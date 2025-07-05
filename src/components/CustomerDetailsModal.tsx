@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,7 +109,7 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer, onUpdateCustomer }: C
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col bg-white rounded-lg shadow-lg border">
+      <DialogContent className="w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col bg-white rounded-lg shadow-lg border">
         <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b">
           <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
             <span className="text-lg sm:text-xl font-bold truncate">{customer.name}</span>
