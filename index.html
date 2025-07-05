@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DukaFiti - Jua Duka Yako | Smart Business Management for Kenyan Shop Owners</title>
+    <meta name="description" content="Transform your shop with DukaFiti's smart inventory management, customer tracking, and M-Pesa integration. Built for Kenyan entrepreneurs. Start your 14-day free trial!" />
+    <meta name="author" content="DukaFiti" />
+    <meta name="keywords" content="Kenya shop management, duka management, M-Pesa integration, inventory management, POS system, business management, retail software Kenya, shop inventory Kenya" />
+
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="DukaFiti">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Fallback icons -->
+    <link rel="icon" href="/placeholder.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/placeholder.svg">
+
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="DukaFiti - Jua Duka Yako | Smart Business Management" />
+    <meta property="og:description" content="Transform your shop with smart inventory management, customer tracking, and M-Pesa integration designed for Kenyan entrepreneurs." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://dukafiti.com" />
+    <meta property="og:image" content="https://dukafiti.com/og-image.png" />
+    <meta property="og:site_name" content="DukaFiti" />
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="DukaFiti - Jua Duka Yako" />
+    <meta name="twitter:description" content="Smart business management for Kenyan shop owners with M-Pesa integration and offline support." />
+    <meta name="twitter:image" content="https://dukafiti.com/og-image.png" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Google Fonts - Inter Variable -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
