@@ -8,10 +8,12 @@ import ProductGrid from './ProductGrid';
 import CheckoutSlidePanel from './CheckoutSlidePanel';
 import OfflineIndicator from './OfflineIndicator';
 import FeatureLimitModal from './trial/FeatureLimitModal';
+import LoadingSkeleton from './ui/loading-skeleton';
+import ErrorState from './ui/error-state';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { useTrialSystem } from '../hooks/useTrialSystem';
-import { Button } from '@/components/ui/button';
-import { ShoppingCart } from 'lucide-react';
+import { TouchFriendlyButton } from '@/components/ui/touch-friendly-button';
+import { ShoppingCart, Loader2 } from 'lucide-react';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
@@ -23,7 +25,6 @@ interface CartItem {
 }
 
 const SalesManagement: React.FC = () => {
-  // All state hooks first
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,21 +35,25 @@ const SalesManagement: React.FC = () => {
     totalProfit: 0,
     transactionCount: 0,
   });
+  const [error, setError] = useState<string | null>(null);
 
-  // All custom hooks after state hooks
   const { toast } = useToast();
   const { addPendingOperation } = useOfflineSync();
   const { trialInfo, updateFeatureUsage, checkFeatureAccess } = useTrialSystem();
   
-  // New Supabase hooks
-  const { customers } = useSupabaseCustomers();
-  const { products, updateProduct } = useSupabaseProducts();
-  const { sales, createSales } = useSupabaseSales();
+  const { customers, loading: customersLoading, error: customersError } = useSupabaseCustomers();
+  const { products, updateProduct, loading: productsLoading, error: productsError } = useSupabaseProducts();
+  const { sales, createSales, loading: salesLoading, error: salesError } = useSupabaseSales();
 
-  // Effects
   useEffect(() => {
     calculateTodayStats();
   }, [sales]);
+
+  useEffect(() => {
+    if (customersError || productsError || salesError) {
+      setError(customersError || productsError || salesError || 'An error occurred');
+    }
+  }, [customersError, productsError, salesError]);
 
   const calculateTodayStats = () => {
     const today = new Date().toDateString();
@@ -64,8 +69,6 @@ const SalesManagement: React.FC = () => {
       totalProfit,
       transactionCount: todaySales.length,
     });
-
-    console.log('Today stats calculated:', { totalRevenue, totalProfit, transactionCount: todaySales.length });
   };
 
   const getCartTotal = () => {
@@ -76,8 +79,6 @@ const SalesManagement: React.FC = () => {
   };
 
   const addToCart = (product: Product) => {
-    console.log('Adding to cart:', product.name, 'Stock:', product.currentStock);
-    
     if (product.currentStock <= 0) {
       toast({
         title: "Out of Stock",
@@ -100,6 +101,10 @@ const SalesManagement: React.FC = () => {
       updateCartQuantity(product.id, existingItem.quantity + 1);
     } else {
       setCartItems(prev => [...prev, { product, quantity: 1 }]);
+      toast({
+        title: "Added to Cart",
+        description: `${product.name} added to cart`,
+      });
     }
   };
 
@@ -147,7 +152,6 @@ const SalesManagement: React.FC = () => {
       return;
     }
 
-    // Check trial limits before processing the sale
     if (trialInfo && trialInfo.isTrialActive) {
       const canCreateSale = checkFeatureAccess('sales');
       if (!canCreateSale) {
@@ -156,8 +160,8 @@ const SalesManagement: React.FC = () => {
       }
     }
 
-    console.log('Processing payment:', paymentData);
     setIsLoading(true);
+    setError(null);
 
     try {
       const total = getCartTotal();
@@ -186,44 +190,29 @@ const SalesManagement: React.FC = () => {
         total: (item.customPrice || item.product.sellingPrice) * item.quantity,
       }));
 
-      console.log('Created sales records:', newSales.length);
-
-      // Create sales in database
       await createSales(newSales);
 
-      // Update product stock
       for (const item of cartItems) {
         const newStock = item.product.currentStock - item.quantity;
-        console.log(`Updating stock for ${item.product.name}: ${item.product.currentStock} -> ${newStock}`);
         await updateProduct(item.product.id, {
           currentStock: newStock,
           updatedAt: new Date().toISOString()
         });
       }
 
-      // Update customer debt if applicable
-      if (customerId && paymentData.debtAmount && paymentData.debtAmount > 0) {
-        const customer = customers.find(c => c.id === customerId);
-        if (customer) {
-          // This would need to be implemented in the customer hook
-          console.log('Updated customer debt for customer:', customerId);
-        }
-      }
-
-      // Update trial usage after successful sale
       if (trialInfo && trialInfo.isTrialActive) {
         updateFeatureUsage('sales', newSales.length);
       }
 
       clearCart();
 
-      console.log('Sale completed successfully');
       toast({
         title: "Sale Completed",
         description: `Successfully processed sale for ${formatCurrency(total)}`,
       });
     } catch (error) {
       console.error('Failed to process sale:', error);
+      setError('Failed to process sale. Please try again.');
       toast({
         title: "Error",
         description: "Failed to process sale. Please try again.",
@@ -234,29 +223,57 @@ const SalesManagement: React.FC = () => {
     }
   };
 
-  // Main render
+  const handleRetry = () => {
+    setError(null);
+    window.location.reload();
+  };
+
+  if (productsLoading || salesLoading) {
+    return (
+      <div className="space-y-6">
+        <LoadingSkeleton variant="card" className="h-32" />
+        <LoadingSkeleton variant="grid" count={6} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <ErrorState 
+        title="Unable to Load Sales Dashboard"
+        message={error}
+        onRetry={handleRetry}
+        variant="page"
+      />
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <OfflineIndicator />
       <StatsCards todayStats={todayStats} />
       
-      {/* Floating Checkout Button */}
+      {/* Floating Checkout Button - Mobile Optimized */}
       {cartItems.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-30">
-          <Button
+        <div className="fixed bottom-4 right-4 z-30">
+          <TouchFriendlyButton
             onClick={() => setShowCheckout(true)}
-            className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white shadow-lg px-6 py-3 rounded-full flex items-center space-x-2 animate-pulse"
-            size="lg"
+            className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white shadow-lg px-4 sm:px-6 py-3 rounded-full flex items-center space-x-2 animate-pulse min-h-[56px]"
+            disabled={isLoading}
           >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="font-semibold">
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <ShoppingCart className="w-5 h-5" />
+            )}
+            <span className="font-semibold text-sm sm:text-base">
               Checkout ({cartItems.length}) - {formatCurrency(getCartTotal())}
             </span>
-          </Button>
+          </TouchFriendlyButton>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6">
         <ProductGrid
           products={products}
           onAddToCart={addToCart}
@@ -272,7 +289,6 @@ const SalesManagement: React.FC = () => {
         />
       </div>
 
-      {/* Checkout Slide Panel */}
       <CheckoutSlidePanel
         isOpen={showCheckout}
         onClose={() => setShowCheckout(false)}
@@ -283,7 +299,6 @@ const SalesManagement: React.FC = () => {
         onPaymentConfirm={handlePaymentConfirm}
       />
 
-      {/* Feature Limit Modal */}
       <FeatureLimitModal
         isOpen={showFeatureLimitModal}
         onClose={() => setShowFeatureLimitModal(false)}

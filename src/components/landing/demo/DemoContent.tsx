@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { TouchFriendlyButton } from '@/components/ui/touch-friendly-button';
 import SalesDemo from './SalesDemo';
 import InventoryDemo from './InventoryDemo';
 import CustomerDemo from './CustomerDemo';
@@ -39,22 +39,22 @@ const DemoContent = ({ activeDemo }: DemoContentProps) => {
 
   return (
     <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
-      <CardContent className="p-8">
-        <div className="grid lg:grid-cols-2 gap-8 items-center">
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-bold text-white">
+      <CardContent className="p-4 sm:p-6 lg:p-8">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="text-xl sm:text-2xl font-bold text-white">
                 {currentDemo.title}
               </h3>
-              <p className="text-lg text-slate-300">
+              <p className="text-base sm:text-lg text-slate-300">
                 {currentDemo.description}
               </p>
             </div>
             
-            <div className="space-y-4">
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+            <div className="space-y-3 sm:space-y-4">
+              <TouchFriendlyButton className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full sm:w-auto">
                 Try This Feature
-              </Button>
+              </TouchFriendlyButton>
               <p className="text-sm text-slate-400">
                 Start your free trial to explore all features
               </p>
