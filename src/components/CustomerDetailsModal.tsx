@@ -109,7 +109,7 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer, onUpdateCustomer }: C
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col bg-white rounded-lg shadow-lg border">
+      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col bg-white rounded-lg shadow-lg border z-50">
         <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b">
           <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
             <span className="text-lg sm:text-xl font-bold truncate">{customer.name}</span>
