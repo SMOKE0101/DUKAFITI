@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from '../components/Dashboard';
@@ -20,10 +19,12 @@ import { useAuth } from '../hooks/useAuth';
 import { useTrialSystem } from '../hooks/useTrialSystem';
 import { useAppContext } from '../hooks/useAppContext';
 import { Product } from '../types';
+import { supabase } from '../lib/supabase';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const { toast } = useToast();
   const { isAuthenticated, loading, user } = useAuth();
   const { trialInfo, showUpgrade, setShowUpgrade } = useTrialSystem();
@@ -41,14 +42,51 @@ const Index = () => {
     }
   }, [isAuthenticated, isInstalledApp, location.pathname, navigate]);
 
-  // Check if onboarding is needed
+  // Check if onboarding is needed by looking at Supabase profile
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const onboardingCompleted = localStorage.getItem(`dts_onboarding_completed_${user.id}`);
-      if (!onboardingCompleted) {
-        setShowOnboarding(true);
+    const checkOnboardingStatus = async () => {
+      if (!isAuthenticated || !user) {
+        setProfileLoading(false);
+        return;
       }
-    }
+
+      try {
+        console.log('Checking onboarding status for user:', user.id);
+        
+        // Check if user has a complete profile in Supabase
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('shop_name, business_type')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching profile:', error);
+          // If there's an error, fall back to localStorage check
+          const localOnboarding = localStorage.getItem(`dts_onboarding_completed_${user.id}`);
+          setShowOnboarding(!localOnboarding);
+        } else if (!profile || !profile.shop_name) {
+          // No profile or incomplete profile means onboarding needed
+          console.log('Profile incomplete, showing onboarding');
+          setShowOnboarding(true);
+        } else {
+          // Profile exists and is complete
+          console.log('Profile complete, skipping onboarding');
+          setShowOnboarding(false);
+          // Update localStorage to match database state
+          localStorage.setItem(`dts_onboarding_completed_${user.id}`, 'true');
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        // Fall back to localStorage check on error
+        const localOnboarding = localStorage.getItem(`dts_onboarding_completed_${user.id}`);
+        setShowOnboarding(!localOnboarding);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    checkOnboardingStatus();
   }, [isAuthenticated, user]);
 
   // Data migration function
@@ -106,7 +144,7 @@ const Index = () => {
       migrateInventoryToProducts();
 
       const shopName = user?.user_metadata?.shop_name || 'Your Shop';
-      if (!showOnboarding) {
+      if (!showOnboarding && !profileLoading) {
         toast({
           title: `Welcome back to ${shopName}!`,
           description: "Shop management system loaded successfully",
@@ -120,7 +158,7 @@ const Index = () => {
         variant: "destructive",
       });
     }
-  }, [toast, isAuthenticated, user, showOnboarding]);
+  }, [toast, isAuthenticated, user, showOnboarding, profileLoading]);
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
@@ -200,8 +238,8 @@ const Index = () => {
     }
   };
 
-  // Show loading spinner while checking authentication
-  if (loading) {
+  // Show loading spinner while checking authentication or profile
+  if (loading || profileLoading) {
     console.log('Index: Showing loading screen');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
