@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
@@ -28,6 +29,7 @@ const SalesManagement: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showFeatureLimitModal, setShowFeatureLimitModal] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [todayStats, setTodayStats] = useState({
@@ -220,7 +222,7 @@ const SalesManagement: React.FC = () => {
     window.location.reload();
   };
 
-  const combinedError = customersError || productsError;
+  const combinedError = customersError || productsError || error;
 
   if (productsLoading || salesLoading) {
     return (
