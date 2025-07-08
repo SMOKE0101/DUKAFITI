@@ -1,56 +1,37 @@
+
 import { Mail, Phone, MapPin, Heart, ExternalLink } from 'lucide-react';
+
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+
   const footerLinks = {
-    product: [{
-      name: 'Features',
-      href: '#features'
-    }, {
-      name: 'Live Demo',
-      href: '#demo'
-    }, {
-      name: 'Pricing',
-      href: '#pricing'
-    }, {
-      name: 'Success Stories',
-      href: '#testimonials'
-    }],
-    support: [{
-      name: 'Help Center',
-      href: '/help'
-    }, {
-      name: 'Contact Support',
-      href: 'mailto:support@dukafiti.com'
-    }, {
-      name: 'WhatsApp Support',
-      href: 'https://wa.me/254700000000',
-      external: true
-    }, {
-      name: 'Video Tutorials',
-      href: '/tutorials'
-    }],
-    company: [{
-      name: 'About Us',
-      href: '/about'
-    }, {
-      name: 'Privacy Policy',
-      href: '/privacy'
-    }, {
-      name: 'Terms of Service',
-      href: '/terms'
-    }, {
-      name: 'Refund Policy',
-      href: '/refund'
-    }]
+    product: [
+      { name: 'Features', href: '#features' },
+      { name: 'Live Demo', href: '#demo' },
+      { name: 'Pricing', href: '#pricing' },
+      { name: 'Success Stories', href: '#testimonials' }
+    ],
+    support: [
+      { name: 'Help Center', href: '/help' },
+      { name: 'Contact Support', href: 'mailto:support@dukafiti.com' },
+      { name: 'WhatsApp Support', href: 'https://wa.me/254700000000', external: true },
+      { name: 'Video Tutorials', href: '/tutorials' }
+    ],
+    company: [
+      { name: 'About Us', href: '/about' },
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Terms of Service', href: '/terms' },
+      { name: 'Refund Policy', href: '/refund' }
+    ]
   };
+
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId.replace('#', ''));
     if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth'
-      });
+      element.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
   const handleLinkClick = (href: string, external?: boolean) => {
     if (href.startsWith('#')) {
       scrollToSection(href);
@@ -60,13 +41,15 @@ const Footer = () => {
       window.location.href = href;
     }
   };
-  return <footer className="bg-slate-950 border-t border-slate-800 relative overflow-hidden">
+
+  return (
+    <footer className="bg-slate-950 border-t border-slate-800 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
-        backgroundImage: `radial-gradient(circle at 25% 25%, #6366f1 0%, transparent 50%), 
-                           radial-gradient(circle at 75% 75%, #10b981 0%, transparent 50%)`
-      }} />
+          backgroundImage: `radial-gradient(circle at 25% 25%, #6366f1 0%, transparent 50%), 
+                           radial-gradient(circle at 75% 75%, #10b981 0%, transparent 50%)`,
+        }} />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 relative z-10">
@@ -106,7 +89,9 @@ const Footer = () => {
               </div>
               <div className="flex items-center space-x-3 text-sm text-slate-400 hover:text-white transition-colors">
                 <Phone className="w-4 h-4 flex-shrink-0" />
-                <a href="tel:+254700000000" className="hover:underline">+254 114417902</a>
+                <a href="tel:+254700000000" className="hover:underline">
+                  +254 700 000 000
+                </a>
               </div>
               <div className="flex items-center space-x-3 text-sm text-slate-400">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
@@ -119,11 +104,16 @@ const Footer = () => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Product</h3>
             <ul className="space-y-3">
-              {footerLinks.product.map((link, index) => <li key={index}>
-                  <button onClick={() => handleLinkClick(link.href)} className="text-slate-400 hover:text-white transition-colors text-sm hover:underline text-left">
+              {footerLinks.product.map((link, index) => (
+                <li key={index}>
+                  <button
+                    onClick={() => handleLinkClick(link.href)}
+                    className="text-slate-400 hover:text-white transition-colors text-sm hover:underline text-left"
+                  >
                     {link.name}
                   </button>
-                </li>)}
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -131,12 +121,17 @@ const Footer = () => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Support</h3>
             <ul className="space-y-3">
-              {footerLinks.support.map((link, index) => <li key={index}>
-                  <button onClick={() => handleLinkClick(link.href, link.external)} className="text-slate-400 hover:text-white transition-colors text-sm hover:underline text-left flex items-center space-x-1">
+              {footerLinks.support.map((link, index) => (
+                <li key={index}>
+                  <button
+                    onClick={() => handleLinkClick(link.href, link.external)}
+                    className="text-slate-400 hover:text-white transition-colors text-sm hover:underline text-left flex items-center space-x-1"
+                  >
                     <span>{link.name}</span>
                     {link.external && <ExternalLink className="w-3 h-3" />}
                   </button>
-                </li>)}
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -144,18 +139,27 @@ const Footer = () => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Company</h3>
             <ul className="space-y-3">
-              {footerLinks.company.map((link, index) => <li key={index}>
-                  <button onClick={() => handleLinkClick(link.href)} className="text-slate-400 hover:text-white transition-colors text-sm hover:underline text-left">
+              {footerLinks.company.map((link, index) => (
+                <li key={index}>
+                  <button
+                    onClick={() => handleLinkClick(link.href)}
+                    className="text-slate-400 hover:text-white transition-colors text-sm hover:underline text-left"
+                  >
                     {link.name}
                   </button>
-                </li>)}
+                </li>
+              ))}
             </ul>
 
             {/* Newsletter Signup */}
             <div className="pt-4">
               <h4 className="text-base font-semibold text-white mb-3">Stay Updated</h4>
               <div className="flex flex-col sm:flex-row gap-2">
-                <input type="email" placeholder="Enter your email" className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors" />
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
+                />
                 <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
                   Subscribe
                 </button>
@@ -222,6 +226,8 @@ const Footer = () => {
 
       {/* Bottom Gradient */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 via-green-500 to-blue-600" />
-    </footer>;
+    </footer>
+  );
 };
+
 export default Footer;
