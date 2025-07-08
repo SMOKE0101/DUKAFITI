@@ -110,62 +110,108 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer, onUpdateCustomer }: C
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col bg-white rounded-lg shadow-lg border z-50">
-        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b">
-          <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-            <span className="text-lg sm:text-xl font-bold truncate">{customer.name}</span>
-            <Badge className={`${getRiskBadgeColor(customer.riskRating)} text-xs sm:text-sm self-start sm:self-center`}>
-              {customer.riskRating.toUpperCase()} RISK
-            </Badge>
+        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl font-bold text-blue-600">{customer.name.charAt(0).toUpperCase()}</span>
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{customer.name}</h2>
+                <p className="text-sm text-gray-600">{customer.phone}</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Badge className={`${getRiskBadgeColor(customer.riskRating)} text-sm px-3 py-1`}>
+                {customer.riskRating.toUpperCase()} RISK
+              </Badge>
+              {customer.outstandingDebt > 0 && (
+                <Badge variant="destructive" className="text-sm px-3 py-1 bg-red-500 text-white">
+                  DEBT: {formatCurrency(customer.outstandingDebt)}
+                </Badge>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-4 sm:space-y-6">
+            {/* Outstanding Debt Alert */}
+            {totalDebt > 0 && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-red-800">Outstanding Debt</h3>
+                      <p className="text-2xl font-bold text-red-600">{formatCurrency(totalDebt)}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleClearAllDebt}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 font-semibold"
+                  >
+                    Clear All Debt
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Customer Overview - Responsive Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <Card className="col-span-1">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" />
+              <Card className="col-span-1 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-red-600" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="text-xs sm:text-sm text-gray-600">Debt</p>
-                      <p className="text-sm sm:text-lg font-bold text-red-600 truncate">{formatCurrency(totalDebt)}</p>
+                      <p className="text-sm font-medium text-red-700">Current Debt</p>
+                      <p className="text-xl font-bold text-red-600">{formatCurrency(totalDebt)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="col-span-1">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
+              <Card className="col-span-1 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-green-600" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="text-xs sm:text-sm text-gray-600">Revenue</p>
-                      <p className="text-sm sm:text-lg font-bold text-green-600 truncate">{formatCurrency(totalRevenue)}</p>
+                      <p className="text-sm font-medium text-green-700">Total Revenue</p>
+                      <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="col-span-1">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center space-x-2">
-                    <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 flex-shrink-0" />
+              <Card className="col-span-1 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <TrendingDown className="w-5 h-5 text-blue-600" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="text-xs sm:text-sm text-gray-600">Profit</p>
-                      <p className="text-sm sm:text-lg font-bold text-blue-600 truncate">{formatCurrency(totalProfit)}</p>
+                      <p className="text-sm font-medium text-blue-700">Total Profit</p>
+                      <p className="text-xl font-bold text-blue-600">{formatCurrency(totalProfit)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="col-span-1">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 flex-shrink-0" />
+              <Card className="col-span-1 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-purple-600" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="text-xs sm:text-sm text-gray-600">Transactions</p>
-                      <p className="text-sm sm:text-lg font-bold text-purple-600">{totalTransactions}</p>
+                      <p className="text-sm font-medium text-purple-700">Transactions</p>
+                      <p className="text-xl font-bold text-purple-600">{totalTransactions}</p>
                     </div>
                   </div>
                 </CardContent>

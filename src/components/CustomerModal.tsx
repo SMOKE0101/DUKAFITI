@@ -81,10 +81,10 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          <div className="space-y-6">
             <div>
-              <Label htmlFor="name" className="text-sm font-medium">
+              <Label htmlFor="name" className="text-base font-semibold text-gray-900 mb-2 block">
                 Full Name *
               </Label>
               <Input
@@ -92,27 +92,27 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter customer name"
-                className="mt-1"
+                className="h-12 text-lg border-2 border-gray-300 focus:border-blue-500 bg-white"
                 required
               />
             </div>
             
             <div>
-              <Label htmlFor="phone" className="text-sm font-medium">
+              <Label htmlFor="phone" className="text-base font-semibold text-gray-900 mb-2 block">
                 Phone Number *
               </Label>
               <Input
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="e.g. 0712345678"
-                className="mt-1"
+                placeholder="e.g. 0712345678 or +254712345678"
+                className="h-12 text-lg border-2 border-gray-300 focus:border-blue-500 bg-white"
                 required
               />
             </div>
             
             <div>
-              <Label htmlFor="email" className="text-sm font-medium">
+              <Label htmlFor="email" className="text-base font-semibold text-gray-900 mb-2 block">
                 Email Address (Optional)
               </Label>
               <Input
@@ -121,12 +121,12 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="customer@example.com"
-                className="mt-1"
+                className="h-12 text-lg border-2 border-gray-300 focus:border-blue-500 bg-white"
               />
             </div>
             
             <div>
-              <Label htmlFor="address" className="text-sm font-medium">
+              <Label htmlFor="address" className="text-base font-semibold text-gray-900 mb-2 block">
                 Address (Optional)
               </Label>
               <Textarea
@@ -134,21 +134,24 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="Enter customer address"
-                className="mt-1 min-h-[80px] resize-none"
-                rows={3}
+                className="min-h-[100px] text-lg border-2 border-gray-300 focus:border-blue-500 bg-white resize-none"
+                rows={4}
               />
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button type="submit" className="flex-1 order-2 sm:order-1">
+          <div className="flex flex-col gap-4 pt-6 border-t border-gray-200">
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+            >
               {customer ? 'Update Customer' : 'Add Customer'}
             </Button>
             <Button 
               type="button" 
               variant="outline" 
               onClick={onClose} 
-              className="flex-1 order-1 sm:order-2"
+              className="w-full h-12 text-lg font-semibold border-2 border-gray-300 hover:bg-gray-50"
             >
               Cancel
             </Button>
