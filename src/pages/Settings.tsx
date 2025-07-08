@@ -3,29 +3,17 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopProfileSettings from '../components/settings/ShopProfileSettings';
-import BusinessConfigSettings from '../components/settings/BusinessConfigSettings';
-import FinancialSettings from '../components/settings/FinancialSettings';
-import NotificationSettings from '../components/settings/NotificationSettings';
-import DataManagementSettings from '../components/settings/DataManagementSettings';
-import SecuritySettings from '../components/settings/SecuritySettings';
 import AppearanceSettings from '../components/settings/AppearanceSettings';
 import MpesaC2BSettings from '../components/settings/MpesaC2BSettings';
-import SMSSettings from '../components/settings/SMSSettings';
-import { Store, DollarSign, Bell, Database, Shield, Palette, Smartphone, MessageSquare } from 'lucide-react';
+import { Store, Palette, Smartphone } from 'lucide-react';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
 
   const settingsTabs = [
     { id: 'profile', label: 'Shop Profile', icon: Store, component: ShopProfileSettings },
-    { id: 'business', label: 'Business Config', icon: Store, component: BusinessConfigSettings },
-    { id: 'financial', label: 'Financial', icon: DollarSign, component: FinancialSettings },
-    { id: 'mpesa', label: 'M-Pesa C2B', icon: Smartphone, component: MpesaC2BSettings },
-    { id: 'sms', label: 'SMS Settings', icon: MessageSquare, component: SMSSettings },
-    { id: 'notifications', label: 'Notifications', icon: Bell, component: NotificationSettings },
-    { id: 'data', label: 'Data Management', icon: Database, component: DataManagementSettings },
-    { id: 'security', label: 'Security', icon: Shield, component: SecuritySettings },
-    { id: 'appearance', label: 'Appearance', icon: Palette, component: AppearanceSettings },
+    { id: 'mpesa', label: 'M-Pesa Setup', icon: Smartphone, component: MpesaC2BSettings },
+    { id: 'appearance', label: 'Display', icon: Palette, component: AppearanceSettings },
   ];
 
   return (
@@ -36,7 +24,7 @@ const Settings = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9 h-auto">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
           {settingsTabs.map((tab) => {
             const Icon = tab.icon;
             return (

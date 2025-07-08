@@ -126,120 +126,45 @@ const MpesaC2BSettings = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center space-x-2 mb-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex items-center space-x-2 mb-6">
               <Switch
                 id="c2b_enabled"
                 checked={credentials.c2b_enabled}
                 onCheckedChange={(checked) => setCredentials({ ...credentials, c2b_enabled: checked })}
               />
-              <Label htmlFor="c2b_enabled" className="text-base font-medium">
-                Enable C2B Payments
+              <Label htmlFor="c2b_enabled" className="text-lg font-medium">
+                Enable M-Pesa Payments
               </Label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="till_number">Till Number *</Label>
+                <Label htmlFor="till_number" className="text-base font-medium">Till Number *</Label>
                 <Input
                   id="till_number"
                   value={credentials.till_number}
                   onChange={(e) => setCredentials({ ...credentials, till_number: e.target.value })}
                   placeholder="Enter your M-Pesa Till Number"
+                  className="text-lg h-12"
                   required
                 />
+                <p className="text-sm text-muted-foreground">This is where customers will send payments</p>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="business_short_code">Business Short Code</Label>
-                <Input
-                  id="business_short_code"
-                  value={credentials.business_short_code}
-                  onChange={(e) => setCredentials({ ...credentials, business_short_code: e.target.value })}
-                  placeholder="Enter your Business Short Code"
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="sandbox"
+                  checked={credentials.is_sandbox}
+                  onCheckedChange={(checked) => setCredentials({ ...credentials, is_sandbox: checked })}
                 />
+                <Label htmlFor="sandbox" className="text-base">Test Mode (Use for testing)</Label>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="consumer_key">Consumer Key</Label>
-                <Input
-                  id="consumer_key"
-                  type="password"
-                  value={credentials.consumer_key}
-                  onChange={(e) => setCredentials({ ...credentials, consumer_key: e.target.value })}
-                  placeholder="Enter your Daraja Consumer Key"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="consumer_secret">Consumer Secret</Label>
-                <Input
-                  id="consumer_secret"
-                  type="password"
-                  value={credentials.consumer_secret}
-                  onChange={(e) => setCredentials({ ...credentials, consumer_secret: e.target.value })}
-                  placeholder="Enter your Daraja Consumer Secret"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="passkey">Passkey</Label>
-              <Input
-                id="passkey"
-                type="password"
-                value={credentials.passkey}
-                onChange={(e) => setCredentials({ ...credentials, passkey: e.target.value })}
-                placeholder="Enter your Lipa na M-Pesa Passkey"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="webhook_url">Webhook URL</Label>
-                <Input
-                  id="webhook_url"
-                  value={credentials.webhook_url}
-                  onChange={(e) => setCredentials({ ...credentials, webhook_url: e.target.value })}
-                  placeholder="https://your-app.com/webhooks/mpesa"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirmation_url">Confirmation URL</Label>
-                <Input
-                  id="confirmation_url"
-                  value={credentials.confirmation_url}
-                  onChange={(e) => setCredentials({ ...credentials, confirmation_url: e.target.value })}
-                  placeholder="https://your-app.com/mpesa/confirm"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="validation_url">Validation URL</Label>
-                <Input
-                  id="validation_url"
-                  value={credentials.validation_url}
-                  onChange={(e) => setCredentials({ ...credentials, validation_url: e.target.value })}
-                  placeholder="https://your-app.com/mpesa/validate"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="sandbox"
-                checked={credentials.is_sandbox}
-                onCheckedChange={(checked) => setCredentials({ ...credentials, is_sandbox: checked })}
-              />
-              <Label htmlFor="sandbox">Use Sandbox Environment (for testing)</Label>
-            </div>
-
-            <Button type="submit" disabled={loading} className="w-full md:w-auto">
-              <Save className="mr-2 h-4 w-4" />
-              {loading ? 'Saving...' : 'Save C2B Settings'}
+            <Button type="submit" disabled={loading} className="w-full h-12 text-lg">
+              <Save className="mr-2 h-5 w-5" />
+              {loading ? 'Saving...' : 'Save Settings'}
             </Button>
           </form>
         </CardContent>
