@@ -91,7 +91,7 @@ const MpesaC2BSettings = () => {
         .upsert({
           user_id: user.id,
           settings_key: 'mpesa_c2b_settings',
-          settings_value: credentials,
+          settings_value: credentials as any,
           updated_at: new Date().toISOString(),
         });
 
