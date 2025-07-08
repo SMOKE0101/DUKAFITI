@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '../../hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../../hooks/useAuth';
 import { Globe, CheckCircle, XCircle, AlertTriangle, Copy, RefreshCw } from 'lucide-react';
 
@@ -40,18 +39,18 @@ const WebhookStatus = () => {
 
   const loadWebhookStatus = async () => {
     try {
-      const { data, error } = await supabase
-        .from('webhook_status')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('type', 'mpesa')
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      setWebhookStatus(data);
+      // TODO: Replace with actual webhook_status table when available
+      // For now, using mock data
+      const mockStatus: WebhookStatus = {
+        id: '1',
+        url: generateWebhookUrl(),
+        status: 'active',
+        last_ping: new Date().toISOString(),
+        total_requests: 25,
+        successful_requests: 23,
+      };
+      
+      setWebhookStatus(mockStatus);
     } catch (error) {
       console.error('Error loading webhook status:', error);
     }

@@ -48,28 +48,31 @@ const MpesaC2BSettings = () => {
     if (!user) return;
 
     try {
+      // Using shop_settings table to store M-Pesa C2B settings temporarily
       const { data, error } = await supabase
-        .from('mpesa_c2b_settings')
+        .from('shop_settings')
         .select('*')
         .eq('user_id', user.id)
+        .eq('settings_key', 'mpesa_c2b_settings')
         .single();
 
       if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
-      if (data) {
+      if (data && data.settings_value) {
+        const settings = data.settings_value as any;
         setCredentials({
-          consumer_key: data.consumer_key || '',
-          consumer_secret: data.consumer_secret || '',
-          business_short_code: data.business_short_code || '',
-          till_number: data.till_number || '',
-          passkey: data.passkey || '',
-          is_sandbox: data.is_sandbox ?? true,
-          webhook_url: data.webhook_url || '',
-          confirmation_url: data.confirmation_url || '',
-          validation_url: data.validation_url || '',
-          c2b_enabled: data.c2b_enabled ?? false,
+          consumer_key: settings.consumer_key || '',
+          consumer_secret: settings.consumer_secret || '',
+          business_short_code: settings.business_short_code || '',
+          till_number: settings.till_number || '',
+          passkey: settings.passkey || '',
+          is_sandbox: settings.is_sandbox ?? true,
+          webhook_url: settings.webhook_url || '',
+          confirmation_url: settings.confirmation_url || '',
+          validation_url: settings.validation_url || '',
+          c2b_enabled: settings.c2b_enabled ?? false,
         });
       }
     } catch (error) {
@@ -84,10 +87,11 @@ const MpesaC2BSettings = () => {
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('mpesa_c2b_settings')
+        .from('shop_settings')
         .upsert({
           user_id: user.id,
-          ...credentials,
+          settings_key: 'mpesa_c2b_settings',
+          settings_value: credentials,
           updated_at: new Date().toISOString(),
         });
 

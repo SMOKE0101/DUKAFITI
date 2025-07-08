@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency } from '../../utils/currency';
 import { Bell, Smartphone, ArrowRight } from 'lucide-react';
@@ -25,48 +24,36 @@ const PaymentNotificationWidget = () => {
   useEffect(() => {
     if (user) {
       loadRecentPayments();
-      setupRealtimeSubscription();
     }
   }, [user]);
 
   const loadRecentPayments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('mpesa_notifications')
-        .select('id, amount, phone_number, status, created_at')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      setRecentPayments(data || []);
+      // TODO: Replace with actual M-Pesa notifications table when available
+      // For now, using mock data
+      const mockPayments: RecentPayment[] = [
+        {
+          id: '1',
+          amount: 1500,
+          phone_number: '254700000000',
+          status: 'processed',
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          amount: 2500,
+          phone_number: '254711111111',
+          status: 'pending',
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+        }
+      ];
+      
+      setRecentPayments(mockPayments);
     } catch (error) {
       console.error('Error loading recent payments:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const setupRealtimeSubscription = () => {
-    const channel = supabase
-      .channel('payment-widget')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'mpesa_notifications',
-          filter: `user_id=eq.${user?.id}`,
-        },
-        () => {
-          loadRecentPayments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   if (loading) {

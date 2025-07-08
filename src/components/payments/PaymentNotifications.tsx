@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '../../hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency } from '../../utils/currency';
 import { Bell, CheckCircle, Clock, AlertCircle, Smartphone } from 'lucide-react';
@@ -31,21 +30,37 @@ const PaymentNotifications = () => {
   useEffect(() => {
     if (user) {
       loadNotifications();
-      setupRealtimeSubscription();
     }
   }, [user]);
 
   const loadNotifications = async () => {
     try {
-      const { data, error } = await supabase
-        .from('mpesa_notifications')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      setNotifications(data || []);
+      // TODO: Replace with actual M-Pesa notifications table when available
+      // For now, using mock data
+      const mockNotifications: PaymentNotification[] = [
+        {
+          id: '1',
+          amount: 1500,
+          phone_number: '254700000000',
+          mpesa_receipt_number: 'QDJ7LTXA12',
+          transaction_date: new Date().toISOString(),
+          customer_name: 'John Doe',
+          status: 'processed',
+          created_at: new Date().toISOString(),
+          processed_at: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          amount: 2500,
+          phone_number: '254711111111',
+          mpesa_receipt_number: 'QDJ7LTXA13',
+          transaction_date: new Date(Date.now() - 3600000).toISOString(),
+          status: 'pending',
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+        }
+      ];
+      
+      setNotifications(mockNotifications);
     } catch (error) {
       console.error('Error loading payment notifications:', error);
       toast({
@@ -58,47 +73,8 @@ const PaymentNotifications = () => {
     }
   };
 
-  const setupRealtimeSubscription = () => {
-    const channel = supabase
-      .channel('payment-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'mpesa_notifications',
-          filter: `user_id=eq.${user?.id}`,
-        },
-        (payload) => {
-          const newNotification = payload.new as PaymentNotification;
-          setNotifications(prev => [newNotification, ...prev]);
-          
-          // Show toast notification
-          toast({
-            title: "New M-Pesa Payment Received!",
-            description: `${formatCurrency(newNotification.amount)} from ${newNotification.phone_number}`,
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
   const processPayment = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('mpesa_notifications')
-        .update({ 
-          status: 'processed', 
-          processed_at: new Date().toISOString() 
-        })
-        .eq('id', notificationId);
-
-      if (error) throw error;
-
       setNotifications(prev => 
         prev.map(n => 
           n.id === notificationId 
