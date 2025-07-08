@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -8,6 +7,7 @@ import { Product } from '../types';
 export const useSupabaseProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -232,15 +232,14 @@ export const useSupabaseProducts = () => {
   // Load products and migrate data on mount
   useEffect(() => {
     if (user) {
-      loadProducts().then(() => {
-        migrateLocalStorageData();
-      });
+      loadProducts();
     }
   }, [user]);
 
   return {
     products,
     loading,
+    error,
     createProduct,
     updateProduct,
     deleteProduct,

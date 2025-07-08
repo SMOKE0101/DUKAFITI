@@ -35,7 +35,6 @@ const SalesManagement: React.FC = () => {
     totalProfit: 0,
     transactionCount: 0,
   });
-  const [error, setError] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { addPendingOperation } = useOfflineSync();
@@ -43,17 +42,11 @@ const SalesManagement: React.FC = () => {
   
   const { customers, loading: customersLoading, error: customersError } = useSupabaseCustomers();
   const { products, updateProduct, loading: productsLoading, error: productsError } = useSupabaseProducts();
-  const { sales, createSales, loading: salesLoading, error: salesError } = useSupabaseSales();
+  const { sales, createSales, loading: salesLoading } = useSupabaseSales();
 
   useEffect(() => {
     calculateTodayStats();
   }, [sales]);
-
-  useEffect(() => {
-    if (customersError || productsError || salesError) {
-      setError(customersError || productsError || salesError || 'An error occurred');
-    }
-  }, [customersError, productsError, salesError]);
 
   const calculateTodayStats = () => {
     const today = new Date().toDateString();
@@ -224,9 +217,10 @@ const SalesManagement: React.FC = () => {
   };
 
   const handleRetry = () => {
-    setError(null);
     window.location.reload();
   };
+
+  const combinedError = customersError || productsError;
 
   if (productsLoading || salesLoading) {
     return (
@@ -237,11 +231,11 @@ const SalesManagement: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (combinedError) {
     return (
       <ErrorState 
         title="Unable to Load Sales Dashboard"
-        message={error}
+        message={combinedError}
         onRetry={handleRetry}
         variant="page"
       />

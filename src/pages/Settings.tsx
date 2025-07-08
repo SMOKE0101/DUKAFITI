@@ -9,7 +9,7 @@ import NotificationSettings from '../components/settings/NotificationSettings';
 import DataManagementSettings from '../components/settings/DataManagementSettings';
 import SecuritySettings from '../components/settings/SecuritySettings';
 import AppearanceSettings from '../components/settings/AppearanceSettings';
-import DarajaSettings from '../components/settings/DarajaSettings';
+import MpesaC2BSettings from '../components/settings/MpesaC2BSettings';
 import SMSSettings from '../components/settings/SMSSettings';
 import { Store, DollarSign, Bell, Database, Shield, Palette, Smartphone, MessageSquare } from 'lucide-react';
 
@@ -20,7 +20,7 @@ const Settings = () => {
     { id: 'profile', label: 'Shop Profile', icon: Store, component: ShopProfileSettings },
     { id: 'business', label: 'Business Config', icon: Store, component: BusinessConfigSettings },
     { id: 'financial', label: 'Financial', icon: DollarSign, component: FinancialSettings },
-    { id: 'daraja', label: 'M-Pesa Setup', icon: Smartphone, component: DarajaSettings },
+    { id: 'mpesa', label: 'M-Pesa C2B', icon: Smartphone, component: MpesaC2BSettings },
     { id: 'sms', label: 'SMS Settings', icon: MessageSquare, component: SMSSettings },
     { id: 'notifications', label: 'Notifications', icon: Bell, component: NotificationSettings },
     { id: 'data', label: 'Data Management', icon: Database, component: DataManagementSettings },
