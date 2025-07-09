@@ -1,6 +1,7 @@
 
-import { Card, CardContent } from '@/components/ui/card';
-import { DollarSign, TrendingUp, ShoppingCart } from 'lucide-react';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 
 interface StatsCardsProps {
@@ -11,41 +12,47 @@ interface StatsCardsProps {
   };
 }
 
-const StatsCards = ({ todayStats }: StatsCardsProps) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ todayStats }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm font-medium">Today's Revenue</p>
-              <p className="text-2xl font-bold">{formatCurrency(todayStats.totalRevenue)}</p>
-            </div>
-            <DollarSign className="h-8 w-8 text-green-200" />
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <DollarSign className="w-4 h-4" />
+            Today's Revenue
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-green-600">
+            {formatCurrency(todayStats.totalRevenue)}
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm font-medium">Today's Profit</p>
-              <p className="text-2xl font-bold">{formatCurrency(todayStats.totalProfit)}</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-blue-200" />
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Today's Profit
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-600">
+            {formatCurrency(todayStats.totalProfit)}
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-sm font-medium">Transactions</p>
-              <p className="text-2xl font-bold">{todayStats.transactionCount}</p>
-            </div>
-            <ShoppingCart className="h-8 w-8 text-purple-200" />
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4" />
+            Transactions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-purple-600">
+            {todayStats.transactionCount}
           </div>
         </CardContent>
       </Card>

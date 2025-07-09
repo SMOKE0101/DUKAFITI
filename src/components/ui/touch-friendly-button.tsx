@@ -5,24 +5,19 @@ import { cn } from '@/lib/utils';
 
 interface TouchFriendlyButtonProps extends ButtonProps {
   children: React.ReactNode;
-  touchOptimized?: boolean;
 }
 
-const TouchFriendlyButton = ({ 
+const TouchFriendlyButton: React.FC<TouchFriendlyButtonProps> = ({ 
   children, 
   className, 
-  touchOptimized = true, 
-  size = "default",
   ...props 
-}: TouchFriendlyButtonProps) => {
-  const touchClasses = touchOptimized 
-    ? "min-h-[44px] min-w-[44px] touch-manipulation" 
-    : "";
-
+}) => {
   return (
     <Button
-      className={cn(touchClasses, className)}
-      size={size}
+      className={cn(
+        'min-h-[48px] touch-manipulation active:scale-95 transition-transform',
+        className
+      )}
       {...props}
     >
       {children}
