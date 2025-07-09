@@ -23,7 +23,7 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
-  // Filter products for search dropdown with debounce
+  // Filter products for search dropdown with proper debounce
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
   useEffect(() => {
@@ -34,16 +34,21 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const filteredProducts = products.filter(product =>
-    debouncedSearchTerm.length >= 2 &&
-    (product.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-     product.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
-    !favorites.some(fav => fav.id === product.id)
-  ).slice(0, 8);
+  // Enhanced filtering with better matching
+  const filteredProducts = products.filter(product => {
+    if (debouncedSearchTerm.length < 2) return false;
+    
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    const nameMatch = product.name.toLowerCase().includes(searchLower);
+    const categoryMatch = product.category.toLowerCase().includes(searchLower);
+    const notInFavorites = !favorites.some(fav => fav.id === product.id);
+    
+    return (nameMatch || categoryMatch) && notInFavorites;
+  }).slice(0, 8);
 
   useEffect(() => {
-    setShowDropdown(debouncedSearchTerm.length >= 2 && filteredProducts.length > 0);
-  }, [debouncedSearchTerm, filteredProducts.length]);
+    setShowDropdown(debouncedSearchTerm.length >= 2 && filteredProducts.length > 0 && isSearchVisible);
+  }, [debouncedSearchTerm, filteredProducts.length, isSearchVisible]);
 
   const handlePlusClick = () => {
     if (isEditMode) return;
@@ -58,7 +63,6 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
   const handleEditToggle = () => {
     setIsEditMode(!isEditMode);
     if (!isEditMode) {
-      // Entering edit mode - hide search
       setIsSearchVisible(false);
       setSearchTerm('');
       setShowDropdown(false);
@@ -109,7 +113,6 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
       description: `${product.name} added to Quick Select`,
     });
     
-    // Add pop animation to the new tile
     setTimeout(() => {
       const newTile = document.querySelector(`[data-product-id="${product.id}"]`);
       if (newTile) {
@@ -167,7 +170,6 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
           </div>
         </CardHeader>
 
-        {/* Edit Mode Banner */}
         {isEditMode && (
           <div className="px-4 pb-2 animate-in slide-in-from-top-2 duration-200">
             <p className="text-xs italic text-muted-foreground text-center">
@@ -177,7 +179,6 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
         )}
 
         <CardContent className="p-4 pt-0 flex flex-col h-full">
-          {/* Search Bar - slides down when visible */}
           <div 
             className={`overflow-hidden transition-all duration-250 ease-out ${
               isSearchVisible && !isEditMode ? 'max-h-20 mb-3' : 'max-h-0'
@@ -208,37 +209,46 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
                 </Button>
               )}
               
-              {/* Search Dropdown */}
+              {/* Enhanced Search Dropdown */}
               {showDropdown && isSearchVisible && (
-                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border rounded-lg shadow-lg">
-                  {filteredProducts.map((product, index) => (
-                    <button
-                      key={product.id}
-                      className={`w-full flex items-center justify-between p-3 text-left border-b last:border-b-0 transition-colors ${
-                        index === selectedIndex 
-                          ? 'bg-primary/10 border-primary' 
-                          : 'hover:bg-accent'
-                      }`}
-                      onClick={() => handleAddFavorite(product)}
-                    >
-                      <div className="flex-1">
-                        <div className="font-bold">{product.name}</div>
-                        <div className="text-sm text-muted-foreground font-mono">
-                          {product.category} • {formatCurrency(product.sellingPrice)}
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border rounded-lg shadow-xl max-h-80 overflow-y-auto">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product, index) => (
+                      <button
+                        key={product.id}
+                        className={`w-full flex items-center justify-between p-3 text-left border-b last:border-b-0 transition-all duration-150 ${
+                          index === selectedIndex 
+                            ? 'bg-primary/10 border-primary/20' 
+                            : 'hover:bg-accent/50'
+                        }`}
+                        onClick={() => handleAddFavorite(product)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm truncate">{product.name}</div>
+                          <div className="text-xs text-muted-foreground font-mono">
+                            {product.category} • {formatCurrency(product.sellingPrice)}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className={`w-2 h-2 rounded-full ${getStockBadgeColor(product.currentStock, product.lowStockThreshold)}`}
-                          title={`Stock: ${product.currentStock}`}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {product.currentStock}
-                        </span>
-                        <Plus className="w-4 h-4 text-muted-foreground ml-2" />
-                      </div>
-                    </button>
-                  ))}
+                        <div className="flex items-center gap-2 ml-3">
+                          <div className="flex items-center gap-1">
+                            <div 
+                              className={`w-2 h-2 rounded-full ${getStockBadgeColor(product.currentStock, product.lowStockThreshold)}`}
+                              title={`Stock: ${product.currentStock}`}
+                            />
+                            <span className="text-xs text-muted-foreground min-w-[20px] text-right">
+                              {product.currentStock}
+                            </span>
+                          </div>
+                          <Plus className="w-4 h-4 text-muted-foreground/60" />
+                        </div>
+                      </button>
+                    ))
+                  ) : debouncedSearchTerm.length >= 2 ? (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                      No products found matching "{debouncedSearchTerm}"
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -257,7 +267,6 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
                 }`}
                 onClick={() => handleFavoriteTileClick(product)}
               >
-                {/* Remove button in edit mode */}
                 {isEditMode && (
                   <button
                     className="absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-red-500 rounded-full flex items-center justify-center animate-in fade-in-0 duration-150 shadow-sm"
