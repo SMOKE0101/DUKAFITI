@@ -7,54 +7,15 @@ import { Plus, Search, User, Phone, Mail, MapPin } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { Customer } from '../types';
 import { useToast } from '../hooks/use-toast';
+import CustomerModal from './CustomerModal';
+import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 
 const CustomerManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
-
-  // Mock data for now to prevent loading issues
-  const [customers] = useState<Customer[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      phone: '+254700000000',
-      email: 'john@example.com',
-      address: '123 Main St, Nairobi',
-      totalPurchases: 15000,
-      outstandingDebt: 2500,
-      creditLimit: 10000,
-      riskRating: 'low',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      phone: '+254711111111',
-      email: 'jane@example.com',
-      address: '456 Oak Ave, Mombasa',
-      totalPurchases: 8500,
-      outstandingDebt: 500,
-      creditLimit: 5000,
-      riskRating: 'low',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: '3',
-      name: 'Bob Wilson',
-      phone: '+254722222222',
-      email: 'bob@example.com',
-      address: '789 Pine Rd, Kisumu',
-      totalPurchases: 3200,
-      outstandingDebt: 1200,
-      creditLimit: 2000,
-      riskRating: 'medium',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ]);
+  const { customers, loading, createCustomer, updateCustomer } = useSupabaseCustomers();
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,11 +33,44 @@ const CustomerManagement: React.FC = () => {
   };
 
   const handleAddCustomer = () => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "Customer management features are being implemented",
-    });
+    setEditingCustomer(null);
+    setShowModal(true);
   };
+
+  const handleEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setShowModal(true);
+  };
+
+  const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer.id, customerData);
+        toast({
+          title: "Success",
+          description: "Customer updated successfully",
+        });
+      } else {
+        await createCustomer(customerData);
+        toast({
+          title: "Success",
+          description: `Customer ${customerData.name} added successfully`,
+        });
+      }
+      setShowModal(false);
+      setEditingCustomer(null);
+    } catch (error) {
+      console.error('Failed to save customer:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -86,9 +80,13 @@ const CustomerManagement: React.FC = () => {
           <h1 className="text-2xl font-bold text-foreground">Customer Management</h1>
           <p className="text-muted-foreground">Manage your customer database and credit accounts</p>
         </div>
-        <Button onClick={handleAddCustomer} className="flex items-center gap-2">
+        <Button 
+          onClick={handleAddCustomer} 
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full transition-colors"
+          title="Create a new customer record"
+        >
           <Plus className="w-4 h-4" />
-          Add Customer
+          New Customer
         </Button>
       </div>
 
@@ -142,7 +140,7 @@ const CustomerManagement: React.FC = () => {
       {/* Customer List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredCustomers.map((customer) => (
-          <Card key={customer.id} className="hover:shadow-md transition-shadow">
+          <Card key={customer.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleEditCustomer(customer)}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -155,6 +153,11 @@ const CustomerManagement: React.FC = () => {
                       {customer.riskRating} risk
                     </span>
                   </div>
+                </div>
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  customer.outstandingDebt > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                }`}>
+                  Balance: {formatCurrency(customer.outstandingDebt)}
                 </div>
               </div>
             </CardHeader>
@@ -182,15 +185,23 @@ const CustomerManagement: React.FC = () => {
                   <span className="font-medium text-green-600">{formatCurrency(customer.totalPurchases)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Outstanding:</span>
-                  <span className={`font-medium ${customer.outstandingDebt > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                    {formatCurrency(customer.outstandingDebt)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Credit Limit:</span>
                   <span className="font-medium">{formatCurrency(customer.creditLimit)}</span>
                 </div>
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  View History
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="flex-1"
+                  disabled={customer.outstandingDebt === 0}
+                >
+                  Record Payment
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -206,14 +217,25 @@ const CustomerManagement: React.FC = () => {
               {searchQuery ? 'Try adjusting your search terms.' : 'Start by adding your first customer.'}
             </p>
             {!searchQuery && (
-              <Button onClick={handleAddCustomer}>
+              <Button onClick={handleAddCustomer} className="bg-purple-600 hover:bg-purple-700">
                 <Plus className="w-4 h-4 mr-2" />
-                Add Customer
+                New Customer
               </Button>
             )}
           </CardContent>
         </Card>
       )}
+
+      {/* Customer Modal */}
+      <CustomerModal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingCustomer(null);
+        }}
+        customer={editingCustomer}
+        onSave={handleSaveCustomer}
+      />
     </div>
   );
 };

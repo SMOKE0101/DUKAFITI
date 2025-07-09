@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Search, Package, AlertTriangle, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, Edit, Trash2, PackagePlus } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { Product } from '../types';
 import { formatCurrency } from '../utils/currency';
 import FeatureLimitModal from './trial/FeatureLimitModal';
+import InventoryModal from './InventoryModal';
 import { useTrialSystem } from '../hooks/useTrialSystem';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 
@@ -19,6 +20,7 @@ const ProductManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showForm, setShowForm] = useState(false);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showFeatureLimitModal, setShowFeatureLimitModal] = useState(false);
   const { toast } = useToast();
@@ -35,7 +37,6 @@ const ProductManagement = () => {
   });
 
   const categories = ['Electronics', 'Clothing', 'Food & Beverages', 'Health & Beauty', 'Home & Garden', 'Books', 'Sports', 'Other'];
-
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -169,17 +170,54 @@ const ProductManagement = () => {
     setShowForm(true);
   };
 
+  const handleAddStock = async (productId: string, quantity: number, buyingPrice: number, supplier?: string) => {
+    try {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+
+      // Update the product stock
+      await updateProduct(productId, {
+        currentStock: product.currentStock + quantity,
+        costPrice: buyingPrice, // Update cost price with latest buying price
+      });
+
+      toast({
+        title: "Stock Added Successfully",
+        description: `Stock recorded: ${quantity} × ${product.name} at KES ${buyingPrice.toFixed(2)} each.`,
+      });
+
+      setShowInventoryModal(false);
+    } catch (error) {
+      console.error('Failed to add stock:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add stock. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Product Management</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
           <p className="text-gray-600">Manage your inventory and product catalog</p>
         </div>
-        <Button onClick={handleAddProduct} className="flex items-center space-x-2">
-          <Plus className="w-4 h-4" />
-          <span>Add Product</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowInventoryModal(true)} 
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full transition-all hover:shadow-lg"
+            title="Record new stock arrival"
+          >
+            <PackagePlus className="w-4 h-4" />
+            <span>Add Inventory</span>
+          </Button>
+          <Button onClick={handleAddProduct} className="flex items-center space-x-2">
+            <Plus className="w-4 h-4" />
+            <span>Add Product</span>
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="all" className="space-y-6">
@@ -219,7 +257,7 @@ const ProductManagement = () => {
           {/* Products Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map(product => (
-              <Card key={product.id} className="hover:shadow-lg transition-shadow">
+              <Card key={product.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -430,6 +468,14 @@ const ProductManagement = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Inventory Modal */}
+      <InventoryModal
+        isOpen={showInventoryModal}
+        onClose={() => setShowInventoryModal(false)}
+        products={products}
+        onAddStock={handleAddStock}
+      />
 
       {/* Feature Limit Modal */}
       <FeatureLimitModal
