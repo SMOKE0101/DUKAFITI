@@ -10,6 +10,7 @@ import InventoryHeader from './inventory/InventoryHeader';
 import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
+import AddProductModal from './inventory/AddProductModal';
 
 const InventoryPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -20,15 +21,6 @@ const InventoryPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    category: '',
-    costPrice: 0,
-    sellingPrice: 0,
-    currentStock: 0,
-    lowStockThreshold: 10,
-  });
 
   const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
   const { toast } = useToast();
@@ -64,53 +56,8 @@ const InventoryPage = () => {
   const totalValue = products.reduce((sum, product) => sum + (product.sellingPrice * product.currentStock), 0);
   const lowStockCount = products.filter(product => product.currentStock <= product.lowStockThreshold).length;
 
-  const resetForm = () => {
-    setNewProduct({
-      name: '',
-      category: '',
-      costPrice: 0,
-      sellingPrice: 0,
-      currentStock: 0,
-      lowStockThreshold: 10,
-    });
-    setEditingProduct(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, newProduct);
-        toast({
-          title: "Product Updated",
-          description: `${newProduct.name} has been updated successfully.`,
-        });
-      } else {
-        await createProduct(newProduct);
-        toast({
-          title: "Product Added",
-          description: `${newProduct.name} has been added to your inventory.`,
-        });
-      }
-      
-      setShowModal(false);
-      resetForm();
-    } catch (error) {
-      console.error('Error saving product:', error);
-    }
-  };
-
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
-    setNewProduct({
-      name: product.name,
-      category: product.category,
-      costPrice: product.costPrice,
-      sellingPrice: product.sellingPrice,
-      currentStock: product.currentStock,
-      lowStockThreshold: product.lowStockThreshold,
-    });
     setShowModal(true);
   };
 
@@ -136,7 +83,7 @@ const InventoryPage = () => {
   };
 
   const handleCreateProduct = () => {
-    resetForm();
+    setEditingProduct(null);
     setShowModal(true);
   };
 
@@ -146,6 +93,19 @@ const InventoryPage = () => {
       setSelectedCategory('all');
       setSearchTerm('');
     }
+  };
+
+  const handleSaveProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (editingProduct) {
+      await updateProduct(editingProduct.id, productData);
+    } else {
+      await createProduct(productData);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingProduct(null);
   };
 
   if (loading) {
@@ -203,104 +163,12 @@ const InventoryPage = () => {
         onDelete={handleDeleteClick}
       />
 
-      {/* Add/Edit Product Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-xl font-semibold mb-4">
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-            </h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Product Name</Label>
-                <Input
-                  id="name"
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={newProduct.category}
-                  onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="costPrice">Cost Price</Label>
-                  <Input
-                    id="costPrice"
-                    type="number"
-                    step="0.01"
-                    value={newProduct.costPrice}
-                    onChange={(e) => setNewProduct({ ...newProduct, costPrice: parseFloat(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="sellingPrice">Selling Price</Label>
-                  <Input
-                    id="sellingPrice"
-                    type="number"
-                    step="0.01"
-                    value={newProduct.sellingPrice}
-                    onChange={(e) => setNewProduct({ ...newProduct, sellingPrice: parseFloat(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="currentStock">Current Stock</Label>
-                  <Input
-                    id="currentStock"
-                    type="number"
-                    value={newProduct.currentStock}
-                    onChange={(e) => setNewProduct({ ...newProduct, currentStock: parseInt(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="lowStockThreshold">Low Stock Alert</Label>
-                  <Input
-                    id="lowStockThreshold"
-                    type="number"
-                    value={newProduct.lowStockThreshold}
-                    onChange={(e) => setNewProduct({ ...newProduct, lowStockThreshold: parseInt(e.target.value) || 10 })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" className="flex-1">
-                  {editingProduct ? 'Update Product' : 'Add Product'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowModal(false);
-                    resetForm();
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Enhanced Add/Edit Product Modal */}
+      <AddProductModal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onSave={handleSaveProduct}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && productToDelete && (
