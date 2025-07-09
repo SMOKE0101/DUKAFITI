@@ -1,126 +1,86 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Edit, Trash2, Plus } from 'lucide-react';
-import { formatCurrency } from '../../utils/currency';
+import { Edit, Trash2 } from 'lucide-react';
 import { Product } from '../../types';
 
 interface ProductCardProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  onRestock: (product: Product) => void;
+  showUnspecifiedStock?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, onRestock }) => {
-  const isUnspecifiedQuantity = product.currentStock === -1;
-  
-  const getStockStatus = () => {
-    if (isUnspecifiedQuantity) {
-      return { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400', label: 'Bulk / Variable' };
-    }
-    if (product.currentStock === 0) return { color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400', label: 'Out of Stock' };
-    if (product.currentStock <= product.lowStockThreshold) return { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400', label: 'Low Stock' };
-    return { color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400', label: 'In Stock' };
-  };
-
-  const stockStatus = getStockStatus();
+const ProductCard: React.FC<ProductCardProps> = ({ 
+  product, 
+  onEdit, 
+  onDelete,
+  showUnspecifiedStock = false 
+}) => {
+  const isLowStock = !showUnspecifiedStock && product.currentStock <= product.lowStockThreshold;
 
   return (
-    <Card className="group relative bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:ring-2 hover:ring-primary/20 transition-all duration-200">
-      <CardContent className="p-0 space-y-3">
-        {/* Top: Name and Category */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate">
-              {product.name}
-            </h3>
-            <Badge className="text-sm bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 rounded-full px-2 mt-1">
-              {product.category}
-            </Badge>
-          </div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+            {product.name}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {product.category}
+          </p>
+        </div>
+        
+        <div className="flex gap-1 ml-2">
+          <button
+            onClick={() => onEdit(product)}
+            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+          >
+            <Edit size={16} />
+          </button>
+          <button
+            onClick={() => onDelete(product)}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500 dark:text-gray-400">Cost:</span>
+          <span className="font-medium">KES {product.costPrice.toFixed(2)}</span>
+        </div>
+        
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500 dark:text-gray-400">Selling:</span>
+          <span className="font-medium text-green-600">KES {product.sellingPrice.toFixed(2)}</span>
+        </div>
+        
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500 dark:text-gray-400">Stock:</span>
+          {showUnspecifiedStock ? (
+            <span className="font-medium text-blue-600">Unspecified</span>
+          ) : (
+            <span className={`font-medium ${isLowStock ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+              {product.currentStock} units
+            </span>
+          )}
         </div>
 
-        {/* Middle: Code and Prices */}
-        <div className="space-y-2">
-          <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-            CODE: {product.id.slice(0, 8).toUpperCase()}
+        {!showUnspecifiedStock && isLowStock && (
+          <div className="mt-2 px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs rounded">
+            Low Stock Alert
           </div>
-          <div className="flex gap-2">
-            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs">
-              Buy: {formatCurrency(product.costPrice)}
-            </Badge>
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 text-xs">
-              Sell: {formatCurrency(product.sellingPrice)}
-            </Badge>
+        )}
+
+        {showUnspecifiedStock && (
+          <div className="mt-2 px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs rounded">
+            Non-standard measurement
           </div>
-        </div>
-
-        {/* Bottom: Stock and Actions */}
-        <div className="flex items-center justify-between pt-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge className={`text-xs ${stockStatus.color}`}>
-                {isUnspecifiedQuantity ? stockStatus.label : `${product.currentStock} units`}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isUnspecifiedQuantity 
-                ? "Quantity tracked in bulk—update as needed."
-                : `Current stock: ${product.currentStock} units`
-              }
-            </TooltipContent>
-          </Tooltip>
-          
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(product)}
-                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Edit product</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(product)}
-                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Delete product</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRestock(product)}
-                  className="h-10 w-10 p-0 rounded-full bg-green-600 hover:bg-green-500 text-white hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Add stock</TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </div>
   );
 };
 

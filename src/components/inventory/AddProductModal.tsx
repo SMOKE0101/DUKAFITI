@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
 
@@ -30,6 +31,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     currentStock: 0,
     lowStockThreshold: 10,
   });
+  const [unspecifiedStock, setUnspecifiedStock] = useState(false);
 
   // Pre-fill form when editing a product
   useEffect(() => {
@@ -42,6 +44,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         currentStock: editingProduct.currentStock,
         lowStockThreshold: editingProduct.lowStockThreshold,
       });
+      // Check if current stock is -1 (indicating unspecified)
+      setUnspecifiedStock(editingProduct.currentStock === -1);
     } else {
       // Reset form for new product
       setFormData({
@@ -52,6 +56,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         currentStock: 0,
         lowStockThreshold: 10,
       });
+      setUnspecifiedStock(false);
     }
   }, [editingProduct, isOpen]);
 
@@ -85,7 +90,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
 
-    if (formData.currentStock < 0) {
+    if (!unspecifiedStock && formData.currentStock < 0) {
       toast({
         title: "Validation Error",
         description: "Stock cannot be negative",
@@ -94,7 +99,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
     
-    onSave(formData);
+    // Use -1 to indicate unspecified stock
+    const finalFormData = {
+      ...formData,
+      currentStock: unspecifiedStock ? -1 : formData.currentStock
+    };
+    
+    onSave(finalFormData);
   };
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -222,12 +233,23 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                     id="currentStock"
                     type="number"
                     min="0"
-                    value={formData.currentStock}
+                    value={unspecifiedStock ? '' : formData.currentStock}
                     onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
-                    placeholder="0"
+                    placeholder={unspecifiedStock ? "Unspecified quantity" : "0"}
                     className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
-                    required
+                    disabled={unspecifiedStock}
+                    required={!unspecifiedStock}
                   />
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="unspecifiedStock"
+                      checked={unspecifiedStock}
+                      onCheckedChange={(checked) => setUnspecifiedStock(checked as boolean)}
+                    />
+                    <Label htmlFor="unspecifiedStock" className="text-sm text-muted-foreground">
+                      Unspecified quantity (sacks, cups, tins, gorogoro, etc.)
+                    </Label>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">

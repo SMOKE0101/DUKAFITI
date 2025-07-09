@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../hooks/use-toast';
 import { Product } from '../types';
@@ -34,8 +33,8 @@ const InventoryPage = () => {
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesFilter = activeFilter === 'all' || 
-        (activeFilter === 'low-stock' && product.currentStock <= product.lowStockThreshold) ||
-        (activeFilter === 'in-stock' && product.currentStock > product.lowStockThreshold);
+        (activeFilter === 'low-stock' && product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold) ||
+        (activeFilter === 'in-stock' && (product.currentStock === -1 || product.currentStock > product.lowStockThreshold));
       return matchesCategory && matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
@@ -43,7 +42,10 @@ const InventoryPage = () => {
         case 'name':
           return a.name.localeCompare(b.name);
         case 'stock':
-          return b.currentStock - a.currentStock;
+          // Handle unspecified stock (-1) by treating it as 0 for sorting
+          const aStock = a.currentStock === -1 ? 0 : a.currentStock;
+          const bStock = b.currentStock === -1 ? 0 : b.currentStock;
+          return bStock - aStock;
         case 'price':
           return b.sellingPrice - a.sellingPrice;
         default:
@@ -51,10 +53,16 @@ const InventoryPage = () => {
       }
     });
 
-  // Calculate stats
+  // Calculate stats (exclude unspecified stock from calculations)
   const totalProducts = products.length;
-  const totalValue = products.reduce((sum, product) => sum + (product.sellingPrice * product.currentStock), 0);
-  const lowStockCount = products.filter(product => product.currentStock <= product.lowStockThreshold).length;
+  const totalValue = products.reduce((sum, product) => {
+    // Only count products with specified stock
+    if (product.currentStock === -1) return sum;
+    return sum + (product.sellingPrice * product.currentStock);
+  }, 0);
+  const lowStockCount = products.filter(product => 
+    product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold
+  ).length;
 
   const handleEdit = (product: Product) => {
     console.log('Edit button clicked for product:', product);
