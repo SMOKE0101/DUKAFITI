@@ -1,25 +1,15 @@
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Plus, 
   Search, 
-  X, 
-  Package, 
-  TrendingUp, 
-  AlertTriangle, 
-  Calendar,
-  Edit,
-  Trash2,
-  RotateCcw
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency } from '../utils/currency';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { Product } from '../types';
 import AddProductModal from './inventory/AddProductModal';
@@ -28,13 +18,7 @@ import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
 import ProductCard from './inventory/ProductCard';
 import ProductCardSkeleton from './inventory/ProductCardSkeleton';
-
-interface InventoryStats {
-  totalSKUs: number;
-  inStockPercentage: number;
-  lowStockCount: number;
-  lastRestockDate: string;
-}
+import PremiumStatsCards from './inventory/PremiumStatsCards';
 
 const InventoryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,20 +31,6 @@ const InventoryPage = () => {
   const { toast } = useToast();
   const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
 
-  // Calculate statistics
-  const stats: InventoryStats = useMemo(() => {
-    const totalSKUs = products.length;
-    const inStock = products.filter(p => p.currentStock > p.lowStockThreshold).length;
-    const lowStock = products.filter(p => p.currentStock <= p.lowStockThreshold && p.currentStock > 0).length;
-    
-    return {
-      totalSKUs,
-      inStockPercentage: totalSKUs > 0 ? Math.round((inStock / totalSKUs) * 100) : 0,
-      lowStockCount: lowStock,
-      lastRestockDate: 'Today'
-    };
-  }, [products]);
-
   // Filter products
   const filteredProducts = useMemo(() => {
     let filtered = products.filter(product =>
@@ -71,6 +41,8 @@ const InventoryPage = () => {
       filtered = filtered.filter(p => p.currentStock <= p.lowStockThreshold && p.currentStock > 0);
     } else if (filterStatus === 'out-of-stock') {
       filtered = filtered.filter(p => p.currentStock === 0);
+    } else if (filterStatus === 'in-stock') {
+      filtered = filtered.filter(p => p.currentStock > p.lowStockThreshold);
     }
 
     return filtered;
@@ -79,13 +51,13 @@ const InventoryPage = () => {
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await createProduct(productData);
-      setShowAddModal(false);
       toast({
         title: "Product Added",
         description: `${productData.name} has been added to inventory`,
       });
     } catch (error) {
       console.error('Failed to add product:', error);
+      throw error; // Re-throw to let modal handle the error
     }
   };
 
@@ -94,7 +66,6 @@ const InventoryPage = () => {
     
     try {
       await updateProduct(selectedProduct.id, productData);
-      setShowEditModal(false);
       setSelectedProduct(null);
       toast({
         title: "Product Updated",
@@ -102,6 +73,7 @@ const InventoryPage = () => {
       });
     } catch (error) {
       console.error('Failed to update product:', error);
+      throw error; // Re-throw to let modal handle the error
     }
   };
 
@@ -138,6 +110,10 @@ const InventoryPage = () => {
     } catch (error) {
       console.error('Failed to restock product:', error);
     }
+  };
+
+  const handleStatsCardClick = (filter: string) => {
+    setFilterStatus(filter === 'all' ? 'all' : filter === 'in-stock' ? 'all' : filter);
   };
 
   const openEditModal = (product: Product) => {
@@ -177,6 +153,12 @@ const InventoryPage = () => {
           </Tooltip>
         </div>
 
+        {/* Premium Statistics Cards */}
+        <PremiumStatsCards 
+          products={products} 
+          onCardClick={handleStatsCardClick}
+        />
+
         {/* Search & Filter Bar */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
@@ -208,63 +190,6 @@ const InventoryPage = () => {
               <SelectItem value="out-of-stock">Out of Stock</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        {/* Statistics Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-card rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-200">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground">{stats.totalSKUs}</div>
-                <div className="text-sm text-muted-foreground">Total SKUs</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-200">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <div className="text-2xl font-bold text-foreground">{stats.inStockPercentage}%</div>
-                <div className="text-sm text-muted-foreground">In Stock</div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                  <div 
-                    className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
-                    style={{ width: `${stats.inStockPercentage}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-200">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground">{stats.lowStockCount}</div>
-                <div className="text-sm text-muted-foreground">Low Stock</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-200">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground">{stats.lastRestockDate}</div>
-                <div className="text-sm text-muted-foreground">Last Restock</div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Product Grid */}
