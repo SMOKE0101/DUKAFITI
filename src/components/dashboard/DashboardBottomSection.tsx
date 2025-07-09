@@ -16,15 +16,21 @@ import { formatCurrency } from '../../utils/currency';
 import { Customer, Product } from '../../types';
 
 interface DashboardBottomSectionProps {
-  overdueCustomers: Customer[];
-  lowStockProducts: Product[];
+  sales: any[];
+  products: Product[];
+  customers: Customer[];
 }
 
 const DashboardBottomSection: React.FC<DashboardBottomSectionProps> = ({
-  overdueCustomers,
-  lowStockProducts
+  sales,
+  products,
+  customers
 }) => {
   const navigate = useNavigate();
+
+  // Calculate overdue customers and low stock products
+  const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
+  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

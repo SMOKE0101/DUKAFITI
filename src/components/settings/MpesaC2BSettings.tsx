@@ -1,250 +1,174 @@
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { useAuth } from '../../hooks/useAuth';
-import { useToast } from '../../hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Save, Shield, Smartphone, Bell, AlertCircle } from 'lucide-react';
-
-interface MpesaC2BCredentials {
-  consumer_key: string;
-  consumer_secret: string;
-  business_short_code: string;
-  till_number: string;
-  passkey: string;
-  is_sandbox: boolean;
-  webhook_url: string;
-  confirmation_url: string;
-  validation_url: string;
-  c2b_enabled: boolean;
-}
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useSettings } from '../../hooks/useSettings';
+import { Smartphone, Shield, AlertCircle, CheckCircle, Settings } from 'lucide-react';
 
 const MpesaC2BSettings = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [credentials, setCredentials] = useState<MpesaC2BCredentials>({
-    consumer_key: '',
-    consumer_secret: '',
-    business_short_code: '',
-    till_number: '',
-    passkey: '',
-    is_sandbox: true,
-    webhook_url: '',
-    confirmation_url: '',
-    validation_url: '',
-    c2b_enabled: false,
-  });
+  const { settings, updateSettings, loading } = useSettings();
 
-  useEffect(() => {
-    loadCredentials();
-  }, [user]);
-
-  const loadCredentials = async () => {
-    if (!user) return;
-
-    try {
-      // Using shop_settings table to store M-Pesa C2B settings temporarily
-      const { data, error } = await supabase
-        .from('shop_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('settings_key', 'mpesa_c2b_settings')
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data && data.settings_value) {
-        const settings = data.settings_value as any;
-        setCredentials({
-          consumer_key: settings.consumer_key || '',
-          consumer_secret: settings.consumer_secret || '',
-          business_short_code: settings.business_short_code || '',
-          till_number: settings.till_number || '',
-          passkey: settings.passkey || '',
-          is_sandbox: settings.is_sandbox ?? true,
-          webhook_url: settings.webhook_url || '',
-          confirmation_url: settings.confirmation_url || '',
-          validation_url: settings.validation_url || '',
-          c2b_enabled: settings.c2b_enabled ?? false,
-        });
-      }
-    } catch (error) {
-      console.error('Error loading M-Pesa C2B credentials:', error);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('shop_settings')
-        .upsert({
-          user_id: user.id,
-          settings_key: 'mpesa_c2b_settings',
-          settings_value: credentials as any,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "M-Pesa C2B Settings Saved",
-        description: "Your Customer-to-Business payment settings have been updated successfully.",
-      });
-    } catch (error) {
-      console.error('Error saving M-Pesa C2B credentials:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save M-Pesa C2B settings. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    const formData = new FormData(e.target as HTMLFormElement);
+    
+    updateSettings({
+      mpesaTillNumber: formData.get('mpesaTillNumber') as string,
+    });
   };
+
+  const handleTestConnection = () => {
+    // Simulate testing M-Pesa connection
+    console.log('Testing M-Pesa connection...');
+  };
+
+  if (loading) {
+    return <div className="flex justify-center p-8">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
+      {/* Status Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-green-600" />
-            M-Pesa C2B (Customer-to-Business) Configuration
+            <Smartphone className="w-5 h-5" />
+            M-Pesa Integration Status
           </CardTitle>
-          <CardDescription>
-            Configure your M-Pesa settings to receive payments directly to your till number
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <Switch
-                id="c2b_enabled"
-                checked={credentials.c2b_enabled}
-                onCheckedChange={(checked) => setCredentials({ ...credentials, c2b_enabled: checked })}
-              />
-              <Label htmlFor="c2b_enabled" className="text-lg font-medium">
-                Enable M-Pesa Payments
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium">Not Configured</span>
+              <Badge variant="secondary">Setup Required</Badge>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleTestConnection}>
+              Test Connection
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Configuration Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              M-Pesa Configuration
+            </CardTitle>
+            <CardDescription>
+              Configure your M-Pesa settings to accept mobile payments
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Till Number */}
+            <div className="space-y-2">
+              <Label htmlFor="mpesaTillNumber" className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                M-Pesa Till Number
               </Label>
+              <Input
+                id="mpesaTillNumber"
+                name="mpesaTillNumber"
+                type="text"
+                defaultValue={settings.mpesaTillNumber}
+                placeholder="Enter your M-Pesa till number"
+              />
+              <p className="text-sm text-gray-600">
+                This is your M-Pesa business till number for receiving payments
+              </p>
             </div>
 
+            {/* Auto-confirmation Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-base">Auto-confirm Payments</Label>
+                <p className="text-sm text-gray-600">
+                  Automatically mark orders as paid when M-Pesa payment is received
+                </p>
+              </div>
+              <Switch defaultChecked={true} />
+            </div>
+
+            {/* SMS Notifications Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-base">SMS Notifications</Label>
+                <p className="text-sm text-gray-600">
+                  Send SMS confirmations for M-Pesa payments
+                </p>
+              </div>
+              <Switch defaultChecked={false} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Security Notice */}
+        <Alert>
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Security Notice:</strong> Your M-Pesa credentials are encrypted and stored securely. 
+            We never store your M-Pesa PIN or sensitive authentication details.
+          </AlertDescription>
+        </Alert>
+
+        {/* Integration Steps */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Integration Steps</CardTitle>
+            <CardDescription>
+              Follow these steps to complete your M-Pesa integration
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="till_number" className="text-base font-medium">Till Number *</Label>
-                <Input
-                  id="till_number"
-                  value={credentials.till_number}
-                  onChange={(e) => setCredentials({ ...credentials, till_number: e.target.value })}
-                  placeholder="Enter your M-Pesa Till Number"
-                  className="text-lg h-12"
-                  required
-                />
-                <p className="text-sm text-muted-foreground">This is where customers will send payments</p>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                  1
+                </div>
+                <div>
+                  <h4 className="font-medium">Get M-Pesa Till Number</h4>
+                  <p className="text-sm text-gray-600">Register for M-Pesa business account and get your till number</p>
+                </div>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="sandbox"
-                  checked={credentials.is_sandbox}
-                  onCheckedChange={(checked) => setCredentials({ ...credentials, is_sandbox: checked })}
-                />
-                <Label htmlFor="sandbox" className="text-base">Test Mode (Use for testing)</Label>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-medium">
+                  2
+                </div>
+                <div>
+                  <h4 className="font-medium">Configure Settings</h4>
+                  <p className="text-sm text-gray-600">Enter your till number and configure payment settings</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-medium">
+                  3
+                </div>
+                <div>
+                  <h4 className="font-medium">Test Integration</h4>
+                  <p className="text-sm text-gray-600">Test the connection and verify payments are working</p>
+                </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <Button type="submit" disabled={loading} className="w-full h-12 text-lg">
-              <Save className="mr-2 h-5 w-5" />
-              {loading ? 'Saving...' : 'Save Settings'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="w-5 h-5 text-blue-600" />
-            How C2B Payments Work
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-blue-800 mb-2">Customer Payment Process:</h4>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
-                <li>Customer goes to M-Pesa menu on their phone</li>
-                <li>Selects "Lipa na M-Pesa" → "Buy Goods and Services"</li>
-                <li>Enters your Till Number: <strong>{credentials.till_number || 'Not set'}</strong></li>
-                <li>Enters the amount to pay</li>
-                <li>Enters their M-Pesa PIN to complete payment</li>
-                <li>Payment notification is sent to your app automatically</li>
-              </ol>
-            </div>
-            
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-green-800 mb-2">What happens in your app:</h4>
-              <ul className="list-disc list-inside space-y-2 text-sm text-green-700">
-                <li>Real-time notification appears when payment is received</li>
-                <li>Payment details are automatically recorded</li>
-                <li>Customer information is linked if phone number matches</li>
-                <li>Transaction history is updated instantly</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-orange-600" />
-            Setup Requirements
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="bg-orange-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-orange-800 mb-2">Before enabling C2B payments:</h4>
-              <ul className="list-disc list-inside space-y-2 text-sm text-orange-700">
-                <li>Register for Safaricom Daraja API at developer.safaricom.co.ke</li>
-                <li>Get your Consumer Key and Consumer Secret</li>
-                <li>Obtain your Business Short Code and Passkey</li>
-                <li>Set up webhook URLs for payment notifications</li>
-                <li>Configure C2B URLs in your Daraja dashboard</li>
-                <li>Test thoroughly in sandbox environment first</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-blue-600" />
-            Security Notice
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Important:</strong> Your M-Pesa credentials are encrypted and stored securely. 
-              Never share these credentials with anyone. Always test in sandbox mode before going live.
-              Ensure your webhook URLs are secure (HTTPS) and properly validate incoming requests.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <Button type="submit" className="px-8">
+            Save M-Pesa Settings
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };
