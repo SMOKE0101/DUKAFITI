@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Package, CreditCard, Smartphone, Banknote } from 'lucide-react';
+import { X, Package, CreditCard, Smartphone, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../integrations/supabase/client';
@@ -20,6 +20,7 @@ interface Order {
   orderNumber: string;
   items: string;
   total: number;
+  expanded?: boolean;
 }
 
 interface Payment {
@@ -39,6 +40,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -73,23 +75,27 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         setOrders(ordersData);
       }
 
-      // Mock payment data (in a real app, fetch from payments table)
-      const mockPayments: Payment[] = [
-        {
-          id: '1',
-          date: new Date().toISOString(),
-          method: 'mpesa',
-          amount: 1500,
-          reference: 'ABC123XYZ'
-        },
-        {
-          id: '2',
-          date: new Date(Date.now() - 86400000).toISOString(),
-          method: 'cash',
-          amount: 2000
-        }
-      ];
-      setPayments(mockPayments);
+      // Fetch actual payment data from transactions table
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('customer_id', customer.id)
+        .eq('paid', true)
+        .order('paid_date', { ascending: false })
+        .limit(20);
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+      } else {
+        const paymentsFormatted = paymentsData?.map(transaction => ({
+          id: transaction.id,
+          date: transaction.paid_date || transaction.date || '',
+          method: 'cash' as const, // Default to cash, could be enhanced with payment method field
+          amount: transaction.total_amount,
+          reference: transaction.notes || undefined
+        })) || [];
+        setPayments(paymentsFormatted);
+      }
 
     } catch (error) {
       console.error('Error fetching customer history:', error);
@@ -107,6 +113,16 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     });
   };
 
+  const toggleOrderExpansion = (orderId: string) => {
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
+    }
+    setExpandedOrders(newExpanded);
+  };
+
   if (!customer) return null;
 
   return (
@@ -115,7 +131,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         className={`
           ${isMobile 
             ? 'fixed inset-x-0 bottom-0 top-[10%] rounded-t-2xl max-w-none w-full h-[90%] p-0'
-            : 'max-w-lg rounded-2xl p-0'
+            : 'max-w-2xl rounded-2xl p-0'
           } 
           bg-white dark:bg-gray-800 shadow-xl
         `}
@@ -143,37 +159,39 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
             </h2>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6">
+          {/* Clean two-tab header */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
             <button
               onClick={() => setActiveTab('orders')}
               className={`
-                flex-1 px-4 py-2 rounded-full text-sm font-medium transition-all duration-150
+                flex-1 px-6 py-3 text-sm font-medium transition-all duration-200 relative
                 ${activeTab === 'orders'
-                  ? 'bg-purple-600 text-white'
-                  : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                  ? 'text-purple-600 dark:text-purple-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }
               `}
-              role="tab"
-              aria-selected={activeTab === 'orders'}
             >
               <Package className="w-4 h-4 inline mr-2" />
-              Orders
+              Orders ({orders.length})
+              {activeTab === 'orders' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 dark:bg-purple-400" />
+              )}
             </button>
             <button
               onClick={() => setActiveTab('payments')}
               className={`
-                flex-1 px-4 py-2 rounded-full text-sm font-medium transition-all duration-150
+                flex-1 px-6 py-3 text-sm font-medium transition-all duration-200 relative
                 ${activeTab === 'payments'
-                  ? 'bg-purple-600 text-white'
-                  : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                  ? 'text-purple-600 dark:text-purple-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }
               `}
-              role="tab"
-              aria-selected={activeTab === 'payments'}
             >
               <CreditCard className="w-4 h-4 inline mr-2" />
-              Payments
+              Payments ({payments.length})
+              {activeTab === 'payments' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 dark:bg-purple-400" />
+              )}
             </button>
           </div>
 
@@ -181,11 +199,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
           <div className="flex-1 overflow-hidden">
             {/* Orders Panel */}
             {activeTab === 'orders' && (
-              <div 
-                className="h-full overflow-y-auto fade-in"
-                role="tabpanel"
-                aria-labelledby="orders-tab"
-              >
+              <div className="h-full overflow-y-auto">
                 {loading ? (
                   <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -200,27 +214,45 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                     ))}
                   </div>
                 ) : orders.length > 0 ? (
-                  <div className="space-y-4">
-                    {orders.map((order, index) => (
+                  <div className="space-y-3">
+                    {orders.map((order) => (
                       <div 
                         key={order.id} 
-                        className="pb-4 border-b border-gray-100 last:border-b-0 animate-fade-in"
-                        style={{ animationDelay: `${index * 50}ms` }}
+                        className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-sm transition-shadow"
                       >
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="text-sm text-gray-500">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
                             {formatDate(order.date)}
                           </span>
-                          <span className="font-semibold">
+                          <span className="font-medium text-sm">
                             {order.orderNumber}
                           </span>
                           <span className="font-semibold text-gray-900 dark:text-gray-100">
                             {formatCurrency(order.total)}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {order.items}
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-600 dark:text-gray-300 flex-1">
+                            {order.items}
+                          </div>
+                          <button
+                            onClick={() => toggleOrderExpansion(order.id)}
+                            className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          >
+                            {expandedOrders.has(order.id) ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
+                        {expandedOrders.has(order.id) && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <div className="text-sm text-gray-600 dark:text-gray-300">
+                              <strong>Items:</strong> {order.items}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -235,11 +267,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 
             {/* Payments Panel */}
             {activeTab === 'payments' && (
-              <div 
-                className="h-full overflow-y-auto fade-in"
-                role="tabpanel"
-                aria-labelledby="payments-tab"
-              >
+              <div className="h-full overflow-y-auto">
                 {loading ? (
                   <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -254,15 +282,14 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                     ))}
                   </div>
                 ) : payments.length > 0 ? (
-                  <div className="space-y-4">
-                    {payments.map((payment, index) => (
+                  <div className="space-y-3">
+                    {payments.map((payment) => (
                       <div 
                         key={payment.id} 
-                        className="pb-4 border-b border-gray-100 last:border-b-0 animate-fade-in"
-                        style={{ animationDelay: `${index * 50}ms` }}
+                        className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-sm transition-shadow"
                       >
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="text-sm text-gray-500">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
                             {formatDate(payment.date)}
                           </span>
                           <div className="flex items-center gap-2">
@@ -275,7 +302,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                               {payment.method === 'mpesa' ? 'M-Pesa' : 'Cash'}
                             </span>
                           </div>
-                          <span className="font-semibold text-green-700">
+                          <span className="font-semibold text-green-700 dark:text-green-400">
                             {formatCurrency(payment.amount)}
                           </span>
                         </div>

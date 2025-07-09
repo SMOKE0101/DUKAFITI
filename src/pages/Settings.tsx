@@ -12,15 +12,15 @@ const Settings = () => {
 
   const settingsTabs = [
     { id: 'profile', label: 'Shop Profile', icon: Store, component: ShopProfileSettings },
-    { id: 'mpesa', label: 'M-Pesa Setup', icon: Smartphone, component: MpesaC2BSettings },
     { id: 'appearance', label: 'Display', icon: Palette, component: AppearanceSettings },
+    { id: 'mpesa', label: 'M-Pesa Setup', icon: Smartphone, component: MpesaC2BSettings },
   ];
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">DukaFiti Settings</h1>
-        <p className="text-gray-600">Manage your shop preferences and configuration</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">DukaFiti Settings</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage your shop preferences and configuration</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -51,7 +51,9 @@ const Settings = () => {
                     {tab.label} Settings
                   </CardTitle>
                   <CardDescription>
-                    Configure your {tab.label.toLowerCase()} preferences and options
+                    {tab.id === 'profile' && 'Configure your shop information and contact details'}
+                    {tab.id === 'appearance' && 'Customize your interface theme and appearance'}
+                    {tab.id === 'mpesa' && 'Set up M-Pesa payment integration (Coming Soon)'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
