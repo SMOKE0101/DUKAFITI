@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +80,6 @@ const CustomersPage = () => {
       sale.timestamp && new Date(sale.timestamp) > twentyFourHoursAgo
     ).length;
     
-    // TODO: Add payments/transactions from a payments table when available
     const recentActivity = recentSales;
     
     return {
@@ -297,7 +295,7 @@ const CustomersPage = () => {
           </Button>
         </div>
 
-        {/* Refined Summary Cards with Real-time Updates */}
+        {/* Summary Cards with Real-time Updates */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((card) => (
             <Card 
@@ -394,7 +392,6 @@ const CustomersPage = () => {
         {/* Customer List */}
         <div className="space-y-4">
           {loading ? (
-            // Loading skeletons
             Array.from({ length: 5 }).map((_, i) => (
               <Card key={i} className="rounded-2xl">
                 <CardContent className="p-6">
