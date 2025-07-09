@@ -36,137 +36,91 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
   });
 
   const [isUnspecifiedQuantity, setIsUnspecifiedQuantity] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const { toast } = useToast();
 
   const generateCode = () => {
     if (!formData.name.trim()) {
-      setErrors(prev => ({ ...prev, code: 'Enter product name first' }));
+      toast({
+        title: "Enter Product Name",
+        description: "Please enter the product name first to generate a code.",
+        variant: "destructive",
+      });
       return;
     }
 
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     setFormData(prev => ({ ...prev, code }));
-    setErrors(prev => ({ ...prev, code: '' }));
-  };
-
-  const validateField = (name: string, value: string) => {
-    const newErrors = { ...errors };
-
-    switch (name) {
-      case 'name':
-        if (!value.trim()) {
-          newErrors.name = 'Product name is required';
-        } else {
-          delete newErrors.name;
-        }
-        break;
-      case 'code':
-        if (!value.trim()) {
-          newErrors.code = 'Product code is required';
-        } else {
-          delete newErrors.code;
-        }
-        break;
-      case 'costPrice':
-        if (!value || parseFloat(value) <= 0) {
-          newErrors.costPrice = 'Valid buying price is required';
-        } else {
-          delete newErrors.costPrice;
-          // Check selling price relationship
-          if (formData.sellingPrice && parseFloat(formData.sellingPrice) < parseFloat(value)) {
-            newErrors.sellingPrice = 'Selling price must be ≥ buying price';
-          } else if (formData.sellingPrice) {
-            delete newErrors.sellingPrice;
-          }
-        }
-        break;
-      case 'sellingPrice':
-        if (!value || parseFloat(value) <= 0) {
-          newErrors.sellingPrice = 'Valid selling price is required';
-        } else if (formData.costPrice && parseFloat(value) < parseFloat(formData.costPrice)) {
-          newErrors.sellingPrice = 'Selling price must be ≥ buying price';
-        } else {
-          delete newErrors.sellingPrice;
-        }
-        break;
-      case 'lowStockThreshold':
-        if (!isUnspecifiedQuantity && (!value || parseInt(value) < 0)) {
-          newErrors.lowStockThreshold = 'Valid threshold is required';
-        } else {
-          delete newErrors.lowStockThreshold;
-        }
-        break;
-      case 'category':
-        if (!value) {
-          newErrors.category = 'Category is required';
-        } else {
-          delete newErrors.category;
-        }
-        break;
-    }
-
-    setErrors(newErrors);
   };
 
   const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
-    validateField(name, value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Validate all required fields
-    const fieldsToValidate = ['name', 'code', 'costPrice', 'sellingPrice', 'category'];
-    if (!isUnspecifiedQuantity) {
-      fieldsToValidate.push('lowStockThreshold');
-    }
-
-    // Run validation on all fields
-    fieldsToValidate.forEach(field => {
-      validateField(field, formData[field as keyof typeof formData]);
-    });
-
-    // Check for validation errors
-    const currentErrors = { ...errors };
-    let hasValidationErrors = false;
-
-    // Re-validate required fields to catch any missed errors
+    // Validate required fields
     if (!formData.name.trim()) {
-      currentErrors.name = 'Product name is required';
-      hasValidationErrors = true;
-    }
-    if (!formData.code.trim()) {
-      currentErrors.code = 'Product code is required';
-      hasValidationErrors = true;
-    }
-    if (!formData.costPrice || parseFloat(formData.costPrice) <= 0) {
-      currentErrors.costPrice = 'Valid buying price is required';
-      hasValidationErrors = true;
-    }
-    if (!formData.sellingPrice || parseFloat(formData.sellingPrice) <= 0) {
-      currentErrors.sellingPrice = 'Valid selling price is required';
-      hasValidationErrors = true;
-    }
-    if (!formData.category) {
-      currentErrors.category = 'Category is required';
-      hasValidationErrors = true;
-    }
-    if (!isUnspecifiedQuantity && (!formData.lowStockThreshold || parseInt(formData.lowStockThreshold) < 0)) {
-      currentErrors.lowStockThreshold = 'Valid threshold is required';
-      hasValidationErrors = true;
-    }
-
-    setErrors(currentErrors);
-
-    if (hasValidationErrors) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields correctly.",
+        title: "Product Name Required",
+        description: "Please enter a product name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.code.trim()) {
+      toast({
+        title: "Product Code Required",
+        description: "Please enter or generate a product code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.costPrice || parseFloat(formData.costPrice) <= 0) {
+      toast({
+        title: "Valid Buying Price Required",
+        description: "Please enter a valid buying price greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.sellingPrice || parseFloat(formData.sellingPrice) <= 0) {
+      toast({
+        title: "Valid Selling Price Required",
+        description: "Please enter a valid selling price greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (parseFloat(formData.sellingPrice) < parseFloat(formData.costPrice)) {
+      toast({
+        title: "Invalid Price Range",
+        description: "Selling price must be greater than or equal to buying price.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.category) {
+      toast({
+        title: "Category Required",
+        description: "Please select a product category.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isUnspecifiedQuantity && (!formData.lowStockThreshold || parseInt(formData.lowStockThreshold) < 0)) {
+      toast({
+        title: "Valid Threshold Required",
+        description: "Please enter a valid low stock threshold.",
         variant: "destructive",
       });
       return;
@@ -186,10 +140,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
 
       await onSave(productData);
       
-      const quantityText = isUnspecifiedQuantity ? '(Bulk / Variable)' : `, Qty ${formData.currentStock}`;
+      const quantityText = isUnspecifiedQuantity ? ' (Bulk/Variable)' : `, Qty: ${formData.currentStock}`;
       toast({
-        title: "Product Added",
-        description: `${formData.name}${quantityText}`,
+        title: "Product Added Successfully",
+        description: `${formData.name}${quantityText} has been added to inventory.`,
         duration: 4000,
       });
       
@@ -197,7 +151,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     } catch (error) {
       console.error('Failed to save product:', error);
       toast({
-        title: "Error",
+        title: "Error Saving Product",
         description: "Failed to save product. Please try again.",
         variant: "destructive",
       });
@@ -219,26 +173,28 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
       currentStock: '0'
     });
     setIsUnspecifiedQuantity(false);
-    setErrors({});
     onClose();
   };
 
   // Check if form is valid for enabling save button
   const isFormValid = () => {
-    // Check required fields
-    const requiredFieldsValid = formData.name.trim() && 
-                               formData.code.trim() && 
-                               formData.costPrice && parseFloat(formData.costPrice) > 0 &&
-                               formData.sellingPrice && parseFloat(formData.sellingPrice) > 0 &&
-                               formData.category;
+    // Required fields validation
+    const hasRequiredFields = formData.name.trim() && 
+                             formData.code.trim() && 
+                             formData.costPrice && 
+                             formData.sellingPrice && 
+                             formData.category;
 
-    // Check threshold if not unspecified quantity
-    const thresholdValid = isUnspecifiedQuantity || (formData.lowStockThreshold && parseInt(formData.lowStockThreshold) >= 0);
+    // Price validation
+    const hasValidPrices = parseFloat(formData.costPrice) > 0 && 
+                          parseFloat(formData.sellingPrice) > 0 &&
+                          parseFloat(formData.sellingPrice) >= parseFloat(formData.costPrice);
 
-    // Check no validation errors exist
-    const noErrors = Object.keys(errors).length === 0 || !Object.values(errors).some(error => error);
+    // Threshold validation (only if not unspecified quantity)
+    const hasValidThreshold = isUnspecifiedQuantity || 
+                             (formData.lowStockThreshold && parseInt(formData.lowStockThreshold) >= 0);
 
-    return requiredFieldsValid && thresholdValid && noErrors;
+    return hasRequiredFields && hasValidPrices && hasValidThreshold;
   };
 
   return (
@@ -263,11 +219,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={`h-10 ${errors.name ? 'border-red-500' : ''}`}
+                  className="h-10"
                   placeholder="Enter product name"
                   disabled={loading}
                 />
-                {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
               </div>
 
               {/* Product Code */}
@@ -280,7 +235,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                     id="code"
                     value={formData.code}
                     onChange={(e) => handleInputChange('code', e.target.value)}
-                    className={`h-10 font-mono ${errors.code ? 'border-red-500' : ''}`}
+                    className="h-10 font-mono"
                     placeholder="Enter code"
                     disabled={loading}
                   />
@@ -295,7 +250,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                     <Shuffle className="w-4 h-4" />
                   </Button>
                 </div>
-                {errors.code && <p className="text-red-500 text-xs">{errors.code}</p>}
               </div>
 
               {/* Category */}
@@ -308,7 +262,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                   onValueChange={(value) => handleInputChange('category', value)}
                   disabled={loading}
                 >
-                  <SelectTrigger className={`h-10 ${errors.category ? 'border-red-500' : ''}`}>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -319,7 +273,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.category && <p className="text-red-500 text-xs">{errors.category}</p>}
               </div>
             </div>
 
@@ -338,9 +291,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                       id="costPrice"
                       type="number"
                       step="0.01"
+                      min="0"
                       value={formData.costPrice}
                       onChange={(e) => handleInputChange('costPrice', e.target.value)}
-                      className={`h-10 pl-12 ${errors.costPrice ? 'border-red-500' : ''}`}
+                      className="h-10 pl-12"
                       placeholder="0.00"
                       disabled={loading}
                     />
@@ -348,7 +302,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                       KES
                     </span>
                   </div>
-                  {errors.costPrice && <p className="text-red-500 text-xs">{errors.costPrice}</p>}
                 </div>
 
                 {/* Selling Price */}
@@ -361,9 +314,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                       id="sellingPrice"
                       type="number"
                       step="0.01"
+                      min="0"
                       value={formData.sellingPrice}
                       onChange={(e) => handleInputChange('sellingPrice', e.target.value)}
-                      className={`h-10 pl-12 ${errors.sellingPrice ? 'border-red-500' : ''}`}
+                      className="h-10 pl-12"
                       placeholder="0.00"
                       disabled={loading}
                     />
@@ -371,7 +325,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                       KES
                     </span>
                   </div>
-                  {errors.sellingPrice && <p className="text-red-500 text-xs">{errors.sellingPrice}</p>}
                 </div>
               </div>
             </div>
@@ -389,14 +342,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                   <Input
                     id="lowStockThreshold"
                     type="number"
+                    min="0"
                     value={formData.lowStockThreshold}
                     onChange={(e) => handleInputChange('lowStockThreshold', e.target.value)}
-                    className={`h-10 ${errors.lowStockThreshold ? 'border-red-500' : ''} ${isUnspecifiedQuantity ? 'opacity-50' : ''}`}
+                    className={`h-10 ${isUnspecifiedQuantity ? 'opacity-50' : ''}`}
                     placeholder="10"
                     disabled={loading || isUnspecifiedQuantity}
                   />
                   <p className="text-xs text-muted-foreground">Alert when stock ≤ this number</p>
-                  {errors.lowStockThreshold && <p className="text-red-500 text-xs">{errors.lowStockThreshold}</p>}
                 </div>
 
                 {/* Initial Stock */}
@@ -414,6 +367,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                     <Input
                       id="currentStock"
                       type="number"
+                      min="0"
                       value={formData.currentStock}
                       onChange={(e) => handleInputChange('currentStock', e.target.value)}
                       className="h-10"

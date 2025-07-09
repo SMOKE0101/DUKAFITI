@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Customer, Transaction, Sale, Product } from '../types';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
@@ -7,33 +6,24 @@ import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseTransactions } from '../hooks/useSupabaseTransactions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
-  Menu, 
-  Search, 
-  Bell, 
-  User, 
   DollarSign, 
   Users, 
   Package, 
-  AlertTriangle,
+  Clock,
   ShoppingCart,
   UserPlus,
   Upload,
   RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  X
+  AlertTriangle
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import DashboardTopbar from './DashboardTopbar';
 
 const Dashboard = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({
     totalSalesToday: 0,
     activeCustomers: 0,
@@ -121,62 +111,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Page Header */}
-      <header className="sticky top-0 z-50 h-16 bg-white dark:bg-gray-900 border-b shadow-sm">
-        <div className="flex items-center justify-between px-6 h-full">
-          {/* Left */}
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm">
-              <Menu className="w-5 h-5" />
-            </Button>
-            <div className="font-bold text-xl text-primary">DukaFiti</div>
-          </div>
-
-          {/* Center - Smart Search */}
-          <div className="flex-1 max-w-md mx-8">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products, customers…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-10"
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                  onClick={() => setSearchTerm('')}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Right */}
-          <div className="flex items-center gap-3">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative">
-                    <Bell className="w-5 h-5" />
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
-                      3
-                    </Badge>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Notifications</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <Button variant="ghost" size="sm">
-              <User className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Dashboard Topbar */}
+      <DashboardTopbar />
 
       <div className="p-6 space-y-6">
         {/* KPI Cards Row */}
