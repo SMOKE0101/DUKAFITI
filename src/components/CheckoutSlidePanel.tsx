@@ -45,29 +45,29 @@ const CheckoutSlidePanel = ({
       )}
       
       {/* Slide Panel */}
-      <div className={`fixed top-0 right-0 h-full w-96 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
+      <div className={`fixed top-0 right-0 h-full w-full sm:w-96 max-w-md bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-          <h2 className="text-lg font-semibold">Checkout</h2>
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+          <h2 className="text-base sm:text-lg font-semibold">Checkout</h2>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={onClose}
-            className="text-white hover:bg-white/20"
+            className="text-white hover:bg-white/20 h-8 w-8 p-0"
           >
             <X className="w-4 h-4" />
           </Button>
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-6 h-full overflow-y-auto pb-20">
+        <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 h-full overflow-y-auto pb-20">
           {/* Cart Total Display */}
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border">
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 sm:p-4 rounded-lg border">
             <div className="text-center">
-              <p className="text-sm text-gray-600">Total Amount</p>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(cartTotal)}</p>
+              <p className="text-xs sm:text-sm text-gray-600">Total Amount</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(cartTotal)}</p>
             </div>
           </div>
 

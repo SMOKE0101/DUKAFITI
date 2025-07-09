@@ -128,28 +128,28 @@ const AuthForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-3 sm:p-4">
+      <div className="w-full max-w-[400px] mx-auto">
         <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
-          <CardHeader className="text-center pb-2">
+          <CardHeader className="text-center pb-4 px-4 sm:px-6">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg">
-                <Store className="h-8 w-8 text-white" />
+              <div className="p-2.5 sm:p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg">
+                <Store className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   DukaFiti
                 </CardTitle>
-                <p className="text-sm text-gray-600 -mt-1">Shop Management System</p>
+                <p className="text-xs sm:text-sm text-gray-600 -mt-1">Shop Management System</p>
               </div>
             </div>
-            <p className="text-gray-600 text-sm">Access your shop from anywhere</p>
+            <p className="text-gray-600 text-xs sm:text-sm">Access your shop from anywhere</p>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="text-sm font-medium">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" className="text-sm font-medium">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
+                <TabsTrigger value="signin" className="text-xs sm:text-sm font-medium py-2">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="text-xs sm:text-sm font-medium py-2">Sign Up</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signin">

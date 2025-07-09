@@ -71,20 +71,20 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">
+      <DialogContent className="w-[95vw] max-w-[500px] max-h-[95vh] mx-auto my-auto overflow-y-auto rounded-lg">
+        <DialogHeader className="text-center space-y-3 pb-4">
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-foreground">
             {customer ? 'Edit Customer' : 'Add New Customer'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-muted-foreground">
             {customer ? 'Update customer information below.' : 'Fill in the customer details to add them to your database.'}
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="name" className="text-base font-semibold text-gray-900 mb-2 block">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6 px-1">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-medium text-foreground">
                 Full Name *
               </Label>
               <Input
@@ -92,13 +92,13 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter customer name"
-                className="h-12 text-lg border-2 border-gray-300 focus:border-blue-500 bg-white"
+                className="h-11 text-base focus-visible:ring-2 focus-visible:ring-primary"
                 required
               />
             </div>
             
-            <div>
-              <Label htmlFor="phone" className="text-base font-semibold text-gray-900 mb-2 block">
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium text-foreground">
                 Phone Number *
               </Label>
               <Input
@@ -106,13 +106,13 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="e.g. 0712345678 or +254712345678"
-                className="h-12 text-lg border-2 border-gray-300 focus:border-blue-500 bg-white"
+                className="h-11 text-base focus-visible:ring-2 focus-visible:ring-primary"
                 required
               />
             </div>
             
-            <div>
-              <Label htmlFor="email" className="text-base font-semibold text-gray-900 mb-2 block">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">
                 Email Address (Optional)
               </Label>
               <Input
@@ -121,12 +121,12 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="customer@example.com"
-                className="h-12 text-lg border-2 border-gray-300 focus:border-blue-500 bg-white"
+                className="h-11 text-base focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
             
-            <div>
-              <Label htmlFor="address" className="text-base font-semibold text-gray-900 mb-2 block">
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-sm font-medium text-foreground">
                 Address (Optional)
               </Label>
               <Textarea
@@ -134,16 +134,16 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="Enter customer address"
-                className="min-h-[100px] text-lg border-2 border-gray-300 focus:border-blue-500 bg-white resize-none"
-                rows={4}
+                className="min-h-[80px] text-base focus-visible:ring-2 focus-visible:ring-primary resize-none"
+                rows={3}
               />
             </div>
           </div>
           
-          <div className="flex flex-col gap-4 pt-6 border-t border-gray-200">
+          <div className="flex flex-col gap-3 pt-6 border-t border-border px-1">
             <Button 
               type="submit" 
-              className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full h-11 text-base font-medium"
             >
               {customer ? 'Update Customer' : 'Add Customer'}
             </Button>
@@ -151,7 +151,7 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
               type="button" 
               variant="outline" 
               onClick={onClose} 
-              className="w-full h-12 text-lg font-semibold border-2 border-gray-300 hover:bg-gray-50"
+              className="w-full h-11 text-base font-medium"
             >
               Cancel
             </Button>
