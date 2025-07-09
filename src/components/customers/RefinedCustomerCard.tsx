@@ -48,7 +48,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
   const balanceStatus = getBalanceStatus();
 
   return (
-    <Card className={`bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-200 ${
+    <Card className={`bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-200 relative ${
       isUpdating ? 'opacity-75' : ''
     }`}>
       <CardContent className="p-0">
@@ -61,8 +61,8 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
 
         {/* Top Row */}
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <Avatar className={`w-12 h-12 ${balanceStatus.avatarColor}`}>
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <Avatar className={`w-12 h-12 ${balanceStatus.avatarColor} flex-shrink-0`}>
               <AvatarFallback className="font-semibold">
                 {getInitials(customer.name)}
               </AvatarFallback>
@@ -91,10 +91,12 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
             </div>
           </div>
 
-          {/* Balance Badge */}
-          <Badge className={`px-3 py-1 rounded-full text-sm ${balanceStatus.color} whitespace-nowrap`}>
-            {formatCurrency(customer.outstandingDebt)}
-          </Badge>
+          {/* Balance Badge - Fixed positioning */}
+          <div className="flex-shrink-0 ml-2">
+            <Badge className={`px-3 py-1 rounded-full text-sm ${balanceStatus.color}`}>
+              {formatCurrency(customer.outstandingDebt)}
+            </Badge>
+          </div>
         </div>
 
         {/* Action Row - Icon Only Buttons */}

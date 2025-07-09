@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { X, Package, CreditCard } from 'lucide-react';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
+import { supabase } from '../../integrations/supabase/client';
 
 interface CustomerHistoryModalProps {
   isOpen: boolean;
@@ -37,56 +38,56 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   customer
 }) => {
   const [activeTab, setActiveTab] = useState('orders');
+  const [realOrders, setRealOrders] = useState<Order[]>([]);
+  const [realPayments, setRealPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Mock data for sales orders only - filtered to show real orders
-  const mockOrders: Order[] = [
-    {
-      id: '1',
-      date: '2024-01-15',
-      orderNumber: 'ORD-001',
-      items: ['Rice 2kg', 'Sugar 1kg', 'Oil 500ml'],
-      total: 1250
-    },
-    {
-      id: '2',
-      date: '2024-01-10',
-      orderNumber: 'ORD-002',
-      items: ['Bread', 'Milk 1L'],
-      total: 450
-    },
-    {
-      id: '3',
-      date: '2024-01-05',
-      orderNumber: 'ORD-003',
-      items: ['Maize flour 2kg', 'Beans 1kg', 'Tomatoes'],
-      total: 890
+  useEffect(() => {
+    if (isOpen && customer) {
+      fetchRealData();
     }
-  ];
+  }, [isOpen, customer]);
 
-  const mockPayments: Payment[] = [
-    {
-      id: '1',
-      date: '2024-01-14',
-      method: 'M-Pesa',
-      amount: 1000,
-      reference: 'NLJ7RT61SX'
-    },
-    {
-      id: '2',
-      date: '2024-01-08',
-      method: 'Cash',
-      amount: 500
-    },
-    {
-      id: '3',
-      date: '2024-01-03',
-      method: 'M-Pesa',
-      amount: 750,
-      reference: 'MLK5QT82PY'
+  const fetchRealData = async () => {
+    if (!customer) return;
+    
+    setLoading(true);
+    try {
+      // Fetch real sales data for this customer
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('customer_id', customer.id)
+        .order('timestamp', { ascending: false })
+        .limit(20);
+
+      if (salesError) {
+        console.error('Error fetching sales:', salesError);
+      } else {
+        // Transform sales data to orders format
+        const orders = salesData?.map((sale, index) => ({
+          id: sale.id,
+          date: sale.timestamp || sale.created_at || '',
+          orderNumber: `ORD-${String(index + 1).padStart(3, '0')}`,
+          items: [sale.product_name],
+          total: sale.total_amount
+        })) || [];
+        setRealOrders(orders);
+      }
+
+      // For now, we don't have a separate payments table, so we'll show empty
+      // In a real app, you'd fetch from a payments/transactions table
+      setRealPayments([]);
+
+    } catch (error) {
+      console.error('Error fetching customer history:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'Unknown date';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -97,6 +98,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   const getPaymentMethodColor = (method: string) => {
     switch (method.toLowerCase()) {
       case 'm-pesa':
+      case 'mpesa':
         return 'bg-green-100 text-green-800';
       case 'cash':
         return 'bg-blue-100 text-blue-800';
@@ -141,8 +143,13 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 
           <TabsContent value="orders" className="mt-6 space-y-3">
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {mockOrders.length > 0 ? (
-                mockOrders.map((order) => (
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">Loading orders...</p>
+                </div>
+              ) : realOrders.length > 0 ? (
+                realOrders.map((order) => (
                   <Card key={order.id} className="p-4 transition-all duration-150 hover:shadow-md">
                     <CardContent className="p-0">
                       <div className="flex justify-between items-start mb-2">
@@ -171,8 +178,13 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 
           <TabsContent value="payments" className="mt-6 space-y-3">
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {mockPayments.length > 0 ? (
-                mockPayments.map((payment) => (
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">Loading payments...</p>
+                </div>
+              ) : realPayments.length > 0 ? (
+                realPayments.map((payment) => (
                   <Card key={payment.id} className="p-4 transition-all duration-150 hover:shadow-md">
                     <CardContent className="p-0">
                       <div className="flex justify-between items-start mb-2">

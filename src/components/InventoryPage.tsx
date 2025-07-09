@@ -175,7 +175,12 @@ const InventoryPage = () => {
       </div>
 
       {/* Premium Stats Cards */}
-      <PremiumStatsCards stats={stats} />
+      <PremiumStatsCards 
+        totalProducts={stats.totalProducts}
+        totalValue={stats.totalValue}
+        lowStockCount={stats.lowStockCount}
+        outOfStockCount={stats.outOfStockCount}
+      />
 
       {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -262,7 +267,7 @@ const InventoryPage = () => {
       <AddProductModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSubmit={handleAddProduct}
+        onSave={handleAddProduct}
         categories={categories}
       />
 
@@ -273,7 +278,7 @@ const InventoryPage = () => {
           setSelectedProduct(null);
         }}
         product={selectedProduct}
-        onSubmit={handleUpdateProduct}
+        onSave={handleUpdateProduct}
         categories={categories}
       />
 
@@ -284,7 +289,7 @@ const InventoryPage = () => {
           setSelectedProduct(null);
         }}
         onConfirm={confirmDeleteProduct}
-        product={selectedProduct}
+        productName={selectedProduct?.name || ''}
       />
 
       <RestockModal
@@ -293,7 +298,7 @@ const InventoryPage = () => {
           setShowRestockModal(false);
           setSelectedProduct(null);
         }}
-        onSubmit={handleRestock}
+        onSave={handleRestock}
         product={selectedProduct}
       />
     </div>
