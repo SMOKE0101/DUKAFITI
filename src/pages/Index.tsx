@@ -5,8 +5,8 @@ import AppLayout from '@/components/layout/AppLayout';
 import Navigation from '../components/Navigation';
 import Dashboard from '../components/Dashboard';
 import SalesManagement from '../components/SalesManagement';
-import ProductManagement from '../components/ProductManagement';
-import CustomerManagement from '../components/CustomerManagement';
+import InventoryPage from '../components/InventoryPage';
+import CustomersPage from '../components/CustomersPage';
 import TransactionHistory from '../components/TransactionHistory';
 import Settings from './Settings';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -59,9 +59,9 @@ const Index = () => {
       case 'sales':
         return <SalesManagement />;
       case 'products':
-        return <ProductManagement />;
+        return <InventoryPage />;
       case 'customers':
-        return <CustomerManagement />;
+        return <CustomersPage />;
       case 'debts':
       case 'history':
         return <TransactionHistory />;
