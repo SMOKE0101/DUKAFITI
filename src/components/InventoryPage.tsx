@@ -22,7 +22,7 @@ const InventoryPage = () => {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
 
-  const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
+  const { products, loading, createProduct, updateProduct, deleteProduct, refetch } = useSupabaseProducts();
   const { toast } = useToast();
 
   // Get unique categories
@@ -57,6 +57,7 @@ const InventoryPage = () => {
   const lowStockCount = products.filter(product => product.currentStock <= product.lowStockThreshold).length;
 
   const handleEdit = (product: Product) => {
+    console.log('Edit button clicked for product:', product);
     setEditingProduct(product);
     setShowModal(true);
   };
@@ -77,6 +78,8 @@ const InventoryPage = () => {
       });
       setShowDeleteModal(false);
       setProductToDelete(null);
+      // Refetch data to update UI immediately
+      await refetch();
     } catch (error) {
       console.error('Error deleting product:', error);
     }
@@ -96,10 +99,32 @@ const InventoryPage = () => {
   };
 
   const handleSaveProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (editingProduct) {
-      await updateProduct(editingProduct.id, productData);
-    } else {
-      await createProduct(productData);
+    try {
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, productData);
+        toast({
+          title: "Product Updated",
+          description: `${productData.name} has been updated successfully.`,
+        });
+      } else {
+        await createProduct(productData);
+        toast({
+          title: "Product Created",
+          description: `${productData.name} has been added to your inventory.`,
+        });
+      }
+      
+      setShowModal(false);
+      setEditingProduct(null);
+      // Refetch data to update UI immediately
+      await refetch();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save product. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -168,6 +193,7 @@ const InventoryPage = () => {
         isOpen={showModal}
         onClose={handleCloseModal}
         onSave={handleSaveProduct}
+        editingProduct={editingProduct}
       />
 
       {/* Delete Confirmation Modal */}

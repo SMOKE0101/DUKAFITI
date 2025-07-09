@@ -1,272 +1,164 @@
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle } from 'lucide-react';
-import { Product } from '../../types';
 import { useToast } from '../../hooks/use-toast';
+import { Product } from '../../types';
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  onSave: (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  editingProduct?: Product | null;
 }
 
-const CATEGORIES = [
-  'Beverages',
-  'Grains', 
-  'Household',
-  'Snacks',
-  'Miscellaneous'
-];
-
-const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSave }) => {
+const AddProductModal: React.FC<AddProductModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave,
+  editingProduct 
+}) => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
-    code: '',
-    costPrice: '',
-    sellingPrice: '',
-    lowStockThreshold: '10',
     category: '',
-    currentStock: '0'
+    costPrice: 0,
+    sellingPrice: 0,
+    currentStock: 0,
+    lowStockThreshold: 10,
   });
 
-  const [isUnspecifiedQuantity, setIsUnspecifiedQuantity] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const { toast } = useToast();
-
-  const generateCode = () => {
-    if (!formData.name.trim()) {
-      toast({
-        title: "Enter Product Name",
-        description: "Please enter the product name first to generate a code.",
-        variant: "destructive",
+  // Pre-fill form when editing a product
+  useEffect(() => {
+    if (editingProduct) {
+      setFormData({
+        name: editingProduct.name,
+        category: editingProduct.category,
+        costPrice: editingProduct.costPrice,
+        sellingPrice: editingProduct.sellingPrice,
+        currentStock: editingProduct.currentStock,
+        lowStockThreshold: editingProduct.lowStockThreshold,
       });
-      return;
+    } else {
+      // Reset form for new product
+      setFormData({
+        name: '',
+        category: '',
+        costPrice: 0,
+        sellingPrice: 0,
+        currentStock: 0,
+        lowStockThreshold: 10,
+      });
     }
+  }, [editingProduct, isOpen]);
 
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setFormData(prev => ({ ...prev, code }));
-  };
-
-  const handleInputChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-
-    // Validate required fields
+    
     if (!formData.name.trim()) {
       toast({
-        title: "Product Name Required",
-        description: "Please enter a product name.",
+        title: "Validation Error",
+        description: "Product name is required",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.code.trim()) {
+    if (!formData.category.trim()) {
       toast({
-        title: "Product Code Required",
-        description: "Please enter or generate a product code.",
+        title: "Validation Error",
+        description: "Category is required",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.costPrice || parseFloat(formData.costPrice) <= 0) {
+    if (formData.costPrice < 0 || formData.sellingPrice < 0) {
       toast({
-        title: "Valid Buying Price Required",
-        description: "Please enter a valid buying price greater than 0.",
+        title: "Validation Error",
+        description: "Prices cannot be negative",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.sellingPrice || parseFloat(formData.sellingPrice) <= 0) {
+    if (formData.currentStock < 0) {
       toast({
-        title: "Valid Selling Price Required",
-        description: "Please enter a valid selling price greater than 0.",
+        title: "Validation Error",
+        description: "Stock cannot be negative",
         variant: "destructive",
       });
       return;
     }
-
-    if (parseFloat(formData.sellingPrice) < parseFloat(formData.costPrice)) {
-      toast({
-        title: "Invalid Price Range",
-        description: "Selling price must be greater than or equal to buying price.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.category) {
-      toast({
-        title: "Category Required",
-        description: "Please select a product category.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isUnspecifiedQuantity && (!formData.lowStockThreshold || parseInt(formData.lowStockThreshold) < 0)) {
-      toast({
-        title: "Valid Threshold Required",
-        description: "Please enter a valid low stock threshold.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const productData = {
-        name: formData.name.trim(),
-        category: formData.category,
-        costPrice: parseFloat(formData.costPrice),
-        sellingPrice: parseFloat(formData.sellingPrice),
-        currentStock: isUnspecifiedQuantity ? -1 : (parseInt(formData.currentStock) || 0),
-        lowStockThreshold: isUnspecifiedQuantity ? 0 : parseInt(formData.lowStockThreshold)
-      };
-
-      await onSave(productData);
-      
-      const quantityText = isUnspecifiedQuantity ? ' (Bulk/Variable)' : `, Qty: ${formData.currentStock}`;
-      toast({
-        title: "Product Added Successfully",
-        description: `${formData.name}${quantityText} has been added to inventory.`,
-        duration: 4000,
-      });
-      
-      handleClose();
-    } catch (error) {
-      console.error('Failed to save product:', error);
-      toast({
-        title: "Error Saving Product",
-        description: "Failed to save product. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClose = () => {
-    if (loading) return;
     
-    setFormData({
-      name: '',
-      code: '',
-      costPrice: '',
-      sellingPrice: '',
-      lowStockThreshold: '10',
-      category: '',
-      currentStock: '0'
-    });
-    setIsUnspecifiedQuantity(false);
-    onClose();
+    onSave(formData);
   };
 
-  // Check if form is valid for enabling save button
-  const isFormValid = () => {
-    // Required fields validation
-    const hasRequiredFields = formData.name.trim() && 
-                             formData.code.trim() && 
-                             formData.costPrice && 
-                             formData.sellingPrice && 
-                             formData.category;
-
-    // Price validation
-    const hasValidPrices = parseFloat(formData.costPrice) > 0 && 
-                          parseFloat(formData.sellingPrice) > 0 &&
-                          parseFloat(formData.sellingPrice) >= parseFloat(formData.costPrice);
-
-    // Threshold validation (only if not unspecified quantity)
-    const hasValidThreshold = isUnspecifiedQuantity || 
-                             (formData.lowStockThreshold && parseInt(formData.lowStockThreshold) >= 0);
-
-    return hasRequiredFields && hasValidPrices && hasValidThreshold;
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
+
+  const categories = [
+    'Electronics',
+    'Clothing',
+    'Food & Beverages',
+    'Health & Beauty',
+    'Home & Garden',
+    'Sports & Outdoors',
+    'Books & Media',
+    'Toys & Games',
+    'Automotive',
+    'Other'
+  ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg p-0">
-        <DialogHeader className="flex-shrink-0 p-6 border-b">
-          <DialogTitle className="text-xl font-semibold">
-            Add New Product
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg border-0 p-0">
+        <DialogHeader className="flex-shrink-0 text-center space-y-3 p-4 sm:p-6 border-b">
+          <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
+            {editingProduct ? 'Edit Product' : 'Add New Product'}
           </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {editingProduct ? 'Update product information' : 'Enter product details to add to your inventory'}
+          </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Product Name */}
-              <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-foreground">
                   Product Name *
                 </Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="h-10"
                   placeholder="Enter product name"
-                  disabled={loading}
+                  className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
+                  required
                 />
               </div>
-
-              {/* Product Code */}
+              
               <div className="space-y-2">
-                <Label htmlFor="code" className="text-sm font-medium">
-                  Product Code *
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="code"
-                    value={formData.code}
-                    onChange={(e) => handleInputChange('code', e.target.value)}
-                    className="h-10 font-mono"
-                    placeholder="Enter code"
-                    disabled={loading}
-                  />
-                  <Button
-                    type="button"
-                    onClick={generateCode}
-                    className="w-10 h-10 p-0"
-                    variant="outline"
-                    disabled={loading}
-                    title="Generate Code"
-                  >
-                    <Shuffle className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Category */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
+                <Label htmlFor="category" className="text-sm font-medium text-foreground">
                   Category *
                 </Label>
                 <Select 
                   value={formData.category} 
                   onValueChange={(value) => handleInputChange('category', value)}
-                  disabled={loading}
                 >
-                  <SelectTrigger className="h-10">
+                  <SelectTrigger className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map(category => (
+                    {categories.map(category => (
                       <SelectItem key={category} value={category}>
                         {category}
                       </SelectItem>
@@ -274,164 +166,124 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Pricing Section */}
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
-              <h3 className="text-sm font-medium uppercase text-gray-500 mb-2">Pricing</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Buying Price */}
                 <div className="space-y-2">
-                  <Label htmlFor="costPrice" className="text-sm font-medium">
-                    Buying Price *
+                  <Label htmlFor="costPrice" className="text-sm font-medium text-foreground">
+                    Cost Price (KES) *
                   </Label>
                   <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
+                      KES
+                    </span>
                     <Input
                       id="costPrice"
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.costPrice}
-                      onChange={(e) => handleInputChange('costPrice', e.target.value)}
-                      className="h-10 pl-12"
+                      onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
                       placeholder="0.00"
-                      disabled={loading}
+                      className="h-12 text-base pl-14 focus-visible:ring-2 focus-visible:ring-primary"
+                      required
                     />
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      KES
-                    </span>
                   </div>
                 </div>
-
-                {/* Selling Price */}
+                
                 <div className="space-y-2">
-                  <Label htmlFor="sellingPrice" className="text-sm font-medium">
-                    Selling Price *
+                  <Label htmlFor="sellingPrice" className="text-sm font-medium text-foreground">
+                    Selling Price (KES) *
                   </Label>
                   <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
+                      KES
+                    </span>
                     <Input
                       id="sellingPrice"
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.sellingPrice}
-                      onChange={(e) => handleInputChange('sellingPrice', e.target.value)}
-                      className="h-10 pl-12"
+                      onChange={(e) => handleInputChange('sellingPrice', parseFloat(e.target.value) || 0)}
                       placeholder="0.00"
-                      disabled={loading}
+                      className="h-12 text-base pl-14 focus-visible:ring-2 focus-visible:ring-primary"
+                      required
                     />
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      KES
-                    </span>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Inventory Section */}
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
-              <h3 className="text-sm font-medium uppercase text-gray-500 mb-2">Inventory</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Low-Stock Threshold */}
                 <div className="space-y-2">
-                  <Label htmlFor="lowStockThreshold" className="text-sm font-medium">
-                    Low-Stock Threshold *
+                  <Label htmlFor="currentStock" className="text-sm font-medium text-foreground">
+                    Current Stock *
+                  </Label>
+                  <Input
+                    id="currentStock"
+                    type="number"
+                    min="0"
+                    value={formData.currentStock}
+                    onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                    className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="lowStockThreshold" className="text-sm font-medium text-foreground">
+                    Low Stock Alert
                   </Label>
                   <Input
                     id="lowStockThreshold"
                     type="number"
                     min="0"
                     value={formData.lowStockThreshold}
-                    onChange={(e) => handleInputChange('lowStockThreshold', e.target.value)}
-                    className={`h-10 ${isUnspecifiedQuantity ? 'opacity-50' : ''}`}
+                    onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 10)}
                     placeholder="10"
-                    disabled={loading || isUnspecifiedQuantity}
+                    className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
                   />
-                  <p className="text-xs text-muted-foreground">Alert when stock ≤ this number</p>
                 </div>
+              </div>
 
-                {/* Initial Stock */}
-                <div className="space-y-2">
-                  <Label htmlFor="currentStock" className="text-sm font-medium">
-                    Initial Stock
-                  </Label>
-                  {isUnspecifiedQuantity ? (
-                    <div className="h-10 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md flex items-center">
-                      <div className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
-                        Bulk / Variable
-                      </div>
+              {formData.costPrice > 0 && formData.sellingPrice > 0 && (
+                <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                  <h3 className="font-medium text-foreground mb-2">Profit Summary</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Profit per unit:</span>
+                      <span className="font-medium text-green-600">
+                        KES {(formData.sellingPrice - formData.costPrice).toFixed(2)}
+                      </span>
                     </div>
-                  ) : (
-                    <Input
-                      id="currentStock"
-                      type="number"
-                      min="0"
-                      value={formData.currentStock}
-                      onChange={(e) => handleInputChange('currentStock', e.target.value)}
-                      className="h-10"
-                      placeholder="0"
-                      disabled={loading}
-                    />
-                  )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Profit margin:</span>
+                      <span className="font-medium text-green-600">
+                        {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* Unspecified Quantity Checkbox */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="unspecified"
-                  checked={isUnspecifiedQuantity}
-                  onCheckedChange={(checked) => {
-                    setIsUnspecifiedQuantity(checked as boolean);
-                    if (checked) {
-                      setFormData(prev => ({ ...prev, currentStock: '', lowStockThreshold: '0' }));
-                    } else {
-                      setFormData(prev => ({ ...prev, currentStock: '0', lowStockThreshold: '10' }));
-                    }
-                  }}
-                  disabled={loading}
-                  className="w-4 h-4"
-                />
-                <Label 
-                  htmlFor="unspecified" 
-                  className="text-sm cursor-pointer"
-                  title="Select for bulk items—quantities recorded later"
-                >
-                  Unspecified quantity (sacks, tins, cups…)
-                </Label>
-              </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col gap-3 pt-6 border-t border-border">
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-base font-medium bg-green-600 hover:bg-green-700 focus-visible:ring-green-500"
+              >
+                {editingProduct ? 'Update Product' : 'Add Product'}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                className="w-full h-12 text-base font-medium"
+              >
+                Cancel
+              </Button>
             </div>
           </form>
-        </div>
-
-        {/* Fixed Footer */}
-        <div className="flex-shrink-0 flex flex-col gap-2 p-6 border-t">
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={!isFormValid() || loading}
-            className="w-full h-10 font-semibold bg-green-600 hover:bg-green-700"
-          >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Saving...
-              </div>
-            ) : (
-              'Save Product'
-            )}
-          </Button>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleClose} 
-            className="w-full h-10"
-            disabled={loading}
-          >
-            Cancel
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
