@@ -135,15 +135,9 @@ const InventoryPage = () => {
     }
   };
 
-  // Create wrapper functions for the handlers
   const handleCreateProduct = () => {
     resetForm();
     setShowModal(true);
-  };
-
-  const handleUpdateProduct = (productData: Partial<Product>) => {
-    // This function will be called with product data when needed
-    console.log('Update product:', productData);
   };
 
   if (loading) {
@@ -177,7 +171,6 @@ const InventoryPage = () => {
         products={filteredProducts}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
-        onUpdate={handleUpdateProduct}
       />
 
       {/* Add/Edit Product Modal */}
