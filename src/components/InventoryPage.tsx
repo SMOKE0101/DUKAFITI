@@ -158,22 +158,6 @@ const InventoryPage = () => {
     }
   };
 
-  const handleStatsCardClick = (filter: string) => {
-    switch (filter) {
-      case 'all':
-        setFilterCategory('all');
-        break;
-      case 'low-stock':
-        // Custom filter logic for low stock products
-        break;
-      case 'in-stock':
-        // Custom filter logic for in-stock products
-        break;
-      default:
-        break;
-    }
-  };
-
   return (
     <div className="space-y-6 p-6">
       {/* Page Header */}
@@ -193,7 +177,7 @@ const InventoryPage = () => {
       {/* Premium Stats Cards */}
       <PremiumStatsCards 
         products={products}
-        onCardClick={handleStatsCardClick}
+        onCardClick={() => {}}
       />
 
       {/* Search and Filter Bar */}

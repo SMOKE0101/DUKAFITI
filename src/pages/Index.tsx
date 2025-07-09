@@ -17,10 +17,19 @@ const Index = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const isMobile = useIsMobile();
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
+
+  console.log('Index component rendered:', { 
+    pathname: location.pathname, 
+    activeTab, 
+    loading, 
+    hasUser: !!user,
+    isMobile 
+  });
 
   // Show loading state while authentication is being checked
   if (loading) {
+    console.log('Showing loading state in Index');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -38,7 +47,7 @@ const Index = () => {
     
     if (path === '/app' || path === '/' || path === '/dashboard') {
       setActiveTab('dashboard');
-    } else if (path === '/products') {
+    } else if (path === '/products' || path === '/inventory') {
       setActiveTab('products');
     } else if (path === '/sales') {
       setActiveTab('sales');
@@ -56,29 +65,43 @@ const Index = () => {
   }, [location.pathname]);
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'sales':
-        return <SalesManagement />;
-      case 'products':
-        return <InventoryPage />;
-      case 'customers':
-        return <CustomersPage />;
-      case 'debts':
-      case 'history':
-        return <TransactionHistory />;
-      case 'reports':
-        return <ReportsPage />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
+    console.log('Rendering content for activeTab:', activeTab);
+    
+    try {
+      switch (activeTab) {
+        case 'dashboard':
+          return <Dashboard />;
+        case 'sales':
+          return <SalesManagement />;
+        case 'products':
+          return <InventoryPage />;
+        case 'customers':
+          return <CustomersPage />;
+        case 'debts':
+        case 'history':
+          return <TransactionHistory />;
+        case 'reports':
+          return <ReportsPage />;
+        case 'settings':
+          return <Settings />;
+        default:
+          console.log('Default case, rendering Dashboard');
+          return <Dashboard />;
+      }
+    } catch (error) {
+      console.error('Error rendering content:', error);
+      return (
+        <div className="p-6 text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Content</h2>
+          <p className="text-muted-foreground">There was an error loading this page. Please try refreshing.</p>
+        </div>
+      );
     }
   };
 
   // For mobile, we still use the old navigation temporarily but with new styling
   if (isMobile) {
+    console.log('Rendering mobile layout');
     return (
       <div className="min-h-screen bg-background">
         <div className="container-responsive space-y-6 pb-20">
@@ -92,6 +115,7 @@ const Index = () => {
   }
 
   // For desktop, use the new layout
+  console.log('Rendering desktop layout');
   return (
     <AppLayout>
       <div className="fade-in-up">

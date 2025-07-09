@@ -13,6 +13,7 @@ import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../integrations/supabase/client';
+import { useAuth } from '../../hooks/useAuth';
 
 interface RepaymentDrawerProps {
   isOpen: boolean;
@@ -28,9 +29,10 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { updateCustomer } = useSupabaseCustomers();
+  const { user } = useAuth();
 
   const handleSavePayment = async () => {
-    if (!customer || !amount || parseFloat(amount) <= 0) return;
+    if (!customer || !amount || parseFloat(amount) <= 0 || !user) return;
 
     setIsSubmitting(true);
     try {
@@ -48,6 +50,7 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       await supabase
         .from('sales')
         .insert({
+          user_id: user.id,
           customer_id: customer.id,
           customer_name: customer.name,
           product_id: '00000000-0000-0000-0000-000000000000', // Placeholder for payment
