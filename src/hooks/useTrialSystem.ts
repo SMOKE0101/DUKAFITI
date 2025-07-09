@@ -12,9 +12,12 @@ interface TrialInfo {
   daysRemaining: number;
   limits: TrialLimits;
   usage: TrialLimits;
+  featuresUsed: TrialLimits;
+  isExpired: boolean;
 }
 
 export const useTrialSystem = () => {
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [trialInfo, setTrialInfo] = useState<TrialInfo>({
     isTrialActive: true,
     daysRemaining: 14,
@@ -28,6 +31,12 @@ export const useTrialSystem = () => {
       products: 0,
       customers: 0,
     },
+    featuresUsed: {
+      sales: 0,
+      products: 0,
+      customers: 0,
+    },
+    isExpired: false,
   });
 
   const checkFeatureAccess = (feature: keyof TrialLimits): boolean => {
@@ -42,6 +51,10 @@ export const useTrialSystem = () => {
         ...prev.usage,
         [feature]: prev.usage[feature] + increment,
       },
+      featuresUsed: {
+        ...prev.featuresUsed,
+        [feature]: prev.featuresUsed[feature] + increment,
+      },
     }));
   };
 
@@ -49,5 +62,7 @@ export const useTrialSystem = () => {
     trialInfo,
     checkFeatureAccess,
     updateFeatureUsage,
+    showUpgrade,
+    setShowUpgrade,
   };
 };

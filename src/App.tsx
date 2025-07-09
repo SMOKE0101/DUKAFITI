@@ -54,10 +54,12 @@ const AppRoutes = () => {
       <Route path="/auth" element={<PublicRoute><AuthForm /></PublicRoute>} />
       <Route path="/signin" element={<Navigate to="/auth" replace />} />
       <Route path="/signup" element={<Navigate to="/auth" replace />} />
+      <Route path="/login" element={<Navigate to="/auth" replace />} />
       
       <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/products" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/inventory" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/sales" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Index /></ProtectedRoute>} />

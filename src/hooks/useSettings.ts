@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
-import { supabase } from '../lib/supabase';
 import { useToast } from './use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ShopSettings {
   // Shop Profile
