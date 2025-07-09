@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -157,6 +158,21 @@ const InventoryPage = () => {
     }
   };
 
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedProduct(null);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setSelectedProduct(null);
+  };
+
+  const handleCloseRestockModal = () => {
+    setShowRestockModal(false);
+    setSelectedProduct(null);
+  };
+
   return (
     <div className="space-y-6 p-6">
       {/* Page Header */}
@@ -269,30 +285,21 @@ const InventoryPage = () => {
 
       <EditProductModal
         isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedProduct(null);
-        }}
+        onClose={handleCloseEditModal}
         product={selectedProduct}
         onSave={handleUpdateProduct}
       />
 
       <DeleteProductModal
         isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setSelectedProduct(null);
-        }}
+        onClose={handleCloseDeleteModal}
         onConfirm={confirmDeleteProduct}
         productName={selectedProduct?.name || ''}
       />
 
       <RestockModal
         isOpen={showRestockModal}
-        onClose={() => {
-          setShowRestockModal(false);
-          setSelectedProduct(null);
-        }}
+        onClose={handleCloseRestockModal}
         onSave={handleRestock}
         product={selectedProduct}
       />
