@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import UserMenu from './UserMenu';
+import { cn } from '@/lib/utils';
 
 interface NavigationProps {
   activeTab: string;
@@ -33,7 +34,7 @@ const Navigation = ({ activeTab, setActiveTab }: NavigationProps) => {
   ];
 
   return (
-    <nav className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-3 mb-6">
+    <nav className="dukafiti-card p-4 mb-6">
       <div className="flex flex-wrap gap-2 items-center">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -41,11 +42,12 @@ const Navigation = ({ activeTab, setActiveTab }: NavigationProps) => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 font-medium text-sm ${
+              className={cn(
+                "nav-item px-4 py-3 rounded-xl transition-all duration-200 font-medium text-sm",
                 activeTab === item.id
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md transform scale-105'
-                  : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm hover:scale-102 transform'
-              }`}
+                  ? "bg-primary text-primary-foreground shadow-md scale-105"
+                  : "hover:bg-accent/10 hover:text-accent hover:scale-102"
+              )}
             >
               <Icon className="w-4 h-4" />
               <span className="font-medium">{item.label}</span>
@@ -54,11 +56,12 @@ const Navigation = ({ activeTab, setActiveTab }: NavigationProps) => {
         })}
         
         <div className="flex items-center ml-auto space-x-3">
-          <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+          <div className={cn(
+            "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
             isOnline 
-              ? 'text-green-700 bg-green-50 border border-green-200 shadow-sm' 
-              : 'text-orange-700 bg-orange-50 border border-orange-200 shadow-sm'
-          }`}>
+              ? "text-brand-green bg-green-50 border border-green-200 shadow-sm" 
+              : "text-orange-700 bg-orange-50 border border-orange-200 shadow-sm"
+          )}>
             {isOnline ? (
               <Wifi className="w-4 h-4" />
             ) : (

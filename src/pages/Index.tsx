@@ -1,321 +1,80 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import AppLayout from '@/components/layout/AppLayout';
+import Navigation from '../components/Navigation';
 import Dashboard from '../components/Dashboard';
-import CustomerManagement from '../components/CustomerManagement';
-import DebtRecording from '../components/DebtRecording';
-import TransactionHistory from '../components/TransactionHistory';
 import SalesManagement from '../components/SalesManagement';
 import ProductManagement from '../components/ProductManagement';
+import CustomerManagement from '../components/CustomerManagement';
+import TransactionHistory from '../components/TransactionHistory';
 import Settings from './Settings';
-import Navigation from '../components/Navigation';
-import AuthForm from '../components/AuthForm';
-import OnboardingWizard from '../components/onboarding/OnboardingWizard';
-import TrialBanner from '../components/trial/TrialBanner';
-import UpgradeModal from '../components/trial/UpgradeModal';
-import OfflineIndicator from '../components/OfflineIndicator';
-import ErrorBoundary from '../components/ErrorBoundary';
-import { useToast } from '../hooks/use-toast';
-import { useAuth } from '../hooks/useAuth';
-import { useTrialSystem } from '../hooks/useTrialSystem';
-import { useAppContext } from '../hooks/useAppContext';
-import { Product } from '../types';
-import { supabase } from '../lib/supabase';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const { toast } = useToast();
-  const { isAuthenticated, loading, user } = useAuth();
-  const { trialInfo, showUpgrade, setShowUpgrade } = useTrialSystem();
-  const { isInstalledApp } = useAppContext();
-  const navigate = useNavigate();
   const location = useLocation();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const isMobile = useIsMobile();
 
-  console.log('Index: Rendering with auth state - loading:', loading, 'authenticated:', isAuthenticated);
-
-  // Smart routing: Handle app vs browser access
+  // Update active tab based on route
   useEffect(() => {
-    if (isAuthenticated && isInstalledApp && location.pathname === '/') {
-      // If user is authenticated and using installed app, redirect directly to dashboard
-      navigate('/app', { replace: true });
+    const path = location.pathname;
+    if (path === '/app' || path === '/' || path === '/dashboard') {
+      setActiveTab('dashboard');
+    } else if (path === '/products') {
+      setActiveTab('products');
+    } else if (path === '/sales') {
+      setActiveTab('sales');
+    } else if (path === '/customers') {
+      setActiveTab('customers');
+    } else if (path === '/history') {
+      setActiveTab('history');
+    } else if (path === '/settings') {
+      setActiveTab('settings');
     }
-  }, [isAuthenticated, isInstalledApp, location.pathname, navigate]);
+  }, [location.pathname]);
 
-  // Check if onboarding is needed by looking at Supabase profile
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      if (!isAuthenticated || !user) {
-        setProfileLoading(false);
-        return;
-      }
-
-      try {
-        console.log('Checking onboarding status for user:', user.id);
-        
-        // Check if user has a complete profile in Supabase
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('shop_name, business_type')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error fetching profile:', error);
-          // If there's an error, fall back to localStorage check
-          const localOnboarding = localStorage.getItem(`dts_onboarding_completed_${user.id}`);
-          setShowOnboarding(!localOnboarding);
-        } else if (!profile || !profile.shop_name) {
-          // No profile or incomplete profile means onboarding needed
-          console.log('Profile incomplete, showing onboarding');
-          setShowOnboarding(true);
-        } else {
-          // Profile exists and is complete
-          console.log('Profile complete, skipping onboarding');
-          setShowOnboarding(false);
-          // Update localStorage to match database state
-          localStorage.setItem(`dts_onboarding_completed_${user.id}`, 'true');
-        }
-      } catch (error) {
-        console.error('Error checking onboarding status:', error);
-        // Fall back to localStorage check on error
-        const localOnboarding = localStorage.getItem(`dts_onboarding_completed_${user.id}`);
-        setShowOnboarding(!localOnboarding);
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, [isAuthenticated, user]);
-
-  // Data migration function
-  const migrateInventoryToProducts = () => {
-    try {
-      const inventoryData = localStorage.getItem('dts_inventory');
-      const productsData = localStorage.getItem('dts_products');
-      
-      if (inventoryData && (!productsData || JSON.parse(productsData).length === 0)) {
-        const inventory = JSON.parse(inventoryData);
-        const migratedProducts: Product[] = inventory.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          category: item.category || 'Other',
-          costPrice: item.costPrice || item.price * 0.7,
-          sellingPrice: item.price,
-          currentStock: item.stock,
-          lowStockThreshold: item.lowStockThreshold || 10,
-          createdAt: item.createdDate || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }));
-        
-        localStorage.setItem('dts_products', JSON.stringify(migratedProducts));
-        console.log('Successfully migrated inventory data to products');
-        
-        toast({
-          title: "Data Migration",
-          description: "Inventory data has been migrated to the new product system",
-        });
-      }
-    } catch (error) {
-      console.error('Failed to migrate inventory data:', error);
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'sales':
+        return <SalesManagement />;
+      case 'products':
+        return <ProductManagement />;
+      case 'customers':
+        return <CustomerManagement />;
+      case 'debts':
+      case 'history':
+        return <TransactionHistory />;
+      case 'settings':
+        return <Settings />;
+      default:
+        return <Dashboard />;
     }
   };
 
-  // Initialize data on first load
-  useEffect(() => {
-    console.log('Index: useEffect triggered, isAuthenticated:', isAuthenticated);
-    
-    if (!isAuthenticated) return;
-
-    try {
-      // Check if data exists, if not create sample data
-      const customers = localStorage.getItem('dts_customers');
-      const transactions = localStorage.getItem('dts_transactions');
-      const products = localStorage.getItem('dts_products');
-      const sales = localStorage.getItem('dts_sales');
-
-      if (!customers) localStorage.setItem('dts_customers', JSON.stringify([]));
-      if (!transactions) localStorage.setItem('dts_transactions', JSON.stringify([]));
-      if (!products) localStorage.setItem('dts_products', JSON.stringify([]));
-      if (!sales) localStorage.setItem('dts_sales', JSON.stringify([]));
-
-      // Migrate inventory data if needed
-      migrateInventoryToProducts();
-
-      const shopName = user?.user_metadata?.shop_name || 'Your Shop';
-      if (!showOnboarding && !profileLoading) {
-        toast({
-          title: `Welcome back to ${shopName}!`,
-          description: "Shop management system loaded successfully",
-        });
-      }
-    } catch (error) {
-      console.error('Failed to initialize data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to initialize system data",
-        variant: "destructive",
-      });
-    }
-  }, [toast, isAuthenticated, user, showOnboarding, profileLoading]);
-
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-    toast({
-      title: `Welcome to DukaFiti!`,
-      description: `Your shop is now ready to go. Let's start managing your business!`,
-    });
-  };
-
-  const renderActiveTab = () => {
-    try {
-      switch (activeTab) {
-        case 'dashboard':
-          return (
-            <ErrorBoundary>
-              <Dashboard />
-            </ErrorBoundary>
-          );
-        case 'sales':
-          return (
-            <ErrorBoundary>
-              <SalesManagement />
-            </ErrorBoundary>
-          );
-        case 'products':
-          return (
-            <ErrorBoundary>
-              <ProductManagement />
-            </ErrorBoundary>
-          );
-        case 'customers':
-          return (
-            <ErrorBoundary>
-              <CustomerManagement />
-            </ErrorBoundary>
-          );
-        case 'debts':
-          return (
-            <ErrorBoundary>
-              <DebtRecording />
-            </ErrorBoundary>
-          );
-        case 'history':
-          return (
-            <ErrorBoundary>
-              <TransactionHistory />
-            </ErrorBoundary>
-          );
-        case 'settings':
-          return (
-            <ErrorBoundary>
-              <Settings />
-            </ErrorBoundary>
-          );
-        default:
-          return (
-            <ErrorBoundary>
-              <Dashboard />
-            </ErrorBoundary>
-          );
-      }
-    } catch (error) {
-      console.error('Error rendering active tab:', error);
-      return (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-red-500 mb-4 text-lg font-medium">Error loading page</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Reload Page
-            </button>
+  // For mobile, we still use the old navigation temporarily but with new styling
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container-responsive space-y-6 pb-20">
+          <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+          <div className="fade-in-up">
+            {renderContent()}
           </div>
         </div>
-      );
-    }
-  };
-
-  // Show loading spinner while checking authentication or profile
-  if (loading || profileLoading) {
-    console.log('Index: Showing loading screen');
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
-          <p className="text-gray-700 text-lg font-medium">Loading your shop...</p>
-        </div>
       </div>
     );
   }
 
-  // Show auth form if not authenticated
-  if (!isAuthenticated) {
-    console.log('Index: Showing auth form');
-    return (
-      <ErrorBoundary>
-        <AuthForm />
-      </ErrorBoundary>
-    );
-  }
-
-  // Show onboarding if needed
-  if (showOnboarding) {
-    return (
-      <ErrorBoundary>
-        <OnboardingWizard onComplete={handleOnboardingComplete} />
-      </ErrorBoundary>
-    );
-  }
-
-  console.log('Index: Showing main app');
-  const shopProfile = localStorage.getItem(`dts_shop_profile_${user?.id}`);
-  const shopName = shopProfile 
-    ? JSON.parse(shopProfile).shopName 
-    : user?.user_metadata?.shop_name || 'Shop Manager';
-
+  // For desktop, use the new layout
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-        {/* Trial Banner */}
-        <TrialBanner />
-        
-        <div className="container mx-auto px-4 py-6">
-          <header className="mb-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {shopName}
-            </h1>
-            <p className="text-gray-700 text-lg font-medium">
-              Complete shop management - debt tracking, sales, and inventory
-              {trialInfo && trialInfo.isTrialActive && (
-                <span className="ml-2 text-blue-600 font-semibold">
-                  • {trialInfo.daysRemaining} days left in trial
-                </span>
-              )}
-            </p>
-          </header>
-
-          <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
-          
-          <main className="mt-6">
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-6">
-              {renderActiveTab()}
-            </div>
-          </main>
-        </div>
-
-        {/* Upgrade Modal */}
-        <UpgradeModal 
-          isOpen={showUpgrade} 
-          onClose={() => setShowUpgrade(false)} 
-        />
-        
-        {/* Offline Indicator */}
-        <OfflineIndicator />
+    <AppLayout>
+      <div className="fade-in-up">
+        {renderContent()}
       </div>
-    </ErrorBoundary>
+    </AppLayout>
   );
 };
 

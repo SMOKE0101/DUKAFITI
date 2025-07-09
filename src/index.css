@@ -3,86 +3,84 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DukaFiti Design System - All colors, gradients, fonts must be defined here */
+/* DukaFiti Design System - Enhanced Brand Colors */
 @layer base {
   :root {
     /* DukaFiti Brand Colors */
-    --dukafiti-purple: #6366f1;
-    --dukafiti-purple-dark: #4f46e5;
-    --dukafiti-purple-light: #a5b4fc;
-    --dukafiti-black: #0f172a;
-    --dukafiti-black-soft: #1e293b;
-    --dukafiti-green: #10b981;
-    --dukafiti-green-dark: #059669;
-    --dukafiti-green-light: #34d399;
+    --dukafiti-green: hsl(158, 64%, 52%);
+    --dukafiti-green-dark: hsl(158, 64%, 45%);
+    --dukafiti-green-light: hsl(158, 64%, 60%);
+    --dukafiti-purple: hsl(259, 66%, 60%);
+    --dukafiti-purple-dark: hsl(259, 66%, 50%);
+    --dukafiti-purple-light: hsl(259, 66%, 70%);
+    --dukafiti-dark: hsl(220, 26%, 10%);
+    --dukafiti-dark-soft: hsl(220, 26%, 18%);
     
     /* Supporting Colors */
-    --surface-glass: rgba(99, 102, 241, 0.1);
+    --surface-glass: hsla(259, 66%, 60%, 0.1);
     --backdrop-blur: blur(20px);
-    --gradient-primary: linear-gradient(135deg, #6366f1 0%, #10b981 100%);
-    --gradient-dark: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    --gradient-purple: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    --gradient-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(158, 64%, 52%) 0%, hsl(259, 66%, 60%) 100%);
+    --gradient-dark: linear-gradient(135deg, hsl(220, 26%, 10%) 0%, hsl(220, 26%, 18%) 100%);
 
     /* Shadcn Variables */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 220 26% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 26% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    --popover-foreground: 220 26% 10%;
+    --primary: 158 64% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 220 26% 10%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 259 66% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 259 66% 60%;
+    --radius: 0.75rem;
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-foreground: 240 5% 26%;
+    --sidebar-primary: 158 64% 52%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent-foreground: 158 64% 52%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 259 66% 60%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 220 26% 10%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 220 26% 10%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 220 26% 10%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 158 64% 52%;
+    --primary-foreground: 220 26% 10%;
+    --secondary: 220 26% 18%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 220 26% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 259 66% 60%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 220 26% 18%;
+    --input: 220 26% 18%;
+    --ring: 259 66% 60%;
+    --sidebar-background: 220 26% 10%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 158 64% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 220 26% 18%;
+    --sidebar-accent-foreground: 158 64% 52%;
+    --sidebar-border: 220 26% 18%;
+    --sidebar-ring: 259 66% 60%;
   }
 }
 
@@ -92,19 +90,20 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    @apply bg-background text-foreground font-body;
     font-feature-settings: 'cv01', 'cv02', 'cv03', 'cv04';
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
   }
 }
 
-/* DukaFiti Specific Styles */
+/* Enhanced DukaFiti Components */
 @layer utilities {
   /* Brand Typography */
   .dukafiti-brand {
-    font-family: 'Inter', sans-serif;
-    font-weight: 800;
-    font-size: 2.5rem;
+    @apply font-display font-bold text-4xl;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -112,348 +111,200 @@
     letter-spacing: -0.025em;
   }
 
-  .brand-tagline {
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    color: var(--dukafiti-green);
-    font-size: 1.125rem;
-    letter-spacing: 0.025em;
+  /* Card Components */
+  .dukafiti-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl shadow-card transition-all duration-300;
   }
 
-  /* Hero Section Styles */
-  .hero-dukafiti {
-    min-height: 100vh;
-    background: var(--gradient-dark);
-    position: relative;
-    overflow: hidden;
+  .dukafiti-card:hover {
+    @apply shadow-glow border-accent/50 scale-[1.02];
   }
 
-  .hero-background {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.3), transparent 70%),
-                radial-gradient(circle at 70% 80%, rgba(16, 185, 129, 0.2), transparent 70%);
+  /* Metric Cards */
+  .metric-card {
+    @apply dukafiti-card p-6 text-center;
   }
 
-  /* Glassmorphism Effects */
-  .glass-effect {
-    background: var(--surface-glass);
-    backdrop-filter: var(--backdrop-blur);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  .metric-value {
+    @apply text-3xl font-bold text-primary animate-count-up;
   }
 
-  .glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1rem;
+  .metric-label {
+    @apply text-sm text-muted-foreground mt-2;
+  }
+
+  /* Navigation Styles */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 relative;
+  }
+
+  .nav-item:hover {
+    @apply bg-accent/10;
+  }
+
+  .nav-item.active {
+    @apply bg-accent/20 text-accent-foreground;
+  }
+
+  .nav-item.active::before {
+    content: '';
+    @apply absolute left-0 top-0 bottom-0 w-1 bg-accent rounded-r-full;
   }
 
   /* Button Styles */
-  .cta-primary-dukafiti {
-    background: var(--gradient-primary);
-    color: white;
-    padding: 1rem 2rem;
-    border-radius: 0.75rem;
-    font-weight: 600;
-    font-size: 1.125rem;
-    border: none;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-md;
   }
 
-  .cta-primary-dukafiti::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s;
+  .btn-primary:hover {
+    @apply shadow-lg scale-105;
   }
 
-  .cta-primary-dukafiti:hover::before {
-    left: 100%;
+  .btn-floating {
+    @apply fixed bottom-6 right-6 bg-primary hover:bg-primary/90 text-primary-foreground p-4 rounded-full shadow-lg transition-all duration-300 z-50;
   }
 
-  .cta-primary-dukafiti:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 15px 40px rgba(99, 102, 241, 0.4);
+  .btn-floating:hover {
+    @apply shadow-xl scale-110;
   }
 
-  .cta-secondary-dukafiti {
-    background: transparent;
-    color: white;
-    padding: 1rem 2rem;
-    border: 2px solid var(--dukafiti-purple);
-    border-radius: 0.75rem;
-    font-weight: 600;
-    font-size: 1.125rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  /* Modal Styles */
+  .modal-desktop {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-6;
   }
 
-  .cta-secondary-dukafiti:hover {
-    background: var(--dukafiti-purple);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+  .modal-content {
+    @apply bg-card rounded-2xl shadow-modal max-w-md w-full max-h-[90vh] overflow-hidden;
   }
 
-  /* Animation Classes */
-  .animate-in {
-    animation: slideInUp 0.6s ease-out forwards;
+  .modal-mobile {
+    @apply fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-2xl shadow-modal animate-slide-up;
+    height: 90vh;
   }
 
-  .slide-in-up {
-    animation: slideInUp 0.5s ease-out forwards;
+  .modal-drag-bar {
+    @apply w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-4;
   }
 
-  .fade-in {
-    animation: fadeIn 0.8s ease-out forwards;
+  /* Bottom Navigation */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border/50 px-4 py-2 z-40;
   }
 
-  .scale-in {
-    animation: scaleIn 0.5s ease-out forwards;
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 relative;
   }
 
-  .stagger-1 { animation-delay: 0.1s; }
-  .stagger-2 { animation-delay: 0.2s; }
-  .stagger-3 { animation-delay: 0.3s; }
-  .stagger-4 { animation-delay: 0.4s; }
-
-  /* Scroll Triggered Animations */
-  @keyframes slideInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .bottom-nav-item:active {
+    @apply animate-halo;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  .bottom-nav-item.active {
+    @apply text-primary;
   }
 
-  @keyframes scaleIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+  /* Table Styles */
+  .table-enhanced {
+    @apply w-full border-collapse;
   }
 
-  /* Feature Cards */
-  .feature-card-dukafiti {
-    background: var(--surface-glass);
-    backdrop-filter: var(--backdrop-blur);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1.5rem;
-    padding: 2rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
+  .table-enhanced th {
+    @apply bg-muted/50 text-left p-3 font-medium text-sm sticky top-0;
   }
 
-  .feature-card-dukafiti:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    border-color: var(--dukafiti-purple);
+  .table-enhanced tr:nth-child(even) {
+    @apply bg-muted/20;
   }
 
-  /* Pain Points to Solutions Animation */
-  .pain-point {
-    opacity: 0;
-    transform: translateX(-50px);
-    transition: all 0.6s ease;
+  .table-enhanced tr:hover {
+    @apply bg-accent/10;
   }
 
-  .pain-point.animate-in {
-    opacity: 1;
-    transform: translateX(0);
+  .table-enhanced td {
+    @apply p-3 text-sm border-b border-border/30;
   }
 
-  .solution-reveal {
-    opacity: 0;
-    transform: translateX(50px);
-    transition: all 0.6s ease;
+  /* Product Grid */
+  .product-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6;
   }
 
-  .solution-reveal.animate-in {
-    opacity: 1;
-    transform: translateX(0);
+  .product-card {
+    @apply dukafiti-card p-4 space-y-3;
   }
 
-  /* Demo Interface */
-  .demo-interface-live {
-    background: var(--gradient-dark);
-    border-radius: 2rem;
-    padding: 2rem;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  .product-image {
+    @apply w-full h-32 bg-muted/30 rounded-lg flex items-center justify-center;
   }
 
-  .demo-tab {
-    background: transparent;
-    color: rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.75rem;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    cursor: pointer;
+  .stock-pill {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
   }
 
-  .demo-tab.active {
-    background: var(--gradient-primary);
-    color: white;
-    border-color: var(--dukafiti-purple);
-    box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
+  .stock-high {
+    @apply stock-pill bg-green-100 text-green-800;
   }
 
-  .demo-tab:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
+  .stock-medium {
+    @apply stock-pill bg-yellow-100 text-yellow-800;
   }
 
-  /* Testimonial Cards */
-  .testimonial-card-dukafiti {
-    background: var(--surface-glass);
-    backdrop-filter: var(--backdrop-blur);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1.5rem;
-    padding: 2rem;
-    transition: all 0.3s ease;
+  .stock-low {
+    @apply stock-pill bg-red-100 text-red-800;
   }
 
-  .testimonial-card-dukafiti:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-    border-color: var(--dukafiti-green);
+  /* Search Components */
+  .search-bar {
+    @apply relative flex items-center;
   }
 
-  /* Kenya-specific styling */
-  .kenyan-context {
-    color: var(--dukafiti-green);
-    font-weight: 600;
+  .search-input {
+    @apply w-full pl-10 pr-8 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent;
   }
 
-  /* PWA Install Prompt */
-  .pwa-install-prompt {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: var(--gradient-primary);
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 1rem;
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
-    z-index: 50;
-    transform: translateY(100px);
-    opacity: 0;
-    transition: all 0.3s ease;
+  .search-clear {
+    @apply absolute right-3 text-muted-foreground hover:text-foreground cursor-pointer;
   }
 
-  .pwa-install-prompt.show {
-    transform: translateY(0);
-    opacity: 1;
+  /* Animations */
+  .fade-in-up {
+    @apply animate-fade-in;
   }
 
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .dukafiti-brand {
-      font-size: 2rem;
-    }
-    
-    .hero-dukafiti {
-      padding: 1rem;
-    }
-    
-    .feature-card-dukafiti {
-      padding: 1.5rem;
-    }
-    
-    .demo-interface-live {
-      padding: 1rem;
-    }
+  .scale-on-hover {
+    @apply transition-transform duration-200 hover:scale-105;
   }
 
-  /* Performance Optimizations */
-  .will-change-transform {
-    will-change: transform;
+  /* Responsive Utilities */
+  .container-responsive {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
-  .gpu-accelerated {
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    perspective: 1000px;
-  }
-
-  /* Trial Status Indicators */
-  .trial-badge {
-    background: var(--gradient-green);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .trial-expiring {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  }
-
-  .trial-expired {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  .grid-responsive {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
   }
 }
 
-/* Custom Scrollbar - DukaFiti Theme */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--dukafiti-black-soft);
+  @apply bg-muted/30;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--dukafiti-purple);
-  border-radius: 4px;
+  @apply bg-muted-foreground/30 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--dukafiti-purple-dark);
+  @apply bg-muted-foreground/50;
 }
 
-/* Landing Page Specific Optimizations */
-.landing-page {
-  scroll-behavior: smooth;
-}
-
-/* Loading States */
-.loading-spinner-dukafiti {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(99, 102, 241, 0.3);
-  border-top: 3px solid var(--dukafiti-purple);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }
