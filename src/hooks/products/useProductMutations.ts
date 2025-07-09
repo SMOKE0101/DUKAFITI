@@ -19,7 +19,12 @@ export const useProductMutations = () => {
       const { data, error } = await supabase
         .from('products')
         .insert([{
-          ...productData,
+          name: productData.name,
+          category: productData.category,
+          cost_price: productData.costPrice,
+          selling_price: productData.sellingPrice,
+          current_stock: productData.currentStock,
+          low_stock_threshold: productData.lowStockThreshold,
           user_id: user.id,
         }])
         .select()

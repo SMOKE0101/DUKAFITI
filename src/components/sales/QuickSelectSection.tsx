@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, X, Search, ShoppingCart, Minus } from 'lucide-react';
+import { Plus, Minus, X, Check, Edit3, ShoppingCart } from 'lucide-react';
 import { Product } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { useFavoriteProducts } from '../../hooks/useFavoriteProducts';
@@ -17,10 +17,11 @@ interface QuickSelectSectionProps {
 const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) => {
   const { favorites, addToFavorites, removeFromFavorites, maxFavorites } = useFavoriteProducts();
   const { toast } = useToast();
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   // Filter products for search dropdown with debounce
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -38,28 +39,27 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
     (product.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
      product.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
     !favorites.some(fav => fav.id === product.id)
-  ).slice(0, 5);
+  ).slice(0, 8);
 
-  const handleActionIconClick = () => {
-    if (isEditMode) {
-      // Exit edit mode
-      setIsEditMode(false);
-    } else if (isSearchMode) {
-      // Exit search mode
-      setIsSearchMode(false);
+  useEffect(() => {
+    setShowDropdown(debouncedSearchTerm.length >= 2 && filteredProducts.length > 0);
+  }, [debouncedSearchTerm, filteredProducts.length]);
+
+  const handlePlusClick = () => {
+    if (isEditMode) return;
+    setIsSearchVisible(!isSearchVisible);
+    if (!isSearchVisible) {
       setSearchTerm('');
       setShowDropdown(false);
-    } else {
-      // Enter search mode
-      setIsSearchMode(true);
+      setSelectedIndex(-1);
     }
   };
 
-  const handleEditModeToggle = () => {
+  const handleEditToggle = () => {
     setIsEditMode(!isEditMode);
     if (!isEditMode) {
       // Entering edit mode - hide search
-      setIsSearchMode(false);
+      setIsSearchVisible(false);
       setSearchTerm('');
       setShowDropdown(false);
     }
@@ -67,26 +67,54 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    setShowDropdown(value.length >= 2);
+    setSelectedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showDropdown) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => Math.min(prev + 1, filteredProducts.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => Math.max(prev - 1, -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0) {
+          handleAddFavorite(filteredProducts[selectedIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setSearchTerm('');
+        setShowDropdown(false);
+        setSelectedIndex(-1);
+        break;
+    }
   };
 
   const handleAddFavorite = (product: Product) => {
     addToFavorites(product);
     setSearchTerm('');
     setShowDropdown(false);
-    setIsSearchMode(false);
+    setIsSearchVisible(false);
+    setSelectedIndex(-1);
     
     toast({
       title: "Added to favorites",
       description: `${product.name} added to Quick Select`,
     });
     
-    // Add bounce animation to the new tile
+    // Add pop animation to the new tile
     setTimeout(() => {
       const newTile = document.querySelector(`[data-product-id="${product.id}"]`);
       if (newTile) {
-        newTile.classList.add('animate-bounce');
-        setTimeout(() => newTile.classList.remove('animate-bounce'), 600);
+        newTile.classList.add('animate-scale-in');
+        setTimeout(() => newTile.classList.remove('animate-scale-in'), 300);
       }
     }, 100);
   };
@@ -105,13 +133,11 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
     }
   };
 
-  const getActionIcon = () => {
-    if (isEditMode) return Plus;
-    if (isSearchMode) return Minus;
-    return Search;
+  const getStockBadgeColor = (stock: number, threshold: number) => {
+    if (stock <= 0) return 'bg-red-500';
+    if (stock <= threshold) return 'bg-yellow-500';
+    return 'bg-green-500';
   };
-
-  const ActionIcon = getActionIcon();
 
   return (
     <div className="h-[28vh] p-4">
@@ -123,22 +149,20 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
               variant="ghost" 
               size="sm" 
               className="text-sm"
-              onClick={handleActionIconClick}
-              aria-label={
-                isEditMode ? "Add favorite product" : 
-                isSearchMode ? "Hide search" : 
-                "Show search"
-              }
+              onClick={handleEditToggle}
+              aria-label={isEditMode ? "Exit edit mode" : "Enter edit mode"}
             >
-              <ActionIcon className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-sm"
-              onClick={handleEditModeToggle}
-            >
-              {isEditMode ? 'Done' : 'Edit'}
+              {isEditMode ? (
+                <>
+                  <Check className="w-4 h-4 mr-1" />
+                  Done
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-4 h-4 mr-1" />
+                  Edit
+                </>
+              )}
             </Button>
           </div>
         </CardHeader>
@@ -153,50 +177,68 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
         )}
 
         <CardContent className="p-4 pt-0 flex flex-col h-full">
-          {/* Search Bar - slides down when in search mode */}
+          {/* Search Bar - slides down when visible */}
           <div 
             className={`overflow-hidden transition-all duration-250 ease-out ${
-              isSearchMode && !isEditMode ? 'max-h-20 mb-3' : 'max-h-0'
+              isSearchVisible && !isEditMode ? 'max-h-20 mb-3' : 'max-h-0'
             }`}
           >
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search products to add..."
+                placeholder="Search products…"
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10"
-                disabled={!isSearchMode}
+                onKeyDown={handleKeyDown}
+                className="bg-gray-100 dark:bg-gray-700 rounded-full px-4"
+                disabled={!isSearchVisible}
+                autoFocus={isSearchVisible}
               />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 rounded-full"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setShowDropdown(false);
+                    setSelectedIndex(-1);
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
               
               {/* Search Dropdown */}
-              {showDropdown && isSearchMode && (
-                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map(product => (
-                      <button
-                        key={product.id}
-                        className="w-full flex items-center justify-between p-3 hover:bg-accent text-left border-b last:border-b-0 transition-colors"
-                        onClick={() => handleAddFavorite(product)}
-                      >
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground font-mono">
-                            {product.category} • {formatCurrency(product.sellingPrice)}
-                          </div>
+              {showDropdown && isSearchVisible && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border rounded-lg shadow-lg">
+                  {filteredProducts.map((product, index) => (
+                    <button
+                      key={product.id}
+                      className={`w-full flex items-center justify-between p-3 text-left border-b last:border-b-0 transition-colors ${
+                        index === selectedIndex 
+                          ? 'bg-primary/10 border-primary' 
+                          : 'hover:bg-accent'
+                      }`}
+                      onClick={() => handleAddFavorite(product)}
+                    >
+                      <div className="flex-1">
+                        <div className="font-bold">{product.name}</div>
+                        <div className="text-sm text-muted-foreground font-mono">
+                          {product.category} • {formatCurrency(product.sellingPrice)}
                         </div>
-                        <Plus className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    ))
-                  ) : debouncedSearchTerm.length >= 2 ? (
-                    <div className="p-3 text-center text-muted-foreground text-sm">
-                      No products found
-                    </div>
-                  ) : (
-                    <div className="p-3 text-center text-muted-foreground text-sm">
-                      Type at least 2 characters to search
-                    </div>
-                  )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className={`w-2 h-2 rounded-full ${getStockBadgeColor(product.currentStock, product.lowStockThreshold)}`}
+                          title={`Stock: ${product.currentStock}`}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {product.currentStock}
+                        </span>
+                        <Plus className="w-4 h-4 text-muted-foreground ml-2" />
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -208,17 +250,17 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
               <div
                 key={product.id}
                 data-product-id={product.id}
-                className={`relative flex-shrink-0 w-18 h-18 bg-card rounded-lg border p-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                className={`relative flex-shrink-0 w-18 h-18 bg-white dark:bg-gray-800 rounded-xl border shadow p-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
                   isEditMode 
                     ? 'opacity-60' 
-                    : 'hover:bg-accent active:scale-95'
+                    : 'hover:shadow-lg hover:scale-105 hover:border-primary/50'
                 }`}
                 onClick={() => handleFavoriteTileClick(product)}
               >
                 {/* Remove button in edit mode */}
                 {isEditMode && (
                   <button
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-red-500 rounded-full flex items-center justify-center animate-in fade-in-0 duration-150"
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-red-500 rounded-full flex items-center justify-center animate-in fade-in-0 duration-150 shadow-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRemoveFavorite(product);
@@ -238,19 +280,34 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
               </div>
             ))}
             
-            {/* Decorative Plus Card - only shown in normal mode */}
-            {!isEditMode && !isSearchMode && (
-              <div
-                className="flex-shrink-0 w-18 h-18 bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center"
-                title={
-                  favorites.length >= maxFavorites 
-                    ? "Max 6 favorites—new items replace oldest." 
-                    : "Tap search to add favorites"
-                }
-              >
+            {/* Plus/Minus Toggle Card */}
+            <div
+              className={`flex-shrink-0 w-18 h-18 rounded-xl border-2 ${
+                isEditMode 
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                  : isSearchVisible 
+                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                    : 'border-dashed border-muted-foreground/30 bg-card'
+              } flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-105`}
+              onClick={handlePlusClick}
+              title={
+                isEditMode 
+                  ? "Exit edit mode" 
+                  : isSearchVisible 
+                    ? "Hide search" 
+                    : favorites.length >= maxFavorites 
+                      ? "Max 6 favorites—new items replace oldest." 
+                      : "Search to add favorites"
+              }
+            >
+              {isEditMode ? (
+                <Check className="w-6 h-6 text-green-600" />
+              ) : isSearchVisible ? (
+                <Minus className="w-6 h-6 text-red-600" />
+              ) : (
                 <Plus className="w-6 h-6 text-muted-foreground" />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
