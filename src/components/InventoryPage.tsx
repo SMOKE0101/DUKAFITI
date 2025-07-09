@@ -1,30 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  AlertTriangle, 
-  TrendingUp, 
-  DollarSign,
-  BarChart3,
-  Filter
-} from 'lucide-react';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { formatCurrency } from '../utils/currency';
 import { Product } from '../types';
+import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import AddProductModal from './inventory/AddProductModal';
-import ProductCard from './inventory/ProductCard';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
-import ProductCardSkeleton from './inventory/ProductCardSkeleton';
 import InventoryHeader from './inventory/InventoryHeader';
 import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
@@ -40,21 +22,6 @@ const InventoryPage = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
-
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const totalProducts = products.length;
-    const totalValue = products.reduce((sum, p) => sum + (p.currentStock * p.costPrice), 0);
-    const lowStockCount = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
-    const outOfStockCount = products.filter(p => p.currentStock === 0).length;
-    
-    return {
-      totalProducts,
-      totalValue,
-      lowStockCount,
-      outOfStockCount
-    };
-  }, [products]);
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -174,11 +141,6 @@ const InventoryPage = () => {
   const handleCloseRestockModal = () => {
     setShowRestockModal(false);
     setSelectedProduct(null);
-  };
-
-  // Create a wrapper function that doesn't take parameters
-  const handleSaveEditProduct = () => {
-    // This will be handled by the modal internally
   };
 
   return (
