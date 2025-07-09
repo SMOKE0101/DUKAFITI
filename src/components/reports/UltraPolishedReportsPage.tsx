@@ -20,22 +20,25 @@ type Filter = {
 };
 
 const UltraPolishedReportsPage = () => {
-  const [dateRange, setDateRange] = useState<DateRange>('today');
+  // Global date range for summary cards only
+  const [globalDateRange, setGlobalDateRange] = useState<DateRange>('today');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date }>();
   const [activeFilters, setActiveFilters] = useState<Filter[]>([]);
-  const [chartResolution, setChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
+  
+  // Independent chart controls
+  const [salesChartResolution, setSalesChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
   const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
 
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { sales, loading: salesLoading } = useSupabaseSales();
 
-  // Calculate date range
-  const getDateRange = () => {
+  // Calculate date range for summary cards only
+  const getGlobalDateRange = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    switch (dateRange) {
+    switch (globalDateRange) {
       case 'today':
         return { from: today, to: new Date() };
       case 'week':
@@ -53,13 +56,13 @@ const UltraPolishedReportsPage = () => {
     }
   };
 
-  const { from: fromDate, to: toDate } = getDateRange();
+  const { from: globalFromDate, to: globalToDate } = getGlobalDateRange();
 
-  // Filter sales data
-  const filteredSales = useMemo(() => {
+  // Filter sales data for summary cards using global date range
+  const summaryCardsSales = useMemo(() => {
     return sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
-      const isInDateRange = saleDate >= fromDate && saleDate <= toDate;
+      const isInDateRange = saleDate >= globalFromDate && saleDate <= globalToDate;
       
       const matchesFilters = activeFilters.every(filter => {
         switch (filter.type) {
@@ -77,38 +80,67 @@ const UltraPolishedReportsPage = () => {
       
       return isInDateRange && matchesFilters;
     });
-  }, [sales, fromDate, toDate, activeFilters, products]);
+  }, [sales, globalFromDate, globalToDate, activeFilters, products]);
 
-  // Calculate metrics
-  const metrics = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
-    const totalOrders = filteredSales.length;
-    const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
+  // Calculate metrics for summary cards
+  const summaryMetrics = useMemo(() => {
+    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalOrders = summaryCardsSales.length;
+    const activeCustomers = new Set(summaryCardsSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
       product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
 
     return { totalRevenue, totalOrders, activeCustomers, lowStockProducts };
-  }, [filteredSales, products]);
+  }, [summaryCardsSales, products]);
 
-  // Prepare chart data
+  // Prepare chart data - Sales Trend Chart with its own timeframe
   const salesTrendData = useMemo(() => {
+    const now = new Date();
+    let chartFromDate: Date;
+    let bucketFormat: string;
+    
+    switch (salesChartResolution) {
+      case 'hourly':
+        chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Last 24 hours
+        bucketFormat = 'hour';
+        break;
+      case 'daily':
+        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // Last 30 days
+        bucketFormat = 'day';
+        break;
+      case 'monthly':
+        chartFromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // Last 12 months
+        bucketFormat = 'month';
+        break;
+      default:
+        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        bucketFormat = 'day';
+    }
+
+    const chartSales = sales.filter(sale => {
+      const saleDate = new Date(sale.timestamp);
+      return saleDate >= chartFromDate && saleDate <= now;
+    });
+
     const groupedData: { [key: string]: number } = {};
     
-    filteredSales.forEach(sale => {
+    chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
       let key: string;
       
-      switch (chartResolution) {
-        case 'hourly':
+      switch (bucketFormat) {
+        case 'hour':
           key = saleDate.toISOString().substring(0, 13) + ':00';
           break;
-        case 'daily':
+        case 'day':
           key = saleDate.toISOString().substring(0, 10);
           break;
-        case 'monthly':
+        case 'month':
           key = saleDate.toISOString().substring(0, 7);
           break;
+        default:
+          key = saleDate.toISOString().substring(0, 10);
       }
       
       groupedData[key] = (groupedData[key] || 0) + sale.total;
@@ -120,16 +152,40 @@ const UltraPolishedReportsPage = () => {
         date: new Date(date).toLocaleDateString(),
         revenue
       }));
-  }, [filteredSales, chartResolution]);
+  }, [sales, salesChartResolution]);
 
+  const salesTrendTotal = useMemo(() => {
+    return salesTrendData.reduce((sum, item) => sum + item.revenue, 0);
+  }, [salesTrendData]);
+
+  // Prepare Orders Per Hour data with its own timeframe
   const ordersPerHourData = useMemo(() => {
+    const now = new Date();
+    let chartFromDate: Date;
+    
+    switch (ordersChartView) {
+      case 'daily':
+        chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'weekly':
+        chartFromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
+    const chartSales = sales.filter(sale => {
+      const saleDate = new Date(sale.timestamp);
+      return saleDate >= chartFromDate && saleDate <= now;
+    });
+
     const hourlyData: { [key: number]: number } = {};
     
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
     
-    filteredSales.forEach(sale => {
+    chartSales.forEach(sale => {
       const hour = new Date(sale.timestamp).getHours();
       hourlyData[hour]++;
     });
@@ -138,28 +194,28 @@ const UltraPolishedReportsPage = () => {
       hour: `${hour}:00`,
       orders
     }));
-  }, [filteredSales]);
+  }, [sales, ordersChartView]);
 
-  // Table data
+  // Table data using filtered sales for consistency
   const salesTableData = useMemo(() => 
-    filteredSales.map(sale => ({
+    summaryCardsSales.map(sale => ({
       productName: sale.productName,
       quantity: sale.quantity,
       revenue: formatCurrency(sale.total),
       customer: sale.customerName || 'Walk-in Customer',
       date: new Date(sale.timestamp).toLocaleDateString()
-    })), [filteredSales]
+    })), [summaryCardsSales]
   );
 
   const paymentsTableData = useMemo(() => 
-    filteredSales
+    summaryCardsSales
       .filter(sale => sale.customerName)
       .map(sale => ({
         customer: sale.customerName,
         amount: formatCurrency(sale.total),
         method: sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1),
         date: new Date(sale.timestamp).toLocaleDateString()
-      })), [filteredSales]
+      })), [summaryCardsSales]
   );
 
   // Alerts data
@@ -214,10 +270,10 @@ const UltraPolishedReportsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Filters Panel */}
+      {/* Global Filters Panel - Only affects summary cards */}
       <ReportsFiltersPanel
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
+        dateRange={globalDateRange}
+        onDateRangeChange={setGlobalDateRange}
         customDateRange={customDateRange}
         onCustomDateRangeChange={setCustomDateRange}
         activeFilters={activeFilters}
@@ -227,11 +283,11 @@ const UltraPolishedReportsPage = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Summary Metrics Cards */}
+        {/* Summary Metrics Cards - Controlled by global date range */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
             title="Total Revenue"
-            value={formatCurrency(metrics.totalRevenue)}
+            value={formatCurrency(summaryMetrics.totalRevenue)}
             icon={DollarSign}
             iconColor="text-green-600 dark:text-green-400"
             iconBgColor="bg-green-100 dark:bg-green-900/20"
@@ -239,7 +295,7 @@ const UltraPolishedReportsPage = () => {
           />
           <MetricCard
             title="Total Orders"
-            value={metrics.totalOrders}
+            value={summaryMetrics.totalOrders}
             icon={ShoppingCart}
             iconColor="text-blue-600 dark:text-blue-400"
             iconBgColor="bg-blue-100 dark:bg-blue-900/20"
@@ -247,7 +303,7 @@ const UltraPolishedReportsPage = () => {
           />
           <MetricCard
             title="Active Customers"
-            value={metrics.activeCustomers}
+            value={summaryMetrics.activeCustomers}
             icon={Users}
             iconColor="text-purple-600 dark:text-purple-400"
             iconBgColor="bg-purple-100 dark:bg-purple-900/20"
@@ -255,7 +311,7 @@ const UltraPolishedReportsPage = () => {
           />
           <MetricCard
             title="Low Stock Products"
-            value={metrics.lowStockProducts}
+            value={summaryMetrics.lowStockProducts}
             icon={Package}
             iconColor="text-orange-600 dark:text-orange-400"
             iconBgColor="bg-orange-100 dark:bg-orange-900/20"
@@ -263,13 +319,13 @@ const UltraPolishedReportsPage = () => {
           />
         </div>
 
-        {/* Charts Section */}
+        {/* Charts Section - Each with independent controls */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SalesTrendChart
             data={salesTrendData}
-            resolution={chartResolution}
-            onResolutionChange={setChartResolution}
-            totalSales={metrics.totalRevenue}
+            resolution={salesChartResolution}
+            onResolutionChange={setSalesChartResolution}
+            totalSales={salesTrendTotal}
           />
           <OrdersPerHourChart
             data={ordersPerHourData}

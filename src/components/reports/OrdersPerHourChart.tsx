@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface OrdersPerHourChartProps {
   data: Array<{ hour: string; orders: number }>;
@@ -18,7 +18,12 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Orders Per Hour</h3>
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Orders Per Hour</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {view === 'daily' ? 'Today' : 'This Week'}
+          </p>
+        </div>
         <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
           {(['daily', 'weekly'] as const).map((option) => (
             <button
@@ -30,7 +35,7 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
             >
-              {option.charAt(0).toUpperCase() + option.slice(1)}
+              {option === 'daily' ? 'Today' : 'This Week'}
             </button>
           ))}
         </div>
@@ -75,9 +80,15 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
             />
             <Bar 
               dataKey="orders" 
-              fill={(entry: any) => entry.orders === maxOrders ? "url(#peakBarGradient)" : "url(#barGradient)"}
               radius={[4, 4, 0, 0]}
-            />
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.orders === maxOrders ? "url(#peakBarGradient)" : "url(#barGradient)"} 
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -16,10 +16,28 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
   onResolutionChange,
   totalSales
 }) => {
+  const getDateRangeLabel = () => {
+    switch (resolution) {
+      case 'hourly':
+        return 'Last 24 hours';
+      case 'daily':
+        return 'Last 30 days';
+      case 'monthly':
+        return 'Last 12 months';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Sales Trend</h3>
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Sales Trend</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {getDateRangeLabel()}
+          </p>
+        </div>
         <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
           {(['hourly', 'daily', 'monthly'] as const).map((option) => (
             <button
@@ -34,6 +52,13 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
               {option.charAt(0).toUpperCase() + option.slice(1)}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+          <span>Sales (KES)</span>
         </div>
       </div>
 
@@ -62,11 +87,13 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
             />
             <Tooltip 
               contentStyle={{
-                backgroundColor: '#1f2937',
+                backgroundColor: 'white',
                 border: 'none',
                 borderRadius: '12px',
-                color: '#fff',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                color: '#1f2937',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                fontSize: '14px',
+                fontWeight: '500'
               }}
               formatter={(value: number) => [`${formatCurrency(value)}`, 'Sales']}
               labelFormatter={(label) => `Date: ${label}`}
@@ -78,7 +105,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
               strokeWidth={3}
               fill="url(#salesGradient)"
               dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
-              activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2 }}
+              activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#8b5cf6' }}
             />
           </AreaChart>
         </ResponsiveContainer>
