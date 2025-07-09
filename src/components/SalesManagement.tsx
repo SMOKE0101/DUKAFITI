@@ -14,6 +14,7 @@ import { Product, Sale, Customer } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import QuickSelectSection from './sales/QuickSelectSection';
 
 interface CartItem {
   product: Product;
@@ -32,9 +33,6 @@ const SalesManagement = () => {
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { sales, loading: salesLoading, createSales } = useSupabaseSales();
   const { customers, loading: customersLoading } = useSupabaseCustomers();
-
-  // Get favorites (top 6 most-used products)
-  const favorites = products.slice(0, 6);
 
   // Filter products for search
   const filteredProducts = products.filter(product =>
@@ -166,40 +164,10 @@ const SalesManagement = () => {
       </header>
 
       {/* Quick-Select Product Carousel */}
-      <div className="h-[28vh] p-4">
-        <Card className="h-full bg-muted/30">
-          <CardHeader className="flex-row justify-between items-center p-4">
-            <CardTitle className="text-base">Favorites</CardTitle>
-            <Button variant="ghost" size="sm" className="text-sm">
-              Edit
-            </Button>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {favorites.map(product => (
-                <div
-                  key={product.id}
-                  className="flex-shrink-0 w-18 h-18 bg-card rounded-lg border p-2 flex flex-col items-center justify-center cursor-pointer transition-transform active:scale-95 hover:bg-accent"
-                  onClick={() => addToCart(product)}
-                >
-                  <div className="w-8 h-8 bg-muted rounded flex items-center justify-center mb-1">
-                    <ShoppingCart className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs text-center truncate w-full">
-                    {product.name}
-                  </span>
-                </div>
-              ))}
-              <div
-                className="flex-shrink-0 w-18 h-18 bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center cursor-pointer hover:bg-accent"
-                onClick={() => setSearchExpanded(true)}
-              >
-                <Plus className="w-6 h-6 text-muted-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <QuickSelectSection 
+        products={products}
+        onAddToCart={addToCart}
+      />
 
       {/* Search Bar */}
       {(searchExpanded || searchTerm) && (
