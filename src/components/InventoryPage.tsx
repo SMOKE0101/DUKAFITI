@@ -1,19 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Package, TrendingUp, AlertTriangle, Edit, Trash2 } from 'lucide-react';
-import { formatCurrency } from '../utils/currency';
 import { useToast } from '../hooks/use-toast';
 import { Product } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import InventoryHeader from './inventory/InventoryHeader';
 import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
+import PremiumStatsCards from './inventory/PremiumStatsCards';
 
 const InventoryPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -23,6 +15,7 @@ const InventoryPage = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
   
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -44,7 +37,10 @@ const InventoryPage = () => {
     .filter(product => {
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesCategory && matchesSearch;
+      const matchesFilter = activeFilter === 'all' || 
+        (activeFilter === 'low-stock' && product.currentStock <= product.lowStockThreshold) ||
+        (activeFilter === 'in-stock' && product.currentStock > product.lowStockThreshold);
+      return matchesCategory && matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -140,6 +136,14 @@ const InventoryPage = () => {
     setShowModal(true);
   };
 
+  const handleCardClick = (filter: string) => {
+    setActiveFilter(filter);
+    if (filter === 'low-stock') {
+      setSelectedCategory('all');
+      setSearchTerm('');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -156,6 +160,28 @@ const InventoryPage = () => {
         lowStockCount={lowStockCount}
         onAddProduct={handleCreateProduct}
       />
+
+      <PremiumStatsCards 
+        products={products}
+        onCardClick={handleCardClick}
+      />
+
+      {/* Filter indicator */}
+      {activeFilter !== 'all' && (
+        <div className="flex items-center gap-2 pb-2">
+          <span className="text-sm text-muted-foreground">Filtered by:</span>
+          <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+            {activeFilter === 'low-stock' ? 'Low Stock Items' : 
+             activeFilter === 'in-stock' ? 'In Stock Items' : 'All Items'}
+          </span>
+          <button
+            onClick={() => setActiveFilter('all')}
+            className="text-sm text-primary hover:text-primary/80 underline"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
 
       <InventoryFilters
         categories={categories}
@@ -282,22 +308,21 @@ const InventoryPage = () => {
             </p>
             
             <div className="flex gap-2">
-              <Button
-                variant="destructive"
+              <button
                 onClick={handleDeleteConfirm}
-                className="flex-1"
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
               >
                 Delete
-              </Button>
-              <Button
-                variant="outline"
+              </button>
+              <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setProductToDelete(null);
                 }}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
               >
                 Cancel
-              </Button>
+              </button>
             </div>
           </div>
         </div>

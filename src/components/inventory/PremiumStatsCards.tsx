@@ -2,258 +2,157 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Package, 
   TrendingUp, 
-  AlertTriangle, 
-  Calendar
+  AlertTriangle
 } from 'lucide-react';
 import { Product } from '../../types';
+import { formatCurrency } from '../../utils/currency';
 
 interface PremiumStatsCardsProps {
   products: Product[];
   onCardClick: (filter: string) => void;
 }
 
-interface StatCard {
-  id: string;
-  title: string;
-  value: string | number;
-  subtitle: string;
-  icon: React.ElementType;
-  iconColor: string;
-  bgColor: string;
-  trend?: string;
-  onClick: () => void;
-}
-
 const PremiumStatsCards: React.FC<PremiumStatsCardsProps> = ({ products, onCardClick }) => {
-  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [animatedValues, setAnimatedValues] = useState({ products: 0, value: 0, lowStock: 0 });
 
   // Calculate metrics
-  const totalSKUs = products.length;
-  const inStockProducts = products.filter(p => p.currentStock > p.lowStockThreshold);
-  const lowStockProducts = products.filter(p => p.currentStock <= p.lowStockThreshold); // Include qty = 0
-  const inStockPercentage = totalSKUs > 0 ? Math.round((inStockProducts.length / totalSKUs) * 100) : 0;
-  
-  // Get most recent restock date (simulated - in real app would come from restock_date field)
-  const getLastRestockInfo = () => {
-    // For demo purposes, using updatedAt as proxy for restock date
-    const sortedByUpdate = [...products].sort((a, b) => 
-      new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
-    );
-    
-    if (sortedByUpdate.length === 0) {
-      return { display: 'No restocks recorded', timeAgo: '', isToday: false };
-    }
-    
-    const lastUpdate = new Date(sortedByUpdate[0].updatedAt || '');
-    const now = new Date();
-    const diffMs = now.getTime() - lastUpdate.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-    
-    let timeAgo = '';
-    if (diffHours < 1) {
-      timeAgo = 'Just now';
-    } else if (diffHours < 24) {
-      timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    } else {
-      timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    }
-    
-    const isToday = diffHours < 24;
-    const display = lastUpdate.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-    
-    return { display, timeAgo, isToday };
-  };
+  const totalProducts = products.length;
+  const totalValue = products.reduce((sum, product) => sum + (product.sellingPrice * product.currentStock), 0);
+  const lowStockCount = products.filter(product => product.currentStock <= product.lowStockThreshold).length;
 
-  const lastRestockInfo = getLastRestockInfo();
-  
-  const cards: StatCard[] = [
+  // Animate values on mount
+  React.useEffect(() => {
+    const animateValue = (start: number, end: number, key: keyof typeof animatedValues) => {
+      const duration = 300;
+      const startTime = Date.now();
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (end - start) * easeOut);
+        
+        setAnimatedValues(prev => ({ ...prev, [key]: current }));
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    };
+
+    animateValue(0, totalProducts, 'products');
+    animateValue(0, totalValue, 'value');
+    animateValue(0, lowStockCount, 'lowStock');
+  }, [totalProducts, totalValue, lowStockCount]);
+
+  const cards = [
     {
       id: 'total-products',
       title: 'Total Products',
-      value: totalSKUs,
-      subtitle: 'SKUs in inventory',
+      value: animatedValues.products,
+      subtitle: 'distinct SKUs',
       icon: Package,
-      iconColor: 'text-primary',
-      bgColor: 'bg-primary/10',
-      trend: '+2 this week',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/20',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      borderColor: 'border-l-blue-500',
+      tooltip: 'Total distinct products in inventory',
       onClick: () => onCardClick('all')
     },
     {
-      id: 'stock-percentage',
-      title: 'In Stock',
-      value: `${inStockPercentage}%`,
-      subtitle: `${inStockProducts.length} of ${totalSKUs} products`,
+      id: 'total-value',
+      title: 'Total Value',
+      value: formatCurrency(animatedValues.value),
+      subtitle: 'inventory worth',
       icon: TrendingUp,
-      iconColor: 'text-green-600',
-      bgColor: 'bg-green-100',
-      trend: inStockPercentage >= 80 ? 'Healthy levels' : 'Needs attention',
-      onClick: () => onCardClick('in-stock')
+      iconBg: 'bg-green-100 dark:bg-green-900/20',
+      iconColor: 'text-green-600 dark:text-green-400',
+      borderColor: 'border-l-green-500',
+      tooltip: 'Current value of all stock',
+      onClick: () => onCardClick('value')
     },
     {
       id: 'low-stock',
-      title: 'Low Stock Alert',
-      value: lowStockProducts.length,
-      subtitle: lowStockProducts.length === 0 ? 'All products well stocked' : 'Items need restocking',
+      title: 'Low Stock',
+      value: animatedValues.lowStock,
+      subtitle: lowStockCount === 0 ? 'all stocked well' : 'items need attention',
       icon: AlertTriangle,
-      iconColor: lowStockProducts.length > 0 ? 'text-red-600' : 'text-gray-400',
-      bgColor: lowStockProducts.length > 0 ? 'bg-red-100' : 'bg-gray-100',
-      trend: lowStockProducts.length > 5 ? 'High priority' : lowStockProducts.length > 0 ? 'Manageable' : 'All good',
-      onClick: () => onCardClick('low-stock')
-    },
-    {
-      id: 'last-restock',
-      title: 'Last Restock',
-      value: lastRestockInfo.display === 'No restocks recorded' ? 'Never' : 'Recent',
-      subtitle: lastRestockInfo.display === 'No restocks recorded' ? lastRestockInfo.display : `${lastRestockInfo.display} • ${lastRestockInfo.timeAgo}`,
-      icon: Calendar,
-      iconColor: lastRestockInfo.isToday ? 'text-green-600' : 'text-blue-600',
-      bgColor: lastRestockInfo.isToday ? 'bg-green-100' : 'bg-blue-100',
-      trend: lastRestockInfo.timeAgo,
-      onClick: () => setShowRestockModal(true)
+      iconBg: lowStockCount > 0 ? 'bg-red-100 dark:bg-red-900/20' : 'bg-gray-100 dark:bg-gray-800',
+      iconColor: lowStockCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400',
+      borderColor: lowStockCount > 0 ? 'border-l-red-500' : 'border-l-gray-300',
+      tooltip: 'Products at or below their reorder threshold',
+      onClick: () => onCardClick('low-stock'),
+      dimmed: lowStockCount === 0
     }
   ];
 
-  const getLastRestockEvents = () => {
-    return products
-      .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
-      .slice(0, 3)
-      .map(product => ({
-        product: product.name,
-        date: new Date(product.updatedAt || '').toLocaleDateString(),
-        quantity: Math.floor(Math.random() * 50) + 10, // Simulated quantity
-      }));
-  };
-
   return (
-    <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cards.map((card) => (
-          <Tooltip key={card.id}>
-            <TooltipTrigger asChild>
-              <Card 
-                className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 ease-out cursor-pointer group hover:scale-105"
-                onClick={card.onClick}
-              >
-                <CardContent className="p-0">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`w-12 h-12 ${card.bgColor} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
-                      <card.icon className={`w-6 h-6 ${card.iconColor}`} />
-                      {card.id === 'last-restock' && lastRestockInfo.isToday && (
-                        <div className="absolute w-3 h-3 bg-green-500 rounded-full -top-1 -right-1 animate-pulse" />
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs uppercase text-muted-foreground font-medium tracking-wide">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {cards.map((card) => (
+        <Tooltip key={card.id}>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`
+                relative overflow-hidden cursor-pointer transition-all duration-300 ease-out
+                bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md hover:shadow-xl
+                border-l-4 ${card.borderColor}
+                hover:-translate-y-1 hover:scale-[1.02]
+                ${card.dimmed ? 'opacity-75' : ''}
+              `}
+              onClick={card.onClick}
+            >
+              <CardContent className="p-0">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`
+                        w-10 h-10 rounded-full flex items-center justify-center
+                        ${card.iconBg} transition-all duration-200
+                        group-hover:scale-110
+                      `}>
+                        <card.icon className={`w-5 h-5 ${card.iconColor}`} />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 tracking-wide">
                         {card.title}
-                      </div>
+                      </h3>
                     </div>
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <div className={`text-3xl font-bold group-hover:text-primary transition-colors duration-200 ${
-                      card.id === 'low-stock' && lowStockProducts.length === 0 ? 'text-gray-400' : 'text-foreground'
-                    }`}>
-                      {card.value}
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground">
-                      {card.subtitle}
-                    </div>
-
-                    {card.trend && (
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                        <span className="text-xs text-primary font-medium">
-                          {card.trend}
-                        </span>
-                      </div>
-                    )}
+                <div className="space-y-1">
+                  <div className={`
+                    text-3xl font-bold transition-colors duration-200
+                    ${card.dimmed ? 'text-gray-400' : 'text-gray-900 dark:text-white'}
+                  `}>
+                    {card.value}
                   </div>
-
-                  {/* Micro progress bar for stock percentage */}
-                  {card.id === 'stock-percentage' && (
-                    <div className="mt-3">
-                      <div className="w-full bg-gray-200 rounded-full h-1.5">
-                        <div 
-                          className="bg-green-500 h-1.5 rounded-full transition-all duration-500"
-                          style={{ width: `${inStockPercentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Mini sparkline effect for low stock */}
-                  {card.id === 'low-stock' && lowStockProducts.length > 0 && (
-                    <div className="mt-3 flex items-center gap-1">
-                      {Array.from({ length: 7 }).map((_, i) => (
-                        <div 
-                          key={i}
-                          className="w-1 bg-red-300 rounded-full animate-pulse"
-                          style={{ 
-                            height: `${8 + Math.random() * 12}px`,
-                            animationDelay: `${i * 100}ms`
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>
-                {card.id === 'low-stock' 
-                  ? (lowStockProducts.length > 0 
-                      ? `${lowStockProducts.length} products at or below your reorder threshold.`
-                      : 'All products in stock above threshold.')
-                  : card.id === 'last-restock'
-                    ? (lastRestockInfo.display === 'No restocks recorded'
-                        ? 'No restocks recorded yet'
-                        : `Last restocked: ${lastRestockInfo.display} at ${new Date().toLocaleTimeString()}`)
-                    : `Click to filter inventory by ${card.title.toLowerCase()}`
-                }
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </div>
-
-      {/* Last Restock Events Modal */}
-      <Dialog open={showRestockModal} onOpenChange={setShowRestockModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Recent Restock Events</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            {getLastRestockEvents().map((event, index) => (
-              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium">{event.product}</div>
-                  <div className="text-sm text-gray-500">{event.date}</div>
+                  
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {card.subtitle}
+                  </div>
                 </div>
-                <div className="text-sm font-medium text-green-600">
-                  +{event.quantity} units
-                </div>
-              </div>
-            ))}
-            {getLastRestockEvents().length === 0 && (
-              <div className="text-center py-6 text-gray-500">
-                No restock events recorded yet
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+
+                {/* Pulse animation for icon background */}
+                <div className={`
+                  absolute top-6 left-6 w-10 h-10 rounded-full
+                  ${card.iconBg} opacity-0 animate-ping
+                `} style={{ animationDelay: `${cards.indexOf(card) * 100}ms` }} />
+
+                {/* Ripple effect overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{card.tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      ))}
+    </div>
   );
 };
 

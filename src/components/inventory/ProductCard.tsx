@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Edit, Trash2, RotateCcw } from 'lucide-react';
+import { Edit, Trash2, Plus } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { Product } from '../../types';
 
@@ -20,25 +20,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
   
   const getStockStatus = () => {
     if (isUnspecifiedQuantity) {
-      return { color: 'bg-yellow-100 text-yellow-800', label: 'Bulk / Variable' };
+      return { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400', label: 'Bulk / Variable' };
     }
-    if (product.currentStock === 0) return { color: 'bg-red-100 text-red-800', label: 'Out of Stock' };
-    if (product.currentStock <= product.lowStockThreshold) return { color: 'bg-yellow-100 text-yellow-800', label: 'Low Stock' };
-    return { color: 'bg-green-100 text-green-800', label: 'In Stock' };
+    if (product.currentStock === 0) return { color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400', label: 'Out of Stock' };
+    if (product.currentStock <= product.lowStockThreshold) return { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400', label: 'Low Stock' };
+    return { color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400', label: 'In Stock' };
   };
 
   const stockStatus = getStockStatus();
 
   return (
-    <Card className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:ring-2 hover:ring-brand-purple/20 transition-all duration-200 group">
+    <Card className="group relative bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:ring-2 hover:ring-primary/20 transition-all duration-200">
       <CardContent className="p-0 space-y-3">
         {/* Top: Name and Category */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg text-foreground group-hover:text-brand-purple transition-colors truncate">
+            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate">
               {product.name}
             </h3>
-            <Badge className="text-sm bg-purple-100 text-purple-800 rounded-full px-2 mt-1">
+            <Badge className="text-sm bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 rounded-full px-2 mt-1">
               {product.category}
             </Badge>
           </div>
@@ -46,14 +46,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
 
         {/* Middle: Code and Prices */}
         <div className="space-y-2">
-          <div className="text-xs text-gray-500 font-mono">
+          <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
             CODE: {product.id.slice(0, 8).toUpperCase()}
           </div>
           <div className="flex gap-2">
-            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs">
               Buy: {formatCurrency(product.costPrice)}
             </Badge>
-            <Badge className="bg-green-100 text-green-800 text-xs">
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 text-xs">
               Sell: {formatCurrency(product.sellingPrice)}
             </Badge>
           </div>
@@ -82,7 +82,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(product)}
-                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-brand-purple"
+                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
@@ -96,7 +96,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                   variant="ghost"
                   size="sm"
                   onClick={() => onDelete(product)}
-                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -110,12 +110,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                   variant="ghost"
                   size="sm"
                   onClick={() => onRestock(product)}
-                  className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600"
+                  className="h-10 w-10 p-0 rounded-full bg-green-600 hover:bg-green-500 text-white hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  <RotateCcw className="w-4 h-4" />
+                  <Plus className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Restock product</TooltipContent>
+              <TooltipContent>Add stock</TooltipContent>
             </Tooltip>
           </div>
         </div>
