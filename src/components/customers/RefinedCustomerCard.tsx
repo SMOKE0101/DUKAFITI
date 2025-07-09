@@ -88,6 +88,12 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
                   <span className="italic">No address provided</span>
                 )}
               </p>
+
+              {/* Credit Limit Field */}
+              <p className="text-sm text-gray-500 mt-2">
+                <span className="font-medium">Credit Limit:</span>{' '}
+                {customer.creditLimit ? formatCurrency(customer.creditLimit) : 'Unlimited'}
+              </p>
             </div>
           </div>
 

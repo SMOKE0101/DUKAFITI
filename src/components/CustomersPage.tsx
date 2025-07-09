@@ -53,7 +53,8 @@ const CustomersPage = () => {
     phone: '',
     email: '',
     address: '',
-    initialBalance: ''
+    initialBalance: '',
+    creditLimit: 1000
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -140,6 +141,11 @@ const CustomersPage = () => {
         errors.email = 'Please enter a valid email address';
       }
     }
+
+    // Credit limit validation
+    if (newCustomerForm.creditLimit < 0) {
+      errors.creditLimit = 'Credit limit must be positive';
+    }
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -157,7 +163,7 @@ const CustomersPage = () => {
         createdDate: new Date().toISOString(),
         totalPurchases: 0,
         outstandingDebt: parseFloat(newCustomerForm.initialBalance) || 0,
-        creditLimit: 1000,
+        creditLimit: newCustomerForm.creditLimit,
         riskRating: 'low',
         lastPurchaseDate: null
       });
@@ -168,7 +174,7 @@ const CustomersPage = () => {
       });
 
       setShowAddModal(false);
-      setNewCustomerForm({ name: '', phone: '', email: '', address: '', initialBalance: '' });
+      setNewCustomerForm({ name: '', phone: '', email: '', address: '', initialBalance: '', creditLimit: 1000 });
       setFormErrors({});
     } catch (error) {
       console.error('Failed to add customer:', error);
@@ -481,6 +487,21 @@ const CustomersPage = () => {
                   aria-label="Customer phone number"
                 />
                 {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="creditLimit" className="text-sm font-semibold">Credit Limit (KES)</Label>
+                <Input
+                  id="creditLimit"
+                  type="number"
+                  value={newCustomerForm.creditLimit}
+                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, creditLimit: Number(e.target.value) }))}
+                  placeholder="1000"
+                  min="0"
+                  className={`text-base ${formErrors.creditLimit ? 'border-red-500' : ''}`}
+                  aria-label="Credit limit"
+                />
+                {formErrors.creditLimit && <p className="text-red-500 text-sm mt-1">{formErrors.creditLimit}</p>}
               </div>
 
               <div>
