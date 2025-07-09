@@ -1,9 +1,9 @@
 
 import React from 'react';
-import PremiumReportsPage from './reports/PremiumReportsPage';
+import UltraPolishedReportsPage from './reports/UltraPolishedReportsPage';
 
 const ReportsPage = () => {
-  return <PremiumReportsPage />;
+  return <UltraPolishedReportsPage />;
 };
 
 export default ReportsPage;
