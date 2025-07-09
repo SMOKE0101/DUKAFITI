@@ -334,91 +334,100 @@ const ProductManagement = () => {
 
       {/* Add/Edit Product Modal */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-2xl h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg border-0 p-0">
+          <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b">
+            <DialogTitle className="text-lg sm:text-xl font-bold">
+              {editingProduct ? 'Edit Product' : 'Add New Product'}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Product Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter product name"
-                />
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-medium">Product Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter product name"
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                    <SelectTrigger className="h-12 text-base">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="costPrice" className="text-sm font-medium">Cost Price *</Label>
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    placeholder="0.00"
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sellingPrice" className="text-sm font-medium">Selling Price *</Label>
+                  <Input
+                    id="sellingPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.sellingPrice}
+                    onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                    placeholder="0.00"
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock</Label>
+                  <Input
+                    id="currentStock"
+                    type="number"
+                    min="0"
+                    value={formData.currentStock}
+                    onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
+                    placeholder="0"
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lowStockThreshold" className="text-sm font-medium">Low Stock Alert</Label>
+                  <Input
+                    id="lowStockThreshold"
+                    type="number"
+                    min="0"
+                    value={formData.lowStockThreshold}
+                    onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
+                    placeholder="10"
+                    className="h-12 text-base"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="category">Category *</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="costPrice">Cost Price *</Label>
-                <Input
-                  id="costPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.costPrice}
-                  onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <Label htmlFor="sellingPrice">Selling Price *</Label>
-                <Input
-                  id="sellingPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.sellingPrice}
-                  onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <Label htmlFor="currentStock">Current Stock</Label>
-                <Input
-                  id="currentStock"
-                  type="number"
-                  min="0"
-                  value={formData.currentStock}
-                  onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lowStockThreshold">Low Stock Alert</Label>
-                <Input
-                  id="lowStockThreshold"
-                  type="number"
-                  min="0"
-                  value={formData.lowStockThreshold}
-                  onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
-                  placeholder="10"
-                />
-              </div>
-            </div>
 
-            <div className="flex space-x-4 pt-4">
-              <Button type="submit" className="flex-1">
-                {editingProduct ? 'Update Product' : 'Add Product'}
-              </Button>
-              <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
-                Cancel
-              </Button>
-            </div>
-          </form>
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-border">
+                <Button type="submit" className="flex-1 h-12 text-base font-medium">
+                  {editingProduct ? 'Update Product' : 'Add Product'}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm} className="flex-1 h-12 text-base font-medium">
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
 
