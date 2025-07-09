@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Product } from '../../types';
+import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
+import { useToast } from '../../hooks/use-toast';
 
 interface EditProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (productData: Partial<Product>) => void;
+  onSave: () => void;
   product: Product | null;
 }
 
@@ -25,29 +27,32 @@ const CATEGORIES = [
 const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, onSave, product }) => {
   const [formData, setFormData] = useState({
     name: '',
+    category: '',
     costPrice: '',
     sellingPrice: '',
     lowStockThreshold: '',
-    category: '',
     currentStock: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [saveError, setSaveError] = useState<string>('');
+
+  const { updateProduct } = useSupabaseProducts();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (product) {
+    if (product && isOpen) {
       setFormData({
         name: product.name,
+        category: product.category,
         costPrice: product.costPrice.toString(),
         sellingPrice: product.sellingPrice.toString(),
-        lowStockThreshold: product.lowStockThreshold.toString(),
-        category: product.category,
+        lowStockThreshold: product.lowStockThreshold?.toString() || '10',
         currentStock: product.currentStock.toString()
       });
+      setErrors({});
     }
-  }, [product]);
+  }, [product, isOpen]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -63,24 +68,19 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
       newErrors.lowStockThreshold = 'Valid threshold is required';
     }
     if (!formData.category) newErrors.category = 'Category is required';
-    if (!formData.currentStock || parseInt(formData.currentStock) < 0) {
-      newErrors.currentStock = 'Valid stock quantity is required';
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
+  const handleSave = async () => {
+    if (!product || !validateForm()) return;
 
     setLoading(true);
-    setSaveError('');
 
     try {
-      const productData = {
+      const updatedProduct = {
+        ...product,
         name: formData.name.trim(),
         category: formData.category,
         costPrice: parseFloat(formData.costPrice),
@@ -89,27 +89,35 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
         lowStockThreshold: parseInt(formData.lowStockThreshold)
       };
 
-      await onSave(productData);
+      await updateProduct(product.id, updatedProduct);
+      
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
+
+      onSave();
       onClose();
     } catch (error) {
       console.error('Failed to update product:', error);
-      setSaveError('Failed to update product. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to update product. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    if (loading) return; // Prevent closing during save
-    
+    if (loading) return;
     setErrors({});
-    setSaveError('');
     onClose();
   };
 
   const isFormValid = formData.name && formData.costPrice && 
-                     formData.sellingPrice && formData.lowStockThreshold && 
-                     formData.category && formData.currentStock;
+                     formData.sellingPrice && formData.lowStockThreshold && formData.category;
 
   if (!product) return null;
 
@@ -120,7 +128,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
           <DialogTitle className="text-xl font-semibold">Edit Product</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           {/* Product Name */}
           <div className="space-y-2">
             <Label htmlFor="name" className="text-lg font-semibold">
@@ -147,8 +155,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
             <Input
               id="code"
               value={product.id.slice(0, 8).toUpperCase()}
+              className="bg-gray-100 dark:bg-gray-700 font-mono"
+              disabled
               readOnly
-              className="bg-gray-100 dark:bg-gray-700 font-mono cursor-not-allowed"
             />
           </div>
 
@@ -205,20 +214,16 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
           {/* Current Stock */}
           <div className="space-y-2">
             <Label htmlFor="currentStock" className="text-lg font-semibold">
-              Current Stock *
+              Current Stock
             </Label>
             <Input
               id="currentStock"
               type="number"
               value={formData.currentStock}
               onChange={(e) => setFormData(prev => ({ ...prev, currentStock: e.target.value }))}
-              className={`focus-visible:ring-2 focus-visible:ring-brand-purple ${
-                errors.currentStock ? 'border-red-500' : ''
-              }`}
-              placeholder="0"
+              className="focus-visible:ring-2 focus-visible:ring-brand-purple"
               disabled={loading}
             />
-            {errors.currentStock && <p className="text-red-500 text-sm">{errors.currentStock}</p>}
           </div>
 
           {/* Low-Stock Threshold */}
@@ -267,11 +272,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
             {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
           </div>
 
-          {/* Error Message */}
-          {saveError && (
-            <div className="text-red-500 text-sm text-center">{saveError}</div>
-          )}
-
           {/* Actions */}
           <div className="flex justify-between pt-6">
             <Button
@@ -284,14 +284,14 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
               Cancel
             </Button>
             <Button
-              type="submit"
+              onClick={handleSave}
               disabled={!isFormValid || loading}
               className="bg-green-600 text-white rounded-lg px-6 py-2 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -7,11 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shuffle } from 'lucide-react';
 import { Product } from '../../types';
+import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
+import { useToast } from '../../hooks/use-toast';
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSave: () => void;
 }
 
 const CATEGORIES = [
@@ -36,7 +38,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isCodeShaking, setIsCodeShaking] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [saveError, setSaveError] = useState<string>('');
+
+  const { createProduct } = useSupabaseProducts();
+  const { toast } = useToast();
 
   const generateCode = () => {
     if (!formData.name.trim()) {
@@ -71,13 +75,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSave = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    setSaveError('');
 
     try {
       const productData = {
@@ -89,8 +90,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         lowStockThreshold: parseInt(formData.lowStockThreshold)
       };
 
-      await onSave(productData);
+      await createProduct(productData);
       
+      toast({
+        title: "Success",
+        description: "Product added successfully",
+      });
+
       // Reset form
       setFormData({
         name: '',
@@ -102,17 +108,22 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         currentStock: '0'
       });
       setErrors({});
+      onSave();
       onClose();
     } catch (error) {
       console.error('Failed to save product:', error);
-      setSaveError('Failed to save product. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to save product. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    if (loading) return; // Prevent closing during save
+    if (loading) return;
     
     setFormData({
       name: '',
@@ -124,7 +135,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
       currentStock: '0'
     });
     setErrors({});
-    setSaveError('');
     onClose();
   };
 
@@ -138,7 +148,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
           <DialogTitle className="text-xl font-semibold">Add New Product</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           {/* Product Name */}
           <div className="space-y-2">
             <Label htmlFor="name" className="text-lg font-semibold">
@@ -298,11 +308,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             />
           </div>
 
-          {/* Error Message */}
-          {saveError && (
-            <div className="text-red-500 text-sm text-center">{saveError}</div>
-          )}
-
           {/* Actions */}
           <div className="flex justify-between pt-6">
             <Button
@@ -315,14 +320,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
               Cancel
             </Button>
             <Button
-              type="submit"
+              onClick={handleSave}
               disabled={!isFormValid || loading}
               className="bg-green-600 text-white rounded-lg px-6 py-2 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : 'Save Product'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
