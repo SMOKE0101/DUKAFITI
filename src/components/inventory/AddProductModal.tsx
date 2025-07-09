@@ -70,7 +70,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
           newErrors.costPrice = 'Valid buying price is required';
         } else {
           delete newErrors.costPrice;
-          // Validate selling vs buying price
           if (formData.sellingPrice && parseFloat(formData.sellingPrice) < parseFloat(value)) {
             newErrors.sellingPrice = 'Selling price must be ≥ buying price';
           } else if (formData.sellingPrice) {
@@ -88,7 +87,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         }
         break;
       case 'lowStockThreshold':
-        if (!value || parseInt(value) < 0) {
+        if (!isUnspecifiedQuantity && (!value || parseInt(value) < 0)) {
           newErrors.lowStockThreshold = 'Valid threshold is required';
         } else {
           delete newErrors.lowStockThreshold;
@@ -109,14 +108,28 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
   };
 
   const handleSave = async () => {
-    // Final validation
-    Object.keys(formData).forEach(key => {
-      if (key !== 'currentStock') {
-        validateField(key, formData[key as keyof typeof formData]);
-      }
+    // Validate all required fields
+    const fieldsToValidate = ['name', 'code', 'costPrice', 'sellingPrice', 'category'];
+    if (!isUnspecifiedQuantity) {
+      fieldsToValidate.push('lowStockThreshold');
+    }
+
+    fieldsToValidate.forEach(field => {
+      validateField(field, formData[field as keyof typeof formData]);
     });
 
-    if (Object.keys(errors).length > 0) return;
+    // Check if there are any validation errors
+    const hasErrors = Object.keys(errors).some(key => errors[key]);
+    const hasEmptyRequired = fieldsToValidate.some(field => !formData[field as keyof typeof formData]);
+
+    if (hasErrors || hasEmptyRequired) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
 
@@ -127,7 +140,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         costPrice: parseFloat(formData.costPrice),
         sellingPrice: parseFloat(formData.sellingPrice),
         currentStock: isUnspecifiedQuantity ? -1 : (parseInt(formData.currentStock) || 0),
-        lowStockThreshold: parseInt(formData.lowStockThreshold)
+        lowStockThreshold: isUnspecifiedQuantity ? 0 : parseInt(formData.lowStockThreshold)
       };
 
       await onSave(productData);
@@ -142,7 +155,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
       handleClose();
     } catch (error) {
       console.error('Failed to save product:', error);
-      setErrors(prev => ({ ...prev, submit: 'Unable to save—please try again.' }));
+      toast({
+        title: "Error",
+        description: "Failed to save product. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -167,26 +184,27 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
   };
 
   const isFormValid = formData.name && formData.code && formData.costPrice && 
-                     formData.sellingPrice && formData.lowStockThreshold && formData.category &&
+                     formData.sellingPrice && formData.category &&
+                     (isUnspecifiedQuantity || formData.lowStockThreshold) &&
                      Object.keys(errors).length === 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg rounded-2xl p-0 bg-white dark:bg-gray-800 shadow-xl overflow-hidden">
+      <DialogContent className="max-w-2xl rounded-2xl p-0 bg-white dark:bg-gray-800 shadow-modal overflow-hidden animate-scale-in">
         {/* Header */}
-        <DialogHeader className="p-8 pb-6 border-b border-border/10">
+        <DialogHeader className="p-8 pb-6 border-b border-gray-200 dark:border-gray-600">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-semibold">
+            <DialogTitle className="text-2xl font-semibold text-gray-900 dark:text-white">
               Add New Product
             </DialogTitle>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleClose}
-              className="w-8 h-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-10 h-10 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 absolute top-6 right-6"
               disabled={loading}
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </Button>
           </div>
         </DialogHeader>
@@ -199,174 +217,180 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
             {/* Product Name - Full width */}
-            <div className="md:col-span-2 space-y-2">
-              <div className="relative">
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  onFocus={() => setFocusedField('name')}
-                  onBlur={() => setFocusedField(null)}
-                  className={`peer h-14 pt-6 pb-2 px-4 text-base bg-gray-50 dark:bg-gray-700 border-0 rounded-xl transition-all duration-200 ${
-                    errors.name ? 'ring-2 ring-red-500' : focusedField === 'name' ? 'ring-2 ring-primary' : ''
-                  }`}
-                  placeholder=" "
-                  disabled={loading}
-                />
-                <Label 
-                  htmlFor="name" 
-                  className={`absolute left-4 transition-all duration-200 pointer-events-none text-lg font-medium ${
-                    formData.name || focusedField === 'name' 
-                      ? 'top-2 text-xs text-muted-foreground' 
-                      : 'top-1/2 -translate-y-1/2 text-base text-muted-foreground'
-                  }`}
-                >
-                  Product Name *
-                </Label>
-              </div>
-              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+            <div className="lg:col-span-2">
+              <Label 
+                htmlFor="name" 
+                className={`block text-base font-medium mb-1 transition-colors ${
+                  focusedField === 'name' ? 'text-primary' : 'text-gray-700 dark:text-gray-200'
+                }`}
+              >
+                Product Name *
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                onFocus={() => setFocusedField('name')}
+                onBlur={() => setFocusedField(null)}
+                className={`h-12 text-lg px-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary ${
+                  errors.name ? 'border-red-500' : ''
+                }`}
+                placeholder="Enter product name"
+                disabled={loading}
+              />
+              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
             </div>
 
             {/* Product Code */}
-            <div className="md:col-span-2 space-y-2">
-              <div className="relative">
-                <div className="flex gap-3">
-                  <div className="flex-1 relative">
-                    <Input
-                      id="code"
-                      value={formData.code}
-                      onChange={(e) => handleInputChange('code', e.target.value)}
-                      onFocus={() => setFocusedField('code')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`peer h-14 pt-6 pb-2 px-4 text-base bg-gray-50 dark:bg-gray-700 border-0 rounded-xl font-mono transition-all duration-200 ${
-                        errors.code ? 'ring-2 ring-red-500' : focusedField === 'code' ? 'ring-2 ring-primary' : ''
-                      }`}
-                      placeholder=" "
-                      disabled={loading}
-                    />
-                    <Label 
-                      htmlFor="code" 
-                      className={`absolute left-4 transition-all duration-200 pointer-events-none text-lg font-medium ${
-                        formData.code || focusedField === 'code' 
-                          ? 'top-2 text-xs text-muted-foreground' 
-                          : 'top-1/2 -translate-y-1/2 text-base text-muted-foreground'
-                      }`}
-                    >
-                      Product Code *
-                    </Label>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={generateCode}
-                    className="w-14 h-14 bg-gray-200 hover:bg-gray-300 rounded-xl p-0 transition-all duration-200"
-                    variant="ghost"
-                    disabled={loading}
-                    title="Generate Code"
-                  >
-                    <Shuffle className="w-5 h-5 text-gray-600" />
-                  </Button>
-                </div>
+            <div className="lg:col-span-2">
+              <Label 
+                htmlFor="code" 
+                className={`block text-base font-medium mb-1 transition-colors ${
+                  focusedField === 'code' ? 'text-primary' : 'text-gray-700 dark:text-gray-200'
+                }`}
+              >
+                Product Code *
+              </Label>
+              <div className="flex gap-3">
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => handleInputChange('code', e.target.value)}
+                  onFocus={() => setFocusedField('code')}
+                  onBlur={() => setFocusedField(null)}
+                  className={`h-12 text-lg px-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary font-mono ${
+                    errors.code ? 'border-red-500' : ''
+                  }`}
+                  placeholder="Enter or generate code"
+                  disabled={loading}
+                />
+                <Button
+                  type="button"
+                  onClick={generateCode}
+                  className="w-12 h-12 bg-gray-200 hover:bg-gray-300 rounded-lg p-0 transition-all duration-200"
+                  variant="ghost"
+                  disabled={loading}
+                  title="Generate Code"
+                >
+                  <Shuffle className="w-5 h-5 text-gray-600" />
+                </Button>
               </div>
-              {errors.code && <p className="text-red-500 text-sm">{errors.code}</p>}
+              {errors.code && <p className="text-red-500 text-sm mt-1">{errors.code}</p>}
             </div>
 
             {/* Category */}
-            <div className="md:col-span-2 space-y-2">
-              <Label className="text-lg font-medium">Category *</Label>
+            <div className="lg:col-span-2">
+              <Label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-1">
+                Category *
+              </Label>
               <Select 
                 value={formData.category} 
                 onValueChange={(value) => handleInputChange('category', value)}
                 disabled={loading}
               >
-                <SelectTrigger className={`h-14 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl px-4 text-base transition-all duration-200 ${
-                  errors.category ? 'ring-2 ring-red-500' : ''
+                <SelectTrigger className={`h-12 text-lg px-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary ${
+                  errors.category ? 'border-red-500' : ''
                 }`}>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map(category => (
-                    <SelectItem key={category} value={category} className="text-base">
+                    <SelectItem key={category} value={category} className="text-lg">
                       {category}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
+              {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
             </div>
+          </div>
 
-            {/* Buying Price */}
-            <div className="space-y-2">
-              <div className="relative">
-                <Input
-                  id="costPrice"
-                  type="number"
-                  step="0.01"
-                  value={formData.costPrice}
-                  onChange={(e) => handleInputChange('costPrice', e.target.value)}
-                  onFocus={() => setFocusedField('costPrice')}
-                  onBlur={() => setFocusedField(null)}
-                  className={`peer h-14 pt-6 pb-2 pl-16 pr-4 text-base bg-gray-50 dark:bg-gray-700 border-0 rounded-xl transition-all duration-200 ${
-                    errors.costPrice ? 'ring-2 ring-red-500' : focusedField === 'costPrice' ? 'ring-2 ring-primary' : ''
-                  }`}
-                  placeholder=" "
-                  disabled={loading}
-                />
+          {/* Pricing Section */}
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
+            <h3 className="text-sm font-medium uppercase text-gray-500 mb-4">Pricing</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+              {/* Buying Price */}
+              <div>
                 <Label 
                   htmlFor="costPrice" 
-                  className={`absolute left-16 transition-all duration-200 pointer-events-none text-lg font-medium ${
-                    formData.costPrice || focusedField === 'costPrice' 
-                      ? 'top-2 text-xs text-muted-foreground' 
-                      : 'top-1/2 -translate-y-1/2 text-base text-muted-foreground'
+                  className={`block text-base font-medium mb-1 transition-colors ${
+                    focusedField === 'costPrice' ? 'text-primary' : 'text-gray-700 dark:text-gray-200'
                   }`}
                 >
                   Buying Price *
                 </Label>
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-                  KES
-                </span>
+                <div className="relative">
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.costPrice}
+                    onChange={(e) => handleInputChange('costPrice', e.target.value)}
+                    onFocus={() => setFocusedField('costPrice')}
+                    onBlur={() => setFocusedField(null)}
+                    className={`h-12 text-lg pl-16 pr-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary ${
+                      errors.costPrice ? 'border-red-500' : ''
+                    }`}
+                    placeholder="0.00"
+                    disabled={loading}
+                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                    KES
+                  </span>
+                </div>
+                {errors.costPrice && <p className="text-red-500 text-sm mt-1">{errors.costPrice}</p>}
               </div>
-              {errors.costPrice && <p className="text-red-500 text-sm">{errors.costPrice}</p>}
-            </div>
 
-            {/* Selling Price */}
-            <div className="space-y-2">
-              <div className="relative">
-                <Input
-                  id="sellingPrice"
-                  type="number"
-                  step="0.01"
-                  value={formData.sellingPrice}
-                  onChange={(e) => handleInputChange('sellingPrice', e.target.value)}
-                  onFocus={() => setFocusedField('sellingPrice')}
-                  onBlur={() => setFocusedField(null)}
-                  className={`peer h-14 pt-6 pb-2 pl-16 pr-4 text-base bg-gray-50 dark:bg-gray-700 border-0 rounded-xl transition-all duration-200 ${
-                    errors.sellingPrice ? 'ring-2 ring-red-500' : focusedField === 'sellingPrice' ? 'ring-2 ring-primary' : ''
-                  }`}
-                  placeholder=" "
-                  disabled={loading}
-                />
+              {/* Selling Price */}
+              <div>
                 <Label 
                   htmlFor="sellingPrice" 
-                  className={`absolute left-16 transition-all duration-200 pointer-events-none text-lg font-medium ${
-                    formData.sellingPrice || focusedField === 'sellingPrice' 
-                      ? 'top-2 text-xs text-muted-foreground' 
-                      : 'top-1/2 -translate-y-1/2 text-base text-muted-foreground'
+                  className={`block text-base font-medium mb-1 transition-colors ${
+                    focusedField === 'sellingPrice' ? 'text-primary' : 'text-gray-700 dark:text-gray-200'
                   }`}
                 >
                   Selling Price *
                 </Label>
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-                  KES
-                </span>
+                <div className="relative">
+                  <Input
+                    id="sellingPrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.sellingPrice}
+                    onChange={(e) => handleInputChange('sellingPrice', e.target.value)}
+                    onFocus={() => setFocusedField('sellingPrice')}
+                    onBlur={() => setFocusedField(null)}
+                    className={`h-12 text-lg pl-16 pr-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary ${
+                      errors.sellingPrice ? 'border-red-500' : ''
+                    }`}
+                    placeholder="0.00"
+                    disabled={loading}
+                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                    KES
+                  </span>
+                </div>
+                {errors.sellingPrice && <p className="text-red-500 text-sm mt-1">{errors.sellingPrice}</p>}
               </div>
-              {errors.sellingPrice && <p className="text-red-500 text-sm">{errors.sellingPrice}</p>}
             </div>
+          </div>
 
-            {/* Low-Stock Threshold */}
-            <div className="space-y-2">
-              <div className="relative">
+          {/* Quantity & Threshold Section */}
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
+            <h3 className="text-sm font-medium uppercase text-gray-500 mb-4">Quantity & Threshold</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+              {/* Low-Stock Threshold */}
+              <div>
+                <Label 
+                  htmlFor="lowStockThreshold" 
+                  className={`block text-base font-medium mb-1 transition-colors ${
+                    focusedField === 'lowStockThreshold' ? 'text-primary' : 'text-gray-700 dark:text-gray-200'
+                  }`}
+                >
+                  Low-Stock Threshold *
+                </Label>
                 <Input
                   id="lowStockThreshold"
                   type="number"
@@ -374,101 +398,81 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                   onChange={(e) => handleInputChange('lowStockThreshold', e.target.value)}
                   onFocus={() => setFocusedField('lowStockThreshold')}
                   onBlur={() => setFocusedField(null)}
-                  className={`peer h-14 pt-6 pb-2 px-4 text-base bg-gray-50 dark:bg-gray-700 border-0 rounded-xl transition-all duration-200 ${
-                    errors.lowStockThreshold ? 'ring-2 ring-red-500' : focusedField === 'lowStockThreshold' ? 'ring-2 ring-primary' : ''
+                  className={`h-12 text-lg px-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary ${
+                    errors.lowStockThreshold ? 'border-red-500' : ''
                   } ${isUnspecifiedQuantity ? 'opacity-50' : ''}`}
-                  placeholder=" "
+                  placeholder="10"
                   disabled={loading || isUnspecifiedQuantity}
                 />
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Alert when stock ≤ this number</p>
+                {errors.lowStockThreshold && <p className="text-red-500 text-sm mt-1">{errors.lowStockThreshold}</p>}
+              </div>
+
+              {/* Initial Stock */}
+              <div>
                 <Label 
-                  htmlFor="lowStockThreshold" 
-                  className={`absolute left-4 transition-all duration-200 pointer-events-none text-lg font-medium ${
-                    formData.lowStockThreshold || focusedField === 'lowStockThreshold' 
-                      ? 'top-2 text-xs text-muted-foreground' 
-                      : 'top-1/2 -translate-y-1/2 text-base text-muted-foreground'
+                  htmlFor="currentStock" 
+                  className={`block text-base font-medium mb-1 transition-colors ${
+                    focusedField === 'currentStock' ? 'text-primary' : 'text-gray-700 dark:text-gray-200'
                   }`}
                 >
-                  Low-Stock Threshold *
+                  Initial Stock
                 </Label>
-              </div>
-              <p className="text-sm text-muted-foreground">Alert when stock ≤ this number</p>
-              {errors.lowStockThreshold && <p className="text-red-500 text-sm">{errors.lowStockThreshold}</p>}
-            </div>
-
-            {/* Initial Stock */}
-            <div className="space-y-2">
-              <div className="relative">
                 {isUnspecifiedQuantity ? (
-                  <div className="h-14 px-4 py-2 bg-yellow-50 border-0 rounded-xl flex items-center transition-all duration-250">
+                  <div className="h-12 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center">
                     <div className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
                       Bulk / Variable
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <Input
-                      id="currentStock"
-                      type="number"
-                      value={formData.currentStock}
-                      onChange={(e) => handleInputChange('currentStock', e.target.value)}
-                      onFocus={() => setFocusedField('currentStock')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`peer h-14 pt-6 pb-2 px-4 text-base bg-gray-50 dark:bg-gray-700 border-0 rounded-xl transition-all duration-250 ${
-                        focusedField === 'currentStock' ? 'ring-2 ring-primary' : ''
-                      }`}
-                      placeholder=" "
-                      disabled={loading}
-                    />
-                    <Label 
-                      htmlFor="currentStock" 
-                      className={`absolute left-4 transition-all duration-200 pointer-events-none text-lg font-medium ${
-                        formData.currentStock || focusedField === 'currentStock' 
-                          ? 'top-2 text-xs text-muted-foreground' 
-                          : 'top-1/2 -translate-y-1/2 text-base text-muted-foreground'
-                      }`}
-                    >
-                      Initial Stock
-                    </Label>
-                  </>
+                  <Input
+                    id="currentStock"
+                    type="number"
+                    value={formData.currentStock}
+                    onChange={(e) => handleInputChange('currentStock', e.target.value)}
+                    onFocus={() => setFocusedField('currentStock')}
+                    onBlur={() => setFocusedField(null)}
+                    className={`h-12 text-lg px-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary`}
+                    placeholder="0"
+                    disabled={loading}
+                  />
                 )}
               </div>
             </div>
 
             {/* Unspecified Quantity Checkbox */}
-            <div className="md:col-span-2 space-y-2">
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="unspecified"
-                  checked={isUnspecifiedQuantity}
-                  onCheckedChange={(checked) => {
-                    setIsUnspecifiedQuantity(checked as boolean);
-                    if (checked) {
-                      setFormData(prev => ({ ...prev, currentStock: '', lowStockThreshold: '0' }));
-                    } else {
-                      setFormData(prev => ({ ...prev, currentStock: '0', lowStockThreshold: '10' }));
-                    }
-                  }}
-                  disabled={loading}
-                  className="w-5 h-5"
-                />
-                <Label 
-                  htmlFor="unspecified" 
-                  className="text-base text-muted-foreground cursor-pointer select-none"
-                  title="Select for bulk items—quantities recorded later"
-                >
-                  Unspecified quantity (sacks, tins, cups…)
-                </Label>
-              </div>
+            <div className="mt-6 flex items-center space-x-3">
+              <Checkbox
+                id="unspecified"
+                checked={isUnspecifiedQuantity}
+                onCheckedChange={(checked) => {
+                  setIsUnspecifiedQuantity(checked as boolean);
+                  if (checked) {
+                    setFormData(prev => ({ ...prev, currentStock: '', lowStockThreshold: '0' }));
+                  } else {
+                    setFormData(prev => ({ ...prev, currentStock: '0', lowStockThreshold: '10' }));
+                  }
+                }}
+                disabled={loading}
+                className="w-5 h-5"
+              />
+              <Label 
+                htmlFor="unspecified" 
+                className="text-base text-gray-700 dark:text-gray-200 cursor-pointer select-none ml-1"
+                title="Select for bulk items—quantities recorded later"
+              >
+                Unspecified quantity (sacks, tins, cups…)
+              </Label>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col md:flex-row gap-3 pt-6">
+          <div className="flex justify-end gap-4 mt-6">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
-              className="md:order-1 h-12 text-base font-medium transition-all duration-200"
+              className="h-12 px-6 text-lg font-medium"
               disabled={loading}
             >
               Cancel
@@ -476,7 +480,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             <Button
               onClick={handleSave}
               disabled={!isFormValid || loading}
-              className="md:order-2 md:flex-1 h-12 text-base font-medium bg-green-600 text-white rounded-lg hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-32 h-12 text-lg font-semibold bg-green-600 text-white hover:bg-green-500 hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
