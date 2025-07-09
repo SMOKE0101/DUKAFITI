@@ -17,15 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    // Return a default auth state for components that use this hook
-    return {
-      user: null,
-      session: null,
-      loading: false,
-      signIn: async () => ({ error: null }),
-      signUp: async () => ({ error: null }),
-      signOut: async () => {},
-    };
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
