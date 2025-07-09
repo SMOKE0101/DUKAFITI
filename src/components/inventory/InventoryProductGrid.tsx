@@ -30,7 +30,6 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
           product={product}
           onEdit={onEdit}
           onDelete={onDelete}
-          showUnspecifiedStock={product.currentStock === -1}
         />
       ))}
     </div>

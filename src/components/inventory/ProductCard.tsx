@@ -7,16 +7,15 @@ interface ProductCardProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  showUnspecifiedStock?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   onEdit, 
-  onDelete,
-  showUnspecifiedStock = false 
+  onDelete
 }) => {
-  const isLowStock = !showUnspecifiedStock && product.currentStock <= product.lowStockThreshold;
+  const isLowStock = product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold;
+  const isUnspecifiedStock = product.currentStock === -1;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
@@ -59,7 +58,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         
         <div className="flex justify-between text-sm">
           <span className="text-gray-500 dark:text-gray-400">Stock:</span>
-          {showUnspecifiedStock ? (
+          {isUnspecifiedStock ? (
             <span className="font-medium text-blue-600">Unspecified</span>
           ) : (
             <span className={`font-medium ${isLowStock ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
@@ -68,15 +67,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
 
-        {!showUnspecifiedStock && isLowStock && (
+        {!isUnspecifiedStock && isLowStock && (
           <div className="mt-2 px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs rounded">
             Low Stock Alert
-          </div>
-        )}
-
-        {showUnspecifiedStock && (
-          <div className="mt-2 px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs rounded">
-            Non-standard measurement
           </div>
         )}
       </div>

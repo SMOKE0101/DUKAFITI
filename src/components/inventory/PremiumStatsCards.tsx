@@ -18,10 +18,18 @@ interface PremiumStatsCardsProps {
 const PremiumStatsCards: React.FC<PremiumStatsCardsProps> = ({ products, onCardClick }) => {
   const [animatedValues, setAnimatedValues] = useState({ products: 0, value: 0, lowStock: 0 });
 
-  // Calculate metrics
+  // Calculate metrics - exclude unspecified stock from calculations
   const totalProducts = products.length;
-  const totalValue = products.reduce((sum, product) => sum + (product.sellingPrice * product.currentStock), 0);
-  const lowStockCount = products.filter(product => product.currentStock <= product.lowStockThreshold).length;
+  const totalValue = products.reduce((sum, product) => {
+    // Only count products with specified stock
+    if (product.currentStock === -1) return sum;
+    return sum + (product.sellingPrice * product.currentStock);
+  }, 0);
+  
+  // Only count products with numeric stock that are below threshold
+  const lowStockCount = products.filter(product => 
+    product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold
+  ).length;
 
   // Animate values on mount
   React.useEffect(() => {
@@ -72,7 +80,7 @@ const PremiumStatsCards: React.FC<PremiumStatsCardsProps> = ({ products, onCardC
       iconBg: 'bg-green-100 dark:bg-green-900/20',
       iconColor: 'text-green-600 dark:text-green-400',
       borderColor: 'border-l-green-500',
-      tooltip: 'Current value of all stock',
+      tooltip: 'Current value of all stock (excluding unspecified quantities)',
       onClick: () => onCardClick('value')
     },
     {
@@ -84,7 +92,7 @@ const PremiumStatsCards: React.FC<PremiumStatsCardsProps> = ({ products, onCardC
       iconBg: lowStockCount > 0 ? 'bg-red-100 dark:bg-red-900/20' : 'bg-gray-100 dark:bg-gray-800',
       iconColor: lowStockCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400',
       borderColor: lowStockCount > 0 ? 'border-l-red-500' : 'border-l-gray-300',
-      tooltip: 'Products at or below their reorder threshold',
+      tooltip: 'Products with numeric quantities at or below their reorder threshold',
       onClick: () => onCardClick('low-stock'),
       dimmed: lowStockCount === 0
     }
