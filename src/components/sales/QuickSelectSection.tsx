@@ -65,8 +65,13 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
       <Card className="h-full bg-muted/30">
         <CardHeader className="flex-row justify-between items-center p-4">
           <CardTitle className="text-base">Favorites</CardTitle>
-          <Button variant="ghost" size="sm" className="text-sm">
-            Edit
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-sm"
+            onClick={handleToggleEditMode}
+          >
+            {isEditMode ? 'Done' : 'Edit'}
           </Button>
         </CardHeader>
         <CardContent className="p-4 pt-0 flex flex-col h-full">
@@ -88,11 +93,11 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
               
               {/* Search Dropdown */}
               {showDropdown && filteredProducts.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {filteredProducts.map(product => (
                     <button
                       key={product.id}
-                      className="w-full flex items-center justify-between p-3 hover:bg-accent text-left border-b last:border-b-0"
+                      className="w-full flex items-center justify-between p-3 hover:bg-accent text-left border-b last:border-b-0 transition-colors"
                       onClick={() => handleAddFavorite(product)}
                     >
                       <div>
@@ -104,6 +109,15 @@ const QuickSelectSection = ({ products, onAddToCart }: QuickSelectSectionProps) 
                       <Plus className="w-4 h-4 text-muted-foreground" />
                     </button>
                   ))}
+                </div>
+              )}
+              
+              {/* No results message */}
+              {showDropdown && searchTerm.length > 0 && filteredProducts.length === 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border rounded-md shadow-lg p-3">
+                  <div className="text-sm text-muted-foreground text-center">
+                    No products found
+                  </div>
                 </div>
               )}
             </div>

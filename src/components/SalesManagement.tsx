@@ -34,16 +34,26 @@ const SalesManagement = () => {
   const { sales, loading: salesLoading, createSales } = useSupabaseSales();
   const { customers, loading: customersLoading } = useSupabaseCustomers();
 
+  console.log('SalesManagement render:', { 
+    productsCount: products.length, 
+    productsLoading,
+    searchTerm,
+    searchExpanded 
+  });
+
   // Filter products for search
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   ).slice(0, 5);
+
+  console.log('Filtered products:', filteredProducts.length);
 
   // Calculate cart total
   const cartTotal = cart.reduce((sum, item) => sum + (item.product.sellingPrice * item.quantity), 0);
 
   // Add product to cart
   const addToCart = (product: Product, quantity: number = 1) => {
+    console.log('Adding to cart:', product.name);
     setCart(prev => {
       const existingItem = prev.find(item => item.product.id === product.id);
       if (existingItem) {
@@ -170,41 +180,48 @@ const SalesManagement = () => {
       />
 
       {/* Search Bar */}
-      {(searchExpanded || searchTerm) && (
-        <div className="px-4 pb-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10"
-              autoFocus
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSearchExpanded(false);
-                }}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-          
-          {/* Search Results */}
-          {searchTerm && filteredProducts.length > 0 && (
-            <Card className="mt-2 max-h-48 overflow-y-auto">
-              <CardContent className="p-0">
-                {filteredProducts.map(product => (
+      <div className="px-4 pb-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => {
+              console.log('Search input changed:', e.target.value);
+              setSearchTerm(e.target.value);
+            }}
+            className="pl-10 pr-10"
+            onFocus={() => {
+              console.log('Search input focused');
+              setSearchExpanded(true);
+            }}
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+              onClick={() => {
+                setSearchTerm('');
+                setSearchExpanded(false);
+              }}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+        
+        {/* Search Results */}
+        {searchTerm && (
+          <Card className="mt-2 max-h-48 overflow-y-auto z-50 relative">
+            <CardContent className="p-0">
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map(product => (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between p-3 border-b last:border-b-0 cursor-pointer hover:bg-accent"
+                    className="flex items-center justify-between p-3 border-b last:border-b-0 cursor-pointer hover:bg-accent transition-colors"
                     onClick={() => {
+                      console.log('Product selected from search:', product.name);
                       addToCart(product);
                       setSearchTerm('');
                       setSearchExpanded(false);
@@ -213,17 +230,21 @@ const SalesManagement = () => {
                     <div>
                       <div className="font-medium">{product.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {formatCurrency(product.sellingPrice)}
+                        {formatCurrency(product.sellingPrice)} • Stock: {product.currentStock}
                       </div>
                     </div>
                     <Plus className="w-4 h-4 text-muted-foreground" />
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+                ))
+              ) : (
+                <div className="p-3 text-center text-muted-foreground">
+                  No products found
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Cart & Checkout Panel */}
       <div className="flex-1 flex flex-col">
