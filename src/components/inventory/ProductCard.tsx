@@ -16,7 +16,12 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, onRestock }) => {
+  const isUnspecifiedQuantity = product.currentStock === -1;
+  
   const getStockStatus = () => {
+    if (isUnspecifiedQuantity) {
+      return { color: 'bg-yellow-100 text-yellow-800', label: 'Bulk / Variable' };
+    }
     if (product.currentStock === 0) return { color: 'bg-red-100 text-red-800', label: 'Out of Stock' };
     if (product.currentStock <= product.lowStockThreshold) return { color: 'bg-yellow-100 text-yellow-800', label: 'Low Stock' };
     return { color: 'bg-green-100 text-green-800', label: 'In Stock' };
@@ -56,9 +61,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
 
         {/* Bottom: Stock and Actions */}
         <div className="flex items-center justify-between pt-2">
-          <Badge className={`text-xs ${stockStatus.color}`}>
-            {product.currentStock} units
-          </Badge>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge className={`text-xs ${stockStatus.color}`}>
+                {isUnspecifiedQuantity ? stockStatus.label : `${product.currentStock} units`}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isUnspecifiedQuantity 
+                ? "Quantity tracked in bulk—update as needed."
+                : `Current stock: ${product.currentStock} units`
+              }
+            </TooltipContent>
+          </Tooltip>
           
           <div className="flex items-center gap-1">
             <Tooltip>

@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shuffle } from 'lucide-react';
 import { Product } from '../../types';
@@ -13,7 +14,7 @@ import { useToast } from '../../hooks/use-toast';
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
 }
 
 const CATEGORIES = [
@@ -35,11 +36,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     currentStock: '0'
   });
 
+  const [isUnspecifiedQuantity, setIsUnspecifiedQuantity] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isCodeShaking, setIsCodeShaking] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { createProduct } = useSupabaseProducts();
   const { toast } = useToast();
 
   const generateCode = () => {
@@ -71,6 +72,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     }
     if (!formData.category) newErrors.category = 'Category is required';
 
+    // Validate quantity logic
+    if (!isUnspecifiedQuantity && formData.currentStock && isNaN(parseInt(formData.currentStock))) {
+      newErrors.currentStock = 'Valid quantity required when not unspecified';
+    }
+    if (isUnspecifiedQuantity && formData.currentStock && !isNaN(parseInt(formData.currentStock))) {
+      newErrors.currentStock = "Remove 'Unspecified' to enter a number";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -86,17 +95,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         category: formData.category,
         costPrice: parseFloat(formData.costPrice),
         sellingPrice: parseFloat(formData.sellingPrice),
-        currentStock: parseInt(formData.currentStock) || 0,
+        currentStock: isUnspecifiedQuantity ? -1 : (parseInt(formData.currentStock) || 0), // Use -1 to indicate unspecified
         lowStockThreshold: parseInt(formData.lowStockThreshold)
       };
 
-      await createProduct(productData);
+      await onSave(productData);
       
-      toast({
-        title: "Success",
-        description: "Product added successfully",
-      });
-
       // Reset form
       setFormData({
         name: '',
@@ -107,16 +111,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         category: '',
         currentStock: '0'
       });
+      setIsUnspecifiedQuantity(false);
       setErrors({});
-      onSave();
       onClose();
     } catch (error) {
       console.error('Failed to save product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save product. Please try again.",
-        variant: "destructive",
-      });
+      setErrors(prev => ({ ...prev, submit: 'Failed to save product. Please try again.' }));
     } finally {
       setLoading(false);
     }
@@ -134,6 +134,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
       category: '',
       currentStock: '0'
     });
+    setIsUnspecifiedQuantity(false);
     setErrors({});
     onClose();
   };
@@ -297,16 +298,56 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             <Label htmlFor="currentStock" className="text-lg font-semibold">
               Initial Quantity
             </Label>
-            <Input
-              id="currentStock"
-              type="number"
-              value={formData.currentStock}
-              onChange={(e) => setFormData(prev => ({ ...prev, currentStock: e.target.value }))}
-              className="focus-visible:ring-2 focus-visible:ring-brand-purple"
-              placeholder="0"
-              disabled={loading}
-            />
+            
+            {/* Quantity Input or Unspecified Pill */}
+            {isUnspecifiedQuantity ? (
+              <div className="h-10 px-3 py-2 border rounded-md bg-yellow-50 border-yellow-200 flex items-center">
+                <div className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                  Unspecified
+                </div>
+              </div>
+            ) : (
+              <Input
+                id="currentStock"
+                type="number"
+                value={formData.currentStock}
+                onChange={(e) => setFormData(prev => ({ ...prev, currentStock: e.target.value }))}
+                className={`focus-visible:ring-2 focus-visible:ring-brand-purple transition-all duration-200 ${
+                  errors.currentStock ? 'border-red-500' : ''
+                }`}
+                placeholder="0"
+                disabled={loading}
+              />
+            )}
+            
+            {/* Unspecified Quantity Checkbox */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="unspecified"
+                checked={isUnspecifiedQuantity}
+                onCheckedChange={(checked) => {
+                  setIsUnspecifiedQuantity(checked as boolean);
+                  if (checked) {
+                    setFormData(prev => ({ ...prev, currentStock: '' }));
+                  }
+                }}
+                disabled={loading}
+                aria-label="Mark quantity as unspecified for bulk items"
+              />
+              <Label htmlFor="unspecified" className="text-sm text-muted-foreground cursor-pointer">
+                Unspecified quantity (e.g. sacks, tins)
+              </Label>
+            </div>
+            
+            {errors.currentStock && <p className="text-red-500 text-sm">{errors.currentStock}</p>}
           </div>
+
+          {/* Submit Error */}
+          {errors.submit && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{errors.submit}</p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-between pt-6">

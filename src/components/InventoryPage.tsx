@@ -38,7 +38,7 @@ const InventoryPage = () => {
     );
 
     if (filterStatus === 'low-stock') {
-      filtered = filtered.filter(p => p.currentStock <= p.lowStockThreshold && p.currentStock > 0);
+      filtered = filtered.filter(p => p.currentStock <= p.lowStockThreshold);
     } else if (filterStatus === 'out-of-stock') {
       filtered = filtered.filter(p => p.currentStock === 0);
     } else if (filterStatus === 'in-stock') {
@@ -55,9 +55,10 @@ const InventoryPage = () => {
         title: "Product Added",
         description: `${productData.name} has been added to inventory`,
       });
+      setShowAddModal(false);
     } catch (error) {
       console.error('Failed to add product:', error);
-      throw error; // Re-throw to let modal handle the error
+      throw error;
     }
   };
 
@@ -67,13 +68,14 @@ const InventoryPage = () => {
     try {
       await updateProduct(selectedProduct.id, productData);
       setSelectedProduct(null);
+      setShowEditModal(false);
       toast({
         title: "Product Updated",
         description: `${selectedProduct.name} has been updated`,
       });
     } catch (error) {
       console.error('Failed to update product:', error);
-      throw error; // Re-throw to let modal handle the error
+      throw error;
     }
   };
 
@@ -191,6 +193,21 @@ const InventoryPage = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Clear Filter Indicator */}
+        {filterStatus !== 'all' && (
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
+              Showing: {filterStatus === 'low-stock' ? 'Low Stock Items' : 'Out of Stock Items'}
+              <button 
+                onClick={() => setFilterStatus('all')}
+                className="text-purple-600 hover:text-purple-800"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Product Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
