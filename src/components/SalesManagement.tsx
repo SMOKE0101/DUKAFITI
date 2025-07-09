@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, ShoppingCart, DollarSign, TrendingUp, Users } from 'lucide-react';
+import { Plus, Search, ShoppingCart, DollarSign, TrendingUp, Users, Menu, User, Minus, X, CreditCard, Smartphone, Banknote } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { useToast } from '../hooks/use-toast';
 import { Product, Sale, Customer } from '../types';
@@ -15,133 +15,132 @@ import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
 const SalesManagement = () => {
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'credit'>('cash');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const { toast } = useToast();
   
   const { products, loading: productsLoading } = useSupabaseProducts();
-  const { sales, loading: salesLoading, createSale } = useSupabaseSales();
+  const { sales, loading: salesLoading, createSales } = useSupabaseSales();
   const { customers, loading: customersLoading } = useSupabaseCustomers();
 
-  // Mock customer data for demonstration (until real customer system is implemented)
-  const mockCustomers: Customer[] = [
-    {
-      id: '1',
-      name: 'John Doe',
-      phone: '+254700000000',
-      email: 'john@example.com',
-      address: '123 Main St, Nairobi',
-      totalPurchases: 15000,
-      outstandingDebt: 2500,
-      creditLimit: 10000,
-      riskRating: 'low',
-      createdDate: new Date().toISOString(),
-      lastPurchaseDate: new Date().toISOString()
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      phone: '+254711111111',
-      email: 'jane@example.com',
-      address: '456 Oak Ave, Mombasa',
-      totalPurchases: 8500,
-      outstandingDebt: 500,
-      creditLimit: 5000,
-      riskRating: 'low',
-      createdDate: new Date().toISOString(),
-      lastPurchaseDate: new Date().toISOString()
-    }
-  ];
+  // Get favorites (top 6 most-used products)
+  const favorites = products.slice(0, 6);
 
-  const allCustomers = customers.length > 0 ? customers : mockCustomers;
-
+  // Filter products for search
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ).slice(0, 5);
 
-  const todaysSales = sales.filter(sale => {
-    const today = new Date().toDateString();
-    const saleDate = new Date(sale.timestamp).toDateString();
-    return today === saleDate;
-  });
+  // Calculate cart total
+  const cartTotal = cart.reduce((sum, item) => sum + (item.product.sellingPrice * item.quantity), 0);
 
-  const totalRevenue = todaysSales.reduce((sum, sale) => sum + sale.total, 0);
-  const totalProfit = todaysSales.reduce((sum, sale) => sum + sale.profit, 0);
-
-  const handleAddToCart = () => {
-    if (!selectedProduct) {
-      toast({
-        title: "Error",
-        description: "Please select a product",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (quantity <= 0) {
-      toast({
-        title: "Error",
-        description: "Quantity must be greater than 0",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (quantity > selectedProduct.currentStock) {
-      toast({
-        title: "Error",
-        description: "Not enough stock available",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Process the sale
-    handleSale();
+  // Add product to cart
+  const addToCart = (product: Product, quantity: number = 1) => {
+    setCart(prev => {
+      const existingItem = prev.find(item => item.product.id === product.id);
+      if (existingItem) {
+        return prev.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      }
+      return [...prev, { product, quantity }];
+    });
   };
 
-  const handleSale = async () => {
-    if (!selectedProduct) return;
+  // Update cart item quantity
+  const updateQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(prev =>
+      prev.map(item =>
+        item.product.id === productId
+          ? { ...item, quantity: newQuantity }
+          : item
+      )
+    );
+  };
 
-    const saleData: Omit<Sale, 'id'> = {
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      quantity,
-      sellingPrice: selectedProduct.sellingPrice,
-      costPrice: selectedProduct.costPrice,
-      profit: (selectedProduct.sellingPrice - selectedProduct.costPrice) * quantity,
-      timestamp: new Date().toISOString(),
-      synced: true,
-      customerId: selectedCustomer?.id,
-      customerName: selectedCustomer?.name,
-      paymentMethod: paymentMethod as 'cash' | 'mpesa' | 'debt' | 'partial',
-      paymentDetails: {
-        cashAmount: paymentMethod === 'cash' ? selectedProduct.sellingPrice * quantity : 0,
-        mpesaAmount: paymentMethod === 'mpesa' ? selectedProduct.sellingPrice * quantity : 0,
-        debtAmount: paymentMethod === 'debt' ? selectedProduct.sellingPrice * quantity : 0,
-      },
-      total: selectedProduct.sellingPrice * quantity,
-    };
+  // Remove from cart
+  const removeFromCart = (productId: string) => {
+    setCart(prev => prev.filter(item => item.product.id !== productId));
+  };
+
+  // Handle payment method change
+  const handlePaymentMethodChange = (method: 'cash' | 'mpesa' | 'credit') => {
+    setPaymentMethod(method);
+    if (method === 'credit') {
+      setShowCustomerSelect(true);
+    } else {
+      setShowCustomerSelect(false);
+      setSelectedCustomer(null);
+    }
+  };
+
+  // Process payment
+  const handlePay = async () => {
+    if (cart.length === 0) return;
 
     try {
-      await createSale(saleData);
-      
+      const salesData = cart.map(item => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        sellingPrice: item.product.sellingPrice,
+        costPrice: item.product.costPrice,
+        profit: (item.product.sellingPrice - item.product.costPrice) * item.quantity,
+        timestamp: new Date().toISOString(),
+        synced: true,
+        customerId: selectedCustomer?.id,
+        customerName: selectedCustomer?.name,
+        paymentMethod,
+        paymentDetails: {
+          cashAmount: paymentMethod === 'cash' ? item.product.sellingPrice * item.quantity : 0,
+          mpesaAmount: paymentMethod === 'mpesa' ? item.product.sellingPrice * item.quantity : 0,
+          debtAmount: paymentMethod === 'credit' ? item.product.sellingPrice * item.quantity : 0,
+        },
+        total: item.product.sellingPrice * item.quantity,
+      }));
+
+      await createSales(salesData);
+
+      // Show success toast
+      const paymentLabels = {
+        cash: 'Cash',
+        mpesa: 'M-Pesa',
+        credit: selectedCustomer ? `Credit (${selectedCustomer.name})` : 'Credit'
+      };
+
       toast({
         title: "Sale Completed",
-        description: `Sold ${quantity} × ${selectedProduct.name} for ${formatCurrency(saleData.total)}`,
+        description: `Payment received — ${formatCurrency(cartTotal)} (${paymentLabels[paymentMethod]})`,
       });
 
-      // Reset form
-      setSelectedProduct(null);
-      setQuantity(1);
+      // Clear cart
+      setCart([]);
       setSelectedCustomer(null);
+      setShowCustomerSelect(false);
       setPaymentMethod('cash');
     } catch (error) {
-      console.error('Failed to create sale:', error);
+      console.error('Payment failed:', error);
+      toast({
+        title: "Payment Failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
     }
   };
 
@@ -154,220 +153,254 @@ const SalesManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Sales Management</h2>
-          <p className="text-gray-600">Process sales and track daily performance</p>
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header */}
+      <header className="h-14 flex items-center justify-between px-4 border-b bg-card">
+        <Button variant="ghost" size="sm">
+          <Menu className="w-5 h-5" />
+        </Button>
+        <div className="text-lg font-semibold">POS</div>
+        <Button variant="ghost" size="sm">
+          <User className="w-5 h-5" />
+        </Button>
+      </header>
+
+      {/* Quick-Select Product Carousel */}
+      <div className="h-[28vh] p-4">
+        <Card className="h-full bg-muted/30">
+          <CardHeader className="flex-row justify-between items-center p-4">
+            <CardTitle className="text-base">Favorites</CardTitle>
+            <Button variant="ghost" size="sm" className="text-sm">
+              Edit
+            </Button>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {favorites.map(product => (
+                <div
+                  key={product.id}
+                  className="flex-shrink-0 w-18 h-18 bg-card rounded-lg border p-2 flex flex-col items-center justify-center cursor-pointer transition-transform active:scale-95 hover:bg-accent"
+                  onClick={() => addToCart(product)}
+                >
+                  <div className="w-8 h-8 bg-muted rounded flex items-center justify-center mb-1">
+                    <ShoppingCart className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs text-center truncate w-full">
+                    {product.name}
+                  </span>
+                </div>
+              ))}
+              <div
+                className="flex-shrink-0 w-18 h-18 bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center cursor-pointer hover:bg-accent"
+                onClick={() => setSearchExpanded(true)}
+              >
+                <Plus className="w-6 h-6 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search Bar */}
+      {(searchExpanded || searchTerm) && (
+        <div className="px-4 pb-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-10"
+              autoFocus
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSearchExpanded(false);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+          
+          {/* Search Results */}
+          {searchTerm && filteredProducts.length > 0 && (
+            <Card className="mt-2 max-h-48 overflow-y-auto">
+              <CardContent className="p-0">
+                {filteredProducts.map(product => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between p-3 border-b last:border-b-0 cursor-pointer hover:bg-accent"
+                    onClick={() => {
+                      addToCart(product);
+                      setSearchTerm('');
+                      setSearchExpanded(false);
+                    }}
+                  >
+                    <div>
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatCurrency(product.sellingPrice)}
+                      </div>
+                    </div>
+                    <Plus className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Sales Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <ShoppingCart className="w-5 h-5 text-blue-500" />
-              <div>
-                <p className="text-sm text-gray-600">Today's Sales</p>
-                <p className="text-2xl font-bold">{todaysSales.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="w-5 h-5 text-green-500" />
-              <div>
-                <p className="text-sm text-gray-600">Revenue</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5 text-purple-500" />
-              <div>
-                <p className="text-sm text-gray-600">Profit</p>
-                <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalProfit)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="w-5 h-5 text-orange-500" />
-              <div>
-                <p className="text-sm text-gray-600">Products Sold</p>
-                <p className="text-2xl font-bold">{todaysSales.reduce((sum, sale) => sum + sale.quantity, 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="new-sale" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="new-sale">New Sale</TabsTrigger>
-          <TabsTrigger value="recent-sales">Recent Sales</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="new-sale" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Sale</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Product Selection */}
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-64 overflow-y-auto">
-                  {filteredProducts.map(product => (
-                    <Card
-                      key={product.id}
-                      className={`cursor-pointer transition-colors ${
-                        selectedProduct?.id === product.id ? 'border-primary bg-primary/5' : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => setSelectedProduct(product)}
-                    >
-                      <CardContent className="p-4">
-                       <div className="space-y-2">
-                          <h3 className="font-medium">{product.name}</h3>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Price:</span>
-                            <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Stock:</span>
-                            <Badge variant={product.currentStock > product.lowStockThreshold ? "default" : "destructive"}>
-                              {product.currentStock}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              {selectedProduct && (
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-medium">Selected: {selectedProduct.name}</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        min="1"
-                        max={selectedProduct.currentStock}
-                        value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="customer">Customer (Optional)</Label>
-                      <Select onValueChange={(value) => {
-                        const customer = allCustomers.find(c => c.id === value);
-                        setSelectedCustomer(customer || null);
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {allCustomers.map(customer => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name} - {customer.phone}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="payment">Payment Method</Label>
-                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="mpesa">M-Pesa</SelectItem>
-                          <SelectItem value="debt">Credit/Debt</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center p-4 bg-white rounded border">
-                    <span className="text-lg font-medium">Total:</span>
-                    <span className="text-2xl font-bold text-green-600">
-                      {formatCurrency(selectedProduct.sellingPrice * quantity)}
-                    </span>
-                  </div>
-
-                  <Button onClick={handleAddToCart} className="w-full" size="lg">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Complete Sale
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="recent-sales">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Sales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {sales.length === 0 ? (
-                <div className="text-center py-8">
-                  <ShoppingCart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No sales recorded yet</p>
+      {/* Cart & Checkout Panel */}
+      <div className="flex-1 flex flex-col">
+        <Card className="flex-1 rounded-t-xl shadow-lg m-0 border-t">
+          <CardContent className="p-0 flex flex-col h-full">
+            {/* Cart Items */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {cart.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <ShoppingCart className="w-12 h-12 mb-4" />
+                  <p>Your cart is empty</p>
+                  <p className="text-sm">Add products to get started</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {sales.slice(0, 10).map(sale => (
-                    <div key={sale.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">{sale.productName}</h3>
-                        <p className="text-sm text-gray-600">
-                          {sale.quantity} × {formatCurrency(sale.sellingPrice)} - {sale.paymentMethod}
-                          {sale.customerName && ` - ${sale.customerName}`}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(sale.timestamp).toLocaleString()}
-                        </p>
+                <div className="space-y-3">
+                  {cart.map(item => (
+                    <div
+                      key={item.product.id}
+                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium">{item.product.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatCurrency(item.product.sellingPrice)} each
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-green-600">{formatCurrency(sale.total)}</p>
-                        <p className="text-sm text-gray-600">Profit: {formatCurrency(sale.profit)}</p>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                        >
+                          <Minus className="w-3 h-3" />
+                        </Button>
+                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      
+                      <div className="text-right ml-4">
+                        <div className="font-medium">
+                          {formatCurrency(item.product.sellingPrice * item.quantity)}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={() => removeFromCart(item.product.id)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+
+            {/* Customer Selection for Credit */}
+            {showCustomerSelect && (
+              <div className="p-4 border-t">
+                <Label className="text-sm font-medium mb-2 block">Select Customer</Label>
+                <Select
+                  value={selectedCustomer?.id || ''}
+                  onValueChange={(value) => {
+                    const customer = customers.find(c => c.id === value);
+                    setSelectedCustomer(customer || null);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map(customer => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name} - {customer.phone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Summary Bar */}
+            {cart.length > 0 && (
+              <div className="p-4 border-t bg-card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-xl font-bold">
+                    Total: {formatCurrency(cartTotal)}
+                  </div>
+                </div>
+
+                {/* Payment Method Pills */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePaymentMethodChange('cash')}
+                    className="flex-1"
+                  >
+                    <Banknote className="w-4 h-4 mr-2" />
+                    Cash
+                  </Button>
+                  <Button
+                    variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePaymentMethodChange('mpesa')}
+                    className="flex-1"
+                  >
+                    <Smartphone className="w-4 h-4 mr-2" />
+                    M-Pesa
+                  </Button>
+                  <Button
+                    variant={paymentMethod === 'credit' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePaymentMethodChange('credit')}
+                    className="flex-1"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Credit
+                  </Button>
+                </div>
+
+                {/* Pay Button */}
+                <Button 
+                  onClick={handlePay}
+                  disabled={cart.length === 0 || (paymentMethod === 'credit' && !selectedCustomer)}
+                  className="w-full h-12 text-lg font-semibold"
+                  size="lg"
+                >
+                  Pay {formatCurrency(cartTotal)}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
