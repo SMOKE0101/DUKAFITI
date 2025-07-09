@@ -176,10 +176,7 @@ const InventoryPage = () => {
 
       {/* Premium Stats Cards */}
       <PremiumStatsCards 
-        totalProducts={stats.totalProducts}
-        totalValue={stats.totalValue}
-        lowStockCount={stats.lowStockCount}
-        outOfStockCount={stats.outOfStockCount}
+        stats={stats}
       />
 
       {/* Search and Filter Bar */}
@@ -268,7 +265,6 @@ const InventoryPage = () => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSave={handleAddProduct}
-        categories={categories}
       />
 
       <EditProductModal
@@ -279,7 +275,6 @@ const InventoryPage = () => {
         }}
         product={selectedProduct}
         onSave={handleUpdateProduct}
-        categories={categories}
       />
 
       <DeleteProductModal

@@ -122,7 +122,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0 hover:bg-accent/10"
+            className="w-8 h-8 p-0 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 absolute top-4 right-4"
             aria-label="Close history modal"
           >
             <X className="h-4 w-4" />

@@ -19,6 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { Customer } from '../types';
 import RefinedCustomerCard from './customers/RefinedCustomerCard';
 import CustomerHistoryModal from './customers/CustomerHistoryModal';
@@ -46,6 +47,7 @@ const CustomersPage = () => {
   const [updatingCustomers, setUpdatingCustomers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { customers, loading, createCustomer, deleteCustomer } = useSupabaseCustomers();
+  const { sales } = useSupabaseSales();
 
   const [newCustomerForm, setNewCustomerForm] = useState({
     name: '',
@@ -57,7 +59,7 @@ const CustomersPage = () => {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Calculate refined statistics
+  // Calculate refined statistics with real-time data
   const stats: CustomerStats = useMemo(() => {
     const totalCustomers = customers.length;
     const totalOutstandingDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
@@ -71,8 +73,16 @@ const CustomersPage = () => {
       new Date(c.lastPurchaseDate) < sevenDaysAgo
     ).length;
     
-    // Mock recent activity (last 24 hours) - in real app would come from transactions
-    const recentActivity = Math.floor(Math.random() * 15) + 5;
+    // Calculate recent activity from actual sales and transactions (last 24 hours)
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    
+    const recentSales = sales.filter(sale => 
+      sale.timestamp && new Date(sale.timestamp) > twentyFourHoursAgo
+    ).length;
+    
+    // TODO: Add payments/transactions from a payments table when available
+    const recentActivity = recentSales;
     
     return {
       totalCustomers,
@@ -80,7 +90,7 @@ const CustomersPage = () => {
       overdueAccounts,
       recentActivity
     };
-  }, [customers]);
+  }, [customers, sales]);
 
   // Filter and sort customers
   const filteredAndSortedCustomers = useMemo(() => {
@@ -262,7 +272,7 @@ const CustomersPage = () => {
       id: 'recent-activity',
       title: 'Recent Activity',
       value: stats.recentActivity,
-      subtitle: 'Recent Transactions',
+      subtitle: 'Last 24 hours',
       icon: Zap,
       iconColor: 'text-green-600',
       bgColor: 'bg-green-100',
@@ -287,7 +297,7 @@ const CustomersPage = () => {
           </Button>
         </div>
 
-        {/* Refined Summary Cards */}
+        {/* Refined Summary Cards with Real-time Updates */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((card) => (
             <Card 
