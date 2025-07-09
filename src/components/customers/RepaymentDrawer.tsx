@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
+import { supabase } from '../../integrations/supabase/client';
 
 interface RepaymentDrawerProps {
   isOpen: boolean;
@@ -36,9 +37,41 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       
+      // Update customer balance
       await updateCustomer(customer.id, {
         outstandingDebt: newBalance,
         lastPurchaseDate: new Date().toISOString()
+      });
+
+      // Create a payment record in the sales table as a negative entry
+      // This helps track payment history
+      await supabase
+        .from('sales')
+        .insert({
+          customer_id: customer.id,
+          customer_name: customer.name,
+          product_id: '00000000-0000-0000-0000-000000000000', // Placeholder for payment
+          product_name: 'Payment Received',
+          quantity: 1,
+          selling_price: -paymentAmount,
+          cost_price: 0,
+          total_amount: -paymentAmount,
+          profit: 0,
+          payment_method: method,
+          payment_details: reference ? { reference } : {},
+          timestamp: new Date().toISOString()
+        });
+
+      // Trigger real-time update by broadcasting the change
+      supabase.channel('payments').send({
+        type: 'broadcast',
+        event: 'payment_recorded',
+        payload: {
+          customer_id: customer.id,
+          amount: paymentAmount,
+          method,
+          reference
+        }
       });
 
       // Reset form

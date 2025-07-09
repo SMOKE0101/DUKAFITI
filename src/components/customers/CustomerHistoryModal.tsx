@@ -45,8 +45,34 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   useEffect(() => {
     if (isOpen && customer) {
       fetchRealData();
+      setupRealtimeSubscription();
     }
   }, [isOpen, customer]);
+
+  const setupRealtimeSubscription = () => {
+    if (!customer) return;
+
+    // Subscribe to real-time updates for this customer's sales and payments
+    const channel = supabase
+      .channel(`customer-${customer.id}-updates`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sales',
+          filter: `customer_id=eq.${customer.id}`
+        },
+        () => {
+          fetchRealData(); // Refetch data when changes occur
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   const fetchRealData = async () => {
     if (!customer) return;
