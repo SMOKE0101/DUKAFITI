@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import ProductCard from './ProductCard';
 import RestockModal from './RestockModal';
 import { Product } from '../../types';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useToast } from '../../hooks/use-toast';
+import { formatCurrency } from '../../utils/currency';
 
 interface InventoryProductGridProps {
   products: Product[];

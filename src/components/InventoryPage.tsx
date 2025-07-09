@@ -1,7 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../hooks/use-toast';
 import { Product } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import InventoryHeader from './inventory/InventoryHeader';
 import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
