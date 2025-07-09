@@ -30,7 +30,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     code: '',
     costPrice: '',
     sellingPrice: '',
-    lowStockThreshold: '',
+    lowStockThreshold: '10',
     category: '',
     currentStock: '0'
   });
@@ -57,18 +57,25 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
 
     switch (name) {
       case 'name':
-        if (!value.trim()) newErrors.name = 'Product name is required';
-        else delete newErrors.name;
+        if (!value.trim()) {
+          newErrors.name = 'Product name is required';
+        } else {
+          delete newErrors.name;
+        }
         break;
       case 'code':
-        if (!value.trim()) newErrors.code = 'Product code is required';
-        else delete newErrors.code;
+        if (!value.trim()) {
+          newErrors.code = 'Product code is required';
+        } else {
+          delete newErrors.code;
+        }
         break;
       case 'costPrice':
         if (!value || parseFloat(value) <= 0) {
           newErrors.costPrice = 'Valid buying price is required';
         } else {
           delete newErrors.costPrice;
+          // Check selling price relationship
           if (formData.sellingPrice && parseFloat(formData.sellingPrice) < parseFloat(value)) {
             newErrors.sellingPrice = 'Selling price must be ≥ buying price';
           } else if (formData.sellingPrice) {
@@ -93,8 +100,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         }
         break;
       case 'category':
-        if (!value) newErrors.category = 'Category is required';
-        else delete newErrors.category;
+        if (!value) {
+          newErrors.category = 'Category is required';
+        } else {
+          delete newErrors.category;
+        }
         break;
     }
 
@@ -116,15 +126,44 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
       fieldsToValidate.push('lowStockThreshold');
     }
 
+    // Run validation on all fields
     fieldsToValidate.forEach(field => {
       validateField(field, formData[field as keyof typeof formData]);
     });
 
-    // Check if there are any validation errors
-    const hasErrors = Object.keys(errors).some(key => errors[key]);
-    const hasEmptyRequired = fieldsToValidate.some(field => !formData[field as keyof typeof formData]);
+    // Check for validation errors
+    const currentErrors = { ...errors };
+    let hasValidationErrors = false;
 
-    if (hasErrors || hasEmptyRequired) {
+    // Re-validate required fields to catch any missed errors
+    if (!formData.name.trim()) {
+      currentErrors.name = 'Product name is required';
+      hasValidationErrors = true;
+    }
+    if (!formData.code.trim()) {
+      currentErrors.code = 'Product code is required';
+      hasValidationErrors = true;
+    }
+    if (!formData.costPrice || parseFloat(formData.costPrice) <= 0) {
+      currentErrors.costPrice = 'Valid buying price is required';
+      hasValidationErrors = true;
+    }
+    if (!formData.sellingPrice || parseFloat(formData.sellingPrice) <= 0) {
+      currentErrors.sellingPrice = 'Valid selling price is required';
+      hasValidationErrors = true;
+    }
+    if (!formData.category) {
+      currentErrors.category = 'Category is required';
+      hasValidationErrors = true;
+    }
+    if (!isUnspecifiedQuantity && (!formData.lowStockThreshold || parseInt(formData.lowStockThreshold) < 0)) {
+      currentErrors.lowStockThreshold = 'Valid threshold is required';
+      hasValidationErrors = true;
+    }
+
+    setErrors(currentErrors);
+
+    if (hasValidationErrors) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields correctly.",
@@ -175,7 +214,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
       code: '',
       costPrice: '',
       sellingPrice: '',
-      lowStockThreshold: '',
+      lowStockThreshold: '10',
       category: '',
       currentStock: '0'
     });
@@ -184,22 +223,33 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     onClose();
   };
 
-  const isFormValid = formData.name && formData.code && formData.costPrice && 
-                     formData.sellingPrice && formData.category &&
-                     (isUnspecifiedQuantity || formData.lowStockThreshold) &&
-                     Object.keys(errors).length === 0;
+  // Check if form is valid for enabling save button
+  const isFormValid = () => {
+    // Check required fields
+    const requiredFieldsValid = formData.name.trim() && 
+                               formData.code.trim() && 
+                               formData.costPrice && parseFloat(formData.costPrice) > 0 &&
+                               formData.sellingPrice && parseFloat(formData.sellingPrice) > 0 &&
+                               formData.category;
+
+    // Check threshold if not unspecified quantity
+    const thresholdValid = isUnspecifiedQuantity || (formData.lowStockThreshold && parseInt(formData.lowStockThreshold) >= 0);
+
+    // Check no validation errors exist
+    const noErrors = Object.keys(errors).length === 0 || !Object.values(errors).some(error => error);
+
+    return requiredFieldsValid && thresholdValid && noErrors;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg p-0">
-        {/* Header - removed duplicate X button */}
         <DialogHeader className="flex-shrink-0 p-6 border-b">
           <DialogTitle className="text-xl font-semibold">
             Add New Product
           </DialogTitle>
         </DialogHeader>
         
-        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Info Grid */}
@@ -407,7 +457,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
           <Button
             type="submit"
             onClick={handleSubmit}
-            disabled={!isFormValid || loading}
+            disabled={!isFormValid() || loading}
             className="w-full h-10 font-semibold bg-green-600 hover:bg-green-700"
           >
             {loading ? (

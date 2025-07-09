@@ -74,7 +74,12 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
       formData.buyingPrice,
       formData.supplier || undefined
     );
+    
+    // Close modal after successful submission
+    onClose();
   };
+
+  const isFormValid = formData.productId && formData.quantity > 0 && formData.buyingPrice >= 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -199,7 +204,7 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
               <Button 
                 type="submit" 
                 className="w-full h-12 text-base font-medium bg-green-600 hover:bg-green-700 focus-visible:ring-green-500"
-                disabled={!formData.productId || formData.quantity <= 0}
+                disabled={!isFormValid}
               >
                 Save Stock Addition
               </Button>

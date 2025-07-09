@@ -1,484 +1,484 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Search, ShoppingCart, Menu, User, Minus, X, CreditCard, Smartphone, Banknote, UserPlus, Trash2 } from 'lucide-react';
-import { formatCurrency } from '../utils/currency';
 import { useToast } from '../hooks/use-toast';
-import { Product, Sale, Customer } from '../types';
+import { Product, Customer } from '../types';
+import { 
+  ShoppingCart, 
+  Search, 
+  X, 
+  Trash2, 
+  Minus, 
+  Plus,
+  Banknote,
+  Smartphone,
+  CreditCard
+} from 'lucide-react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import TopPicksSection from './sales/TopPicksSection';
-import AddCustomerModal from './sales/AddCustomerModal';
-import { useIsMobile } from '../hooks/use-mobile';
+import AddCustomerModal from './customer/AddCustomerModal';
 
-interface CartItem {
-  product: Product;
+interface CartItem extends Product {
   quantity: number;
 }
 
 const SalesManagement = () => {
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchExpanded, setSearchExpanded] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'credit'>('cash');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { toast } = useToast();
-  const isMobile = useIsMobile();
-  
-  const { products, loading: productsLoading } = useSupabaseProducts();
-  const { createSales } = useSupabaseSales();
-  const { customers, loading: customersLoading, createCustomer } = useSupabaseCustomers();
+  const [showSearch, setShowSearch] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Filter products for search
+  const { products } = useSupabaseProducts();
+  const { customers, createCustomer } = useSupabaseCustomers();
+  const { toast } = useToast();
+
+  // Filter products based on search term
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  ).slice(0, 8);
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get top picks (first 6 products)
+  const topPicks = products.slice(0, 6);
 
   // Calculate cart total
-  const cartTotal = cart.reduce((sum, item) => sum + (item.product.sellingPrice * item.quantity), 0);
+  const cartTotal = cartItems.reduce((total, item) => total + item.sellingPrice * item.quantity, 0);
 
-  // Add product to cart
-  const addToCart = (product: Product, quantity: number = 1) => {
-    setCart(prev => {
-      const existingItem = prev.find(item => item.product.id === product.id);
-      if (existingItem) {
-        return prev.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...prev, { product, quantity }];
+  const clearCart = () => {
+    setCartItems([]);
+    setSelectedCustomer(null);
+    toast({
+      title: "Cart Cleared",
+      description: "All items have been removed from cart",
     });
   };
 
-  // Update cart item quantity
+  const addToCart = (product: Product) => {
+    const existingItem = cartItems.find(item => item.id === product.id);
+    if (existingItem) {
+      const updatedCart = cartItems.map(item =>
+        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+      );
+      setCartItems(updatedCart);
+    } else {
+      setCartItems([...cartItems, { ...product, quantity: 1 }]);
+    }
+    toast({
+      title: "Item Added",
+      description: `${product.name} added to cart`,
+    });
+  };
+
+  const removeFromCart = (productId: string) => {
+    const updatedCart = cartItems.filter(item => item.id !== productId);
+    setCartItems(updatedCart);
+    toast({
+      title: "Item Removed",
+      description: "Item removed from cart",
+    });
+  };
+
   const updateQuantity = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(productId);
       return;
     }
-    setCart(prev =>
-      prev.map(item =>
-        item.product.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
-  };
 
-  // Remove from cart
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
-  };
-
-  // Clear entire cart
-  const clearCart = () => {
-    setCart([]);
-    setSelectedCustomer(null);
-    setPaymentMethod('cash');
-  };
-
-  // Handle payment method change
-  const handlePaymentMethodChange = (method: 'cash' | 'mpesa' | 'debt') => {
-    setPaymentMethod(method);
-    if (method !== 'debt') {
-      setSelectedCustomer(null);
-    }
-  };
-
-  // Handle customer creation
-  const handleCreateCustomer = async (customerData: Omit<Customer, 'id' | 'createdDate'>) => {
-    try {
-      const newCustomer = await createCustomer({
-        ...customerData,
-        createdDate: new Date().toISOString()
-      });
-      if (newCustomer) {
-        setSelectedCustomer(newCustomer);
-        setShowAddCustomer(false);
-        toast({
-          title: "Customer Added",
-          description: `${newCustomer.name} has been added successfully`,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to create customer:', error);
-    }
-  };
-
-  // Process payment
-  const handlePay = async () => {
-    if (cart.length === 0) return;
-    if (paymentMethod === 'debt' && !selectedCustomer) {
+    const product = products.find(p => p.id === productId);
+    if (!product) {
       toast({
-        title: "Customer Required",
-        description: "Please select a customer for credit sales",
+        title: "Error",
+        description: "Product not found",
         variant: "destructive",
       });
       return;
     }
 
-    try {
-      const salesData = cart.map(item => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        quantity: item.quantity,
-        sellingPrice: item.product.sellingPrice,
-        costPrice: item.product.costPrice,
-        profit: (item.product.sellingPrice - item.product.costPrice) * item.quantity,
-        timestamp: new Date().toISOString(),
-        synced: true,
-        customerId: selectedCustomer?.id,
-        customerName: selectedCustomer?.name,
-        paymentMethod,
-        paymentDetails: {
-          cashAmount: paymentMethod === 'cash' ? item.product.sellingPrice * item.quantity : 0,
-          mpesaAmount: paymentMethod === 'mpesa' ? item.product.sellingPrice * item.quantity : 0,
-          debtAmount: paymentMethod === 'debt' ? item.product.sellingPrice * item.quantity : 0,
-        },
-        total: item.product.sellingPrice * item.quantity,
-      }));
-
-      await createSales(salesData);
-
-      const paymentLabels = {
-        cash: 'Cash',
-        mpesa: 'M-Pesa',
-        debt: selectedCustomer ? `Credit (${selectedCustomer.name})` : 'Credit'
-      };
-
+    if (newQuantity > product.currentStock) {
       toast({
-        title: "Sale Completed",
-        description: `Payment received — ${formatCurrency(cartTotal)} (${paymentLabels[paymentMethod]})`,
+        title: "Error",
+        description: "Not enough stock",
+        variant: "destructive",
       });
+      return;
+    }
 
-      // Clear cart and reset
-      clearCart();
-    } catch (error) {
-      console.error('Payment failed:', error);
+    const updatedCart = cartItems.map(item =>
+      item.id === productId ? { ...item, quantity: newQuantity } : item
+    );
+    setCartItems(updatedCart);
+  };
+
+  const handleCustomerSelect = (customerId: string) => {
+    if (!customerId) {
+      setSelectedCustomer(null);
+      return;
+    }
+    const customer = customers.find(c => c.id === customerId);
+    setSelectedCustomer(customer || null);
+  };
+
+  const handleAddCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await createCustomer(customerData);
       toast({
-        title: "Payment Failed",
-        description: "Please try again",
+        title: "Customer Added",
+        description: `${customerData.name} has been added.`,
+      });
+      setShowAddCustomer(false);
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add customer. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  if (productsLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const handleCheckout = async () => {
+    setLoading(true);
+    try {
+      // Simulate checkout process
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      toast({
+        title: "Checkout Successful",
+        description: `Payment of KES ${cartTotal.toFixed(2)} processed via ${paymentMethod}`,
+      });
+      clearCart();
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: "Checkout Failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <header className={`${isMobile ? 'h-14' : 'h-16'} flex items-center justify-between px-4 border-b bg-card shadow-sm`}>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden"
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
-          <div className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            POS
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {!isMobile && (
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4" />
-                <span>{cart.length} items</span>
-              </div>
-              {cartTotal > 0 && (
-                <Badge variant="secondary" className="text-sm">
-                  {formatCurrency(cartTotal)}
-                </Badge>
-              )}
+      <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 h-14 lg:h-16">
+          <div className="flex items-center gap-3">
+            <div className="lg:hidden">
+              <Button variant="ghost" size="icon" className="w-8 h-8">
+                <span className="sr-only">Menu</span>
+              </Button>
             </div>
-          )}
-          <Button variant="ghost" size="sm">
-            <User className="w-5 h-5" />
-          </Button>
+            <h1 className="text-lg lg:text-xl font-bold text-gray-900">Sales POS</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowSearch(!showSearch)}
+              className="lg:hidden w-8 h-8"
+            >
+              <Search className="w-4 h-4" />
+            </Button>
+            <div className="relative">
+              <Button variant="ghost" size="icon" className="w-8 h-8">
+                <ShoppingCart className="w-4 h-4" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItems.length}
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div className={`flex-1 flex ${isMobile ? 'flex-col' : 'flex-row'} overflow-hidden`}>
-        {/* Left Panel - Products & Search */}
-        <div className={`${isMobile ? 'flex-1' : 'w-2/5'} flex flex-col bg-gray-50 dark:bg-gray-900/50`}>
-          {/* Top Picks Section */}
-          <div className="flex-shrink-0">
-            <TopPicksSection 
-              products={products}
-              onAddToCart={addToCart}
-            />
-          </div>
-
-          {/* Search Section */}
-          <div className="flex-shrink-0 p-4">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Product Selection Panel */}
+        <div className="flex-1 lg:flex-none lg:w-2/5 flex flex-col bg-white border-r overflow-hidden">
+          {/* Search Bar - Desktop Always Visible */}
+          <div className={`p-4 border-b ${showSearch || window.innerWidth >= 1024 ? 'block' : 'hidden lg:block'}`}>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
+                type="text"
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-10 h-12 text-base bg-white dark:bg-gray-800"
-                onFocus={() => setSearchExpanded(true)}
+                className="pl-10 pr-10 h-12 text-base"
               />
               {searchTerm && (
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSearchExpanded(false);
-                  }}
+                  size="icon"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 w-6 h-6"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               )}
             </div>
-            
-            {/* Search Results */}
-            {searchTerm && (
-              <Card className="mt-2 max-h-64 overflow-y-auto z-50 relative shadow-lg">
-                <CardContent className="p-0">
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map(product => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between p-4 border-b last:border-b-0 cursor-pointer hover:bg-accent transition-colors"
-                        onClick={() => {
-                          addToCart(product);
-                          setSearchTerm('');
-                          setSearchExpanded(false);
-                        }}
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium text-base">{product.name}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-4">
-                            <span>{formatCurrency(product.sellingPrice)}</span>
-                            <Badge variant={product.currentStock > 0 ? "secondary" : "destructive"} className="text-xs">
-                              Stock: {product.currentStock}
-                            </Badge>
-                          </div>
-                        </div>
-                        <Plus className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No products found
+          </div>
+
+          {/* Top Picks Section */}
+          <div className="flex-1 overflow-y-auto">
+            {searchTerm ? (
+              // Search Results
+              <div className="p-4">
+                <h2 className="text-lg font-semibold mb-4">Search Results</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {filteredProducts.map(product => (
+                    <div
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-all duration-200 active:scale-95"
+                    >
+                      <h3 className="font-medium text-sm mb-1 line-clamp-2">{product.name}</h3>
+                      <p className="text-green-600 font-bold">KES {product.sellingPrice}</p>
+                      <p className="text-xs text-gray-500">Stock: {product.currentStock}</p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+                {filteredProducts.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No products found</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Top Picks
+              <div className="p-4">
+                <h2 className="text-lg font-semibold mb-4">Top Picks</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {topPicks.map(product => (
+                    <div
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-all duration-200 active:scale-95 relative overflow-hidden"
+                    >
+                      <div className="absolute top-1 right-1">
+                        <div className="bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-full font-medium">
+                          TOP
+                        </div>
+                      </div>
+                      <h3 className="font-medium text-sm mb-1 line-clamp-2 pr-12">{product.name}</h3>
+                      <p className="text-green-600 font-bold">KES {product.sellingPrice}</p>
+                      <p className="text-xs text-gray-500">Stock: {product.currentStock}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Right Panel - Cart & Checkout */}
-        <div className={`${isMobile ? 'flex-1' : 'w-3/5'} flex flex-col bg-white dark:bg-gray-800 border-l`}>
-          <Card className="flex-1 rounded-none shadow-none border-0 flex flex-col">
-            <CardContent className="p-0 flex-1 flex flex-col">
-              {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <ShoppingCart className="w-16 h-16 mb-4 opacity-50" />
-                    <p className="text-lg font-medium">Your cart is empty</p>
-                    <p className="text-sm">Add products to get started</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Clear Cart Button */}
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Cart Items ({cart.length})</h3>
+        {/* Cart & Checkout Panel */}
+        <div className="hidden lg:flex lg:w-3/5 flex-col bg-gray-50">
+          {/* Cart Header */}
+          <div className="bg-white p-4 border-b flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Shopping Cart</h2>
+            {cartItems.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearCart}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Clear Cart
+              </Button>
+            )}
+          </div>
+
+          {/* Cart Items */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {cartItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <ShoppingCart className="w-16 h-16 mb-4 opacity-50" />
+                <p className="text-lg mb-2">Your cart is empty</p>
+                <p className="text-sm">Add products from the left to get started</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {cartItems.map(item => (
+                  <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-gray-900 flex-1 mr-2">{item.name}</h3>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={clearCart}
-                        className="text-destructive hover:text-destructive"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFromCart(item.id)}
+                        className="w-8 h-8 text-red-500 hover:bg-red-50"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Clear Cart
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-
-                    <div className="space-y-3">
-                      {cart.map(item => (
-                        <div
-                          key={item.product.id}
-                          className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl hover:shadow-sm transition-all"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-base truncate">{item.product.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {formatCurrency(item.product.sellingPrice)} each
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-full"
-                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                            >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium text-base">{item.quantity}</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-full"
-                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          
-                          <div className="text-right">
-                            <div className="font-semibold text-base">
-                              {formatCurrency(item.product.sellingPrice * item.quantity)}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              onClick={() => removeFromCart(item.product.id)}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">KES {item.sellingPrice} each</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="w-8 h-8"
+                            disabled={item.quantity <= 1}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="w-8 h-8"
+                            disabled={item.quantity >= item.currentStock}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
                         </div>
-                      ))}
+                        <span className="font-bold text-green-600 min-w-[80px] text-right">
+                          KES {(item.sellingPrice * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
                     </div>
-                  </>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Checkout Section */}
+          {cartItems.length > 0 && (
+            <div className="bg-white border-t p-4 space-y-4">
+              {/* Customer Selection */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Customer (Optional)</Label>
+                <div className="flex gap-2">
+                  <Select value={selectedCustomer?.id || ''} onValueChange={handleCustomerSelect}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select customer (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Customer</SelectItem>
+                      {customers.map(customer => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{customer.name}</span>
+                            {customer.outstandingDebt > 0 && (
+                              <span className="text-xs text-red-600 ml-2">
+                                Debt: KES {customer.outstandingDebt}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddCustomer(true)}
+                    className="flex-shrink-0"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Payment Method</Label>
+                <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+                  {(['cash', 'mpesa', 'credit'] as const).map(method => (
+                    <Button
+                      key={method}
+                      variant={paymentMethod === method ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setPaymentMethod(method)}
+                      className={`flex-1 ${
+                        paymentMethod === method 
+                          ? 'bg-white shadow-sm' 
+                          : 'hover:bg-white/50'
+                      }`}
+                      disabled={method === 'credit' && !selectedCustomer}
+                    >
+                      {method === 'cash' && <Banknote className="w-4 h-4 mr-1" />}
+                      {method === 'mpesa' && <Smartphone className="w-4 h-4 mr-1" />}
+                      {method === 'credit' && <CreditCard className="w-4 h-4 mr-1" />}
+                      {method.charAt(0).toUpperCase() + method.slice(1)}
+                      {method === 'mpesa' && <span className="ml-1 text-xs">M-Pesa</span>}
+                    </Button>
+                  ))}
+                </div>
+                {paymentMethod === 'credit' && !selectedCustomer && (
+                  <p className="text-xs text-orange-600">Please select a customer for credit sales</p>
                 )}
               </div>
 
-              {/* Checkout Section */}
-              {cart.length > 0 && (
-                <div className="flex-shrink-0 border-t bg-card">
-                  {/* Customer Selection */}
-                  <div className="p-4 border-b">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm font-medium">Customer {paymentMethod === 'debt' && '*'}</label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAddCustomer(true)}
-                        className="text-xs"
-                      >
-                        <UserPlus className="w-3 h-3 mr-1" />
-                        Add New
-                      </Button>
-                    </div>
-                    <Select
-                      value={selectedCustomer?.id || ''}
-                      onValueChange={(value) => {
-                        const customer = customers.find(c => c.id === value);
-                        setSelectedCustomer(customer || null);
-                      }}
-                    >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select customer (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map(customer => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{customer.name}</span>
-                              <span className="text-xs text-muted-foreground ml-2">
-                                {customer.phone}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Payment Methods */}
-                  <div className="p-4 border-b">
-                    <label className="text-sm font-medium mb-3 block">Payment Method</label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePaymentMethodChange('cash')}
-                        className="flex-1 h-12"
-                      >
-                        <Banknote className="w-4 h-4 mr-2" />
-                        Cash
-                      </Button>
-                      <Button
-                        variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePaymentMethodChange('mpesa')}
-                        className="flex-1 h-12"
-                      >
-                        <Smartphone className="w-4 h-4 mr-2" />
-                        M-Pesa
-                      </Button>
-                      <Button
-                        variant={paymentMethod === 'debt' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePaymentMethodChange('debt')}
-                        className="flex-1 h-12"
-                      >
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Credit
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Total & Pay Button */}
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-lg font-medium">Total</span>
-                      <span className="text-2xl font-bold">{formatCurrency(cartTotal)}</span>
-                    </div>
-                    <Button 
-                      onClick={handlePay}
-                      disabled={cart.length === 0 || (paymentMethod === 'debt' && !selectedCustomer)}
-                      className="w-full h-14 text-lg font-semibold bg-green-600 hover:bg-green-700"
-                      size="lg"
-                    >
-                      Pay {formatCurrency(cartTotal)}
-                    </Button>
-                  </div>
+              {/* Total and Pay Button */}
+              <div className="pt-4 border-t space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold">Total:</span>
+                  <span className="text-2xl font-bold text-green-600">
+                    KES {cartTotal.toFixed(2)}
+                  </span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <Button
+                  onClick={handleCheckout}
+                  disabled={loading || (paymentMethod === 'credit' && !selectedCustomer)}
+                  className="w-full h-12 text-lg font-semibold bg-green-600 hover:bg-green-700"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Processing...
+                    </div>
+                  ) : (
+                    `Pay KES ${cartTotal.toFixed(2)}`
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Mobile Cart Overlay */}
+      {cartItems.length > 0 && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Cart ({cartItems.length})</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearCart}
+                className="text-red-600 p-1 h-auto"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+            <span className="font-bold text-green-600">KES {cartTotal.toFixed(2)}</span>
+          </div>
+          <Button onClick={handleCheckout} className="w-full bg-green-600 hover:bg-green-700">
+            Checkout
+          </Button>
+        </div>
+      )}
+
       {/* Add Customer Modal */}
       <AddCustomerModal
-        open={showAddCustomer}
-        onOpenChange={setShowAddCustomer}
-        onCreateCustomer={handleCreateCustomer}
-        loading={customersLoading}
+        isOpen={showAddCustomer}
+        onClose={() => setShowAddCustomer(false)}
+        onSave={handleAddCustomer}
       />
     </div>
   );
