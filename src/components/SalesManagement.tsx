@@ -14,7 +14,7 @@ import { Product, Sale, Customer } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import QuickSelectSection from './sales/QuickSelectSection';
+import TopPicksSection from './sales/TopPicksSection';
 
 interface CartItem {
   product: Product;
@@ -173,8 +173,8 @@ const SalesManagement = () => {
         </Button>
       </header>
 
-      {/* Quick-Select Product Carousel */}
-      <QuickSelectSection 
+      {/* Top Picks Section */}
+      <TopPicksSection 
         products={products}
         onAddToCart={addToCart}
       />

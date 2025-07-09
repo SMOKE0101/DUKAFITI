@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, X } from 'lucide-react';
+import { Shuffle } from 'lucide-react';
 import { Product } from '../../types';
 import { useToast } from '../../hooks/use-toast';
 
@@ -106,11 +106,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     validateField(name, value);
   };
 
-  const handleSave = async (e?: React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
     // Validate all required fields
     const fieldsToValidate = ['name', 'code', 'costPrice', 'sellingPrice', 'category'];
@@ -193,203 +191,187 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-md h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg border-0 p-0">
-        {/* Header */}
-        <DialogHeader className="flex-shrink-0 text-center space-y-2 p-4 sm:p-6 border-b">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
-              Add New Product
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="w-8 h-8 p-1 rounded-full hover:bg-muted"
-              disabled={loading}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg p-0">
+        {/* Header - removed duplicate X button */}
+        <DialogHeader className="flex-shrink-0 p-6 border-b">
+          <DialogTitle className="text-xl font-semibold">
+            Add New Product
+          </DialogTitle>
         </DialogHeader>
         
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <form onSubmit={handleSave} className="space-y-4">
-            {/* Product Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                Product Name *
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className={`h-10 text-base focus-visible:ring-2 focus-visible:ring-primary ${
-                  errors.name ? 'border-red-500' : ''
-                }`}
-                placeholder="Enter product name"
-                disabled={loading}
-              />
-              {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
-            </div>
-
-            {/* Product Code */}
-            <div className="space-y-2">
-              <Label htmlFor="code" className="text-sm font-medium text-foreground">
-                Product Code *
-              </Label>
-              <div className="flex gap-2">
+        <div className="flex-1 overflow-y-auto p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Info Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Product Name */}
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Product Name *
+                </Label>
                 <Input
-                  id="code"
-                  value={formData.code}
-                  onChange={(e) => handleInputChange('code', e.target.value)}
-                  className={`h-10 text-base font-mono focus-visible:ring-2 focus-visible:ring-primary ${
-                    errors.code ? 'border-red-500' : ''
-                  }`}
-                  placeholder="Enter or generate code"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className={`h-10 ${errors.name ? 'border-red-500' : ''}`}
+                  placeholder="Enter product name"
                   disabled={loading}
                 />
-                <Button
-                  type="button"
-                  onClick={generateCode}
-                  className="w-10 h-10 p-0"
-                  variant="outline"
-                  disabled={loading}
-                  title="Generate Code"
-                >
-                  <Shuffle className="w-4 h-4" />
-                </Button>
+                {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
               </div>
-              {errors.code && <p className="text-red-500 text-xs">{errors.code}</p>}
-            </div>
 
-            {/* Category */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">
-                Category *
-              </Label>
-              <Select 
-                value={formData.category} 
-                onValueChange={(value) => handleInputChange('category', value)}
-                disabled={loading}
-              >
-                <SelectTrigger className={`h-10 text-base focus-visible:ring-2 focus-visible:ring-primary ${
-                  errors.category ? 'border-red-500' : ''
-                }`}>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.category && <p className="text-red-500 text-xs">{errors.category}</p>}
+              {/* Product Code */}
+              <div className="space-y-2">
+                <Label htmlFor="code" className="text-sm font-medium">
+                  Product Code *
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => handleInputChange('code', e.target.value)}
+                    className={`h-10 font-mono ${errors.code ? 'border-red-500' : ''}`}
+                    placeholder="Enter code"
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    onClick={generateCode}
+                    className="w-10 h-10 p-0"
+                    variant="outline"
+                    disabled={loading}
+                    title="Generate Code"
+                  >
+                    <Shuffle className="w-4 h-4" />
+                  </Button>
+                </div>
+                {errors.code && <p className="text-red-500 text-xs">{errors.code}</p>}
+              </div>
+
+              {/* Category */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
+                  Category *
+                </Label>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={(value) => handleInputChange('category', value)}
+                  disabled={loading}
+                >
+                  <SelectTrigger className={`h-10 ${errors.category ? 'border-red-500' : ''}`}>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.category && <p className="text-red-500 text-xs">{errors.category}</p>}
+              </div>
             </div>
 
             {/* Pricing Section */}
-            <div className="border border-border rounded-lg p-3 space-y-3">
-              <h3 className="text-xs font-medium uppercase text-muted-foreground">Pricing</h3>
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-medium uppercase text-gray-500 mb-2">Pricing</h3>
               
-              {/* Buying Price */}
-              <div className="space-y-2">
-                <Label htmlFor="costPrice" className="text-sm font-medium text-foreground">
-                  Buying Price *
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="costPrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.costPrice}
-                    onChange={(e) => handleInputChange('costPrice', e.target.value)}
-                    className={`h-10 text-base pl-12 focus-visible:ring-2 focus-visible:ring-primary ${
-                      errors.costPrice ? 'border-red-500' : ''
-                    }`}
-                    placeholder="0.00"
-                    disabled={loading}
-                  />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                    KES
-                  </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Buying Price */}
+                <div className="space-y-2">
+                  <Label htmlFor="costPrice" className="text-sm font-medium">
+                    Buying Price *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="costPrice"
+                      type="number"
+                      step="0.01"
+                      value={formData.costPrice}
+                      onChange={(e) => handleInputChange('costPrice', e.target.value)}
+                      className={`h-10 pl-12 ${errors.costPrice ? 'border-red-500' : ''}`}
+                      placeholder="0.00"
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      KES
+                    </span>
+                  </div>
+                  {errors.costPrice && <p className="text-red-500 text-xs">{errors.costPrice}</p>}
                 </div>
-                {errors.costPrice && <p className="text-red-500 text-xs">{errors.costPrice}</p>}
-              </div>
 
-              {/* Selling Price */}
-              <div className="space-y-2">
-                <Label htmlFor="sellingPrice" className="text-sm font-medium text-foreground">
-                  Selling Price *
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="sellingPrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.sellingPrice}
-                    onChange={(e) => handleInputChange('sellingPrice', e.target.value)}
-                    className={`h-10 text-base pl-12 focus-visible:ring-2 focus-visible:ring-primary ${
-                      errors.sellingPrice ? 'border-red-500' : ''
-                    }`}
-                    placeholder="0.00"
-                    disabled={loading}
-                  />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                    KES
-                  </span>
+                {/* Selling Price */}
+                <div className="space-y-2">
+                  <Label htmlFor="sellingPrice" className="text-sm font-medium">
+                    Selling Price *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="sellingPrice"
+                      type="number"
+                      step="0.01"
+                      value={formData.sellingPrice}
+                      onChange={(e) => handleInputChange('sellingPrice', e.target.value)}
+                      className={`h-10 pl-12 ${errors.sellingPrice ? 'border-red-500' : ''}`}
+                      placeholder="0.00"
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      KES
+                    </span>
+                  </div>
+                  {errors.sellingPrice && <p className="text-red-500 text-xs">{errors.sellingPrice}</p>}
                 </div>
-                {errors.sellingPrice && <p className="text-red-500 text-xs">{errors.sellingPrice}</p>}
               </div>
             </div>
 
-            {/* Quantity & Threshold Section */}
-            <div className="border border-border rounded-lg p-3 space-y-3">
-              <h3 className="text-xs font-medium uppercase text-muted-foreground">Quantity & Threshold</h3>
+            {/* Inventory Section */}
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-medium uppercase text-gray-500 mb-2">Inventory</h3>
               
-              {/* Low-Stock Threshold */}
-              <div className="space-y-2">
-                <Label htmlFor="lowStockThreshold" className="text-sm font-medium text-foreground">
-                  Low-Stock Threshold *
-                </Label>
-                <Input
-                  id="lowStockThreshold"
-                  type="number"
-                  value={formData.lowStockThreshold}
-                  onChange={(e) => handleInputChange('lowStockThreshold', e.target.value)}
-                  className={`h-10 text-base focus-visible:ring-2 focus-visible:ring-primary ${
-                    errors.lowStockThreshold ? 'border-red-500' : ''
-                  } ${isUnspecifiedQuantity ? 'opacity-50' : ''}`}
-                  placeholder="10"
-                  disabled={loading || isUnspecifiedQuantity}
-                />
-                <p className="text-xs text-muted-foreground">Alert when stock ≤ this number</p>
-                {errors.lowStockThreshold && <p className="text-red-500 text-xs">{errors.lowStockThreshold}</p>}
-              </div>
-
-              {/* Initial Stock */}
-              <div className="space-y-2">
-                <Label htmlFor="currentStock" className="text-sm font-medium text-foreground">
-                  Initial Stock
-                </Label>
-                {isUnspecifiedQuantity ? (
-                  <div className="h-10 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md flex items-center">
-                    <div className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
-                      Bulk / Variable
-                    </div>
-                  </div>
-                ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Low-Stock Threshold */}
+                <div className="space-y-2">
+                  <Label htmlFor="lowStockThreshold" className="text-sm font-medium">
+                    Low-Stock Threshold *
+                  </Label>
                   <Input
-                    id="currentStock"
+                    id="lowStockThreshold"
                     type="number"
-                    value={formData.currentStock}
-                    onChange={(e) => handleInputChange('currentStock', e.target.value)}
-                    className="h-10 text-base focus-visible:ring-2 focus-visible:ring-primary"
-                    placeholder="0"
-                    disabled={loading}
+                    value={formData.lowStockThreshold}
+                    onChange={(e) => handleInputChange('lowStockThreshold', e.target.value)}
+                    className={`h-10 ${errors.lowStockThreshold ? 'border-red-500' : ''} ${isUnspecifiedQuantity ? 'opacity-50' : ''}`}
+                    placeholder="10"
+                    disabled={loading || isUnspecifiedQuantity}
                   />
-                )}
+                  <p className="text-xs text-muted-foreground">Alert when stock ≤ this number</p>
+                  {errors.lowStockThreshold && <p className="text-red-500 text-xs">{errors.lowStockThreshold}</p>}
+                </div>
+
+                {/* Initial Stock */}
+                <div className="space-y-2">
+                  <Label htmlFor="currentStock" className="text-sm font-medium">
+                    Initial Stock
+                  </Label>
+                  {isUnspecifiedQuantity ? (
+                    <div className="h-10 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md flex items-center">
+                      <div className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                        Bulk / Variable
+                      </div>
+                    </div>
+                  ) : (
+                    <Input
+                      id="currentStock"
+                      type="number"
+                      value={formData.currentStock}
+                      onChange={(e) => handleInputChange('currentStock', e.target.value)}
+                      className="h-10"
+                      placeholder="0"
+                      disabled={loading}
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Unspecified Quantity Checkbox */}
@@ -410,7 +392,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                 />
                 <Label 
                   htmlFor="unspecified" 
-                  className="text-sm text-foreground cursor-pointer"
+                  className="text-sm cursor-pointer"
                   title="Select for bulk items—quantities recorded later"
                 >
                   Unspecified quantity (sacks, tins, cups…)
@@ -421,12 +403,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         </div>
 
         {/* Fixed Footer */}
-        <div className="flex-shrink-0 flex flex-col gap-2 p-4 sm:p-6 border-t border-border">
+        <div className="flex-shrink-0 flex flex-col gap-2 p-6 border-t">
           <Button
-            type="button"
-            onClick={handleSave}
+            type="submit"
+            onClick={handleSubmit}
             disabled={!isFormValid || loading}
-            className="w-full h-10 text-base font-semibold bg-green-600 hover:bg-green-700 focus-visible:ring-green-500"
+            className="w-full h-10 font-semibold bg-green-600 hover:bg-green-700"
           >
             {loading ? (
               <div className="flex items-center gap-2">
@@ -441,7 +423,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             type="button" 
             variant="outline" 
             onClick={handleClose} 
-            className="w-full h-10 text-base font-medium"
+            className="w-full h-10"
             disabled={loading}
           >
             Cancel
