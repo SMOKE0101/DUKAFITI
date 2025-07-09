@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, ShoppingCart, Menu, User, Minus, X, CreditCard, Smartphone, Banknote, UserPlus } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Menu, User, Minus, X, CreditCard, Smartphone, Banknote, UserPlus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { useToast } from '../hooks/use-toast';
 import { Product, Sale, Customer } from '../types';
@@ -25,7 +25,7 @@ const SalesManagement = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchExpanded, setSearchExpanded] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'credit'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -80,10 +80,17 @@ const SalesManagement = () => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
 
+  // Clear entire cart
+  const clearCart = () => {
+    setCart([]);
+    setSelectedCustomer(null);
+    setPaymentMethod('cash');
+  };
+
   // Handle payment method change
-  const handlePaymentMethodChange = (method: 'cash' | 'mpesa' | 'credit') => {
+  const handlePaymentMethodChange = (method: 'cash' | 'mpesa' | 'debt') => {
     setPaymentMethod(method);
-    if (method !== 'credit') {
+    if (method !== 'debt') {
       setSelectedCustomer(null);
     }
   };
@@ -91,7 +98,10 @@ const SalesManagement = () => {
   // Handle customer creation
   const handleCreateCustomer = async (customerData: Omit<Customer, 'id' | 'createdDate'>) => {
     try {
-      const newCustomer = await createCustomer(customerData);
+      const newCustomer = await createCustomer({
+        ...customerData,
+        createdDate: new Date().toISOString()
+      });
       if (newCustomer) {
         setSelectedCustomer(newCustomer);
         setShowAddCustomer(false);
@@ -108,7 +118,7 @@ const SalesManagement = () => {
   // Process payment
   const handlePay = async () => {
     if (cart.length === 0) return;
-    if (paymentMethod === 'credit' && !selectedCustomer) {
+    if (paymentMethod === 'debt' && !selectedCustomer) {
       toast({
         title: "Customer Required",
         description: "Please select a customer for credit sales",
@@ -133,7 +143,7 @@ const SalesManagement = () => {
         paymentDetails: {
           cashAmount: paymentMethod === 'cash' ? item.product.sellingPrice * item.quantity : 0,
           mpesaAmount: paymentMethod === 'mpesa' ? item.product.sellingPrice * item.quantity : 0,
-          debtAmount: paymentMethod === 'credit' ? item.product.sellingPrice * item.quantity : 0,
+          debtAmount: paymentMethod === 'debt' ? item.product.sellingPrice * item.quantity : 0,
         },
         total: item.product.sellingPrice * item.quantity,
       }));
@@ -143,7 +153,7 @@ const SalesManagement = () => {
       const paymentLabels = {
         cash: 'Cash',
         mpesa: 'M-Pesa',
-        credit: selectedCustomer ? `Credit (${selectedCustomer.name})` : 'Credit'
+        debt: selectedCustomer ? `Credit (${selectedCustomer.name})` : 'Credit'
       };
 
       toast({
@@ -152,9 +162,7 @@ const SalesManagement = () => {
       });
 
       // Clear cart and reset
-      setCart([]);
-      setSelectedCustomer(null);
-      setPaymentMethod('cash');
+      clearCart();
     } catch (error) {
       console.error('Payment failed:', error);
       toast({
@@ -299,55 +307,71 @@ const SalesManagement = () => {
                     <p className="text-sm">Add products to get started</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {cart.map(item => (
-                      <div
-                        key={item.product.id}
-                        className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl hover:shadow-sm transition-all"
+                  <>
+                    {/* Clear Cart Button */}
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Cart Items ({cart.length})</h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearCart}
+                        className="text-destructive hover:text-destructive"
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-base truncate">{item.product.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatCurrency(item.product.sellingPrice)} each
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Clear Cart
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {cart.map(item => (
+                        <div
+                          key={item.product.id}
+                          className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl hover:shadow-sm transition-all"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-base truncate">{item.product.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatCurrency(item.product.sellingPrice)} each
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full"
+                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium text-base">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full"
+                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          
+                          <div className="text-right">
+                            <div className="font-semibold text-base">
+                              {formatCurrency(item.product.sellingPrice * item.quantity)}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              onClick={() => removeFromCart(item.product.id)}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 rounded-full"
-                            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span className="w-8 text-center font-medium text-base">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 rounded-full"
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                        
-                        <div className="text-right">
-                          <div className="font-semibold text-base">
-                            {formatCurrency(item.product.sellingPrice * item.quantity)}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                            onClick={() => removeFromCart(item.product.id)}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -357,7 +381,7 @@ const SalesManagement = () => {
                   {/* Customer Selection */}
                   <div className="p-4 border-b">
                     <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm font-medium">Customer {paymentMethod === 'credit' && '*'}</label>
+                      <label className="text-sm font-medium">Customer {paymentMethod === 'debt' && '*'}</label>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -416,9 +440,9 @@ const SalesManagement = () => {
                         M-Pesa
                       </Button>
                       <Button
-                        variant={paymentMethod === 'credit' ? 'default' : 'outline'}
+                        variant={paymentMethod === 'debt' ? 'default' : 'outline'}
                         size="sm"
-                        onClick={() => handlePaymentMethodChange('credit')}
+                        onClick={() => handlePaymentMethodChange('debt')}
                         className="flex-1 h-12"
                       >
                         <CreditCard className="w-4 h-4 mr-2" />
@@ -435,7 +459,7 @@ const SalesManagement = () => {
                     </div>
                     <Button 
                       onClick={handlePay}
-                      disabled={cart.length === 0 || (paymentMethod === 'credit' && !selectedCustomer)}
+                      disabled={cart.length === 0 || (paymentMethod === 'debt' && !selectedCustomer)}
                       className="w-full h-14 text-lg font-semibold bg-green-600 hover:bg-green-700"
                       size="lg"
                     >

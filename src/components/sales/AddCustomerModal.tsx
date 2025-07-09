@@ -38,7 +38,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
       outstandingDebt: 0,
       creditLimit: formData.creditLimit,
       riskRating: 'low',
-      lastPurchaseDate: undefined,
+      lastPurchaseDate: null,
     });
 
     // Reset form
@@ -124,7 +124,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
             
             <div>
               <Label htmlFor="creditLimit" className="text-sm font-medium">
-                Credit Limit
+                Credit Limit (KES)
               </Label>
               <Input
                 id="creditLimit"
