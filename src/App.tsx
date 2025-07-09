@@ -19,26 +19,10 @@ const queryClient = new QueryClient({
   },
 });
 
-const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => {
-  console.error('Application error:', error);
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
-        <p className="text-muted-foreground mb-4">{error.message}</p>
-        <button 
-          onClick={resetErrorBoundary}
-          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
-        >
-          Try again
-        </button>
-      </div>
-    </div>
-  );
-};
-
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  
+  console.log('ProtectedRoute:', { user: !!user, loading });
   
   if (loading) {
     return (
@@ -52,6 +36,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
+    console.log('No user, redirecting to /auth');
     return <Navigate to="/auth" replace />;
   }
   
@@ -60,6 +45,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  
+  console.log('PublicRoute:', { user: !!user, loading });
   
   if (loading) {
     return (
@@ -73,6 +60,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (user) {
+    console.log('User authenticated, redirecting to /app');
     return <Navigate to="/app" replace />;
   }
   
@@ -80,6 +68,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
+  console.log('AppRoutes rendering');
+  
   return (
     <Routes>
       <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
@@ -95,6 +85,7 @@ const AppRoutes = () => {
       <Route path="/sales" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/debts" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       
@@ -104,18 +95,22 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  console.log('App component rendering');
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

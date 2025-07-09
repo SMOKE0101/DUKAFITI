@@ -40,6 +40,17 @@ const Index = () => {
     );
   }
 
+  if (!user) {
+    console.log('No user in Index component');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground">Authentication required</p>
+        </div>
+      </div>
+    );
+  }
+
   // Update active tab based on route
   useEffect(() => {
     const path = location.pathname;
@@ -94,6 +105,12 @@ const Index = () => {
         <div className="p-6 text-center">
           <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Content</h2>
           <p className="text-muted-foreground">There was an error loading this page. Please try refreshing.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+          >
+            Refresh Page
+          </button>
         </div>
       );
     }
