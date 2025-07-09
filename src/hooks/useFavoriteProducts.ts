@@ -41,7 +41,7 @@ export const useFavoriteProducts = () => {
 
       let newFavorites = [...prevFavorites, product];
       
-      // If we exceed max favorites, remove the oldest one
+      // If we exceed max favorites, remove the oldest one (first item)
       if (newFavorites.length > MAX_FAVORITES) {
         newFavorites = newFavorites.slice(1);
       }
