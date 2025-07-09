@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ interface RefinedCustomerCardProps {
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
   onRecordRepayment: (customer: Customer) => void;
+  isUpdating?: boolean;
 }
 
 const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
@@ -22,7 +23,8 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
   onViewHistory,
   onEdit,
   onDelete,
-  onRecordRepayment
+  onRecordRepayment,
+  isUpdating = false
 }) => {
   const getInitials = (name: string) => {
     return name
@@ -46,30 +48,57 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
   const balanceStatus = getBalanceStatus();
 
   return (
-    <Card className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-200">
+    <Card className={`bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-200 ${
+      isUpdating ? 'opacity-75' : ''
+    }`}>
       <CardContent className="p-0">
+        {/* Loading overlay */}
+        {isUpdating && (
+          <div className="absolute inset-0 bg-white/50 dark:bg-gray-800/50 rounded-2xl flex items-center justify-center z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+
         {/* Top Row */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <Avatar className={`w-12 h-12 ${balanceStatus.avatarColor}`}>
               <AvatarFallback className="font-semibold">
                 {getInitials(customer.name)}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <h3 className="text-lg font-display font-semibold text-foreground">{customer.name}</h3>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-display font-semibold text-foreground truncate">{customer.name}</h3>
               <p className="text-sm text-gray-500">{customer.phone}</p>
+              
+              {/* Email Field */}
+              <p className="text-sm text-gray-600 mt-1">
+                {customer.email ? (
+                  <span className="truncate block">{customer.email}</span>
+                ) : (
+                  <span className="italic">No email provided</span>
+                )}
+              </p>
+              
+              {/* Address Field */}
+              <p className="text-sm text-gray-600 mt-1">
+                {customer.address ? (
+                  <span className="line-clamp-2 leading-tight">{customer.address}</span>
+                ) : (
+                  <span className="italic">No address provided</span>
+                )}
+              </p>
             </div>
           </div>
 
           {/* Balance Badge */}
-          <Badge className={`px-3 py-1 rounded-full text-sm ${balanceStatus.color}`}>
+          <Badge className={`px-3 py-1 rounded-full text-sm ${balanceStatus.color} whitespace-nowrap`}>
             {formatCurrency(customer.outstandingDebt)}
           </Badge>
         </div>
 
         {/* Action Row - Icon Only Buttons */}
-        <div className="flex gap-3 justify-end">
+        <div className="flex gap-3 justify-end mt-6">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

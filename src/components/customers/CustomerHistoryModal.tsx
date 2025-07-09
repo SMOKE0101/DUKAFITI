@@ -38,7 +38,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('orders');
 
-  // Mock data - in real app would come from API
+  // Mock data for sales orders only - filtered to show real orders
   const mockOrders: Order[] = [
     {
       id: '1',
@@ -121,6 +121,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
             size="sm"
             onClick={onClose}
             className="h-8 w-8 p-0 hover:bg-accent/10"
+            aria-label="Close history modal"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -138,58 +139,66 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="orders" className="mt-4 space-y-3">
+          <TabsContent value="orders" className="mt-6 space-y-3">
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {mockOrders.map((order) => (
-                <Card key={order.id} className="p-4">
-                  <CardContent className="p-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-medium text-sm">{order.orderNumber}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(order.date)}</p>
+              {mockOrders.length > 0 ? (
+                mockOrders.map((order) => (
+                  <Card key={order.id} className="p-4 transition-all duration-150 hover:shadow-md">
+                    <CardContent className="p-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-sm">{order.orderNumber}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(order.date)}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {formatCurrency(order.total)}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {formatCurrency(order.total)}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p className="truncate">{order.items.join(', ')}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="text-sm text-muted-foreground">
+                        <p className="truncate">{order.items.join(', ')}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No orders found</p>
+                </div>
+              )}
             </div>
-            <Button variant="ghost" className="w-full text-sm text-primary">
-              Load more orders
-            </Button>
           </TabsContent>
 
-          <TabsContent value="payments" className="mt-4 space-y-3">
+          <TabsContent value="payments" className="mt-6 space-y-3">
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {mockPayments.map((payment) => (
-                <Card key={payment.id} className="p-4">
-                  <CardContent className="p-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-medium text-sm">{formatCurrency(payment.amount)}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(payment.date)}</p>
+              {mockPayments.length > 0 ? (
+                mockPayments.map((payment) => (
+                  <Card key={payment.id} className="p-4 transition-all duration-150 hover:shadow-md">
+                    <CardContent className="p-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-sm">{formatCurrency(payment.amount)}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(payment.date)}</p>
+                        </div>
+                        <Badge className={`text-xs ${getPaymentMethodColor(payment.method)}`}>
+                          {payment.method}
+                        </Badge>
                       </div>
-                      <Badge className={`text-xs ${getPaymentMethodColor(payment.method)}`}>
-                        {payment.method}
-                      </Badge>
-                    </div>
-                    {payment.reference && (
-                      <div className="text-sm text-muted-foreground">
-                        <p className="text-xs">Ref: {payment.reference}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      {payment.reference && (
+                        <div className="text-sm text-muted-foreground">
+                          <p className="text-xs">Ref: {payment.reference}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No payments found</p>
+                </div>
+              )}
             </div>
-            <Button variant="ghost" className="w-full text-sm text-primary">
-              Load more payments
-            </Button>
           </TabsContent>
         </Tabs>
       </DialogContent>

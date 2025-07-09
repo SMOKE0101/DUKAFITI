@@ -1,271 +1,302 @@
 
 import React, { useState, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { 
+  Package, 
   Plus, 
   Search, 
-  X
+  AlertTriangle, 
+  TrendingUp, 
+  DollarSign,
+  BarChart3,
+  Filter
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { formatCurrency } from '../utils/currency';
 import { Product } from '../types';
 import AddProductModal from './inventory/AddProductModal';
+import ProductCard from './inventory/ProductCard';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
-import ProductCard from './inventory/ProductCard';
-import ProductCardSkeleton from './inventory/ProductCardSkeleton';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
+import ProductCardSkeleton from './inventory/ProductCardSkeleton';
 
 const InventoryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('name-asc');
+  const [filterCategory, setFilterCategory] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const { toast } = useToast();
+
   const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
 
-  // Filter products
-  const filteredProducts = useMemo(() => {
-    let filtered = products.filter(product =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalProducts = products.length;
+    const totalValue = products.reduce((sum, p) => sum + (p.currentStock * p.costPrice), 0);
+    const lowStockCount = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
+    const outOfStockCount = products.filter(p => p.currentStock === 0).length;
+    
+    return {
+      totalProducts,
+      totalValue,
+      lowStockCount,
+      outOfStockCount
+    };
+  }, [products]);
 
-    if (filterStatus === 'low-stock') {
-      filtered = filtered.filter(p => p.currentStock <= p.lowStockThreshold);
-    } else if (filterStatus === 'out-of-stock') {
-      filtered = filtered.filter(p => p.currentStock === 0);
-    } else if (filterStatus === 'in-stock') {
-      filtered = filtered.filter(p => p.currentStock > p.lowStockThreshold);
-    }
+  // Get unique categories
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(products.map(p => p.category)));
+    return uniqueCategories.sort();
+  }, [products]);
+
+  // Filter and sort products
+  const filteredAndSortedProducts = useMemo(() => {
+    let filtered = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           product.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'stock-asc':
+          return a.currentStock - b.currentStock;
+        case 'stock-desc':
+          return b.currentStock - a.currentStock;
+        case 'price-asc':
+          return a.sellingPrice - b.sellingPrice;
+        case 'price-desc':
+          return b.sellingPrice - a.sellingPrice;
+        default:
+          return 0;
+      }
+    });
 
     return filtered;
-  }, [products, searchQuery, filterStatus]);
+  }, [products, searchQuery, sortBy, filterCategory]);
 
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await createProduct(productData);
-      toast({
-        title: "Product Added",
-        description: `${productData.name} has been added to inventory`,
-      });
       setShowAddModal(false);
     } catch (error) {
       console.error('Failed to add product:', error);
-      throw error;
     }
   };
 
-  const handleEditProduct = async (productData: Partial<Product>) => {
+  const handleEditProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateProduct = async (productData: Partial<Product>) => {
     if (!selectedProduct) return;
     
     try {
       await updateProduct(selectedProduct.id, productData);
-      setSelectedProduct(null);
       setShowEditModal(false);
-      toast({
-        title: "Product Updated",
-        description: `${selectedProduct.name} has been updated`,
-      });
+      setSelectedProduct(null);
     } catch (error) {
       console.error('Failed to update product:', error);
-      throw error;
     }
   };
 
-  const handleDeleteProduct = async () => {
+  const handleDeleteProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteProduct = async () => {
     if (!selectedProduct) return;
-    
+
     try {
       await deleteProduct(selectedProduct.id);
       setShowDeleteModal(false);
       setSelectedProduct(null);
-      toast({
-        title: "Product Deleted",
-        description: `${selectedProduct.name} has been removed from inventory`,
-      });
     } catch (error) {
       console.error('Failed to delete product:', error);
     }
   };
 
-  const handleRestock = async (quantity: number, buyingPrice: number) => {
+  const handleRestockProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setShowRestockModal(true);
+  };
+
+  const handleRestock = async (quantity: number, costPrice?: number) => {
     if (!selectedProduct) return;
     
     try {
-      await updateProduct(selectedProduct.id, {
+      const updatedProduct: Partial<Product> = {
         currentStock: selectedProduct.currentStock + quantity,
-        costPrice: buyingPrice
-      });
+      };
+      
+      if (costPrice !== undefined) {
+        updatedProduct.costPrice = costPrice;
+      }
+      
+      await updateProduct(selectedProduct.id, updatedProduct);
       setShowRestockModal(false);
       setSelectedProduct(null);
-      toast({
-        title: "Inventory Restocked",
-        description: `Added ${quantity} units to ${selectedProduct.name}`,
-      });
     } catch (error) {
       console.error('Failed to restock product:', error);
     }
   };
 
-  const handleStatsCardClick = (filter: string) => {
-    setFilterStatus(filter === 'all' ? 'all' : filter === 'in-stock' ? 'all' : filter);
-  };
-
-  const openEditModal = (product: Product) => {
-    setSelectedProduct(product);
-    setShowEditModal(true);
-  };
-
-  const openDeleteModal = (product: Product) => {
-    setSelectedProduct(product);
-    setShowDeleteModal(true);
-  };
-
-  const openRestockModal = (product: Product) => {
-    setSelectedProduct(product);
-    setShowRestockModal(true);
-  };
-
   return (
-    <TooltipProvider>
-      <div className="space-y-6 p-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <h1 className="text-3xl font-display text-primary">Inventory</h1>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                onClick={() => setShowAddModal(true)}
-                className="px-5 py-2 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-500 transition-all duration-200 flex items-center gap-2"
-              >
-                <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                  <Plus className="w-3 h-3" />
-                </div>
-                Add Inventory
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add new product to inventory</TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Premium Statistics Cards */}
-        <PremiumStatsCards 
-          products={products} 
-          onCardClick={handleStatsCardClick}
-        />
-
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search products…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-10 py-4"
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-3xl font-display text-primary">Inventory</h1>
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className="px-6 py-2 bg-accent text-white rounded-xl shadow-lg hover:bg-accent/90 transition-all duration-200 flex items-center gap-2"
+        >
+          <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+            <Plus className="w-3 h-3" />
           </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="low-stock">Low Stock</SelectItem>
-              <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-            </SelectContent>
-          </Select>
+          Add Product
+        </Button>
+      </div>
+
+      {/* Premium Stats Cards */}
+      <PremiumStatsCards stats={stats} />
+
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 py-4"
+          />
         </div>
+        
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-full sm:w-48">
+            <Filter className="w-4 h-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Clear Filter Indicator */}
-        {filterStatus !== 'all' && (
-          <div className="flex items-center gap-2">
-            <div className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
-              Showing: {filterStatus === 'low-stock' ? 'Low Stock Items' : 'Out of Stock Items'}
-              <button 
-                onClick={() => setFilterStatus('all')}
-                className="text-purple-600 hover:text-purple-800"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name-asc">Name A-Z</SelectItem>
+            <SelectItem value="name-desc">Name Z-A</SelectItem>
+            <SelectItem value="stock-asc">Stock Low-High</SelectItem>
+            <SelectItem value="stock-desc">Stock High-Low</SelectItem>
+            <SelectItem value="price-asc">Price Low-High</SelectItem>
+            <SelectItem value="price-desc">Price High-Low</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
+      {/* Products Grid */}
+      <div className="space-y-4">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
-            ))
-          ) : (
-            filteredProducts.map((product) => (
-              <ProductCard 
+            ))}
+          </div>
+        ) : filteredAndSortedProducts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAndSortedProducts.map((product) => (
+              <ProductCard
                 key={product.id}
                 product={product}
-                onEdit={openEditModal}
-                onDelete={openDeleteModal}
-                onRestock={openRestockModal}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteProduct}
+                onRestock={handleRestockProduct}
               />
-            ))
-          )}
-        </div>
-
-        {/* Modals */}
-        <AddProductModal 
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onSave={handleAddProduct}
-        />
-
-        <EditProductModal 
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedProduct(null);
-          }}
-          onSave={handleEditProduct}
-          product={selectedProduct}
-        />
-
-        <DeleteProductModal 
-          isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setSelectedProduct(null);
-          }}
-          onConfirm={handleDeleteProduct}
-          productName={selectedProduct?.name || ''}
-        />
-
-        <RestockModal 
-          isOpen={showRestockModal}
-          onClose={() => {
-            setShowRestockModal(false);
-            setSelectedProduct(null);
-          }}
-          onSave={handleRestock}
-          product={selectedProduct}
-        />
+            ))}
+          </div>
+        ) : (
+          <Card className="rounded-2xl">
+            <CardContent className="p-8 text-center">
+              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No products found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery || filterCategory !== 'all' ? 'Try adjusting your search or filters.' : 'Start by adding your first product.'}
+              </p>
+              {!searchQuery && filterCategory === 'all' && (
+                <Button onClick={() => setShowAddModal(true)} className="bg-accent hover:bg-accent/90">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Product
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
-    </TooltipProvider>
+
+      {/* Modals */}
+      <AddProductModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddProduct}
+        categories={categories}
+      />
+
+      <EditProductModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+        onSubmit={handleUpdateProduct}
+        categories={categories}
+      />
+
+      <DeleteProductModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedProduct(null);
+        }}
+        onConfirm={confirmDeleteProduct}
+        product={selectedProduct}
+      />
+
+      <RestockModal
+        isOpen={showRestockModal}
+        onClose={() => {
+          setShowRestockModal(false);
+          setSelectedProduct(null);
+        }}
+        onSubmit={handleRestock}
+        product={selectedProduct}
+      />
+    </div>
   );
 };
 

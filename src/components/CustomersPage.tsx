@@ -3,9 +3,10 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { 
   Search, 
@@ -42,14 +43,19 @@ const CustomersPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRepaymentDrawer, setShowRepaymentDrawer] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [updatingCustomers, setUpdatingCustomers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { customers, loading, createCustomer, deleteCustomer } = useSupabaseCustomers();
 
   const [newCustomerForm, setNewCustomerForm] = useState({
     name: '',
     phone: '',
+    email: '',
+    address: '',
     initialBalance: ''
   });
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Calculate refined statistics
   const stats: CustomerStats = useMemo(() => {
@@ -80,7 +86,8 @@ const CustomersPage = () => {
   const filteredAndSortedCustomers = useMemo(() => {
     let filtered = customers.filter(customer =>
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery)
+      customer.phone.includes(searchQuery) ||
+      (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     // Apply filter type
@@ -112,13 +119,33 @@ const CustomersPage = () => {
     return filtered;
   }, [customers, searchQuery, sortBy, filterType]);
 
+  const validateAddCustomerForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!newCustomerForm.name.trim()) errors.name = 'Name is required';
+    if (!newCustomerForm.phone.trim()) errors.phone = 'Phone is required';
+    
+    // Email validation if provided
+    if (newCustomerForm.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newCustomerForm.email.trim())) {
+        errors.email = 'Please enter a valid email address';
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleAddCustomer = async () => {
+    if (!validateAddCustomerForm()) return;
+
     try {
       await createCustomer({
-        name: newCustomerForm.name,
-        phone: newCustomerForm.phone,
-        email: '',
-        address: '',
+        name: newCustomerForm.name.trim(),
+        phone: newCustomerForm.phone.trim(),
+        email: newCustomerForm.email.trim(),
+        address: newCustomerForm.address.trim(),
         createdDate: new Date().toISOString(),
         totalPurchases: 0,
         outstandingDebt: parseFloat(newCustomerForm.initialBalance) || 0,
@@ -133,9 +160,15 @@ const CustomersPage = () => {
       });
 
       setShowAddModal(false);
-      setNewCustomerForm({ name: '', phone: '', initialBalance: '' });
+      setNewCustomerForm({ name: '', phone: '', email: '', address: '', initialBalance: '' });
+      setFormErrors({});
     } catch (error) {
       console.error('Failed to add customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add customer. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -162,6 +195,8 @@ const CustomersPage = () => {
   const confirmDeleteCustomer = async () => {
     if (!selectedCustomer) return;
 
+    setUpdatingCustomers(prev => new Set(prev).add(selectedCustomer.id));
+
     try {
       await deleteCustomer(selectedCustomer.id);
       
@@ -174,6 +209,17 @@ const CustomersPage = () => {
       setSelectedCustomer(null);
     } catch (error) {
       console.error('Failed to delete customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingCustomers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(selectedCustomer.id);
+        return newSet;
+      });
     }
   };
 
@@ -302,7 +348,7 @@ const CustomersPage = () => {
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search by name or phone…"
+              placeholder="Search by name, phone, or email…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 py-4"
@@ -348,6 +394,8 @@ const CustomersPage = () => {
                       <div className="space-y-2">
                         <div className="h-4 bg-muted animate-pulse rounded w-32" />
                         <div className="h-3 bg-muted animate-pulse rounded w-24" />
+                        <div className="h-3 bg-muted animate-pulse rounded w-28" />
+                        <div className="h-3 bg-muted animate-pulse rounded w-36" />
                       </div>
                     </div>
                     <div className="h-6 bg-muted animate-pulse rounded w-20" />
@@ -355,8 +403,8 @@ const CustomersPage = () => {
                   <div className="flex gap-3 justify-end mt-6">
                     <div className="h-9 bg-muted animate-pulse rounded w-10" />
                     <div className="h-9 bg-muted animate-pulse rounded w-10" />
-                    <div className="h-9 bg-muted animate-pulse rounded w-16" />
-                    <div className="h-9 bg-muted animate-pulse rounded w-16" />
+                    <div className="h-9 bg-muted animate-pulse rounded w-10" />
+                    <div className="h-9 bg-muted animate-pulse rounded w-10" />
                   </div>
                 </CardContent>
               </Card>
@@ -371,6 +419,7 @@ const CustomersPage = () => {
                   onEdit={handleEditCustomer}
                   onDelete={handleDeleteCustomer}
                   onRecordRepayment={handleRecordRepayment}
+                  isUpdating={updatingCustomers.has(customer.id)}
                 />
               ))}
             </div>
@@ -395,34 +444,67 @@ const CustomersPage = () => {
 
         {/* Add Customer Modal */}
         <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-          <DialogContent className="sm:max-w-md rounded-2xl p-6">
+          <DialogContent className="sm:max-w-md rounded-2xl p-6 animate-in fade-in-0 scale-in-95 duration-200">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">New Customer</DialogTitle>
             </DialogHeader>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name" className="text-sm font-semibold">Name *</Label>
                 <Input
                   id="name"
                   value={newCustomerForm.name}
                   onChange={(e) => setNewCustomerForm(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Customer name"
+                  className={`text-base ${formErrors.name ? 'border-red-500' : ''}`}
+                  aria-label="Customer name"
                 />
+                {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
               </div>
 
               <div>
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone" className="text-sm font-semibold">Phone *</Label>
                 <Input
                   id="phone"
                   value={newCustomerForm.phone}
                   onChange={(e) => setNewCustomerForm(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="0712345678"
+                  className={`text-base ${formErrors.phone ? 'border-red-500' : ''}`}
+                  aria-label="Customer phone number"
+                />
+                {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newCustomerForm.email}
+                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="customer@example.com"
+                  className={`text-base ${formErrors.email ? 'border-red-500' : ''}`}
+                  aria-label="Customer email address"
+                />
+                {formErrors.email && <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="address" className="text-sm font-semibold">Address</Label>
+                <Textarea
+                  id="address"
+                  value={newCustomerForm.address}
+                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Customer address"
+                  className="text-base resize-none"
+                  rows={3}
+                  aria-label="Customer address"
                 />
               </div>
 
               <div>
-                <Label htmlFor="initialBalance">Initial Balance (Optional)</Label>
+                <Label htmlFor="initialBalance" className="text-sm font-semibold">Initial Balance (Optional)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                     KES
@@ -433,16 +515,20 @@ const CustomersPage = () => {
                     step="0.01"
                     value={newCustomerForm.initialBalance}
                     onChange={(e) => setNewCustomerForm(prev => ({ ...prev, initialBalance: e.target.value }))}
-                    className="pl-12"
+                    className="pl-12 text-base"
                     placeholder="0.00"
+                    aria-label="Initial balance"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-6">
                 <Button
                   variant="ghost"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setFormErrors({});
+                  }}
                   className="flex-1"
                 >
                   Cancel
@@ -450,7 +536,7 @@ const CustomersPage = () => {
                 <Button
                   onClick={handleAddCustomer}
                   disabled={!newCustomerForm.name || !newCustomerForm.phone}
-                  className="flex-1 bg-accent hover:bg-accent/90"
+                  className="flex-1 bg-accent hover:bg-accent/90 transition-all duration-200"
                 >
                   Save
                 </Button>
