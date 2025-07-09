@@ -24,7 +24,7 @@ const SalesManagement = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchExpanded, setSearchExpanded] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'credit'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const { toast } = useToast();
@@ -80,9 +80,9 @@ const SalesManagement = () => {
   };
 
   // Handle payment method change
-  const handlePaymentMethodChange = (method: 'cash' | 'mpesa' | 'credit') => {
+  const handlePaymentMethodChange = (method: 'cash' | 'mpesa' | 'debt') => {
     setPaymentMethod(method);
-    if (method === 'credit') {
+    if (method === 'debt') {
       setShowCustomerSelect(true);
     } else {
       setShowCustomerSelect(false);
@@ -110,7 +110,7 @@ const SalesManagement = () => {
         paymentDetails: {
           cashAmount: paymentMethod === 'cash' ? item.product.sellingPrice * item.quantity : 0,
           mpesaAmount: paymentMethod === 'mpesa' ? item.product.sellingPrice * item.quantity : 0,
-          debtAmount: paymentMethod === 'credit' ? item.product.sellingPrice * item.quantity : 0,
+          debtAmount: paymentMethod === 'debt' ? item.product.sellingPrice * item.quantity : 0,
         },
         total: item.product.sellingPrice * item.quantity,
       }));
@@ -121,7 +121,7 @@ const SalesManagement = () => {
       const paymentLabels = {
         cash: 'Cash',
         mpesa: 'M-Pesa',
-        credit: selectedCustomer ? `Credit (${selectedCustomer.name})` : 'Credit'
+        debt: selectedCustomer ? `Credit (${selectedCustomer.name})` : 'Credit'
       };
 
       toast({
@@ -377,9 +377,9 @@ const SalesManagement = () => {
                     M-Pesa
                   </Button>
                   <Button
-                    variant={paymentMethod === 'credit' ? 'default' : 'outline'}
+                    variant={paymentMethod === 'debt' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => handlePaymentMethodChange('credit')}
+                    onClick={() => handlePaymentMethodChange('debt')}
                     className="flex-1"
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
@@ -390,7 +390,7 @@ const SalesManagement = () => {
                 {/* Pay Button */}
                 <Button 
                   onClick={handlePay}
-                  disabled={cart.length === 0 || (paymentMethod === 'credit' && !selectedCustomer)}
+                  disabled={cart.length === 0 || (paymentMethod === 'debt' && !selectedCustomer)}
                   className="w-full h-12 text-lg font-semibold"
                   size="lg"
                 >

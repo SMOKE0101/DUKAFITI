@@ -8,6 +8,7 @@ import SalesManagement from '../components/SalesManagement';
 import InventoryPage from '../components/InventoryPage';
 import CustomersPage from '../components/CustomersPage';
 import TransactionHistory from '../components/TransactionHistory';
+import ReportsPage from '../components/ReportsPage';
 import Settings from './Settings';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,6 +46,8 @@ const Index = () => {
       setActiveTab('customers');
     } else if (path === '/history') {
       setActiveTab('history');
+    } else if (path === '/reports') {
+      setActiveTab('reports');
     } else if (path === '/settings') {
       setActiveTab('settings');
     } else if (path === '/debts') {
@@ -65,6 +68,8 @@ const Index = () => {
       case 'debts':
       case 'history':
         return <TransactionHistory />;
+      case 'reports':
+        return <ReportsPage />;
       case 'settings':
         return <Settings />;
       default:
