@@ -1,19 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { X, Package, CreditCard } from 'lucide-react';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
-
-interface Transaction {
-  id: string;
-  date: string;
-  type: 'Sale' | 'Payment';
-  amount: number;
-  description?: string;
-}
 
 interface CustomerHistoryModalProps {
   isOpen: boolean;
@@ -21,152 +15,183 @@ interface CustomerHistoryModalProps {
   customer: Customer | null;
 }
 
+interface Order {
+  id: string;
+  date: string;
+  orderNumber: string;
+  items: string[];
+  total: number;
+}
+
+interface Payment {
+  id: string;
+  date: string;
+  method: string;
+  amount: number;
+  reference?: string;
+}
+
 const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   isOpen,
   onClose,
   customer
 }) => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('orders');
 
-  // Mock data for now - in real app, fetch from API
-  useEffect(() => {
-    if (customer && isOpen) {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        const mockTransactions: Transaction[] = [
-          {
-            id: '1',
-            date: '2025-01-07',
-            type: 'Sale',
-            amount: 250,
-            description: 'Rice 2kg, Cooking Oil 1L'
-          },
-          {
-            id: '2',
-            date: '2025-01-05',
-            type: 'Payment',
-            amount: -150,
-            description: 'Cash payment'
-          },
-          {
-            id: '3',
-            date: '2025-01-03',
-            type: 'Sale',
-            amount: 180,
-            description: 'Bread, Milk'
-          },
-          {
-            id: '4',
-            date: '2025-01-01',
-            type: 'Payment',
-            amount: -100,
-            description: 'M-Pesa payment'
-          },
-          {
-            id: '5',
-            date: '2024-12-28',
-            type: 'Sale',
-            amount: 320,
-            description: 'Sugar 2kg, Tea leaves'
-          }
-        ];
-        setTransactions(mockTransactions);
-        setLoading(false);
-      }, 500);
+  // Mock data - in real app would come from API
+  const mockOrders: Order[] = [
+    {
+      id: '1',
+      date: '2024-01-15',
+      orderNumber: 'ORD-001',
+      items: ['Rice 2kg', 'Sugar 1kg', 'Oil 500ml'],
+      total: 1250
+    },
+    {
+      id: '2',
+      date: '2024-01-10',
+      orderNumber: 'ORD-002',
+      items: ['Bread', 'Milk 1L'],
+      total: 450
+    },
+    {
+      id: '3',
+      date: '2024-01-05',
+      orderNumber: 'ORD-003',
+      items: ['Maize flour 2kg', 'Beans 1kg', 'Tomatoes'],
+      total: 890
     }
-  }, [customer, isOpen]);
+  ];
+
+  const mockPayments: Payment[] = [
+    {
+      id: '1',
+      date: '2024-01-14',
+      method: 'M-Pesa',
+      amount: 1000,
+      reference: 'NLJ7RT61SX'
+    },
+    {
+      id: '2',
+      date: '2024-01-08',
+      method: 'Cash',
+      amount: 500
+    },
+    {
+      id: '3',
+      date: '2024-01-03',
+      method: 'M-Pesa',
+      amount: 750,
+      reference: 'MLK5QT82PY'
+    }
+  ];
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+      day: 'numeric'
     });
+  };
+
+  const getPaymentMethodColor = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'm-pesa':
+        return 'bg-green-100 text-green-800';
+      case 'cash':
+        return 'bg-blue-100 text-blue-800';
+      case 'bank':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   if (!customer) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md rounded-2xl p-6 bg-white dark:bg-gray-800 shadow-xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
+      <DialogContent className="max-w-md rounded-2xl p-6 bg-white dark:bg-gray-800 shadow-xl animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <DialogTitle className="text-xl font-display font-semibold">
             History for {customer.name}
           </DialogTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0 hover:bg-accent/10"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
 
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg animate-pulse">
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-300 rounded w-20"></div>
-                    <div className="h-3 bg-gray-300 rounded w-16"></div>
-                  </div>
-                  <div className="h-4 bg-gray-300 rounded w-16"></div>
-                </div>
-              ))}
-            </div>
-          ) : transactions.length > 0 ? (
-            <div className="space-y-2">
-              {transactions.map((transaction, index) => (
-                <div key={transaction.id}>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-sm">
-                          {formatDate(transaction.date)}
-                        </span>
-                        <Badge 
-                          className={`text-xs ${
-                            transaction.type === 'Sale' 
-                              ? 'bg-blue-100 text-blue-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          {transaction.type}
-                        </Badge>
-                      </div>
-                      {transaction.description && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {transaction.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className={`font-medium text-sm ${
-                      transaction.type === 'Payment' 
-                        ? 'text-green-600' 
-                        : 'text-gray-900 dark:text-gray-100'
-                    }`}>
-                      {transaction.type === 'Payment' ? '-' : '+'}
-                      {formatCurrency(Math.abs(transaction.amount))}
-                    </div>
-                  </div>
-                  {index < transactions.length - 1 && <Separator />}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No transaction history found
-            </div>
-          )}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Orders
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Payments
+            </TabsTrigger>
+          </TabsList>
 
-        {transactions.length > 0 && (
-          <div className="pt-4 border-t">
-            <Button
-              variant="ghost"
-              className="w-full text-purple-600 hover:text-purple-700"
-            >
-              Load More
+          <TabsContent value="orders" className="mt-4 space-y-3">
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {mockOrders.map((order) => (
+                <Card key={order.id} className="p-4">
+                  <CardContent className="p-0">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-medium text-sm">{order.orderNumber}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(order.date)}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {formatCurrency(order.total)}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <p className="truncate">{order.items.join(', ')}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <Button variant="ghost" className="w-full text-sm text-primary">
+              Load more orders
             </Button>
-          </div>
-        )}
+          </TabsContent>
+
+          <TabsContent value="payments" className="mt-4 space-y-3">
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {mockPayments.map((payment) => (
+                <Card key={payment.id} className="p-4">
+                  <CardContent className="p-0">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-medium text-sm">{formatCurrency(payment.amount)}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(payment.date)}</p>
+                      </div>
+                      <Badge className={`text-xs ${getPaymentMethodColor(payment.method)}`}>
+                        {payment.method}
+                      </Badge>
+                    </div>
+                    {payment.reference && (
+                      <div className="text-sm text-muted-foreground">
+                        <p className="text-xs">Ref: {payment.reference}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <Button variant="ghost" className="w-full text-sm text-primary">
+              Load more payments
+            </Button>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
