@@ -7,7 +7,6 @@ import {
   ShoppingCart, 
   Users, 
   Package,
-  TrendingUp,
   AlertTriangle
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
@@ -36,9 +35,10 @@ const EnhancedStatsCards: React.FC<EnhancedStatsCardsProps> = ({ sales, products
       title: 'Total Sales Today',
       value: formatCurrency(totalSalesToday),
       icon: DollarSign,
-      color: 'bg-gradient-to-br from-green-500 to-green-600',
-      textColor: 'text-green-50',
-      route: '/sales'
+      color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      textColor: 'text-purple-50',
+      route: '/sales',
+      hoverColor: 'hover:shadow-purple-200 dark:hover:shadow-purple-800/20'
     },
     {
       title: 'Orders Today',
@@ -46,15 +46,17 @@ const EnhancedStatsCards: React.FC<EnhancedStatsCardsProps> = ({ sales, products
       icon: ShoppingCart,
       color: 'bg-gradient-to-br from-blue-500 to-blue-600',
       textColor: 'text-blue-50',
-      route: '/sales'
+      route: '/sales',
+      hoverColor: 'hover:shadow-blue-200 dark:hover:shadow-blue-800/20'
     },
     {
       title: 'Active Customers',
       value: activeCustomers.toString(),
       icon: Users,
-      color: 'bg-gradient-to-br from-purple-500 to-purple-600',
-      textColor: 'text-purple-50',
-      route: '/customers'
+      color: 'bg-gradient-to-br from-green-500 to-green-600',
+      textColor: 'text-green-50',
+      route: '/customers',
+      hoverColor: 'hover:shadow-green-200 dark:hover:shadow-green-800/20'
     },
     {
       title: 'Low Stock Products',
@@ -64,7 +66,10 @@ const EnhancedStatsCards: React.FC<EnhancedStatsCardsProps> = ({ sales, products
         ? 'bg-gradient-to-br from-orange-500 to-red-500' 
         : 'bg-gradient-to-br from-gray-500 to-gray-600',
       textColor: lowStockProducts > 0 ? 'text-orange-50' : 'text-gray-50',
-      route: '/inventory'
+      route: '/inventory',
+      hoverColor: lowStockProducts > 0 
+        ? 'hover:shadow-orange-200 dark:hover:shadow-orange-800/20' 
+        : 'hover:shadow-gray-200 dark:hover:shadow-gray-800/20'
     }
   ];
 
@@ -75,21 +80,20 @@ const EnhancedStatsCards: React.FC<EnhancedStatsCardsProps> = ({ sales, products
         return (
           <Card 
             key={index}
-            className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-105"
+            className={`relative overflow-hidden border-0 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md hover:shadow-xl ${card.hoverColor} transition-all duration-300 cursor-pointer group hover:-translate-y-1`}
             onClick={() => navigate(card.route)}
           >
-            <div className={`absolute inset-0 ${card.color}`} />
-            <CardContent className="relative p-6 text-white">
+            <CardContent className="p-0">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className={`text-sm font-medium ${card.textColor} opacity-90`}>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {card.title}
                   </p>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {card.value}
                   </p>
                 </div>
-                <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors backdrop-blur-sm">
+                <div className={`p-3 ${card.color} rounded-full group-hover:scale-110 transition-transform backdrop-blur-sm bg-opacity-90`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>

@@ -50,7 +50,7 @@ const EnhancedTopbar = () => {
   const { sales } = useSupabaseSales();
 
   // Get low stock alerts
-  const lowStockAlerts = products.filter(p => p.currentStock <= p.lowStockThreshold);
+  const lowStockAlerts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
   const unreadNotifications = lowStockAlerts.length;
 
   // Get overdue customers
@@ -155,9 +155,18 @@ const EnhancedTopbar = () => {
     <>
       <header className="sticky top-0 z-50 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/20 dark:border-gray-700/20 shadow-sm">
         <div className="flex items-center justify-between px-4 lg:px-6 h-full max-w-7xl mx-auto">
-          {/* Left - Brand */}
+          {/* Left - Hamburger & Logo */}
           <div className="flex items-center gap-4">
-            <div className="font-bold text-xl text-gray-900 dark:text-white">{shopName}</div>
+            <Button variant="ghost" size="sm" className="lg:hidden">
+              <Menu className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">D</span>
+              </div>
+              <div className="font-bold text-xl text-gray-900 dark:text-white hidden sm:block">{shopName}</div>
+            </div>
           </div>
 
           {/* Center - Global Search */}
@@ -169,7 +178,7 @@ const EnhancedTopbar = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
-                className="pl-10 pr-10 bg-gray-50/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus:bg-white dark:focus:bg-gray-800 transition-colors"
+                className="pl-10 pr-10 bg-gray-50/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus:bg-white dark:focus:bg-gray-800 transition-colors rounded-xl"
               />
               {searchTerm && (
                 <Button
@@ -313,10 +322,14 @@ const EnhancedTopbar = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8 rounded-full p-0"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
-                <User className="w-5 h-5" />
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-medium text-sm">
+                    {shopName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
               </Button>
 
               {/* Profile Dropdown */}
