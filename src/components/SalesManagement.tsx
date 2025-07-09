@@ -132,7 +132,7 @@ const SalesManagement = () => {
           mpesaAmount: paymentMethod === 'mpesa' ? total : 0,
           debtAmount: paymentMethod === 'credit' ? total : 0,
         },
-        totalAmount: item.product.sellingPrice * item.quantity,
+        total: item.product.sellingPrice * item.quantity,
         timestamp: new Date().toISOString(),
         synced: true,
       }));
