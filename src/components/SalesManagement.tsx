@@ -12,11 +12,12 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Minus, ShoppingCart, User, Search, X, Trash2, Menu, CreditCard, Smartphone, Banknote } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Plus, Minus, ShoppingCart, User, Search, X, Trash2, Menu, CreditCard, Smartphone, Banknote, UserPlus, Trash } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { useToast } from '../hooks/use-toast';
 import { useIsMobile } from '../hooks/use-mobile';
-import AddCustomerModal from './customers/AddCustomerModal';
 import TopPicksSection from './sales/TopPicksSection';
 
 interface CartItem {
@@ -24,7 +25,7 @@ interface CartItem {
   quantity: number;
 }
 
-type PaymentMethod = 'cash' | 'mpesa' | 'credit';
+type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const SalesManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,9 +36,16 @@ const SalesManagement = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    creditLimit: 1000
+  });
 
   const { products } = useSupabaseProducts();
-  const { customers } = useSupabaseCustomers();
+  const { customers, createCustomer } = useSupabaseCustomers();
   const { createSales } = useSupabaseSales();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -86,13 +94,56 @@ const SalesManagement = () => {
     setSelectedCustomer(customer || null);
   };
 
-  const handleCreateCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
-    console.log('Creating customer:', customerData);
-    toast({
-      title: "Customer Added",
-      description: `${customerData.name} has been added successfully.`,
-    });
-    setShowCustomerModal(false);
+  const handleCreateCustomer = async () => {
+    if (!newCustomerData.name.trim() || !newCustomerData.phone.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Name and phone are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const customerData = {
+        name: newCustomerData.name.trim(),
+        phone: newCustomerData.phone.trim(),
+        email: newCustomerData.email.trim() || undefined,
+        address: newCustomerData.address.trim() || undefined,
+        creditLimit: newCustomerData.creditLimit,
+        outstandingDebt: 0,
+        totalPurchases: 0,
+        lastPurchaseDate: null,
+        riskRating: 'low' as const,
+        createdDate: new Date().toISOString()
+      };
+
+      const newCustomer = await createCustomer(customerData);
+      if (newCustomer) {
+        setSelectedCustomer(newCustomer);
+        toast({
+          title: "Customer Added",
+          description: `${newCustomerData.name} has been added and selected.`,
+        });
+      }
+      
+      // Reset form
+      setNewCustomerData({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        creditLimit: 1000
+      });
+      setShowCustomerModal(false);
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create customer. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCompleteSale = async () => {
@@ -105,7 +156,7 @@ const SalesManagement = () => {
       return;
     }
 
-    if (paymentMethod === 'credit' && !selectedCustomer) {
+    if (paymentMethod === 'debt' && !selectedCustomer) {
       toast({
         title: "Customer Required",
         description: "Please select a customer for credit sales.",
@@ -130,7 +181,7 @@ const SalesManagement = () => {
         paymentDetails: {
           cashAmount: paymentMethod === 'cash' ? total : 0,
           mpesaAmount: paymentMethod === 'mpesa' ? total : 0,
-          debtAmount: paymentMethod === 'credit' ? total : 0,
+          debtAmount: paymentMethod === 'debt' ? total : 0,
         },
         total: item.product.sellingPrice * item.quantity,
         timestamp: new Date().toISOString(),
@@ -142,7 +193,7 @@ const SalesManagement = () => {
       const paymentLabels = {
         cash: 'Cash',
         mpesa: 'M-Pesa',
-        credit: 'Credit'
+        debt: 'Credit'
       };
 
       toast({
@@ -171,7 +222,7 @@ const SalesManagement = () => {
   };
 
   const canCompleteSale = () => {
-    return cart.length > 0 && !isProcessing && (paymentMethod !== 'credit' || selectedCustomer);
+    return cart.length > 0 && !isProcessing && (paymentMethod !== 'debt' || selectedCustomer);
   };
 
   // Mobile Header Component
@@ -291,6 +342,82 @@ const SalesManagement = () => {
     </div>
   );
 
+  // Add Customer Modal Component
+  const AddCustomerModal = () => (
+    <Dialog open={showCustomerModal} onOpenChange={setShowCustomerModal}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Customer</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="customer-name">Name *</Label>
+            <Input
+              id="customer-name"
+              value={newCustomerData.name}
+              onChange={(e) => setNewCustomerData({...newCustomerData, name: e.target.value})}
+              placeholder="Customer name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer-phone">Phone *</Label>
+            <Input
+              id="customer-phone"
+              value={newCustomerData.phone}
+              onChange={(e) => setNewCustomerData({...newCustomerData, phone: e.target.value})}
+              placeholder="Phone number"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer-email">Email</Label>
+            <Input
+              id="customer-email"
+              type="email"
+              value={newCustomerData.email}
+              onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
+              placeholder="Email (optional)"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer-address">Address</Label>
+            <Input
+              id="customer-address"
+              value={newCustomerData.address}
+              onChange={(e) => setNewCustomerData({...newCustomerData, address: e.target.value})}
+              placeholder="Address (optional)"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer-credit">Credit Limit</Label>
+            <Input
+              id="customer-credit"
+              type="number"
+              value={newCustomerData.creditLimit}
+              onChange={(e) => setNewCustomerData({...newCustomerData, creditLimit: Number(e.target.value)})}
+              placeholder="1000"
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowCustomerModal(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateCustomer}
+              className="flex-1"
+              disabled={!newCustomerData.name.trim() || !newCustomerData.phone.trim()}
+            >
+              Add Customer
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   // Cart Content Component
   const CartContent = () => (
     <div className="flex flex-col h-full">
@@ -361,36 +488,38 @@ const SalesManagement = () => {
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
           {/* Customer Selection */}
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-              Customer {paymentMethod === 'credit' && <span className="text-red-500">*</span>}
-            </label>
-            <div className="flex gap-2">
-              <Select value={selectedCustomer?.id || ""} onValueChange={handleCustomerSelect}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select customer (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map(customer => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{customer.name}</span>
-                        {customer.outstandingDebt > 0 && (
-                          <Badge variant="secondary" className="ml-2">
-                            {formatCurrency(customer.outstandingDebt)}
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="new-customer" onSelect={() => setShowCustomerModal(true)}>
-                    <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4" />
-                      <span>Add New Customer</span>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Customer {paymentMethod === 'debt' && <span className="text-red-500">*</span>}
+              </label>
+              <Dialog open={showCustomerModal} onOpenChange={setShowCustomerModal}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-sm">
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    New
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            </div>
+            <Select value={selectedCustomer?.id || ""} onValueChange={handleCustomerSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select customer (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map(customer => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{customer.name}</span>
+                      {customer.outstandingDebt > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {formatCurrency(customer.outstandingDebt)}
+                        </Badge>
+                      )}
                     </div>
                   </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Payment Method Selection */}
@@ -416,9 +545,9 @@ const SalesManagement = () => {
                 <span className="text-xs">M-Pesa</span>
               </Button>
               <Button
-                variant={paymentMethod === 'credit' ? "default" : "outline"}
+                variant={paymentMethod === 'debt' ? "default" : "outline"}
                 className="flex flex-col items-center gap-1 h-16"
-                onClick={() => setPaymentMethod('credit')}
+                onClick={() => setPaymentMethod('debt')}
               >
                 <CreditCard className="h-4 w-4" />
                 <span className="text-xs">Credit</span>
@@ -426,28 +555,31 @@ const SalesManagement = () => {
             </div>
           </div>
 
-          {/* Total and Pay Button */}
+          {/* Total and Action Buttons */}
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-lg font-medium">Total:</span>
               <span className="text-2xl font-bold text-green-600">{formatCurrency(total)}</span>
             </div>
-            <Button
-              className="w-full h-12 text-lg font-semibold"
-              onClick={handleCompleteSale}
-              disabled={!canCompleteSale()}
-            >
-              {isProcessing ? 'Processing...' : `Pay ${formatCurrency(total)}`}
-            </Button>
-            {cart.length > 0 && (
+            <div className="space-y-2">
               <Button
-                variant="outline"
-                className="w-full mt-2"
-                onClick={clearCart}
+                className="w-full h-12 text-lg font-semibold"
+                onClick={handleCompleteSale}
+                disabled={!canCompleteSale()}
               >
-                Clear Cart
+                {isProcessing ? 'Processing...' : `Pay ${formatCurrency(total)}`}
               </Button>
-            )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={clearCart}
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Clear Cart
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -510,11 +642,7 @@ const SalesManagement = () => {
       </div>
 
       {/* Add Customer Modal */}
-      <AddCustomerModal
-        isOpen={showCustomerModal}
-        onClose={() => setShowCustomerModal(false)}
-        onSave={handleCreateCustomer}
-      />
+      <AddCustomerModal />
     </div>
   );
 };
