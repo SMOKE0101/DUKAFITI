@@ -102,7 +102,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
         `}>
           {navigation.map((item, index) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.href || (item.href === '/dashboard' && ['/app', '/'].includes(location.pathname));
+            const isActive = location.pathname === item.href || (item.href === '/dashboard' && ['/app'].includes(location.pathname));
             
             return (
               <NavLink

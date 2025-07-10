@@ -35,7 +35,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   // Mobile layout - No sidebar, bottom navigation only
   if (isMobile) {
     return (
-      <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-purple-50 via-white to-blue-50">
+      <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-x-hidden">
         {/* Mobile Topbar */}
         <EnhancedTopbar 
           hideSidebarToggle={true}
@@ -43,14 +43,14 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         />
 
         {/* Mobile Main Content */}
-        <main className="flex-1 pt-16 pb-24 overflow-x-hidden min-h-[calc(100vh-6rem)]">
+        <main className="flex-1 pt-16 pb-20 overflow-x-hidden min-h-[calc(100vh-5rem)] w-full">
           <div className="h-full w-full">
             {children}
           </div>
         </main>
 
         {/* Mobile Bottom Navigation - Fixed and persistent */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-t border-gray-200/50 shadow-2xl">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-lg border-t border-gray-200/50 shadow-2xl">
           <BottomNavigation />
         </div>
       </div>
@@ -60,7 +60,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   // Tablet layout - Bottom navigation with optimized spacing
   if (isTablet) {
     return (
-      <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-purple-50 via-white to-blue-50">
+      <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-x-hidden">
         {/* Tablet Topbar */}
         <EnhancedTopbar 
           hideSidebarToggle={true}
@@ -68,14 +68,14 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         />
 
         {/* Tablet Main Content */}
-        <main className="flex-1 pt-16 pb-24 overflow-x-hidden min-h-[calc(100vh-6rem)]">
-          <div className="h-full w-full px-4 py-6">
+        <main className="flex-1 pt-16 pb-20 overflow-x-hidden min-h-[calc(100vh-5rem)] w-full">
+          <div className="h-full w-full px-2 sm:px-4 py-4 sm:py-6">
             {children}
           </div>
         </main>
 
         {/* Tablet Bottom Navigation - Fixed and persistent */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-t border-gray-200/50 shadow-2xl">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-lg border-t border-gray-200/50 shadow-2xl">
           <BottomNavigation />
         </div>
       </div>
@@ -92,7 +92,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         hideSidebarToggle={false}
       />
 
-      <div className="flex flex-1 pt-16 relative">
+      <div className="flex flex-1 pt-16 relative w-full">
         {/* Desktop Sidebar */}
         <EnhancedSidebar 
           isCollapsed={sidebarCollapsed}
@@ -102,14 +102,14 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         {/* Desktop Main Content */}
         <main 
           className={`
-            flex-1 transition-all duration-300 ease-out min-h-[calc(100vh-4rem)]
+            flex-1 transition-all duration-300 ease-out min-h-[calc(100vh-4rem)] overflow-x-hidden
             ${sidebarCollapsed 
               ? 'ml-[72px] w-[calc(100vw-72px)]' 
               : 'ml-[280px] w-[calc(100vw-280px)]'
             }
           `}
         >
-          <div className="h-full overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+          <div className="h-full overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8 w-full">
             <div className="max-w-full mx-auto">
               {children}
             </div>

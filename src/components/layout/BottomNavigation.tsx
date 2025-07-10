@@ -17,7 +17,7 @@ const navigationItems = [
     icon: BarChart3, 
     path: '/dashboard',
     label: 'Dashboard',
-    matchPaths: ['/dashboard', '/app', '/']
+    matchPaths: ['/dashboard', '/app']
   },
   { 
     id: 'inventory', 
@@ -60,8 +60,8 @@ export const BottomNavigation: React.FC = () => {
   const location = useLocation();
 
   return (
-    <nav className="h-20 bg-white/90 backdrop-blur-lg border-t border-gray-200/50">
-      <div className="grid grid-cols-6 h-full max-w-full mx-auto">
+    <nav className="h-16 sm:h-20 bg-white/95 backdrop-blur-lg border-t border-gray-200/50 w-full">
+      <div className="grid grid-cols-6 h-full max-w-full mx-auto px-2">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.matchPaths.includes(location.pathname);
@@ -83,12 +83,12 @@ export const BottomNavigation: React.FC = () => {
               )}
               
               <Icon className={cn(
-                "w-5 h-5 mb-1 flex-shrink-0 transition-all duration-300",
+                "w-4 h-4 sm:w-5 sm:h-5 mb-1 flex-shrink-0 transition-all duration-300",
                 isActive ? "text-purple-600 drop-shadow-sm" : "text-gray-500"
               )} />
               
               <span className={cn(
-                "text-[10px] font-semibold truncate w-full text-center leading-tight px-1 transition-all duration-300",
+                "text-[9px] sm:text-[10px] font-semibold truncate w-full text-center leading-tight px-1 transition-all duration-300",
                 isActive ? "text-purple-700" : "text-gray-600"
               )}>
                 {item.label}
@@ -96,7 +96,7 @@ export const BottomNavigation: React.FC = () => {
               
               {/* Active indicator */}
               {isActive && (
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full" />
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 sm:w-8 h-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full" />
               )}
             </NavLink>
           );
