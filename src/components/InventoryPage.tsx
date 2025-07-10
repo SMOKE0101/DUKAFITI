@@ -145,6 +145,7 @@ const InventoryPage = () => {
             
             <Button 
               onClick={() => setIsAddModalOpen(true)}
+              variant="outline"
               className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
             >
               <Plus className="w-4 h-4 mr-2 stroke-2" />
@@ -386,6 +387,7 @@ const InventoryPage = () => {
               {!searchTerm && filterBy === 'all' && (
                 <Button 
                   onClick={() => setIsAddModalOpen(true)}
+                  variant="outline"
                   className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-semibold"
                 >
                   <Plus className="w-4 h-4 mr-2 stroke-2" />
@@ -415,7 +417,7 @@ const InventoryPage = () => {
             isOpen={!!editingProduct}
             onClose={() => setEditingProduct(null)}
             product={editingProduct}
-            onSave={updateProduct}
+            onSave={(id, data) => updateProduct(id, data)}
           />
         )}
         
@@ -423,7 +425,7 @@ const InventoryPage = () => {
           <DeleteProductModal
             isOpen={!!deletingProduct}
             onClose={() => setDeletingProduct(null)}
-            product={deletingProduct}
+            productId={deletingProduct.id}
             onDelete={deleteProduct}
           />
         )}

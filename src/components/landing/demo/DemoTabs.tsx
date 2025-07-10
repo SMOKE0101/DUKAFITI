@@ -1,5 +1,5 @@
 
-import React, { Dispatch, SetStateAction } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import InventoryDemo from './InventoryDemo';
 import SalesDemo from './SalesDemo';
@@ -8,7 +8,7 @@ import ReportsDemo from './ReportsDemo';
 
 interface DemoTabsProps {
   activeTab: string;
-  setActiveTab: Dispatch<SetStateAction<string>>;
+  setActiveTab: (tab: string) => void;
 }
 
 const DemoTabs: React.FC<DemoTabsProps> = ({ activeTab, setActiveTab }) => {
