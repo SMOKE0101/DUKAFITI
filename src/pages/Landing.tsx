@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Store, BarChart3, Users, Package2, ShoppingCart, TrendingUp, Shield, Wifi, Star } from "lucide-react";
+import { BarChart3, Users, Package2, ShoppingCart, TrendingUp, Shield, Wifi, Star } from "lucide-react";
 
 const Landing = () => {
   return (
@@ -11,9 +11,11 @@ const Landing = () => {
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-success rounded-xl flex items-center justify-center shadow-lg">
-              <Store className="h-7 w-7 text-white" strokeWidth={2.5} />
-            </div>
+            <img 
+              src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+              alt="DukaFiti Logo" 
+              className="w-12 h-12 rounded-xl shadow-lg"
+            />
             <div>
               <span className="text-3xl font-bold text-foreground tracking-tight">
                 DukaFiti
@@ -185,9 +187,11 @@ const Landing = () => {
       <footer className="container mx-auto px-4 py-12 border-t border-border mt-16">
         <div className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-success rounded-lg flex items-center justify-center">
-              <Store className="h-5 w-5 text-white" strokeWidth={2} />
-            </div>
+            <img 
+              src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+              alt="DukaFiti Logo" 
+              className="w-8 h-8 rounded-lg"
+            />
             <span className="text-xl font-bold text-foreground">DukaFiti</span>
           </div>
           <p className="brand-tagline mb-2">DUKAFITI NI DUKABORA</p>

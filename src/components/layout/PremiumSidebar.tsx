@@ -120,12 +120,14 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
           {isOpen ? (
             <div className="space-y-4">
-              {/* Logo */}
+              {/* Logo with Custom Icon */}
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">D</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">DukaSmart</span>
+                <img 
+                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                  alt="DukaFiti Logo" 
+                  className="w-8 h-8 rounded-lg"
+                />
+                <span className="text-xl font-bold text-gray-900 dark:text-white">DukaFiti</span>
               </div>
               
               {/* Profile Card */}
@@ -150,9 +152,11 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
             </div>
           ) : (
             <div className="flex justify-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">D</span>
-              </div>
+              <img 
+                src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                alt="DukaFiti Logo" 
+                className="w-8 h-8 rounded-lg"
+              />
             </div>
           )}
         </div>

@@ -70,7 +70,11 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {isOpen && (
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-brand-green to-brand-purple rounded-lg"></div>
+            <img 
+              src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+              alt="DukaFiti Logo" 
+              className="w-8 h-8 rounded-lg"
+            />
             <span className="dukafiti-brand text-lg">DukaFiti</span>
           </div>
         )}

@@ -14,8 +14,7 @@ import {
   AlertTriangle,
   Plus,
   UserPlus,
-  TrendingUp,
-  Store
+  TrendingUp
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
@@ -94,9 +93,11 @@ const RoughBlockyDashboard = () => {
       <header className="h-20 bg-card/80 backdrop-blur-sm border-b border-border shadow-sm">
         <div className="flex items-center justify-between px-6 h-full">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-success rounded-lg flex items-center justify-center shadow-md">
-              <Store className="w-6 h-6 text-white" />
-            </div>
+            <img 
+              src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+              alt="DukaFiti Logo" 
+              className="w-10 h-10 rounded-lg shadow-md"
+            />
             <div>
               <h1 className="text-2xl font-bold text-foreground tracking-tight">
                 DASHIBODI
