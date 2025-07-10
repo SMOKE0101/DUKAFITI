@@ -85,7 +85,7 @@ const InventoryPage = () => {
     setShowRestockModal(true);
   };
 
-  const handleRestockSave = async (quantity: number, buyingPrice: number) => {
+  const handleRestockSave = async (quantity: number, buyingPrice: number): Promise<void> => {
     if (!restockingProduct) return;
 
     setIsRestocking(true);
@@ -242,7 +242,7 @@ const InventoryPage = () => {
         products={filteredProducts}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
-        onRestock={handleRestock}
+        onRestock={handleRestockSave}
       />
 
       {/* Enhanced Add/Edit Product Modal */}
