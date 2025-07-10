@@ -227,29 +227,35 @@ const RoughBlockyDashboard = () => {
                 QUICK ACTIONS
               </h3>
               <div className="space-y-3">
-                <Button
+                <div 
+                  className="flex items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer"
                   onClick={() => navigate('/sales')}
-                  className="w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  Add Sale
-                </Button>
+                  <ShoppingCart className="w-5 h-5 mr-3 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">
+                    Add Sale
+                  </span>
+                </div>
                 
-                <Button
+                <div 
+                  className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
                   onClick={() => navigate('/inventory')}
-                  className="w-full h-14 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Add Product
-                </Button>
+                  <Plus className="w-5 h-5 mr-3 text-blue-600 dark:text-blue-400" />
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">
+                    Add Product
+                  </span>
+                </div>
                 
-                <Button
+                <div 
+                  className="flex items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors cursor-pointer"
                   onClick={() => navigate('/customers')}
-                  className="w-full h-14 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Add Customer
-                </Button>
+                  <UserPlus className="w-5 h-5 mr-3 text-purple-600 dark:text-purple-400" />
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">
+                    Add Customer
+                  </span>
+                </div>
               </div>
             </div>
           </Card>
