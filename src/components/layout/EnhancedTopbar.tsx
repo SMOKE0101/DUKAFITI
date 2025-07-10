@@ -55,14 +55,10 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
   const { customers } = useSupabaseCustomers();
   const { sales } = useSupabaseSales();
 
-  // Get low stock alerts
   const lowStockAlerts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
   const unreadNotifications = notificationsRead ? 0 : lowStockAlerts.length;
-
-  // Get overdue customers
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
 
-  // Global search with debounce
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       if (searchTerm.length >= 2) {
@@ -80,7 +76,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
     const results: SearchResult[] = [];
     const term = searchTerm.toLowerCase();
 
-    // Search products
     products
       .filter(p => p.name.toLowerCase().includes(term))
       .slice(0, 3)
@@ -94,7 +89,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
         });
       });
 
-    // Search customers
     customers
       .filter(c => c.name.toLowerCase().includes(term) || c.phone.includes(term))
       .slice(0, 3)
@@ -131,12 +125,10 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
   const handleNotificationClick = () => {
     setShowNotifications(!showNotifications);
     if (!showNotifications) {
-      // Mark notifications as read when opened
       setNotificationsRead(true);
     }
   };
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -225,7 +217,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
               )}
             </div>
 
-            {/* Search Dropdown */}
             {showSearchDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-50 max-h-80 overflow-y-auto">
                 {searchResults.map((result) => (
@@ -253,17 +244,15 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
 
           {/* Right - Actions - Fixed positioning */}
           <div className="flex items-center gap-3 ml-auto">
-            {/* Mobile Search */}
             <Button
               variant="ghost"
               size="sm"
               className="md:hidden text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              onClick={() => {/* Handle mobile search */}}
+              onClick={() => {}}
             >
               <Search className="w-5 h-5" />
             </Button>
 
-            {/* Notifications */}
             <div className="relative" ref={notificationsRef}>
               <Button
                 variant="ghost"
@@ -279,7 +268,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
                 )}
               </Button>
 
-              {/* Notifications Dropdown */}
               {showNotifications && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-50 max-h-80 overflow-y-auto">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700/50">
@@ -347,7 +335,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
               )}
             </div>
 
-            {/* Profile Menu */}
             <div className="relative" ref={profileRef}>
               <Button
                 variant="ghost"
@@ -362,7 +349,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sideba
                 </div>
               </Button>
 
-              {/* Profile Dropdown */}
               {showProfileMenu && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-50">
                   <div className="p-3 border-b border-gray-100 dark:border-gray-700/50">
