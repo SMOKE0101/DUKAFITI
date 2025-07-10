@@ -1,27 +1,22 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, shopName?: string) => Promise<any>;
-  signIn: (email: string, password: string) => Promise<any>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signUp: async () => {},
-  signIn: async () => {},
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -29,92 +24,65 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  console.log('AuthProvider: Initializing with user:', user?.id);
-
   useEffect(() => {
-    console.log('AuthProvider: Setting up auth state listener');
-    
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('AuthProvider: Error getting session:', error);
-        } else {
-          console.log('AuthProvider: Initial session:', session?.user?.id);
-          setUser(session?.user ?? null);
-        }
-      } catch (error) {
-        console.error('AuthProvider: Error in getInitialSession:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getInitialSession();
-
-    // Listen for auth changes
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('AuthProvider: Auth state changed:', event, session?.user?.id);
+      (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
       }
     );
 
-    return () => {
-      console.log('AuthProvider: Cleaning up auth listener');
-      subscription.unsubscribe();
-    };
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, shopName?: string) => {
-    console.log('AuthProvider: Signing up user');
-    const { data, error } = await supabase.auth.signUp({
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
+  };
+
+  const signUp = async (email: string, password: string, metadata?: any) => {
+    const redirectUrl = `${window.location.origin}/app`;
+    
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          shop_name: shopName,
-        },
-      },
+        emailRedirectTo: redirectUrl,
+        data: metadata
+      }
     });
-    return { data, error };
-  };
-
-  const signIn = async (email: string, password: string) => {
-    console.log('AuthProvider: Signing in user');
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { data, error };
+    return { error };
   };
 
   const signOut = async () => {
-    console.log('AuthProvider: Signing out user');
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('AuthProvider: Sign out error:', error);
-      throw error;
-    }
+    await supabase.auth.signOut();
   };
 
   const value = {
     user,
+    session,
     loading,
-    signUp,
     signIn,
+    signUp,
     signOut,
   };
 
-  console.log('AuthProvider: Rendering with user:', user?.id, 'loading:', loading);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
