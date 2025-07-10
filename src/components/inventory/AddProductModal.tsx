@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -9,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
+import { Shuffle } from 'lucide-react';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -26,6 +26,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
+    sku: '',
     category: '',
     costPrice: 0,
     sellingPrice: 0,
@@ -39,6 +40,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     if (editingProduct) {
       setFormData({
         name: editingProduct.name,
+        sku: editingProduct.sku || '',
         category: editingProduct.category,
         costPrice: editingProduct.costPrice,
         sellingPrice: editingProduct.sellingPrice,
@@ -50,6 +52,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       // Reset form for new product
       setFormData({
         name: '',
+        sku: '',
         category: '',
         costPrice: 0,
         sellingPrice: 0,
@@ -59,6 +62,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setUnspecifiedStock(false);
     }
   }, [editingProduct, isOpen]);
+
+  const generateSKU = () => {
+    const prefix = formData.category ? formData.category.substring(0, 3).toUpperCase() : 'PRD';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    const generatedSKU = `${prefix}-${timestamp}-${random}`;
+    setFormData(prev => ({ ...prev, sku: generatedSKU }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +182,29 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                     className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
                     required
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sku" className="text-sm font-medium text-foreground">
+                    Product SKU
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="sku"
+                      value={formData.sku}
+                      onChange={(e) => handleInputChange('sku', e.target.value)}
+                      placeholder="Enter or generate SKU"
+                      className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={generateSKU}
+                      className="h-12 px-3 flex-shrink-0"
+                    >
+                      <Shuffle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
