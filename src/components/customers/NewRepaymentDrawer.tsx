@@ -25,7 +25,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
   customer
 }) => {
   const { toast } = useToast();
-  const { recordPayment } = useSupabaseCustomers();
+  const { updateCustomer } = useSupabaseCustomers();
   
   const [formData, setFormData] = useState({
     amount: '',
@@ -67,10 +67,12 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
 
     setIsSubmitting(true);
     try {
-      await recordPayment(customer.id, {
-        amount: paymentAmount,
-        paymentMethod: formData.paymentMethod,
-        notes: formData.notes.trim() || undefined
+      // Update customer's outstanding debt
+      const newOutstandingDebt = Math.max(0, customer.outstandingDebt - paymentAmount);
+      
+      await updateCustomer(customer.id, {
+        outstandingDebt: newOutstandingDebt,
+        lastPurchaseDate: new Date().toISOString()
       });
 
       toast({

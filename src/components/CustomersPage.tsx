@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { Input } from '@/components/ui/input';
@@ -29,7 +28,7 @@ import CustomerDetailsDrawer from './customers/CustomerDetailsDrawer';
 import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
 
 const CustomersPage = () => {
-  const { customers, loading, addCustomer } = useSupabaseCustomers();
+  const { customers, loading, createCustomer } = useSupabaseCustomers();
   const { toast } = useToast();
 
   // Modal states
@@ -80,7 +79,7 @@ const CustomersPage = () => {
         case 'debt':
           return b.outstandingDebt - a.outstandingDebt;
         case 'recent':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdDate || 0).getTime() - new Date(a.createdDate || 0).getTime();
         default:
           return 0;
       }
@@ -91,7 +90,7 @@ const CustomersPage = () => {
 
   const handleAddCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      await addCustomer(customerData);
+      await createCustomer(customerData);
       setShowNewCustomerDrawer(false);
       toast({
         title: "Success",

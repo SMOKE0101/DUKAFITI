@@ -8,7 +8,6 @@ import {
   Users, 
   FileText, 
   Settings,
-  HelpCircle,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -204,21 +203,6 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
 
         {/* Utility Buttons */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
-          <button
-            className={cn(
-              "flex items-center w-full p-3 rounded-xl transition-all duration-200 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 group",
-              !isOpen && "justify-center"
-            )}
-          >
-            <HelpCircle className={cn("w-5 h-5 flex-shrink-0", isOpen ? "mr-3" : "")} />
-            {isOpen && <span className="font-medium">Help</span>}
-            {!isOpen && (
-              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                Help
-              </div>
-            )}
-          </button>
-          
           <button
             onClick={handleLogout}
             className={cn(

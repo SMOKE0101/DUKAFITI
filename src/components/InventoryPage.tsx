@@ -17,10 +17,10 @@ const InventoryPage = () => {
   const { 
     products, 
     loading, 
-    addProduct, 
+    createProduct, 
     updateProduct, 
     deleteProduct, 
-    restockProduct 
+    addStock 
   } = useSupabaseProducts();
   
   const { toast } = useToast();
@@ -69,7 +69,7 @@ const InventoryPage = () => {
 
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      await addProduct(productData);
+      await createProduct(productData);
       setShowAddModal(false);
       toast({
         title: "Success",
@@ -116,7 +116,7 @@ const InventoryPage = () => {
 
   const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
     try {
-      await restockProduct(product.id, quantity, buyingPrice);
+      await addStock(product.id, quantity, buyingPrice);
       toast({
         title: "Success",
         description: `${product.name} restocked successfully`,
