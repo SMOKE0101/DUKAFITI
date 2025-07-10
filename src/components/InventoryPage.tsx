@@ -37,10 +37,12 @@ const InventoryPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
 
-  console.log('InventoryPage: Render state:', { 
+  console.log('InventoryPage: Current state:', { 
     productsCount: products.length, 
     loading, 
-    error 
+    error,
+    editingProduct: editingProduct?.id,
+    deletingProduct: deletingProduct?.id
   });
 
   // Get unique categories
@@ -96,19 +98,23 @@ const InventoryPage = () => {
   };
 
   const handleEditProduct = (product: Product) => {
+    console.log('InventoryPage: Setting editing product:', product.id);
     setEditingProduct(product);
   };
 
   const handleSaveEdit = () => {
+    console.log('InventoryPage: Clearing editing product');
     setEditingProduct(null);
   };
 
   const handleDeleteProduct = (product: Product) => {
+    console.log('InventoryPage: Setting deleting product:', product.id);
     setDeletingProduct(product);
   };
 
   const handleConfirmDelete = async (id: string) => {
     try {
+      console.log('InventoryPage: Deleting product:', id);
       await deleteProduct(id);
       setDeletingProduct(null);
       toast({
@@ -326,7 +332,7 @@ const InventoryPage = () => {
         <DeleteProductModal
           isOpen={!!deletingProduct}
           onClose={() => setDeletingProduct(null)}
-          product={deletingProduct!}
+          product={deletingProduct}
           onDelete={handleConfirmDelete}
         />
       </div>

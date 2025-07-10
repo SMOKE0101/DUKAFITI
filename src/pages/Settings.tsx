@@ -18,23 +18,21 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="p-6 space-y-8 max-w-7xl mx-auto">
-        {/* Enhanced Header */}
-        <div className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700">
-          <div className="relative z-10">
-            <h1 className="font-mono text-4xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
-              SETTINGS
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Manage your shop preferences and configuration</p>
+      {/* Modern Top Bar */}
+      <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-6">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <Store className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
-          
-          {/* Decorative elements */}
-          <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-xl"></div>
-          <div className="absolute bottom-4 right-8 w-16 h-16 bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-full blur-lg"></div>
+          <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+            SETTINGS
+          </h1>
         </div>
+      </div>
 
-        {/* Enhanced Settings Content */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
+      <div className="p-6 space-y-8 max-w-7xl mx-auto">
+        {/* Settings Content */}
+        <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Modern Tab List */}
             <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">

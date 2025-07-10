@@ -7,7 +7,7 @@ import { Product } from '../../types';
 interface DeleteProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  product: Product;
+  product: Product | null;
   onDelete: (id: string) => Promise<void>;
 }
 
@@ -18,9 +18,14 @@ const DeleteProductModal: React.FC<DeleteProductModalProps> = ({
   onDelete
 }) => {
   const handleDelete = async () => {
+    if (!product) return;
     await onDelete(product.id);
     onClose();
   };
+
+  if (!product) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
