@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { DollarSign, ShoppingCart, Users, Package, CreditCard, Banknote, HandCoins } from 'lucide-react';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
@@ -78,7 +77,7 @@ const HybridReportsPage = () => {
   }, [sales, globalFromDate, globalToDate, activeFilters, products]);
 
   const summaryMetrics = useMemo(() => {
-    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + sale.total, 0);
     const totalOrders = summaryCardsSales.length;
     const activeCustomers = new Set(summaryCardsSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
@@ -87,15 +86,15 @@ const HybridReportsPage = () => {
 
     const revenueByCash = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'cash')
-      .reduce((sum, sale) => sum + sale.total_amount, 0);
+      .reduce((sum, sale) => sum + sale.total, 0);
     
     const revenueByMpesa = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'mpesa')
-      .reduce((sum, sale) => sum + sale.total_amount, 0);
+      .reduce((sum, sale) => sum + sale.total, 0);
     
     const revenueByDebt = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'debt')
-      .reduce((sum, sale) => sum + sale.total_amount, 0);
+      .reduce((sum, sale) => sum + sale.total, 0);
 
     return { 
       totalRevenue, 
@@ -176,7 +175,7 @@ const HybridReportsPage = () => {
       }
       
       if (groupedData.hasOwnProperty(key)) {
-        groupedData[key] += sale.total_amount;
+        groupedData[key] += sale.total;
       }
     });
     
@@ -246,7 +245,7 @@ const HybridReportsPage = () => {
     summaryCardsSales.map(sale => ({
       productName: sale.productName,
       quantity: sale.quantity,
-      revenue: formatCurrency(sale.total_amount),
+      revenue: formatCurrency(sale.total),
       customer: sale.customerName || 'Walk-in Customer',
       date: new Date(sale.timestamp).toLocaleDateString()
     })), [summaryCardsSales]
@@ -257,7 +256,7 @@ const HybridReportsPage = () => {
       .filter(sale => sale.customerName)
       .map(sale => ({
         customer: sale.customerName,
-        amount: formatCurrency(sale.total_amount),
+        amount: formatCurrency(sale.total),
         method: sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1),
         date: new Date(sale.timestamp).toLocaleDateString()
       })), [summaryCardsSales]
