@@ -1,9 +1,12 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -11,321 +14,350 @@ import {
   Users,
   Package,
   AlertTriangle,
-  Calendar,
-  Clock
+  UserPlus,
+  Plus,
+  Activity,
+  Clock,
+  ArrowRight,
+  Zap
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
-import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 const RoughBlockyDashboard = () => {
+  const navigate = useNavigate();
   const { sales, loading: salesLoading } = useSupabaseSales();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { customers, loading: customersLoading } = useSupabaseCustomers();
+  const [realtimeData, setRealtimeData] = useState({ sales, products, customers });
 
   const isLoading = salesLoading || productsLoading || customersLoading;
 
-  // Calculate dashboard statistics
-  const stats = useMemo(() => {
-    // Filter out payment records (negative amounts)
-    const validSales = sales.filter(sale => sale.total >= 0);
+  // Real-time subscriptions
+  useEffect(() => {
+    const salesChannel = supabase
+      .channel('sales-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload) => {
+        console.log('Sales updated:', payload);
+        // Trigger data refresh
+      })
+      .subscribe();
+
+    const productsChannel = supabase
+      .channel('products-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        console.log('Products updated:', payload);
+        // Trigger data refresh
+      })
+      .subscribe();
+
+    const customersChannel = supabase
+      .channel('customers-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
+        console.log('Customers updated:', payload);
+        // Trigger data refresh
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(salesChannel);
+      supabase.removeChannel(productsChannel);
+      supabase.removeChannel(customersChannel);
+    };
+  }, []);
+
+  // Calculate today's metrics
+  const todayMetrics = useMemo(() => {
+    const today = new Date().toDateString();
+    const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today && s.total >= 0);
     
-    const totalRevenue = validSales.reduce((sum, sale) => sum + sale.total, 0);
-    const totalProfit = validSales.reduce((sum, sale) => sum + sale.profit, 0);
-    const totalTransactions = validSales.length;
-    
-    const totalCustomers = customers.length;
-    const customersWithDebt = customers.filter(c => c.outstandingDebt > 0).length;
-    const totalDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
-    
-    const totalProducts = products.length;
-    const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
-    const outOfStockProducts = products.filter(p => p.currentStock === 0).length;
-    const totalInventoryValue = products.reduce((sum, p) => sum + (p.sellingPrice * p.currentStock), 0);
+    const totalSalesToday = todaySales.reduce((sum, s) => sum + s.total, 0);
+    const totalOrdersToday = todaySales.length;
+    const activeCustomers = customers.length;
+    const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10) && p.currentStock > 0).length;
 
     return {
-      totalRevenue,
-      totalProfit,
-      totalTransactions,
-      totalCustomers,
-      customersWithDebt,
-      totalDebt,
-      totalProducts,
-      lowStockProducts,
-      outOfStockProducts,
-      totalInventoryValue
+      totalSalesToday,
+      totalOrdersToday,
+      activeCustomers,
+      lowStockProducts
     };
   }, [sales, customers, products]);
 
-  // Get recent sales
-  const recentSales = useMemo(() => {
-    return sales
-      .filter(sale => sale.total >= 0) // Exclude payment records
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 5);
-  }, [sales]);
-
-  // Get low stock products
-  const lowStockProducts = useMemo(() => {
-    return products
+  // Get alerts data
+  const alertsData = useMemo(() => {
+    const lowStockItems = products
       .filter(p => p.currentStock <= (p.lowStockThreshold || 10) && p.currentStock > 0)
       .sort((a, b) => a.currentStock - b.currentStock)
       .slice(0, 5);
-  }, [products]);
+
+    const overdueCustomers = customers
+      .filter(c => c.outstandingDebt > 0)
+      .sort((a, b) => b.outstandingDebt - a.outstandingDebt)
+      .slice(0, 5);
+
+    return { lowStockItems, overdueCustomers };
+  }, [products, customers]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Page Title - Consistent with other pages */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
-        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
-                  DASHBOARD
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
-                  Overview of your business performance
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* 1. Top Overview Tile */}
+        <Card className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-8 bg-white dark:bg-gray-800 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/20">
+              <Activity className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-4xl font-black font-mono uppercase tracking-widest text-gray-900 dark:text-white mb-2">
+                BUSINESS OVERVIEW
+              </h1>
+              <p className="text-lg italic text-gray-500 dark:text-gray-400 font-light">
+                Quick glance at your key metrics
+              </p>
+              <div className="flex items-center gap-2 mt-4 text-sm text-gray-400">
                 <Clock className="w-4 h-4" />
                 <span>Last updated: {new Date().toLocaleTimeString()}</span>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
-      </div>
 
-      <div className="container mx-auto px-6 py-8 space-y-8">
-        {/* Financial Overview */}
+        {/* 2. Summary Metrics: Outlined Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-green-200 dark:border-green-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-green-600 dark:text-green-400">
-                    TOTAL REVENUE
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {formatCurrency(stats.totalRevenue)}
-                  </p>
-                </div>
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-xl">
-                  <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400">
-                    TOTAL PROFIT
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {formatCurrency(stats.totalProfit)}
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl">
-                  <TrendingUp className="w-8 h-8 text-blue-600 dark:text-blue-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-purple-200 dark:border-purple-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-purple-600 dark:text-purple-400">
-                    TRANSACTIONS
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {stats.totalTransactions}
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl">
-                  <ShoppingCart className="w-8 h-8 text-purple-600 dark:text-purple-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-orange-600 dark:text-orange-400">
-                    CUSTOMERS
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {stats.totalCustomers}
-                  </p>
-                </div>
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-700 rounded-xl">
-                  <Users className="w-8 h-8 text-orange-600 dark:text-orange-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Business Health */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-indigo-200 dark:border-indigo-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-indigo-600 dark:text-indigo-400">
-                    INVENTORY VALUE
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {formatCurrency(stats.totalInventoryValue)}
-                  </p>
-                </div>
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl">
-                  <Package className="w-8 h-8 text-indigo-600 dark:text-indigo-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-amber-600 dark:text-amber-400">
-                    LOW STOCK ITEMS
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {stats.lowStockProducts}
-                  </p>
-                </div>
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-700 rounded-xl">
-                  <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-red-200 dark:border-red-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-red-600 dark:text-red-400">
-                    TOTAL DEBT
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {formatCurrency(stats.totalDebt)}
-                  </p>
-                </div>
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-700 rounded-xl">
-                  <DollarSign className="w-8 h-8 text-red-600 dark:text-red-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-teal-200 dark:border-teal-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-teal-600 dark:text-teal-400">
-                    CUSTOMERS WITH DEBT
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {stats.customersWithDebt}
-                  </p>
-                </div>
-                <div className="p-3 bg-teal-50 dark:bg-teal-900/20 border-2 border-teal-200 dark:border-teal-700 rounded-xl">
-                  <Users className="w-8 h-8 text-teal-600 dark:text-teal-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Sales */}
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-mono font-bold uppercase tracking-tight text-gray-900 dark:text-white">
-                RECENT SALES
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentSales.length > 0 ? recentSales.map((sale) => (
-                  <div key={sale.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{sale.productName}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {sale.customerName || 'Walk-in Customer'} • {sale.quantity} units
+          {[
+            {
+              title: 'Total Sales Today',
+              value: formatCurrency(todayMetrics.totalSalesToday),
+              icon: DollarSign,
+              color: 'border-green-600 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/10',
+              iconColor: 'text-green-600 dark:text-green-400',
+              onClick: () => navigate('/sales')
+            },
+            {
+              title: 'Total Orders Today',
+              value: todayMetrics.totalOrdersToday.toString(),
+              icon: ShoppingCart,
+              color: 'border-blue-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10',
+              iconColor: 'text-blue-600 dark:text-blue-400',
+              onClick: () => navigate('/sales')
+            },
+            {
+              title: 'Active Customers',
+              value: todayMetrics.activeCustomers.toString(),
+              icon: Users,
+              color: 'border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10',
+              iconColor: 'text-purple-600 dark:text-purple-400',
+              onClick: () => navigate('/customers')
+            },
+            {
+              title: 'Low Stock Products',
+              value: todayMetrics.lowStockProducts.toString(),
+              icon: AlertTriangle,
+              color: 'border-orange-600 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10',
+              iconColor: 'text-orange-600 dark:text-orange-400',
+              onClick: () => navigate('/inventory')
+            }
+          ].map((metric, index) => {
+            const Icon = metric.icon;
+            return (
+              <Card 
+                key={index}
+                className={`border-2 ${metric.color} rounded-xl p-6 bg-transparent cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group`}
+                onClick={metric.onClick}
+                role="button"
+                aria-label={`View ${metric.title}`}
+                tabIndex={0}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-black font-mono uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-3">
+                        {metric.title}
+                      </h3>
+                      <p className="text-2xl font-semibold text-gray-900 dark:text-white group-hover:scale-105 transition-transform">
+                        {metric.value}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-600 dark:text-green-400">
-                        {formatCurrency(sale.total)}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
-                        {new Date(sale.timestamp).toLocaleDateString()}
-                      </p>
+                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+                      <Icon className={`w-6 h-6 ${metric.iconColor}`} />
                     </div>
                   </div>
-                )) : (
-                  <p className="text-gray-500 dark:text-gray-500 text-center py-8">No recent sales</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
 
-          {/* Low Stock Alert */}
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-mono font-bold uppercase tracking-tight text-gray-900 dark:text-white">
-                LOW STOCK ALERT
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {lowStockProducts.length > 0 ? lowStockProducts.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{product.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{product.category}</p>
+        {/* 3. Alerts & Reminders: Outlined Panels */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Low Stock Alerts */}
+          <Card className="border-2 border-orange-400 dark:border-orange-500 rounded-lg p-6 bg-transparent">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <h3 className="text-lg font-black font-mono uppercase tracking-wide text-gray-900 dark:text-white">
+                Low Stock Alerts
+              </h3>
+              {alertsData.lowStockItems.length > 0 && (
+                <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                  {alertsData.lowStockItems.length}
+                </Badge>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              {alertsData.lowStockItems.length > 0 ? (
+                alertsData.lowStockItems.map((product) => (
+                  <div 
+                    key={product.id}
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/10 cursor-pointer transition-colors"
+                    onClick={() => navigate('/inventory')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Package className="w-4 h-4 text-orange-600" />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">
+                          {product.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {product.category}
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
-                      <Badge className="bg-amber-100 text-amber-800 border-amber-300">
+                      <Badge variant="secondary" className="text-xs">
                         {product.currentStock} left
                       </Badge>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        Alert at {product.lowStockThreshold}
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date().toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                )) : (
-                  <p className="text-gray-500 dark:text-gray-500 text-center py-8">All products well stocked</p>
-                )}
-              </div>
-            </CardContent>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">All products well stocked! 📦</p>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Overdue Customer Payments */}
+          <Card className="border-2 border-red-400 dark:border-red-500 rounded-lg p-6 bg-transparent">
+            <div className="flex items-center gap-3 mb-4">
+              <Users className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <h3 className="text-lg font-black font-mono uppercase tracking-wide text-gray-900 dark:text-white">
+                Overdue Payments
+              </h3>
+              {alertsData.overdueCustomers.length > 0 && (
+                <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                  {alertsData.overdueCustomers.length}
+                </Badge>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              {alertsData.overdueCustomers.length > 0 ? (
+                alertsData.overdueCustomers.map((customer) => (
+                  <div 
+                    key={customer.id}
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer transition-colors"
+                    onClick={() => navigate('/customers')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Users className="w-4 h-4 text-red-600" />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">
+                          {customer.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {customer.phone}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-red-600 text-sm">
+                        {formatCurrency(customer.outstandingDebt)}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date().toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">All payments up to date! 🎉</p>
+                </div>
+              )}
+            </div>
           </Card>
         </div>
+
+        {/* 4. Quick Actions: Floating Outlined Buttons */}
+        <Card className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-black font-mono uppercase tracking-wide text-gray-900 dark:text-white">
+              Quick Actions
+            </h3>
+            <Zap className="w-5 h-5 text-purple-600" />
+          </div>
+          
+          <div className="flex flex-wrap gap-3 justify-center">
+            {[
+              { 
+                label: 'Add Sale', 
+                icon: ShoppingCart, 
+                path: '/app', 
+                color: 'border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/10' 
+              },
+              { 
+                label: 'Add Product', 
+                icon: Plus, 
+                path: '/inventory', 
+                color: 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10' 
+              },
+              { 
+                label: 'Add Customer', 
+                icon: UserPlus, 
+                path: '/customers', 
+                color: 'border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/10' 
+              },
+              { 
+                label: 'View Reports', 
+                icon: TrendingUp, 
+                path: '/reports', 
+                color: 'border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/10' 
+              }
+            ].map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <Button
+                  key={index}
+                  variant="outline"
+                  onClick={() => navigate(action.path)}
+                  className={`border-2 ${action.color} rounded-full px-6 py-3 bg-transparent transition-all duration-300 hover:scale-105 hover:shadow-md group`}
+                >
+                  <Icon className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                  <span className="font-medium">{action.label}</span>
+                  <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                </Button>
+              );
+            })}
+          </div>
+        </Card>
       </div>
     </div>
   );

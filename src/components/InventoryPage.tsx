@@ -1,125 +1,103 @@
-
-import React, { useState } from 'react';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
+  Package, 
   Search, 
   Plus, 
-  Filter,
-  SortAsc,
-  SortDesc,
-  Package,
-  TrendingUp,
-  AlertTriangle,
-  Eye,
-  Edit,
-  Trash2,
-  ShoppingCart
+  Edit, 
+  Trash2, 
+  ArrowDown, 
+  ArrowUp,
+  AlertTriangle
 } from 'lucide-react';
+import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { formatCurrency } from '../utils/currency';
+import { Product } from '../types';
 import AddProductModal from './inventory/AddProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
-import InventoryModal from './InventoryModal';
-import ProductCard from './inventory/ProductCard';
-import { Product } from '../types';
+import RestockModal from './inventory/RestockModal';
 
 const InventoryPage = () => {
-  const { products, loading, createProduct, updateProduct, deleteProduct, addStock } = useSupabaseProducts();
+  const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState<'name' | 'category' | 'stock' | 'price'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [filterBy, setFilterBy] = useState('all');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Filter and sort products
-  const filteredAndSortedProducts = React.useMemo(() => {
-    let filtered = products.filter(product => 
+  const sortedProducts = useMemo(() => {
+    let filteredProducts = products.filter(product =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Apply filter
-    if (filterBy === 'low-stock') {
-      filtered = filtered.filter(product => product.currentStock <= (product.lowStockThreshold || 10));
-    } else if (filterBy === 'out-of-stock') {
-      filtered = filtered.filter(product => product.currentStock === 0);
-    } else if (filterBy !== 'all') {
-      filtered = filtered.filter(product => product.category === filterBy);
-    }
-
-    // Apply sort
-    filtered.sort((a, b) => {
-      let aValue, bValue;
-      
+    filteredProducts = [...filteredProducts].sort((a, b) => {
+      let comparison = 0;
       switch (sortBy) {
         case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
-        case 'stock':
-          aValue = a.currentStock;
-          bValue = b.currentStock;
-          break;
-        case 'price':
-          aValue = a.sellingPrice;
-          bValue = b.sellingPrice;
+          comparison = a.name.localeCompare(b.name);
           break;
         case 'category':
-          aValue = a.category.toLowerCase();
-          bValue = b.category.toLowerCase();
+          comparison = a.category.localeCompare(b.category);
+          break;
+        case 'stock':
+          comparison = a.currentStock - b.currentStock;
+          break;
+        case 'price':
+          comparison = a.sellingPrice - b.sellingPrice;
           break;
         default:
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
+          comparison = 0;
       }
-
-      if (sortOrder === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      }
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
-    return filtered;
-  }, [products, searchTerm, sortBy, sortOrder, filterBy]);
+    return filteredProducts;
+  }, [products, searchTerm, sortBy, sortOrder]);
 
-  // Calculate summary stats
   const totalProducts = products.length;
-  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
-  const totalValue = products.reduce((sum, p) => sum + (p.sellingPrice * p.currentStock), 0);
-  const outOfStockProducts = products.filter(p => p.currentStock === 0).length;
+  const totalStockValue = products.reduce((sum, product) => sum + (product.sellingPrice * product.currentStock), 0);
+  const lowStockProducts = products.filter(product => product.currentStock <= (product.lowStockThreshold || 10)).length;
 
-  // Get unique categories and sort them alphabetically
-  const categories = Array.from(new Set(products.map(p => p.category))).sort();
-
-  const handleAddStock = async (productId: string, quantity: number, buyingPrice: number, supplier?: string) => {
-    try {
-      await addStock(productId, quantity, buyingPrice, supplier);
-      setIsInventoryModalOpen(false);
-    } catch (error) {
-      console.error('Failed to add stock:', error);
-    }
+  const handleCreateProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newProductData = {
+      ...productData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    await createProduct(newProductData);
   };
 
-  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
-    try {
-      await addStock(product.id, quantity, buyingPrice);
-    } catch (error) {
-      console.error('Failed to restock product:', error);
-      throw error;
-    }
+  const handleUpdateProduct = async (id: string, updates: Partial<Product>) => {
+    await updateProduct(id, updates);
+    setShowEditModal(false);
+    setSelectedProduct(null);
   };
 
-  const handleDeleteProduct = async (id: string) => {
-    await deleteProduct(id);
+  const handleDeleteProduct = (id: string) => {
+    return deleteProduct(id);
+  };
+
+  const openEditModal = (product: Product) => {
+    setSelectedProduct(product);
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (product: Product) => {
+    setSelectedProduct(product);
+    setShowDeleteModal(true);
+  };
+
+  const openRestockModal = (product: Product) => {
+    setSelectedProduct(product);
+    setShowRestockModal(true);
   };
 
   if (loading) {
@@ -136,7 +114,7 @@ const InventoryPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Page Title - Consistent with other pages */}
+      {/* Page Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
         <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
           <CardContent className="p-6">
@@ -146,37 +124,26 @@ const InventoryPage = () => {
                   INVENTORY
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
-                  Manage your products and track stock levels
+                  Manage your products and stock levels
                 </p>
               </div>
               
-              <div className="flex gap-3">
-                <Button 
-                  onClick={() => setIsInventoryModalOpen(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
-                >
-                  <Plus className="w-4 h-4 mr-2 stroke-2" />
-                  ADD INVENTORY
-                </Button>
-                
-                <Button 
-                  onClick={() => setIsAddModalOpen(true)}
-                  variant="outline"
-                  className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
-                >
-                  <Plus className="w-4 h-4 mr-2 stroke-2" />
-                  ADD PRODUCT
-                </Button>
-              </div>
+              <Button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-green-600 hover:bg-green-500 text-white rounded-lg px-6 py-3 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all hover:scale-105"
+              >
+                <Plus className="w-5 h-5" />
+                Add Product
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="container mx-auto px-6 py-8 space-y-8">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200">
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-blue-200 dark:border-blue-700 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -194,7 +161,25 @@ const InventoryPage = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-md transition-all duration-200">
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-green-200 dark:border-green-700 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-green-600 dark:text-green-400">
+                    TOTAL STOCK VALUE
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {formatCurrency(totalStockValue)}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-xl">
+                  <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400 stroke-2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-orange-200 dark:border-orange-700 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -211,186 +196,162 @@ const InventoryPage = () => {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-green-200 dark:border-green-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-green-600 dark:text-green-400">
-                    TOTAL VALUE
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {formatCurrency(totalValue)}
-                  </p>
-                </div>
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-xl">
-                  <TrendingUp className="w-8 h-8 text-green-600 dark:text-green-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-red-200 dark:border-red-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-red-600 dark:text-red-400">
-                    OUT OF STOCK
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {outOfStockProducts}
-                  </p>
-                </div>
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-700 rounded-xl">
-                  <Package className="w-8 h-8 text-red-600 dark:text-red-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Filters and Search */}
-        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+        {/* Search and Filters */}
+        <Card className="bg-white dark:bg-gray-800 shadow-sm">
           <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search */}
+            <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 stroke-2" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search products by name or category..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600"
+                  className="pl-10"
                 />
               </div>
-
-              {/* Filter */}
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500 stroke-2" />
-                <Select value={filterBy} onValueChange={setFilterBy}>
-                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Products</SelectItem>
-                    <SelectItem value="low-stock">Low Stock</SelectItem>
-                    <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                    {categories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Sort */}
-              <div className="flex items-center gap-2">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="category">Category</SelectItem>
-                    <SelectItem value="stock">Stock Level</SelectItem>
-                    <SelectItem value="price">Price</SelectItem>
-                  </SelectContent>
-                </Select>
+              
+              <div className="flex gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'name' | 'category' | 'stock' | 'price')}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                >
+                  <option value="name">Sort by Name</option>
+                  <option value="category">Sort by Category</option>
+                  <option value="stock">Sort by Stock</option>
+                  <option value="price">Sort by Price</option>
+                </select>
                 
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600"
                 >
-                  {sortOrder === 'asc' ? <SortAsc className="w-4 h-4 stroke-2" /> : <SortDesc className="w-4 h-4 stroke-2" />}
+                  {sortOrder === 'asc' ? (
+                    <ArrowDown className="w-4 h-4" />
+                  ) : (
+                    <ArrowUp className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-mono font-bold uppercase tracking-tight">
-            SHOWING {filteredAndSortedProducts.length} OF {totalProducts} PRODUCTS
-          </p>
-        </div>
+        {/* Product List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sortedProducts.map((product) => (
+            <Card key={product.id} className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                      {product.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {product.category}
+                    </p>
+                    {product.currentStock <= product.lowStockThreshold && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                        <Badge variant="secondary" className="text-xs">
+                          Low Stock ({product.currentStock})
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredAndSortedProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onEdit={setEditingProduct}
-              onDelete={setDeletingProduct}
-              onRestock={handleRestock}
-            />
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center justify-between">
+                    <span>Selling Price:</span>
+                    <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Cost Price:</span>
+                    <span className="font-medium">{formatCurrency(product.costPrice)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Current Stock:</span>
+                    <span className="font-medium">{product.currentStock}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openRestockModal(product)}
+                      className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                    >
+                      Restock
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditModal(product)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDeleteModal(product)}
+                      className="text-red-600 border-red-600 hover:bg-red-50"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
-        {/* Empty State */}
-        {filteredAndSortedProducts.length === 0 && (
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-            <CardContent className="p-12 text-center">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Package className="w-8 h-8 text-gray-400 stroke-2" />
-              </div>
-              <h3 className="text-lg font-mono font-bold uppercase tracking-tight text-gray-600 dark:text-gray-400 mb-2">
-                {searchTerm || filterBy !== 'all' ? 'NO PRODUCTS FOUND' : 'NO PRODUCTS YET'}
-              </h3>
-              <p className="text-gray-500 dark:text-gray-500 mb-6 font-medium">
-                {searchTerm || filterBy !== 'all' 
-                  ? 'Try adjusting your search or filter criteria'
-                  : 'Add your first product to get started'
-                }
-              </p>
-              {!searchTerm && filterBy === 'all' && (
-                <Button 
-                  onClick={() => setIsAddModalOpen(true)}
-                  variant="outline"
-                  className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-semibold"
-                >
-                  <Plus className="w-4 h-4 mr-2 stroke-2" />
-                  ADD PRODUCT
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Modals */}
-        <AddProductModal 
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSave={createProduct}
-        />
-        
-        <InventoryModal
-          isOpen={isInventoryModalOpen}
-          onClose={() => setIsInventoryModalOpen(false)}
-          products={products}
-          onAddStock={handleAddStock}
-        />
-        
-        {editingProduct && (
-          <EditProductModal
-            isOpen={!!editingProduct}
-            onClose={() => setEditingProduct(null)}
-            product={editingProduct}
-            onSave={(id, data) => updateProduct(id, data)}
-          />
-        )}
-        
-        {deletingProduct && (
-          <DeleteProductModal
-            isOpen={!!deletingProduct}
-            onClose={() => setDeletingProduct(null)}
-            product={deletingProduct}
-            onDelete={handleDeleteProduct}
-          />
+        {sortedProducts.length === 0 && (
+          <div className="text-center py-12">
+            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No products found</h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              {searchTerm ? 'Try adjusting your search terms.' : 'Get started by adding your first product.'}
+            </p>
+          </div>
         )}
       </div>
+
+      {/* Modals */}
+      <AddProductModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={handleCreateProduct}
+      />
+
+      {selectedProduct && (
+        <>
+          <EditProductModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            product={selectedProduct}
+            onSave={handleUpdateProduct}
+          />
+
+          <DeleteProductModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            product={selectedProduct}
+            onDelete={handleDeleteProduct}
+          />
+
+          <RestockModal
+            isOpen={showRestockModal}
+            onClose={() => setShowRestockModal(false)}
+            product={selectedProduct}
+          />
+        </>
+      )}
     </div>
   );
 };

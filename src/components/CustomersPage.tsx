@@ -1,107 +1,111 @@
-import React, { useState } from 'react';
-import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
+  Users, 
   Search, 
-  Plus, 
+  UserPlus, 
+  DollarSign,
+  Calendar,
+  Phone,
+  Mail,
+  MapPin,
   Filter,
   SortAsc,
-  SortDesc,
-  Users,
-  CreditCard,
-  AlertTriangle,
-  Eye,
-  Edit,
-  Trash2,
-  DollarSign,
-  Calendar
+  AlertTriangle
 } from 'lucide-react';
+import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { formatCurrency } from '../utils/currency';
+import { Customer } from '../types';
 import AddCustomerModal from './customers/AddCustomerModal';
 import EditCustomerModal from './customers/EditCustomerModal';
 import DeleteCustomerModal from './customers/DeleteCustomerModal';
-import CustomerHistoryModal from './customers/CustomerHistoryModal';
 import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
-import { Customer } from '../types';
+import CustomerHistoryModal from './customers/CustomerHistoryModal';
 
 const CustomersPage = () => {
   const { customers, loading, createCustomer, updateCustomer, deleteCustomer } = useSupabaseCustomers();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [filterBy, setFilterBy] = useState('all');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
-  const [viewingHistory, setViewingHistory] = useState<Customer | null>(null);
-  const [repaymentCustomer, setRepaymentCustomer] = useState<Customer | null>(null);
+  const [selectedRisk, setSelectedRisk] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'debt' | 'date'>('name');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRepaymentDrawer, setShowRepaymentDrawer] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  // Filter and sort customers
-  const filteredAndSortedCustomers = React.useMemo(() => {
-    let filtered = customers.filter(customer => 
+  const filteredAndSortedCustomers = useMemo(() => {
+    let filtered = customers.filter(customer =>
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.phone.includes(searchTerm)
     );
 
-    // Apply filter
-    if (filterBy === 'with-debt') {
-      filtered = filtered.filter(customer => customer.outstandingDebt > 0);
-    } else if (filterBy === 'no-debt') {
-      filtered = filtered.filter(customer => customer.outstandingDebt === 0);
+    if (selectedRisk !== 'all') {
+      filtered = filtered.filter(customer => customer.riskRating === selectedRisk);
     }
 
-    // Apply sort
-    filtered.sort((a, b) => {
-      let aValue, bValue;
-      
+    return filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
+          return a.name.localeCompare(b.name);
         case 'debt':
-          aValue = a.outstandingDebt;
-          bValue = b.outstandingDebt;
-          break;
-        case 'lastPurchase':
-          aValue = new Date(a.lastPurchaseDate || 0).getTime();
-          bValue = new Date(b.lastPurchaseDate || 0).getTime();
-          break;
+          return b.outstandingDebt - a.outstandingDebt;
+        case 'date':
+          return new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime();
         default:
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-      }
-
-      if (sortOrder === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+          return 0;
       }
     });
+  }, [customers, searchTerm, selectedRisk, sortBy]);
 
-    return filtered;
-  }, [customers, searchTerm, sortBy, sortOrder, filterBy]);
-
-  // Calculate summary stats
   const totalCustomers = customers.length;
-  const customersWithDebt = customers.filter(c => c.outstandingDebt > 0).length;
-  const totalDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
-  const averageDebt = customersWithDebt > 0 ? totalDebt / customersWithDebt : 0;
+  const totalDebt = customers.reduce((sum, customer) => sum + customer.outstandingDebt, 0);
+  const customersWithDebt = customers.filter(customer => customer.outstandingDebt > 0).length;
+  const highRiskCustomers = customers.filter(customer => customer.riskRating === 'high').length;
 
-  const handleCreateCustomer = async (customerData: Omit<Customer, 'id' | 'createdDate' | 'lastPurchaseDate'>) => {
-    await createCustomer(customerData);
+  const handleAddCustomer = async (customerData: Omit<Customer, 'id' | 'createdDate' | 'lastPurchaseDate'>) => {
+    const newCustomerData = {
+      ...customerData,
+      createdDate: new Date().toISOString(),
+      lastPurchaseDate: null
+    };
+    await createCustomer(newCustomerData);
   };
 
-  const handleUpdateCustomer = async (id: string, updates: Partial<Customer>) => {
+  const handleEditCustomer = async (id: string, updates: Partial<Customer>) => {
     await updateCustomer(id, updates);
+    setShowEditModal(false);
+    setSelectedCustomer(null);
   };
 
   const handleDeleteCustomer = async (id: string) => {
     await deleteCustomer(id);
+    setShowDeleteModal(false);
+    setSelectedCustomer(null);
+  };
+
+  const openEditModal = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowDeleteModal(true);
+  };
+
+  const openRepaymentDrawer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowRepaymentDrawer(true);
+  };
+
+  const openHistoryModal = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowHistoryModal(true);
   };
 
   if (loading) {
@@ -118,7 +122,7 @@ const CustomersPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Page Title - Consistent with other pages */}
+      {/* Page Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
         <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
           <CardContent className="p-6">
@@ -128,29 +132,26 @@ const CustomersPage = () => {
                   CUSTOMERS
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
-                  Manage your customer relationships and track credit
+                  Manage your customer relationships and credit
                 </p>
               </div>
               
-              <div className="flex gap-3">
-                <Button 
-                  onClick={() => setIsAddModalOpen(true)}
-                  variant="outline"
-                  className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
-                >
-                  <Plus className="w-4 h-4 mr-2 stroke-2" />
-                  ADD CUSTOMER
-                </Button>
-              </div>
+              <Button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-green-600 hover:bg-green-500 text-white rounded-lg px-6 py-3 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all hover:scale-105"
+              >
+                <UserPlus className="w-5 h-5" />
+                Add Customer
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="container mx-auto px-6 py-8 space-y-8">
-        {/* Summary Cards */}
+        {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200">
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-blue-200 dark:border-blue-700 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -168,7 +169,25 @@ const CustomersPage = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-md transition-all duration-200">
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-red-200 dark:border-red-700 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-red-600 dark:text-red-400">
+                    TOTAL DEBT
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {formatCurrency(totalDebt)}
+                  </p>
+                </div>
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-700 rounded-xl">
+                  <DollarSign className="w-8 h-8 text-red-600 dark:text-red-400 stroke-2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-orange-200 dark:border-orange-700 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -186,258 +205,200 @@ const CustomersPage = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-red-200 dark:border-red-700 shadow-sm hover:shadow-md transition-all duration-200">
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-purple-200 dark:border-purple-700 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-red-600 dark:text-red-400">
-                    TOTAL DEBT
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-purple-600 dark:text-purple-400">
+                    HIGH RISK
                   </p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {formatCurrency(totalDebt)}
+                    {highRiskCustomers}
                   </p>
                 </div>
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-700 rounded-xl">
-                  <CreditCard className="w-8 h-8 text-red-600 dark:text-red-400 stroke-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-green-200 dark:border-green-700 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-green-600 dark:text-green-400">
-                    AVERAGE DEBT
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {formatCurrency(averageDebt)}
-                  </p>
-                </div>
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-xl">
-                  <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400 stroke-2" />
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl">
+                  <AlertTriangle className="w-8 h-8 text-purple-600 dark:text-purple-400 stroke-2" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters and Search */}
-        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+        {/* Search and Filters */}
+        <Card className="bg-white dark:bg-gray-800 shadow-sm">
           <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search */}
+            <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 stroke-2" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search customers by name or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600"
+                  className="pl-10"
                 />
               </div>
-
-              {/* Filter */}
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500 stroke-2" />
-                <Select value={filterBy} onValueChange={setFilterBy}>
-                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Customers</SelectItem>
-                    <SelectItem value="with-debt">With Debt</SelectItem>
-                    <SelectItem value="no-debt">No Debt</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Sort */}
-              <div className="flex items-center gap-2">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="debt">Outstanding Debt</SelectItem>
-                    <SelectItem value="lastPurchase">Last Purchase</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600"
+              
+              <div className="flex gap-2">
+                <select
+                  value={selectedRisk}
+                  onChange={(e) => setSelectedRisk(e.target.value as 'all' | 'low' | 'medium' | 'high')}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
                 >
-                  {sortOrder === 'asc' ? <SortAsc className="w-4 h-4 stroke-2" /> : <SortDesc className="w-4 h-4 stroke-2" />}
-                </Button>
+                  <option value="all">All Risk Levels</option>
+                  <option value="low">Low Risk</option>
+                  <option value="medium">Medium Risk</option>
+                  <option value="high">High Risk</option>
+                </select>
+                
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'name' | 'debt' | 'date')}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                >
+                  <option value="name">Sort by Name</option>
+                  <option value="debt">Sort by Debt</option>
+                  <option value="date">Sort by Date</option>
+                </select>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-mono font-bold uppercase tracking-tight">
-            SHOWING {filteredAndSortedCustomers.length} OF {totalCustomers} CUSTOMERS
-          </p>
-        </div>
-
-        {/* Customer Grid */}
+        {/* Customer List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAndSortedCustomers.map((customer) => (
-            <Card key={customer.id} className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">{customer.name}</CardTitle>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{customer.phone}</p>
+            <Card key={customer.id} className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                      {customer.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge
+                        variant={
+                          customer.riskRating === 'high' ? 'destructive' :
+                          customer.riskRating === 'medium' ? 'secondary' : 'default'
+                        }
+                        className="text-xs"
+                      >
+                        {customer.riskRating.toUpperCase()} RISK
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge className={`text-xs font-mono font-bold uppercase border ${
-                    customer.outstandingDebt > 0 
-                      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700' 
-                      : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-700'
-                  }`}>
-                    {customer.outstandingDebt > 0 ? 'HAS DEBT' : 'NO DEBT'}
-                  </Badge>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400 font-medium">Outstanding Debt:</span>
-                    <span className={`font-bold ${customer.outstandingDebt > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    <span>{customer.phone}</span>
+                  </div>
+                  {customer.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      <span>{customer.email}</span>
+                    </div>
+                  )}
+                  {customer.address && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      <span className="truncate">{customer.address}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Joined {new Date(customer.createdDate).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Outstanding Debt</span>
+                    <span className={`font-bold ${customer.outstandingDebt > 0 ? 'text-red-600' : 'text-green-600'}`}>
                       {formatCurrency(customer.outstandingDebt)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400 font-medium">Total Purchases:</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(customer.totalPurchases)}</span>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openHistoryModal(customer)}
+                      className="flex-1"
+                    >
+                      History
+                    </Button>
+                    {customer.outstandingDebt > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openRepaymentDrawer(customer)}
+                        className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                      >
+                        Repay
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditModal(customer)}
+                    >
+                      Edit
+                    </Button>
                   </div>
-                  {customer.lastPurchaseDate && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400 font-medium">Last Purchase:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {new Date(customer.lastPurchaseDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 grid grid-cols-4 gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold"
-                    onClick={() => setViewingHistory(customer)}
-                  >
-                    <Eye className="w-4 h-4 stroke-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-yellow-200 dark:border-yellow-700 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 font-semibold"
-                    onClick={() => setEditingCustomer(customer)}
-                  >
-                    <Edit className="w-4 h-4 stroke-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-green-200 dark:border-green-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 font-semibold"
-                    onClick={() => setRepaymentCustomer(customer)}
-                    disabled={customer.outstandingDebt <= 0}
-                  >
-                    <DollarSign className="w-4 h-4 stroke-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold"
-                    onClick={() => setDeletingCustomer(customer)}
-                  >
-                    <Trash2 className="w-4 h-4 stroke-2" />
-                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Empty State */}
         {filteredAndSortedCustomers.length === 0 && (
-          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-            <CardContent className="p-12 text-center">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-gray-400 stroke-2" />
-              </div>
-              <h3 className="text-lg font-mono font-bold uppercase tracking-tight text-gray-600 dark:text-gray-400 mb-2">
-                {searchTerm || filterBy !== 'all' ? 'NO CUSTOMERS FOUND' : 'NO CUSTOMERS YET'}
-              </h3>
-              <p className="text-gray-500 dark:text-gray-500 mb-6 font-medium">
-                {searchTerm || filterBy !== 'all' 
-                  ? 'Try adjusting your search or filter criteria'
-                  : 'Add your first customer to get started'
-                }
-              </p>
-              {!searchTerm && filterBy === 'all' && (
-                <Button 
-                  onClick={() => setIsAddModalOpen(true)}
-                  variant="outline"
-                  className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-semibold"
-                >
-                  <Plus className="w-4 h-4 mr-2 stroke-2" />
-                  ADD CUSTOMER
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Modals */}
-        <AddCustomerModal 
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSave={handleCreateCustomer}
-        />
-        
-        {editingCustomer && (
-          <EditCustomerModal
-            isOpen={!!editingCustomer}
-            onClose={() => setEditingCustomer(null)}
-            customer={editingCustomer}
-            onSave={handleUpdateCustomer}
-          />
-        )}
-        
-        {deletingCustomer && (
-          <DeleteCustomerModal
-            isOpen={!!deletingCustomer}
-            onClose={() => setDeletingCustomer(null)}
-            customer={deletingCustomer}
-            onDelete={handleDeleteCustomer}
-          />
-        )}
-
-        {viewingHistory && (
-          <CustomerHistoryModal
-            isOpen={!!viewingHistory}
-            onClose={() => setViewingHistory(null)}
-            customer={viewingHistory}
-          />
-        )}
-
-        {repaymentCustomer && (
-          <NewRepaymentDrawer
-            isOpen={!!repaymentCustomer}
-            onClose={() => setRepaymentCustomer(null)}
-            customer={repaymentCustomer}
-          />
+          <div className="text-center py-12">
+            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No customers found</h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              {searchTerm ? 'Try adjusting your search terms.' : 'Get started by adding your first customer.'}
+            </p>
+          </div>
         )}
       </div>
+
+      {/* Modals */}
+      <AddCustomerModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={handleAddCustomer}
+      />
+
+      {selectedCustomer && (
+        <>
+          <EditCustomerModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            customer={selectedCustomer}
+            onSave={handleEditCustomer}
+          />
+
+          <DeleteCustomerModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            customer={selectedCustomer}
+            onDelete={handleDeleteCustomer}
+          />
+
+          <NewRepaymentDrawer
+            isOpen={showRepaymentDrawer}
+            onClose={() => setShowRepaymentDrawer(false)}
+            customer={selectedCustomer}
+          />
+
+          <CustomerHistoryModal
+            isOpen={showHistoryModal}
+            onClose={() => setShowHistoryModal(false)}
+            customer={selectedCustomer}
+          />
+        </>
+      )}
     </div>
   );
 };
