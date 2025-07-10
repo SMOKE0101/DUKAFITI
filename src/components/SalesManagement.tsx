@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Product, Customer } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
@@ -11,13 +12,14 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Plus, Minus, ShoppingCart, User, Search, X, Trash2, Menu, CreditCard, Smartphone, Banknote, UserPlus, Trash } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { useToast } from '../hooks/use-toast';
 import { useIsMobile } from '../hooks/use-mobile';
 import TopPicksSection from './sales/TopPicksSection';
+import AddCustomerModal from './sales/AddCustomerModal';
 
 interface CartItem {
   product: Product;
@@ -35,13 +37,6 @@ const SalesManagement = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const [newCustomerData, setNewCustomerData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
-    creditLimit: 1000
-  });
 
   const { products } = useSupabaseProducts();
   const { customers, createCustomer } = useSupabaseCustomers();
@@ -89,52 +84,21 @@ const SalesManagement = () => {
   };
 
   const handleCustomerSelect = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId);
+    const customer = customers.find(c =>c.id === customerId);
     setSelectedCustomer(customer || null);
   };
 
-  const handleCreateCustomer = async () => {
-    if (!newCustomerData.name.trim() || !newCustomerData.phone.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Name and phone are required.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleCreateCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const customerData = {
-        name: newCustomerData.name.trim(),
-        phone: newCustomerData.phone.trim(),
-        email: newCustomerData.email.trim() || undefined,
-        address: newCustomerData.address.trim() || undefined,
-        creditLimit: newCustomerData.creditLimit,
-        outstandingDebt: 0,
-        totalPurchases: 0,
-        lastPurchaseDate: null,
-        riskRating: 'low' as const,
-        createdDate: new Date().toISOString()
-      };
-
       const newCustomer = await createCustomer(customerData);
       if (newCustomer) {
         setSelectedCustomer(newCustomer);
         toast({
           title: "Customer Added",
-          description: `${newCustomerData.name} has been added and selected.`,
+          description: `${customerData.name} has been added and selected.`,
         });
+        setShowCustomerModal(false);
       }
-      
-      // Reset form
-      setNewCustomerData({
-        name: '',
-        phone: '',
-        email: '',
-        address: '',
-        creditLimit: 1000
-      });
-      setShowCustomerModal(false);
     } catch (error) {
       console.error('Error creating customer:', error);
       toast({
@@ -346,87 +310,6 @@ const SalesManagement = () => {
     </div>
   );
 
-  // Add Customer Modal Component
-  const AddCustomerModal = () => (
-    <Dialog open={showCustomerModal} onOpenChange={setShowCustomerModal}>
-      <DialogContent className="sm:max-w-md border-2 border-gray-300 dark:border-gray-600">
-        <DialogHeader>
-          <DialogTitle className="font-mono uppercase tracking-wide">Add New Customer</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="customer-name" className="font-mono text-sm">Name *</Label>
-            <Input
-              id="customer-name"
-              value={newCustomerData.name}
-              onChange={(e) => setNewCustomerData({...newCustomerData, name: e.target.value})}
-              placeholder="Customer name"
-              className="border-2 border-gray-300 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <Label htmlFor="customer-phone" className="font-mono text-sm">Phone *</Label>
-            <Input
-              id="customer-phone"
-              value={newCustomerData.phone}
-              onChange={(e) => setNewCustomerData({...newCustomerData, phone: e.target.value})}
-              placeholder="Phone number" 
-              className="border-2 border-gray-300 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <Label htmlFor="customer-email" className="font-mono text-sm">Email</Label>
-            <Input
-              id="customer-email"
-              type="email"
-              value={newCustomerData.email}
-              onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
-              placeholder="Email (optional)"
-              className="border-2 border-gray-300 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <Label htmlFor="customer-address" className="font-mono text-sm">Address</Label>
-            <Input
-              id="customer-address"
-              value={newCustomerData.address}
-              onChange={(e) => setNewCustomerData({...newCustomerData, address: e.target.value})}
-              placeholder="Address (optional)"
-              className="border-2 border-gray-300 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <Label htmlFor="customer-credit" className="font-mono text-sm">Credit Limit</Label>
-            <Input
-              id="customer-credit"
-              type="number"
-              value={newCustomerData.creditLimit}
-              onChange={(e) => setNewCustomerData({...newCustomerData, creditLimit: Number(e.target.value)})}
-              placeholder="1000"
-              className="border-2 border-gray-300 dark:border-gray-600"
-            />
-          </div>
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowCustomerModal(false)}
-              className="flex-1 border-2 border-gray-300 dark:border-gray-600"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateCustomer}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-              disabled={!newCustomerData.name.trim() || !newCustomerData.phone.trim()}
-            >
-              Add Customer
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
   // Cart Content Component with new aesthetic
   const CartContent = () => (
     <div className="flex flex-col h-full">
@@ -501,14 +384,15 @@ const SalesManagement = () => {
               <label className="text-sm font-mono font-medium text-gray-700 dark:text-gray-300">
                 Customer {paymentMethod === 'debt' && <span className="text-red-500">*</span>}
               </label>
-              <Dialog open={showCustomerModal} onOpenChange={setShowCustomerModal}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-sm font-mono border border-gray-300 dark:border-gray-600">
-                    <UserPlus className="h-4 w-4 mr-1" />
-                    New
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-sm font-mono border border-gray-300 dark:border-gray-600"
+                onClick={() => setShowCustomerModal(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-1" />
+                New
+              </Button>
             </div>
             <Select value={selectedCustomer?.id || ""} onValueChange={handleCustomerSelect}>
               <SelectTrigger className="border-2 border-gray-300 dark:border-gray-600">
@@ -682,7 +566,11 @@ const SalesManagement = () => {
       </div>
 
       {/* Add Customer Modal */}
-      <AddCustomerModal />
+      <AddCustomerModal
+        open={showCustomerModal}
+        onOpenChange={setShowCustomerModal}
+        onCreateCustomer={handleCreateCustomer}
+      />
     </div>
   );
 };

@@ -52,6 +52,7 @@ export interface Sale {
 export interface Product {
   id: string;
   name: string;
+  sku?: string;
   category: string;
   costPrice: number;
   sellingPrice: number;
