@@ -92,6 +92,7 @@ export default {
 			fontFamily: {
 				'display': ['Inter', 'ui-sans-serif', 'system-ui'],
 				'body': ['Inter', 'ui-sans-serif', 'system-ui'],
+				'mono': ['Space Mono', 'ui-monospace', 'monospace'],
 			},
 			spacing: {
 				'18': '4.5rem',
@@ -103,6 +104,9 @@ export default {
 				'glow': '0 0 20px rgba(128, 90, 213, 0.3)',
 				'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
 				'modal': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+			},
+			transitionDuration: {
+				'250': '250ms',
 			},
 			keyframes: {
 				'accordion-down': {
