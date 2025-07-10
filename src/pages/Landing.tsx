@@ -2,155 +2,196 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Store, BarChart3, Users, Package, ShoppingCart, TrendingUp } from "lucide-react";
+import { Store, BarChart3, Users, Package2, ShoppingCart, TrendingUp, Shield, Wifi, Star } from "lucide-react";
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-accent/10">
+      {/* Professional Header */}
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
-              <Store className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-success rounded-xl flex items-center justify-center shadow-lg">
+              <Store className="h-7 w-7 text-white" strokeWidth={2.5} />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              DukaFiti
-            </span>
+            <div>
+              <span className="text-3xl font-bold text-foreground tracking-tight">
+                DukaFiti
+              </span>
+              <p className="brand-tagline text-xs">DUKAFITI NI DUKABORA</p>
+            </div>
           </div>
-          <Button asChild>
-            <Link to="/auth">Get Started</Link>
+          <Button asChild className="dukafiti-button-primary">
+            <Link to="/auth">
+              <Star className="w-4 h-4" />
+              Anza Sasa
+            </Link>
           </Button>
         </nav>
       </header>
 
       {/* Hero Section */}
       <main className="container mx-auto px-4 py-12">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+        <div className="text-center mb-16 animate-brand-entrance">
+          <h1 className="brand-title mb-6">
             Jua Duka Yako
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-              Smart Business Management
+            <span className="block mt-2">
+              DukaFiti Ni DukaBora
             </span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Transform your shop with smart inventory management, customer tracking, and M-Pesa integration designed for Kenyan entrepreneurs.
+          <p className="brand-subtitle mb-8 max-w-3xl mx-auto">
+            Mfumo wa kisasa zaidi wa usimamizi wa maduka nchini Kenya. 
+            Uongozaji wa hisa, ufuatiliaji wa wateja, na uunganishaji wa M-Pesa - 
+            umejengwa kwa ajili ya wafanyabiashara wa Kenya.
           </p>
           <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
-            <Button size="lg" asChild className="w-full sm:w-auto">
-              <Link to="/auth">Start Free Trial</Link>
+            <Button size="lg" asChild className="dukafiti-button-primary w-full sm:w-auto text-base px-8 py-4">
+              <Link to="/auth">
+                <TrendingUp className="w-5 h-5" />
+                Jaribio la Bure la Siku 14
+              </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
-              <Link to="/auth">Sign In</Link>
+            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-base px-8 py-4 border-primary/20 hover:bg-primary/5">
+              <Link to="/auth">
+                <Shield className="w-5 h-5" />
+                Ingia Akaunti
+              </Link>
             </Button>
+          </div>
+          
+          {/* Trust Indicators */}
+          <div className="flex items-center justify-center gap-8 mt-12 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-success" strokeWidth={2} />
+              <span>Salama 100%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Wifi className="w-4 h-4 text-primary" strokeWidth={2} />
+              <span>Inafanya Kazi Offline</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-warning" strokeWidth={2} />
+              <span>Imetumiwa na Maduka 10,000+</span>
+            </div>
           </div>
         </div>
 
-        {/* Features Grid */}
+        {/* Features Grid - Professional Layout */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          <Card>
+          <Card className="dukafiti-card bg-primary/5 border-primary/20">
             <CardHeader>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                <Package className="h-6 w-6 text-blue-600" />
+              <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-4 border border-primary/20">
+                <Package2 className="h-7 w-7 text-primary" strokeWidth={2} />
               </div>
-              <CardTitle>Inventory Management</CardTitle>
+              <CardTitle className="text-xl font-bold">Usimamizi wa Hisa</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Track stock levels, set low-stock alerts, and manage your products with ease.
+              <p className="text-muted-foreground leading-relaxed">
+                Fuatilia viwango vya hisa, weka arifa za hisa ya chini, na simamia bidhaa zako bila shida.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dukafiti-card bg-success/5 border-success/20">
             <CardHeader>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                <ShoppingCart className="h-6 w-6 text-green-600" />
+              <div className="w-14 h-14 bg-success/10 rounded-xl flex items-center justify-center mb-4 border border-success/20">
+                <ShoppingCart className="h-7 w-7 text-success" strokeWidth={2} />
               </div>
-              <CardTitle>Sales Management</CardTitle>
+              <CardTitle className="text-xl font-bold">Usimamizi wa Mauzo</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Process sales quickly with multiple payment options including M-Pesa integration.
+              <p className="text-muted-foreground leading-relaxed">
+                Chakata mauzo haraka na njia nyingi za malipo pamoja na uunganishaji wa M-Pesa.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dukafiti-card bg-chart-4/5 border-chart-4/20">
             <CardHeader>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="w-14 h-14 bg-chart-4/10 rounded-xl flex items-center justify-center mb-4 border border-chart-4/20">
+                <Users className="h-7 w-7 text-chart-4" strokeWidth={2} />
               </div>
-              <CardTitle>Customer Tracking</CardTitle>
+              <CardTitle className="text-xl font-bold">Ufuatiliaji wa Wateja</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Build customer relationships and track purchase history for better service.
+              <p className="text-muted-foreground leading-relaxed">
+                Jenga mahusiano ya wateja na fuatilia historia ya ununuzi kwa huduma bora.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dukafiti-card bg-warning/5 border-warning/20">
             <CardHeader>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
-                <BarChart3 className="h-6 w-6 text-orange-600" />
+              <div className="w-14 h-14 bg-warning/10 rounded-xl flex items-center justify-center mb-4 border border-warning/20">
+                <BarChart3 className="h-7 w-7 text-warning" strokeWidth={2} />
               </div>
-              <CardTitle>Business Analytics</CardTitle>
+              <CardTitle className="text-xl font-bold">Uchanganuzi wa Biashara</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Get insights into your business performance with detailed reports and analytics.
+              <p className="text-muted-foreground leading-relaxed">
+                Pata maarifa kuhusu utendaji wa biashara yako na ripoti za kina.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dukafiti-card bg-chart-2/5 border-chart-2/20">
             <CardHeader>
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-4">
-                <TrendingUp className="h-6 w-6 text-teal-600" />
+              <div className="w-14 h-14 bg-chart-2/10 rounded-xl flex items-center justify-center mb-4 border border-chart-2/20">
+                <TrendingUp className="h-7 w-7 text-chart-2" strokeWidth={2} />
               </div>
-              <CardTitle>Profit Tracking</CardTitle>
+              <CardTitle className="text-xl font-bold">Ufuatiliaji wa Faida</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Monitor your profits in real-time and make data-driven business decisions.
+              <p className="text-muted-foreground leading-relaxed">
+                Fuatilia faida zako kwa wakati halisi na fanya maamuzi ya biashara kulingana na data.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dukafiti-card bg-destructive/5 border-destructive/20">
             <CardHeader>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
-                <Store className="h-6 w-6 text-red-600" />
+              <div className="w-14 h-14 bg-destructive/10 rounded-xl flex items-center justify-center mb-4 border border-destructive/20">
+                <Wifi className="h-7 w-7 text-destructive" strokeWidth={2} />
               </div>
-              <CardTitle>Offline Support</CardTitle>
+              <CardTitle className="text-xl font-bold">Msaada wa Offline</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Continue working even without internet - data syncs when you're back online.
+              <p className="text-muted-foreground leading-relaxed">
+                Endelea kufanya kazi hata bila intaneti - data itasawazishwa ukiwa mtandaoni tena.
               </p>
             </CardContent>
           </Card>
         </div>
 
         {/* CTA Section */}
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Ready to Transform Your Business?
+        <div className="text-center bg-gradient-to-r from-primary/5 to-success/5 rounded-3xl p-12 border border-primary/10">
+          <h2 className="text-4xl font-bold text-foreground mb-4">
+            Uko Tayari Kubadilisha Biashara Yako?
           </h2>
-          <p className="text-lg text-gray-600 mb-8">
-            Join thousands of Kenyan entrepreneurs already using DukaFiti.
+          <p className="brand-subtitle mb-8">
+            Jiunge na maelfu ya wafanyabiashara wa Kenya wanaotumia DukaFiti.
           </p>
-          <Button size="lg" asChild>
-            <Link to="/auth">Start Your Free Trial</Link>
+          <p className="brand-tagline mb-6">DUKAFITI NI DUKABORA</p>
+          <Button size="lg" asChild className="dukafiti-button-primary text-lg px-12 py-4">
+            <Link to="/auth">
+              <Star className="w-6 h-6" />
+              Anza Jaribio Lako la Bure
+            </Link>
           </Button>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 border-t border-gray-200 mt-16">
-        <div className="text-center text-gray-600">
-          <p>&copy; 2024 DukaFiti. Built for Kenyan entrepreneurs.</p>
+      {/* Professional Footer */}
+      <footer className="container mx-auto px-4 py-12 border-t border-border mt-16">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-success rounded-lg flex items-center justify-center">
+              <Store className="h-5 w-5 text-white" strokeWidth={2} />
+            </div>
+            <span className="text-xl font-bold text-foreground">DukaFiti</span>
+          </div>
+          <p className="brand-tagline mb-2">DUKAFITI NI DUKABORA</p>
+          <p className="text-muted-foreground">&copy; 2024 DukaFiti. Umejengwa kwa ajili ya wafanyabiashara wa Kenya.</p>
         </div>
       </footer>
     </div>
