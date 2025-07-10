@@ -152,26 +152,16 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   return (
     <>
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 z-50 shadow-sm">
-        <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
+        <div className={`h-full flex items-center justify-between ${isMobile ? 'px-4' : 'px-4 md:px-6'}`}>
           {/* Left section */}
-          <div className="flex items-center gap-4">
-            {/* Mobile Menu Button */}
-            {isMobile ? (
+          <div className="flex items-center gap-3">
+            {/* Menu Button for Desktop Sidebar Toggle */}
+            {!isMobile && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onSidebarToggle}
-                className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </Button>
-            ) : (
-              /* Desktop Sidebar Toggle */
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onSidebarToggle}
-                className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group"
+                className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group"
                 aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
                 <Menu 
@@ -180,22 +170,24 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               </Button>
             )}
 
-            {/* Logo - Mobile */}
-            <div className="md:hidden flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
-                <span className="text-white font-black text-sm">D</span>
+            {/* Logo - Hidden on Mobile */}
+            {!isMobile && (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
+                  <span className="text-white font-black text-sm">D</span>
+                </div>
+                <div>
+                  <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white">
+                    DUKASMART
+                  </h1>
+                </div>
               </div>
-              <div>
-                <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white">
-                  DUKASMART
-                </h1>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Center - Search Bar (Desktop) */}
+          {/* Center - Search Bar (Desktop Only) */}
           {!isMobile && (
-            <div className="flex-1 max-w-md relative" ref={searchRef}>
+            <div className="flex-1 max-w-md mx-8 relative" ref={searchRef}>
               <form onSubmit={handleSearch} className="relative">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -204,7 +196,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
-                    className="pl-10 pr-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl transition-all duration-300"
+                    className="pl-10 pr-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl transition-all duration-300 h-11"
                   />
                   {searchTerm && (
                     <Button
@@ -260,7 +252,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 onClick={() => setShowMobileSearch(!showMobileSearch)}
                 className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                <Search className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                <Search className="h-5 w-5 text-gray-600 dark:text-gray-400" />
               </Button>
             )}
 
@@ -282,7 +274,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 
               {/* Notifications Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto animate-scale-in">
+                <div className={`absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto animate-scale-in ${isMobile ? 'w-80 -translate-x-20' : 'w-80'}`}>
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       Low Stock Alerts
@@ -347,7 +339,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 
               {/* Profile Dropdown */}
               {showProfileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 animate-scale-in overflow-hidden">
+                <div className={`absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 animate-scale-in overflow-hidden ${isMobile ? 'w-64 -translate-x-12' : 'w-64'}`}>
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
@@ -433,7 +425,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
-                  className="pl-10 pr-10 h-12 rounded-xl border-2 border-gray-300 dark:border-gray-600"
+                  className="pl-10 pr-10 h-12 rounded-xl border-2 border-gray-300 dark:border-gray-600 text-base"
                   autoFocus
                 />
                 <Button

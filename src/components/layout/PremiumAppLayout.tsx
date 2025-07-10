@@ -26,11 +26,13 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
       />
 
       <div className="flex flex-1 pt-16">
-        {/* Enhanced Sidebar */}
-        <EnhancedSidebar 
-          isCollapsed={sidebarCollapsed}
-          onToggle={handleSidebarToggle}
-        />
+        {/* Enhanced Sidebar - Hidden on mobile */}
+        {!isMobile && (
+          <EnhancedSidebar 
+            isCollapsed={sidebarCollapsed}
+            onToggle={handleSidebarToggle}
+          />
+        )}
 
         {/* Main Content */}
         <main 
@@ -44,7 +46,10 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
             }
           `}
         >
-          <div className="p-4 md:p-6 lg:p-8 max-w-full overflow-x-hidden">
+          <div className={`
+            max-w-full overflow-x-hidden
+            ${isMobile ? 'p-3 pt-4' : 'p-4 md:p-6 lg:p-8'}
+          `}>
             {children}
           </div>
         </main>
