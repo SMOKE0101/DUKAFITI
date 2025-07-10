@@ -26,7 +26,7 @@ import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
 import RefinedCustomerCard from './customers/RefinedCustomerCard';
 
 const CustomersPage = () => {
-  const { customers, loading } = useSupabaseCustomers();
+  const { customers, loading, createCustomer } = useSupabaseCustomers();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -93,6 +93,15 @@ const CustomersPage = () => {
   const customersWithDebt = customers.filter(c => c.outstandingDebt > 0).length;
   const totalOutstandingDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
   const totalPurchasesValue = customers.reduce((sum, c) => sum + c.totalPurchases, 0);
+
+  const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await createCustomer(customerData);
+      setIsAddModalOpen(false);
+    } catch (error) {
+      console.error('Failed to save customer:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -261,7 +270,7 @@ const CustomersPage = () => {
               onEdit={() => setEditingCustomer(customer)}
               onDelete={() => setDeletingCustomer(customer)}
               onViewHistory={() => setHistoryCustomer(customer)}
-              onRecordPayment={() => setRepaymentCustomer(customer)}
+              onRecordRepayment={() => setRepaymentCustomer(customer)}
             />
           ))}
         </div>
@@ -295,6 +304,7 @@ const CustomersPage = () => {
         <AddCustomerModal 
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
+          onSave={handleSaveCustomer}
         />
         
         {editingCustomer && (

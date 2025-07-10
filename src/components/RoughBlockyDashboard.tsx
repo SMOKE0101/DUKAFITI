@@ -13,8 +13,7 @@ import {
   Package,
   AlertTriangle,
   Plus,
-  UserPlus,
-  Sync
+  UserPlus
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
@@ -46,8 +45,7 @@ const RoughBlockyDashboard = () => {
       title: 'TOTAL SALES TODAY',
       value: formatCurrency(totalSalesToday),
       icon: DollarSign,
-      color: 'border-brand-purple',
-      bgColor: 'bg-brand-purple/5',
+      bgGradient: 'from-green-500 to-emerald-600',
       route: '/sales',
       details: `${todaySales.length} transactions recorded today`
     },
@@ -56,8 +54,7 @@ const RoughBlockyDashboard = () => {
       title: 'ORDERS TODAY',
       value: totalOrdersToday.toString(),
       icon: ShoppingCart,
-      color: 'border-brand-green',
-      bgColor: 'bg-brand-green/5',
+      bgGradient: 'from-blue-500 to-blue-600',
       route: '/sales',
       details: `Average: ${totalOrdersToday ? (totalSalesToday / totalOrdersToday).toFixed(2) : '0'} per order`
     },
@@ -66,8 +63,7 @@ const RoughBlockyDashboard = () => {
       title: 'ACTIVE CUSTOMERS',
       value: activeCustomers.toString(),
       icon: Users,
-      color: 'border-brand-purple',
-      bgColor: 'bg-brand-purple/5',
+      bgGradient: 'from-purple-500 to-purple-600',
       route: '/customers',
       details: `${overdueCustomers.length} with outstanding debt`
     },
@@ -76,31 +72,35 @@ const RoughBlockyDashboard = () => {
       title: 'LOW STOCK ALERTS',
       value: lowStockProducts.length.toString(),
       icon: lowStockProducts.length > 0 ? AlertTriangle : Package,
-      color: lowStockProducts.length > 0 ? 'border-red-500' : 'border-brand-green',
-      bgColor: lowStockProducts.length > 0 ? 'bg-red-50' : 'bg-brand-green/5',
+      bgGradient: lowStockProducts.length > 0 ? 'from-red-500 to-red-600' : 'from-green-500 to-emerald-600',
       route: '/inventory',
       details: lowStockProducts.length > 0 ? 'Immediate attention required' : 'All items well stocked'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-mono">
-      {/* Compact Header */}
-      <header className="h-14 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b-4 border-brand-purple">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 font-mono">
+      {/* Header with Blocky Typography */}
+      <header className="h-16 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex items-center justify-between px-6 h-full">
-          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
-            DUKASMART
+          <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white uppercase" 
+              style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-1px' }}>
+            DASHBOARD
           </h1>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-purple border-2 border-brand-purple-dark"></div>
+          <div className="flex items-center gap-4">
+            <input 
+              type="search" 
+              placeholder="Quick search..." 
+              className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 border-0 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
         </div>
       </header>
 
-      {/* Main Dashboard Content */}
-      <div className="p-4 max-w-7xl mx-auto">
-        {/* Summary Cards - 2x2 Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      {/* Main Content */}
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Summary Cards - 2x2 Grid with Smooth Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {summaryCards.map((card) => {
             const Icon = card.icon;
             const isFlipped = flippedCard === card.id;
@@ -108,41 +108,41 @@ const RoughBlockyDashboard = () => {
             return (
               <Card 
                 key={card.id}
-                className={`relative overflow-hidden border-4 ${card.color} ${card.bgColor} cursor-pointer transition-all duration-200 hover:border-gray-900 dark:hover:border-white`}
+                className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border-0"
                 style={{ 
-                  borderRadius: '0px',
                   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
                   transformStyle: 'preserve-3d',
-                  transition: 'transform 200ms'
+                  transition: 'transform 200ms ease-out, box-shadow 300ms ease-out'
                 }}
                 onClick={() => handleCardFlip(card.id)}
               >
-                <CardContent className="p-4" style={{ backfaceVisibility: 'hidden' }}>
+                <CardContent className="p-6" style={{ backfaceVisibility: 'hidden' }}>
                   <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs font-black tracking-widest text-gray-600 dark:text-gray-400 mb-2">
+                    <div className="flex-1">
+                      <p className="text-sm font-black tracking-widest text-gray-600 dark:text-gray-400 mb-3 uppercase"
+                         style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-0.5px' }}>
                         {card.title}
                       </p>
-                      <p className="text-2xl font-black text-gray-900 dark:text-white">
+                      <p className="text-4xl font-semibold text-gray-900 dark:text-white mb-2">
                         {card.value}
                       </p>
                     </div>
-                    <div className="w-8 h-8 bg-gray-900 dark:bg-white flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-white dark:text-gray-900" />
+                    <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${card.bgGradient} flex items-center justify-center shadow-lg`}>
+                      <Icon className="w-6 h-6 text-white" />
                     </div>
                   </div>
                 </CardContent>
                 
                 {/* Flipped Content */}
                 <div 
-                  className="absolute inset-0 p-4 flex items-center justify-center text-center"
+                  className="absolute inset-0 p-6 flex items-center justify-center text-center bg-white dark:bg-gray-900"
                   style={{ 
                     backfaceVisibility: 'hidden',
                     transform: 'rotateY(180deg)'
                   }}
                 >
                   <div>
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-4">
                       {card.details}
                     </p>
                     <Button
@@ -150,8 +150,7 @@ const RoughBlockyDashboard = () => {
                         e.stopPropagation();
                         navigate(card.route);
                       }}
-                      className="bg-gray-900 hover:bg-gray-700 text-white font-bold px-4 py-2"
-                      style={{ borderRadius: '0px' }}
+                      className={`bg-gradient-to-r ${card.bgGradient} hover:opacity-90 text-white font-semibold px-6 py-2 rounded-full shadow-lg transition-all duration-200`}
                     >
                       VIEW MORE
                     </Button>
@@ -162,90 +161,94 @@ const RoughBlockyDashboard = () => {
           })}
         </div>
 
-        {/* Alerts & Quick Actions Panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Alerts & Quick Actions Panel - Smooth Containers */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Low Stock Alerts */}
-          <Card className="border-4 border-brand-purple bg-white dark:bg-gray-800" style={{ borderRadius: '0px' }}>
-            <div className="border-l-4 border-brand-purple bg-brand-purple/10 p-4">
-              <h3 className="font-black text-sm tracking-widest text-gray-900 dark:text-white mb-4">
+          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-0">
+            <div className="p-6">
+              <h3 className="font-black text-lg tracking-wide text-gray-900 dark:text-white mb-4 uppercase"
+                  style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-0.5px' }}>
                 LOW STOCK ALERTS
               </h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-3 max-h-48 overflow-y-auto">
                 {lowStockProducts.length > 0 ? (
                   lowStockProducts.slice(0, 5).map((product) => (
-                    <div key={product.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-700 border-2 border-gray-900 dark:border-white">
-                      <span className="font-bold text-xs text-gray-900 dark:text-white truncate">
+                    <div key={product.id} className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
+                      <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
                         {product.name}
                       </span>
-                      <Badge className="bg-red-500 text-white font-bold" style={{ borderRadius: '0px' }}>
+                      <Badge className="bg-red-500 text-white font-semibold rounded-full px-2 py-1">
                         {product.currentStock}
                       </Badge>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs font-bold text-gray-600 dark:text-gray-400">ALL STOCKED ✓</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 text-center py-8">
+                    All items well stocked! 📦
+                  </p>
                 )}
               </div>
             </div>
           </Card>
 
           {/* Overdue Payments */}
-          <Card className="border-4 border-red-500 bg-white dark:bg-gray-800" style={{ borderRadius: '0px' }}>
-            <div className="border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20 p-4">
-              <h3 className="font-black text-sm tracking-widest text-gray-900 dark:text-white mb-4">
+          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-0">
+            <div className="p-6">
+              <h3 className="font-black text-lg tracking-wide text-gray-900 dark:text-white mb-4 uppercase"
+                  style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-0.5px' }}>
                 OVERDUE PAYMENTS
               </h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-3 max-h-48 overflow-y-auto">
                 {overdueCustomers.length > 0 ? (
                   overdueCustomers.slice(0, 5).map((customer) => (
-                    <div key={customer.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-700 border-2 border-gray-900 dark:border-white">
-                      <span className="font-bold text-xs text-gray-900 dark:text-white truncate">
+                    <div key={customer.id} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                      <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
                         {customer.name}
                       </span>
-                      <span className="font-black text-xs text-red-600">
+                      <span className="font-semibold text-sm text-red-600 dark:text-red-400">
                         {formatCurrency(customer.outstandingDebt)}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs font-bold text-gray-600 dark:text-gray-400">ALL PAID UP ✓</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 text-center py-8">
+                    All payments up to date! 🎉
+                  </p>
                 )}
               </div>
             </div>
           </Card>
 
           {/* Quick Actions */}
-          <Card className="border-4 border-brand-green bg-white dark:bg-gray-800" style={{ borderRadius: '0px' }}>
-            <div className="border-l-4 border-brand-green bg-brand-green/10 p-4">
-              <h3 className="font-black text-sm tracking-widest text-gray-900 dark:text-white mb-4">
+          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-0">
+            <div className="p-6">
+              <h3 className="font-black text-lg tracking-wide text-gray-900 dark:text-white mb-4 uppercase"
+                  style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-0.5px' }}>
                 QUICK ACTIONS
               </h3>
               <div className="space-y-3">
                 <Button
                   onClick={() => navigate('/sales')}
-                  className="w-full h-12 bg-brand-green hover:bg-brand-green-dark text-white font-black flex flex-col items-center justify-center gap-1 border-2 border-gray-900"
-                  style={{ borderRadius: '0px' }}
+                  className="w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span className="text-xs">ADD SALE</span>
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Add Sale
                 </Button>
                 
                 <Button
                   onClick={() => navigate('/inventory')}
-                  className="w-full h-12 bg-brand-purple hover:bg-brand-purple-dark text-white font-black flex flex-col items-center justify-center gap-1 border-2 border-gray-900"
-                  style={{ borderRadius: '0px' }}
+                  className="w-full h-14 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-xs">ADD PRODUCT</span>
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Product
                 </Button>
                 
                 <Button
                   onClick={() => navigate('/customers')}
-                  className="w-full h-12 bg-gray-900 hover:bg-gray-700 text-white font-black flex flex-col items-center justify-center gap-1 border-2 border-gray-900"
-                  style={{ borderRadius: '0px' }}
+                  className="w-full h-14 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span className="text-xs">ADD CUSTOMER</span>
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Add Customer
                 </Button>
               </div>
             </div>
