@@ -92,6 +92,18 @@ const CustomersPage = () => {
   const totalDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
   const averageDebt = customersWithDebt > 0 ? totalDebt / customersWithDebt : 0;
 
+  const handleCreateCustomer = async (customerData: Omit<Customer, 'id' | 'createdDate' | 'lastPurchaseDate'>) => {
+    await createCustomer(customerData);
+  };
+
+  const handleUpdateCustomer = async (id: string, updates: Partial<Customer>) => {
+    await updateCustomer(id, updates);
+  };
+
+  const handleDeleteCustomer = async (id: string) => {
+    await deleteCustomer(id);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -108,26 +120,31 @@ const CustomersPage = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Page Title - Consistent with other pages */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
-              CUSTOMERS
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
-              Manage your customer relationships and track credit
-            </p>
-          </div>
-          
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
-            >
-              <Plus className="w-4 h-4 mr-2 stroke-2" />
-              ADD CUSTOMER
-            </Button>
-          </div>
-        </div>
+        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
+                  CUSTOMERS
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
+                  Manage your customer relationships and track credit
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setIsAddModalOpen(true)}
+                  variant="outline"
+                  className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2 stroke-2" />
+                  ADD CUSTOMER
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="container mx-auto px-6 py-8 space-y-8">
@@ -369,6 +386,7 @@ const CustomersPage = () => {
               {!searchTerm && filterBy === 'all' && (
                 <Button 
                   onClick={() => setIsAddModalOpen(true)}
+                  variant="outline"
                   className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-semibold"
                 >
                   <Plus className="w-4 h-4 mr-2 stroke-2" />
@@ -383,7 +401,7 @@ const CustomersPage = () => {
         <AddCustomerModal 
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onSave={createCustomer}
+          onSave={handleCreateCustomer}
         />
         
         {editingCustomer && (
@@ -391,7 +409,7 @@ const CustomersPage = () => {
             isOpen={!!editingCustomer}
             onClose={() => setEditingCustomer(null)}
             customer={editingCustomer}
-            onSave={updateCustomer}
+            onSave={handleUpdateCustomer}
           />
         )}
         
@@ -400,7 +418,7 @@ const CustomersPage = () => {
             isOpen={!!deletingCustomer}
             onClose={() => setDeletingCustomer(null)}
             customer={deletingCustomer}
-            onDelete={deleteCustomer}
+            onDelete={handleDeleteCustomer}
           />
         )}
 

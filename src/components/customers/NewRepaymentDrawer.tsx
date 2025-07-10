@@ -28,7 +28,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const { updateCustomer, refreshCustomers } = useSupabaseCustomers();
+  const { refreshCustomers } = useSupabaseCustomers();
   const { user } = useAuth();
 
   const handleSavePayment = async () => {
@@ -46,6 +46,14 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       
+      console.log('Processing payment:', {
+        customerId: customer.id,
+        customerName: customer.name,
+        paymentAmount,
+        currentDebt: customer.outstandingDebt,
+        newBalance
+      });
+
       // Create a sales record with negative amount to indicate payment
       const { error: salesError } = await supabase
         .from('sales')
@@ -70,6 +78,8 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
         throw new Error(`Failed to record payment: ${salesError.message}`);
       }
 
+      console.log('Payment recorded in sales table successfully');
+
       // Update customer balance directly
       const { error: updateError } = await supabase
         .from('customers')
@@ -85,6 +95,8 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
         console.error('Error updating customer balance:', updateError);
         throw new Error('Failed to update customer balance.');
       }
+
+      console.log('Customer balance updated successfully');
 
       // Reset form
       setAmount('');

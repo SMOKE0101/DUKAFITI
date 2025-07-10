@@ -25,6 +25,7 @@ import AddProductModal from './inventory/AddProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import InventoryModal from './InventoryModal';
+import ProductCard from './inventory/ProductCard';
 import { Product } from '../types';
 
 const InventoryPage = () => {
@@ -108,6 +109,19 @@ const InventoryPage = () => {
     }
   };
 
+  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
+    try {
+      await addStock(product.id, quantity, buyingPrice);
+    } catch (error) {
+      console.error('Failed to restock product:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    await deleteProduct(id);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -124,35 +138,39 @@ const InventoryPage = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Page Title - Consistent with other pages */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
-              INVENTORY
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
-              Manage your products and track stock levels
-            </p>
-          </div>
-          
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setIsInventoryModalOpen(true)}
-              className="bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border-2 border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
-            >
-              <Plus className="w-4 h-4 mr-2 stroke-2" />
-              ADD INVENTORY
-            </Button>
-            
-            <Button 
-              onClick={() => setIsAddModalOpen(true)}
-              variant="outline"
-              className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
-            >
-              <Plus className="w-4 h-4 mr-2 stroke-2" />
-              ADD PRODUCT
-            </Button>
-          </div>
-        </div>
+        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
+                  INVENTORY
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
+                  Manage your products and track stock levels
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setIsInventoryModalOpen(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2 stroke-2" />
+                  ADD INVENTORY
+                </Button>
+                
+                <Button 
+                  onClick={() => setIsAddModalOpen(true)}
+                  variant="outline"
+                  className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2 stroke-2" />
+                  ADD PRODUCT
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="container mx-auto px-6 py-8 space-y-8">
@@ -301,70 +319,13 @@ const InventoryPage = () => {
         {/* Product Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredAndSortedProducts.map((product) => (
-            <Card key={product.id} className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 group">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">{product.name}</CardTitle>
-                    <Badge className="mt-1 text-xs font-mono font-bold uppercase border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-700">
-                      {product.category}
-                    </Badge>
-                  </div>
-                  <Badge className={`text-xs font-mono font-bold uppercase border ${
-                    product.currentStock === 0 
-                      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700' 
-                      : product.currentStock <= (product.lowStockThreshold || 10)
-                      ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-700'
-                      : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-700'
-                  }`}>
-                    STOCK: {product.currentStock}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400 font-medium">Selling Price:</span>
-                    <span className="font-bold text-green-600 dark:text-green-400">{formatCurrency(product.sellingPrice)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400 font-medium">Cost Price:</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(product.costPrice)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400 font-medium">Value:</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(product.sellingPrice * product.currentStock)}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 grid grid-cols-3 gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold"
-                    onClick={() => {/* View functionality */}}
-                  >
-                    <Eye className="w-4 h-4 stroke-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-yellow-200 dark:border-yellow-700 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 font-semibold"
-                    onClick={() => setEditingProduct(product)}
-                  >
-                    <Edit className="w-4 h-4 stroke-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold"
-                    onClick={() => setDeletingProduct(product)}
-                  >
-                    <Trash2 className="w-4 h-4 stroke-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <ProductCard
+              key={product.id}
+              product={product}
+              onEdit={setEditingProduct}
+              onDelete={setDeletingProduct}
+              onRestock={handleRestock}
+            />
           ))}
         </div>
 
@@ -425,8 +386,8 @@ const InventoryPage = () => {
           <DeleteProductModal
             isOpen={!!deletingProduct}
             onClose={() => setDeletingProduct(null)}
-            productId={deletingProduct.id}
-            onDelete={deleteProduct}
+            product={deletingProduct}
+            onDelete={handleDeleteProduct}
           />
         )}
       </div>

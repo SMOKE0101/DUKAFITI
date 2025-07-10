@@ -104,7 +104,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               size="sm"
               onClick={() => setShowRestockModal(true)}
               disabled={isUnspecifiedQuantity}
-              className={`flex-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 ${isUnspecifiedQuantity ? 'cursor-not-allowed opacity-50' : ''}`}
+              className={`flex-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 ${isUnspecifiedQuantity ? 'cursor-not-allowed opacity-50' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'}`}
               title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
             >
               <Package className="w-4 h-4 mr-1" />
