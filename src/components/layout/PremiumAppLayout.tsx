@@ -12,6 +12,7 @@ interface PremiumAppLayoutProps {
 const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isMobile = useIsMobile();
+  const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -26,8 +27,8 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
       />
 
       <div className="flex flex-1 pt-16 relative">
-        {/* Enhanced Sidebar - Hidden on mobile, always visible on tablet+ */}
-        {!isMobile && (
+        {/* Enhanced Sidebar - Only visible on desktop */}
+        {!isMobile && !isTablet && (
           <EnhancedSidebar 
             isCollapsed={sidebarCollapsed}
             onToggle={handleSidebarToggle}
@@ -37,8 +38,8 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main 
           className={`
-            flex-1 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)] transition-all duration-500 ease-out
-            ${isMobile 
+            flex-1 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)] transition-all duration-300 ease-out
+            ${isMobile || isTablet
               ? 'pb-20 ml-0 w-full' 
               : sidebarCollapsed 
                 ? 'ml-[72px] w-[calc(100vw-72px)]' 
@@ -47,16 +48,25 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
           `}
         >
           <div className={`
-            h-full overflow-x-hidden
-            ${isMobile ? 'p-3 pt-4' : 'p-4 md:p-6 lg:p-8'}
+            h-full overflow-x-hidden overflow-y-auto
+            ${isMobile 
+              ? 'p-2 pt-2' 
+              : isTablet 
+                ? 'p-3 pt-3' 
+                : 'p-4 md:p-6 lg:p-8'
+            }
           `}>
             {children}
           </div>
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      {isMobile && <BottomNavigation />}
+      {/* Mobile/Tablet Bottom Navigation */}
+      {(isMobile || isTablet) && (
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <BottomNavigation />
+        </div>
+      )}
     </div>
   );
 };

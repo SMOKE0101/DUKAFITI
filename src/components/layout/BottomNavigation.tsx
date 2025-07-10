@@ -15,32 +15,38 @@ const navigationItems = [
   { 
     id: 'dashboard', 
     icon: BarChart3, 
-    path: '/app' 
+    path: '/dashboard',
+    label: 'Dashboard'
   },
   { 
-    id: 'products', 
+    id: 'inventory', 
     icon: Package, 
-    path: '/products' 
+    path: '/inventory',
+    label: 'Inventory'
   },
   { 
     id: 'sales', 
     icon: ShoppingCart, 
-    path: '/sales' 
+    path: '/sales',
+    label: 'Sales'
   },
   { 
     id: 'customers', 
     icon: Users, 
-    path: '/customers' 
+    path: '/customers',
+    label: 'Customers'
   },
   { 
-    id: 'history', 
+    id: 'reports', 
     icon: FileText, 
-    path: '/history' 
+    path: '/reports',
+    label: 'Reports'
   },
   { 
     id: 'settings', 
     icon: Settings, 
-    path: '/settings' 
+    path: '/settings',
+    label: 'Settings'
   },
 ];
 
@@ -48,23 +54,28 @@ export const BottomNavigation: React.FC = () => {
   const location = useLocation();
 
   return (
-    <nav className="bottom-nav">
-      <div className="flex justify-around">
+    <nav className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+      <div className="grid grid-cols-6 h-16">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path || 
-            (item.path === '/app' && location.pathname === '/');
+            (item.path === '/dashboard' && location.pathname === '/');
           
           return (
             <NavLink
               key={item.id}
               to={item.path}
               className={cn(
-                "bottom-nav-item",
-                isActive && "active"
+                "flex flex-col items-center justify-center px-1 py-2 text-xs transition-all duration-200",
+                isActive 
+                  ? "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20" 
+                  : "text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-800"
               )}
             >
-              <Icon className="w-6 h-6" />
+              <Icon className="w-5 h-5 mb-1" />
+              <span className="text-[10px] font-medium truncate w-full text-center">
+                {item.label}
+              </span>
             </NavLink>
           );
         })}
