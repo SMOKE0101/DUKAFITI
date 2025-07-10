@@ -10,6 +10,7 @@ interface PremiumAppLayoutProps {
 }
 
 const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isMobile = useIsMobile();
 
   return (
@@ -19,12 +20,26 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
 
       <div className="flex flex-1 pt-16">
         {/* Enhanced Sidebar */}
-        <EnhancedSidebar />
+        <EnhancedSidebar 
+          isCollapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
-        {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${
-          isMobile ? 'pb-20' : ''
-        } bg-gray-50 dark:bg-gray-900 min-h-screen`}>
+        {/* Main Content with dynamic margin */}
+        <main 
+          className={`
+            flex-1 bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-out
+            ${isMobile 
+              ? 'pb-20 ml-0' 
+              : sidebarCollapsed 
+                ? 'ml-[72px]' 
+                : 'ml-[240px]'
+            }
+          `}
+          style={{
+            '--sidebar-width': isMobile ? '0px' : sidebarCollapsed ? '72px' : '240px'
+          } as React.CSSProperties}
+        >
           {children}
         </main>
       </div>

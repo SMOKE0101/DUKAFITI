@@ -27,11 +27,17 @@ const navigation = [
 ];
 
 interface EnhancedSidebarProps {
+  isCollapsed: boolean;
+  onToggle: () => void;
   className?: string;
 }
 
-const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ 
+  isCollapsed, 
+  onToggle, 
+  className = '' 
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -41,27 +47,31 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => 
     }
   };
 
+  // Calculate effective width for hover peek effect
+  const effectiveWidth = isCollapsed ? (isHovered ? '100px' : '72px') : '240px';
+
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className={`hidden md:flex ${className}`}>
+      <div className={`hidden md:block ${className}`}>
         <div 
-          className={`
-            fixed left-0 top-0 h-full transition-all duration-300 ease-out
-            ${isCollapsed ? 'w-[72px]' : 'w-[240px]'}
-            bg-white dark:bg-black border-r-2 border-gray-300 dark:border-gray-600
-            flex flex-col z-40
-          `}
+          className="fixed left-0 top-0 h-full bg-white dark:bg-black border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transition-all duration-300 ease-out"
+          style={{ 
+            width: effectiveWidth,
+            '--sidebar-width': effectiveWidth
+          } as React.CSSProperties}
+          onMouseEnter={() => isCollapsed && setIsHovered(true)}
+          onMouseLeave={() => isCollapsed && setIsHovered(false)}
         >
           {/* Brand & Profile Section */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-              <div className="w-12 h-12 rounded-full border-2 border-purple-300 dark:border-purple-600 flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-600">
+            <div className={`flex items-center ${isCollapsed && !isHovered ? 'justify-center' : 'gap-3'}`}>
+              <div className="w-12 h-12 rounded-full border-2 border-purple-300 dark:border-purple-600 flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0">
                 <span className="text-white font-bold text-lg">D</span>
               </div>
-              {!isCollapsed && (
-                <div>
-                  <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white">
+              {(!isCollapsed || isHovered) && (
+                <div className="min-w-0">
+                  <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
                     DUKASMART
                   </h1>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -72,10 +82,10 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => 
             </div>
             
             {/* User Profile */}
-            {!isCollapsed && user && (
+            {(!isCollapsed || isHovered) && user && (
               <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0">
                     <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -103,16 +113,16 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => 
                   to={item.href}
                   className={`
                     group flex items-center rounded-lg transition-all duration-200
-                    ${isCollapsed ? 'justify-center p-3' : 'p-4 gap-4'}
+                    ${isCollapsed && !isHovered ? 'justify-center p-3' : 'p-4 gap-4'}
                     ${isActive 
                       ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-600 text-purple-700 dark:text-purple-400' 
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-2 hover:border-purple-300'
                     }
                   `}
-                  title={isCollapsed ? item.name : undefined}
+                  title={isCollapsed && !isHovered ? item.name : undefined}
                 >
                   <div className={`
-                    p-2 rounded-full border-2 transition-colors duration-200
+                    p-2 rounded-full border-2 transition-colors duration-200 flex-shrink-0
                     ${isActive 
                       ? 'border-purple-300 bg-purple-100 dark:bg-purple-900/30' 
                       : 'border-gray-300 dark:border-gray-600 group-hover:border-purple-300'
@@ -120,8 +130,8 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => 
                   `}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  {!isCollapsed && (
-                    <span className="font-mono font-bold uppercase tracking-tight text-sm">
+                  {(!isCollapsed || isHovered) && (
+                    <span className="font-mono font-bold uppercase tracking-tight text-sm min-w-0 truncate">
                       {item.name}
                     </span>
                   )}
@@ -135,15 +145,15 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => 
             <button
               className={`
                 group flex items-center rounded-lg transition-all duration-200 w-full
-                ${isCollapsed ? 'justify-center p-3' : 'p-4 gap-4'}
+                ${isCollapsed && !isHovered ? 'justify-center p-3' : 'p-4 gap-4'}
                 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-2 hover:border-purple-300
               `}
-              title={isCollapsed ? 'Help' : undefined}
+              title={isCollapsed && !isHovered ? 'Help' : undefined}
             >
-              <div className="p-2 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-purple-300 transition-colors duration-200">
+              <div className="p-2 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-purple-300 transition-colors duration-200 flex-shrink-0">
                 <HelpCircle className="w-5 h-5" />
               </div>
-              {!isCollapsed && (
+              {(!isCollapsed || isHovered) && (
                 <span className="font-mono font-bold uppercase tracking-tight text-sm">
                   Help
                 </span>
@@ -154,15 +164,15 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => 
               onClick={handleSignOut}
               className={`
                 group flex items-center rounded-lg transition-all duration-200 w-full
-                ${isCollapsed ? 'justify-center p-3' : 'p-4 gap-4'}
+                ${isCollapsed && !isHovered ? 'justify-center p-3' : 'p-4 gap-4'}
                 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-2 hover:border-red-300
               `}
-              title={isCollapsed ? 'Logout' : undefined}
+              title={isCollapsed && !isHovered ? 'Logout' : undefined}
             >
-              <div className="p-2 rounded-full border-2 border-red-300 dark:border-red-600 group-hover:border-red-400 transition-colors duration-200">
+              <div className="p-2 rounded-full border-2 border-red-300 dark:border-red-600 group-hover:border-red-400 transition-colors duration-200 flex-shrink-0">
                 <LogOut className="w-5 h-5" />
               </div>
-              {!isCollapsed && (
+              {(!isCollapsed || isHovered) && (
                 <span className="font-mono font-bold uppercase tracking-tight text-sm">
                   Logout
                 </span>
@@ -170,17 +180,21 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => 
             </button>
           </div>
 
-          {/* Toggle Button */}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white dark:bg-black border-2 border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-            ) : (
-              <ChevronLeft className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-            )}
-          </button>
+          {/* Toggle Button - Bottom Center */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={onToggle}
+              className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <div className="p-1 transition-transform duration-300 ease-out" style={{
+                transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
+              }}>
+                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
