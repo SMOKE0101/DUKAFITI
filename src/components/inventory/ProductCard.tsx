@@ -11,8 +11,8 @@ import RestockModal from './RestockModal';
 interface ProductCardProps {
   product: Product;
   onEdit: (product: Product) => void;
-  onDelete: (id: string) => void;
-  onRestock: (id: string, quantity: number, buyingPrice: number) => void;
+  onDelete: (product: Product) => void;
+  onRestock: (product: Product) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, onRestock }) => {
@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
   };
 
   const handleRestock = (quantity: number, buyingPrice: number) => {
-    onRestock(product.id, quantity, buyingPrice);
+    onRestock(product);
     setShowRestockModal(false);
   };
 
@@ -91,7 +91,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               size="sm"
               onClick={() => setShowRestockModal(true)}
               disabled={isUnspecifiedQuantity}
-              className={`flex-1 ${isUnspecifiedQuantity ? 'cursor-not-allowed' : ''}`}
+              className={`flex-1 ${isUnspecifiedQuantity ? 'cursor-not-allowed opacity-50' : ''}`}
               title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
             >
               <Package className="w-4 h-4 mr-1" />
@@ -100,7 +100,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onDelete(product.id)}
+              onClick={() => onDelete(product)}
               className="text-red-600 hover:text-red-800"
             >
               <Trash2 className="w-4 h-4" />
@@ -119,7 +119,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
       <RestockModal
         isOpen={showRestockModal}
         onClose={() => setShowRestockModal(false)}
-        onRestock={handleRestock}
         product={product}
       />
     </>

@@ -54,6 +54,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         .from('sales')
         .select('*')
         .eq('customer_id', customer.id)
+        .gte('total_amount', 0) // Positive amounts = orders
         .order('timestamp', { ascending: false })
         .limit(20);
 
@@ -70,7 +71,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         setOrders(ordersData);
       }
 
-      // Fetch payment data (including negative sales entries which represent payments)
+      // Fetch payment data (negative sales entries which represent payments)
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('sales')
         .select('*')
@@ -82,13 +83,16 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
       if (paymentsError) {
         console.error('Error fetching payments:', paymentsError);
       } else {
-        const paymentsFormatted = paymentsData?.map(payment => ({
-          id: payment.id,
-          date: payment.timestamp || payment.created_at || '',
-          method: payment.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
-          amount: Math.abs(payment.total_amount), // Convert negative to positive for display
-          reference: payment.payment_details?.reference || undefined
-        })) || [];
+        const paymentsFormatted = paymentsData?.map(payment => {
+          const paymentDetails = payment.payment_details as any;
+          return {
+            id: payment.id,
+            date: payment.timestamp || payment.created_at || '',
+            method: payment.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
+            amount: Math.abs(payment.total_amount), // Convert negative to positive for display
+            reference: paymentDetails?.reference || undefined
+          };
+        }) || [];
         setPayments(paymentsFormatted);
       }
 
@@ -106,7 +110,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     // Fetch initial data
     fetchInitialData();
 
-    // Set up real-time subscription for sales (orders)
+    // Set up real-time subscription for sales (orders and payments)
     const salesChannel = supabase
       .channel(`sales-changes-${customer.id}`)
       .on(
@@ -140,12 +144,13 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
               });
             } else {
               // Negative amount = payment
+              const paymentDetails = newSale.payment_details as any;
               const newPayment: Payment = {
                 id: newSale.id,
                 date: newSale.timestamp || newSale.created_at || '',
                 method: newSale.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
                 amount: Math.abs(newSale.total_amount),
-                reference: newSale.payment_details?.reference || undefined
+                reference: paymentDetails?.reference || undefined
               };
               
               setPayments(prev => {
@@ -173,6 +178,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
               ));
             } else {
               // Update payment
+              const paymentDetails = updatedSale.payment_details as any;
               setPayments(prev => prev.map(payment => 
                 payment.id === updatedSale.id 
                   ? {
@@ -180,7 +186,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                       method: updatedSale.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
                       amount: Math.abs(updatedSale.total_amount),
                       date: updatedSale.timestamp || updatedSale.created_at || payment.date,
-                      reference: updatedSale.payment_details?.reference || undefined
+                      reference: paymentDetails?.reference || undefined
                     }
                   : payment
               ));

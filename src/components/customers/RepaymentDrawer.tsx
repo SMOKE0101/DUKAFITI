@@ -32,7 +32,14 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
   const { user } = useAuth();
 
   const handleSavePayment = async () => {
-    if (!customer || !amount || parseFloat(amount) <= 0 || !user) return;
+    if (!customer || !amount || parseFloat(amount) <= 0 || !user) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid payment amount.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -46,7 +53,6 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       });
 
       // Create a payment record in the sales table as a negative entry
-      // This helps track payment history and will trigger real-time updates
       const { error: salesError } = await supabase
         .from('sales')
         .insert({
