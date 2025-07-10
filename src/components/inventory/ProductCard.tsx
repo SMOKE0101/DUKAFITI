@@ -1,18 +1,20 @@
 
 import React from 'react';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Package } from 'lucide-react';
 import { Product } from '../../types';
 
 interface ProductCardProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
+  onRestock: (product: Product) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   onEdit, 
-  onDelete
+  onDelete,
+  onRestock
 }) => {
   const isLowStock = product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold;
   const isUnspecifiedStock = product.currentStock === -1;
@@ -30,6 +32,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
         
         <div className="flex gap-1 ml-2">
+          <button
+            onClick={() => onRestock(product)}
+            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+            title="Restock"
+          >
+            <Package size={16} />
+          </button>
           <button
             onClick={() => onEdit(product)}
             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"

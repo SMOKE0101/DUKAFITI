@@ -46,8 +46,8 @@ const DashboardTopbar = () => {
   const { customers } = useSupabaseCustomers();
   const { sales } = useSupabaseSales();
 
-  // Get low stock alerts
-  const lowStockAlerts = products.filter(p => p.currentStock <= p.lowStockThreshold);
+  // Get low stock alerts - exclude products with unspecified stock (-1)
+  const lowStockAlerts = products.filter(p => p.currentStock !== -1 && p.currentStock <= p.lowStockThreshold);
   const unreadNotifications = lowStockAlerts.length;
 
   // Global search with debounce

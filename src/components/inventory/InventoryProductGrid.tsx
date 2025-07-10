@@ -7,12 +7,14 @@ interface InventoryProductGridProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
+  onRestock: (product: Product) => void;
 }
 
 const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
   products,
   onEdit,
   onDelete,
+  onRestock,
 }) => {
   if (products.length === 0) {
     return (
@@ -30,6 +32,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
           product={product}
           onEdit={onEdit}
           onDelete={onDelete}
+          onRestock={onRestock}
         />
       ))}
     </div>

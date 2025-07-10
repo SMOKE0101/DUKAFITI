@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../hooks/use-toast';
 import { Product } from '../types';
@@ -10,6 +11,7 @@ import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
 import AddProductModal from './inventory/AddProductModal';
+import RestockModal from './inventory/RestockModal';
 
 const InventoryPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -20,6 +22,9 @@ const InventoryPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [restockingProduct, setRestockingProduct] = useState<Product | null>(null);
+  const [isRestocking, setIsRestocking] = useState(false);
 
   const { products, loading, createProduct, updateProduct, deleteProduct, refetch } = useSupabaseProducts();
   const { toast } = useToast();
@@ -73,6 +78,44 @@ const InventoryPage = () => {
   const handleDeleteClick = (product: Product) => {
     setProductToDelete(product);
     setShowDeleteModal(true);
+  };
+
+  const handleRestock = (product: Product) => {
+    setRestockingProduct(product);
+    setShowRestockModal(true);
+  };
+
+  const handleRestockSave = async (quantity: number, buyingPrice: number) => {
+    if (!restockingProduct) return;
+
+    setIsRestocking(true);
+    try {
+      const newStock = restockingProduct.currentStock === -1 ? quantity : restockingProduct.currentStock + quantity;
+      
+      await updateProduct(restockingProduct.id, {
+        ...restockingProduct,
+        currentStock: newStock,
+        costPrice: buyingPrice, // Update cost price with latest buying price
+      });
+
+      toast({
+        title: "Product Restocked",
+        description: `${restockingProduct.name} has been restocked with ${quantity} units.`,
+      });
+
+      setShowRestockModal(false);
+      setRestockingProduct(null);
+      await refetch();
+    } catch (error) {
+      console.error('Error restocking product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to restock product. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRestocking(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -141,6 +184,11 @@ const InventoryPage = () => {
     setEditingProduct(null);
   };
 
+  const handleCloseRestockModal = () => {
+    setShowRestockModal(false);
+    setRestockingProduct(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -194,6 +242,7 @@ const InventoryPage = () => {
         products={filteredProducts}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
+        onRestock={handleRestock}
       />
 
       {/* Enhanced Add/Edit Product Modal */}
@@ -202,6 +251,15 @@ const InventoryPage = () => {
         onClose={handleCloseModal}
         onSave={handleSaveProduct}
         editingProduct={editingProduct}
+      />
+
+      {/* Restock Modal */}
+      <RestockModal
+        isOpen={showRestockModal}
+        onClose={handleCloseRestockModal}
+        onSave={handleRestockSave}
+        product={restockingProduct}
+        isLoading={isRestocking}
       />
 
       {/* Delete Confirmation Modal */}

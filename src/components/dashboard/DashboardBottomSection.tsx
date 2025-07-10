@@ -31,9 +31,9 @@ const DashboardBottomSection: React.FC<DashboardBottomSectionProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Calculate overdue customers and low stock products
+  // Calculate overdue customers and low stock products (exclude unspecified stock -1)
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
-  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
+  const lowStockProducts = products.filter(p => p.currentStock !== -1 && p.currentStock <= (p.lowStockThreshold || 10));
 
   return (
     <div className="space-y-8">
