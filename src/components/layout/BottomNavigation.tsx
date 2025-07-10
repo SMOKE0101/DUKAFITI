@@ -54,12 +54,12 @@ export const BottomNavigation: React.FC = () => {
   const location = useLocation();
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-      <div className="grid grid-cols-6 h-16">
+    <nav className="bg-white dark:bg-gray-900 h-20 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+      <div className="grid grid-cols-6 h-full max-w-full mx-auto">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path || 
-            (item.path === '/dashboard' && location.pathname === '/');
+            (item.path === '/dashboard' && (location.pathname === '/' || location.pathname === '/app'));
           
           return (
             <NavLink
@@ -72,8 +72,8 @@ export const BottomNavigation: React.FC = () => {
                   : "text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-800"
               )}
             >
-              <Icon className="w-5 h-5 mb-1" />
-              <span className="text-[10px] font-medium truncate w-full text-center">
+              <Icon className="w-5 h-5 mb-1 flex-shrink-0" />
+              <span className="text-[10px] font-medium truncate w-full text-center leading-tight">
                 {item.label}
               </span>
             </NavLink>

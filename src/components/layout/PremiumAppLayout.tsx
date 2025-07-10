@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import EnhancedSidebar from './EnhancedSidebar';
 import { BottomNavigation } from './BottomNavigation';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import EnhancedTopbar from './EnhancedTopbar';
 
 interface PremiumAppLayoutProps {
@@ -11,12 +11,29 @@ interface PremiumAppLayoutProps {
 
 const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
-  const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+  const isTablet = useIsTablet();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
+
+  // Don't render until mounted to avoid hydration issues
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  const showBottomNav = isMobile || isTablet;
+  const showSidebar = !isMobile && !isTablet;
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
@@ -28,7 +45,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
 
       <div className="flex flex-1 pt-16 relative">
         {/* Enhanced Sidebar - Only visible on desktop */}
-        {!isMobile && !isTablet && (
+        {showSidebar && (
           <EnhancedSidebar 
             isCollapsed={sidebarCollapsed}
             onToggle={handleSidebarToggle}
@@ -38,12 +55,12 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main 
           className={`
-            flex-1 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)] transition-all duration-300 ease-out
-            ${isMobile || isTablet
-              ? 'pb-20 ml-0 w-full' 
+            flex-1 bg-gray-50 dark:bg-gray-900 transition-all duration-300 ease-out
+            ${showBottomNav
+              ? 'pb-20 ml-0 w-full min-h-[calc(100vh-4rem-5rem)]' 
               : sidebarCollapsed 
-                ? 'ml-[72px] w-[calc(100vw-72px)]' 
-                : 'ml-[280px] w-[calc(100vw-280px)]'
+                ? 'ml-[72px] w-[calc(100vw-72px)] min-h-[calc(100vh-4rem)]' 
+                : 'ml-[280px] w-[calc(100vw-280px)] min-h-[calc(100vh-4rem)]'
             }
           `}
         >
@@ -56,14 +73,16 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
                 : 'p-4 md:p-6 lg:p-8'
             }
           `}>
-            {children}
+            <div className="max-w-full mx-auto">
+              {children}
+            </div>
           </div>
         </main>
       </div>
 
       {/* Mobile/Tablet Bottom Navigation */}
-      {(isMobile || isTablet) && (
-        <div className="fixed bottom-0 left-0 right-0 z-50">
+      {showBottomNav && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 dark:border-gray-700">
           <BottomNavigation />
         </div>
       )}
