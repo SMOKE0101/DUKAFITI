@@ -271,10 +271,6 @@ const HybridReportsPage = () => {
     ));
   };
 
-  const handleExport = (format: 'pdf' | 'csv') => {
-    console.log(`Exporting as ${format}`);
-  };
-
   const handleDownloadSalesCSV = () => {
     const csvContent = [
       ['Product Name', 'Quantity', 'Revenue', 'Customer', 'Date'],
@@ -320,19 +316,18 @@ const HybridReportsPage = () => {
         </h1>
       </div>
 
-      {/* Global Filters Panel */}
-      <ReportsFiltersPanel
-        dateRange={globalDateRange}
-        onDateRangeChange={setGlobalDateRange}
-        customDateRange={customDateRange}
-        onCustomDateRangeChange={setCustomDateRange}
-        activeFilters={activeFilters}
-        onRemoveFilter={removeFilter}
-        onExport={handleExport}
-      />
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Global Filters Panel - Now positioned above summary cards */}
+        <ReportsFiltersPanel
+          dateRange={globalDateRange}
+          onDateRangeChange={setGlobalDateRange}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+          activeFilters={activeFilters}
+          onRemoveFilter={removeFilter}
+        />
+
         {/* Summary Metrics Cards - 7 Cards in Responsive Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           <MetricCard
