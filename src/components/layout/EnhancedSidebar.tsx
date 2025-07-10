@@ -1,239 +1,229 @@
 
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
   ShoppingCart, 
   Users, 
-  FileText, 
+  BarChart3, 
   Settings,
-  ChevronLeft,
-  ChevronRight,
   HelpCircle,
   LogOut,
+  ChevronRight,
+  ChevronLeft,
   User
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Badge } from '@/components/ui/badge';
-import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
-
-interface SidebarProps {
-  isOpen: boolean;
-  onToggle: () => void;
-}
+import { useAuth } from '../../hooks/useAuth';
+import { Button } from '../ui/button';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Sales', href: '/sales', icon: ShoppingCart },
   { name: 'Customers', href: '/customers', icon: Users },
-  { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export const EnhancedSidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
-  const navigate = useNavigate();
+interface EnhancedSidebarProps {
+  className?: string;
+}
+
+const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ className = '' }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
-  const isMobile = useIsMobile();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  
-  const { products } = useSupabaseProducts();
-  
-  // Enhanced low stock count - exclude unspecified stock products
-  const lowStockCount = products.filter(p => 
-    p.currentStock !== -1 && 
-    p.currentStock <= p.lowStockThreshold
-  ).length;
+  const { user, signOut } = useAuth();
 
-  const handleLogout = () => {
-    console.log('Logging out...');
-    setShowLogoutConfirm(false);
-    navigate('/');
-  };
-
-  const isActive = (href: string) => {
-    if (href === '/') {
-      return location.pathname === '/';
+  const handleSignOut = async () => {
+    if (window.confirm('Are you sure you want to sign out?')) {
+      await signOut();
     }
-    return location.pathname.startsWith(href);
   };
 
   return (
     <>
       {/* Desktop Sidebar */}
-      {!isMobile && (
-        <div className={`fixed left-0 top-0 h-full bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 border-r-2 border-purple-300/20 transition-all duration-300 z-40 ${
-          isOpen ? 'w-64' : 'w-16'
-        }`}>
-          {/* Brand Section */}
-          <div className="p-4 border-b border-purple-300/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+      <div className={`hidden md:flex ${className}`}>
+        <div 
+          className={`
+            fixed left-0 top-0 h-full transition-all duration-300 ease-out
+            ${isCollapsed ? 'w-[72px]' : 'w-[240px]'}
+            bg-white dark:bg-black border-r-2 border-gray-300 dark:border-gray-600
+            flex flex-col z-40
+          `}
+        >
+          {/* Brand & Profile Section */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+              <div className="w-12 h-12 rounded-full border-2 border-purple-300 dark:border-purple-600 flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-600">
                 <span className="text-white font-bold text-lg">D</span>
               </div>
-              {isOpen && (
-                <div className="text-white">
-                  <h1 className="font-black text-lg tracking-tight uppercase">DUKASMART</h1>
-                  <p className="text-purple-200 text-xs opacity-80">Smart Business</p>
+              {!isCollapsed && (
+                <div>
+                  <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white">
+                    DUKASMART
+                  </h1>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Smart Business
+                  </p>
                 </div>
               )}
             </div>
+            
+            {/* User Profile */}
+            {!isCollapsed && user && (
+              <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                    <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-mono font-bold text-gray-900 dark:text-white truncate">
+                      {user.email?.split('@')[0] || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Owner
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Navigation */}
-          <nav className="mt-6 px-3 space-y-2">
+          {/* Navigation Links */}
+          <nav className="flex-1 p-4 space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const active = isActive(item.href);
+              const isActive = location.pathname === item.href;
               
               return (
-                <button
+                <NavLink
                   key={item.name}
-                  onClick={() => navigate(item.href)}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group ${
-                    active 
-                      ? 'bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/30' 
-                      : 'text-purple-200 hover:bg-white/10 hover:text-white'
-                  }`}
+                  to={item.href}
+                  className={`
+                    group flex items-center rounded-lg transition-all duration-200
+                    ${isCollapsed ? 'justify-center p-3' : 'p-4 gap-4'}
+                    ${isActive 
+                      ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-600 text-purple-700 dark:text-purple-400' 
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-2 hover:border-purple-300'
+                    }
+                  `}
+                  title={isCollapsed ? item.name : undefined}
                 >
-                  <div className={`relative ${isOpen ? 'w-6 h-6' : 'w-6 h-6 mx-auto'}`}>
-                    <Icon className="w-full h-full" />
-                    {item.name === 'Inventory' && lowStockCount > 0 && (
-                      <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 bg-red-500 text-white text-xs flex items-center justify-center">
-                        {lowStockCount}
-                      </Badge>
-                    )}
+                  <div className={`
+                    p-2 rounded-full border-2 transition-colors duration-200
+                    ${isActive 
+                      ? 'border-purple-300 bg-purple-100 dark:bg-purple-900/30' 
+                      : 'border-gray-300 dark:border-gray-600 group-hover:border-purple-300'
+                    }
+                  `}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  {isOpen && (
-                    <span className="font-semibold text-sm tracking-wide">{item.name}</span>
+                  {!isCollapsed && (
+                    <span className="font-mono font-bold uppercase tracking-tight text-sm">
+                      {item.name}
+                    </span>
                   )}
-                  {active && (
-                    <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-pink-400 to-purple-400 rounded-r-full"></div>
-                  )}
-                </button>
+                </NavLink>
               );
             })}
           </nav>
 
-          {/* Bottom Section */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-purple-300/20">
-            {/* Profile */}
-            <div className={`flex items-center gap-3 mb-3 p-2 rounded-lg ${isOpen ? '' : 'justify-center'}`}>
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
-              {isOpen && (
-                <div className="text-white text-sm">
-                  <div className="font-medium">Admin</div>
-                  <div className="text-purple-200 text-xs">Owner</div>
-                </div>
-              )}
-            </div>
-
-            {/* Utility Buttons */}
-            <div className="space-y-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`w-full text-purple-200 hover:text-white hover:bg-white/10 ${
-                  isOpen ? 'justify-start gap-3' : 'justify-center p-2'
-                }`}
-              >
-                <HelpCircle className="w-4 h-4" />
-                {isOpen && <span className="text-sm">Help</span>}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowLogoutConfirm(true)}
-                className={`w-full text-purple-200 hover:text-red-300 hover:bg-red-500/20 ${
-                  isOpen ? 'justify-start gap-3' : 'justify-center p-2'
-                }`}
-              >
-                <LogOut className="w-4 h-4" />
-                {isOpen && <span className="text-sm">Logout</span>}
-              </Button>
-            </div>
-
-            {/* Toggle Button */}
-            <Button
-              onClick={onToggle}
-              variant="ghost"
-              size="sm"
-              className="w-full mt-3 text-purple-200 hover:text-white hover:bg-white/10 justify-center"
+          {/* Bottom Utilities */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+            <button
+              className={`
+                group flex items-center rounded-lg transition-all duration-200 w-full
+                ${isCollapsed ? 'justify-center p-3' : 'p-4 gap-4'}
+                text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-2 hover:border-purple-300
+              `}
+              title={isCollapsed ? 'Help' : undefined}
             >
-              {isOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </Button>
+              <div className="p-2 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-purple-300 transition-colors duration-200">
+                <HelpCircle className="w-5 h-5" />
+              </div>
+              {!isCollapsed && (
+                <span className="font-mono font-bold uppercase tracking-tight text-sm">
+                  Help
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={handleSignOut}
+              className={`
+                group flex items-center rounded-lg transition-all duration-200 w-full
+                ${isCollapsed ? 'justify-center p-3' : 'p-4 gap-4'}
+                text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-2 hover:border-red-300
+              `}
+              title={isCollapsed ? 'Logout' : undefined}
+            >
+              <div className="p-2 rounded-full border-2 border-red-300 dark:border-red-600 group-hover:border-red-400 transition-colors duration-200">
+                <LogOut className="w-5 h-5" />
+              </div>
+              {!isCollapsed && (
+                <span className="font-mono font-bold uppercase tracking-tight text-sm">
+                  Logout
+                </span>
+              )}
+            </button>
           </div>
+
+          {/* Toggle Button */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white dark:bg-black border-2 border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+            ) : (
+              <ChevronLeft className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+            )}
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Mobile Bottom Navigation */}
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-50">
-          <div className="flex items-center justify-around py-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+        <div className="bg-white dark:bg-black border-t-2 border-gray-300 dark:border-gray-600 px-4 py-2">
+          <div className="flex items-center justify-around">
             {navigation.slice(0, 5).map((item) => {
               const Icon = item.icon;
-              const active = isActive(item.href);
+              const isActive = location.pathname === item.href;
               
               return (
-                <button
+                <NavLink
                   key={item.name}
-                  onClick={() => navigate(item.href)}
-                  className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                    active 
-                      ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' 
+                  to={item.href}
+                  className={`
+                    flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-200
+                    ${isActive 
+                      ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20' 
                       : 'text-gray-600 dark:text-gray-400'
-                  }`}
+                    }
+                  `}
                 >
-                  <div className="relative">
-                    <Icon className="w-5 h-5" />
-                    {item.name === 'Inventory' && lowStockCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 bg-red-500 text-white text-xs flex items-center justify-center">
-                        {lowStockCount}
-                      </Badge>
-                    )}
+                  <div className={`
+                    p-1.5 rounded-full border transition-colors duration-200
+                    ${isActive 
+                      ? 'border-purple-300 bg-purple-100 dark:bg-purple-900/30' 
+                      : 'border-gray-300 dark:border-gray-600'
+                    }
+                  `}>
+                    <Icon className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-medium">{item.name}</span>
-                </button>
+                  <span className="text-xs font-mono font-bold uppercase tracking-tight">
+                    {item.name}
+                  </span>
+                </NavLink>
               );
             })}
           </div>
         </div>
-      )}
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
-              Confirm Logout
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to exit DukaSmart?
-            </p>
-            
-            <div className="flex gap-3">
-              <Button
-                onClick={handleLogout}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-              >
-                Yes, Logout
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </>
   );
 };
+
+export default EnhancedSidebar;

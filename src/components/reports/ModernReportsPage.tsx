@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,6 @@ import {
   Calendar,
   Download,
   X,
-  TrendingUp,
-  Clock,
-  AlertTriangle,
   Search,
   ChevronUp,
   ChevronDown,
@@ -23,7 +20,8 @@ import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
 import { formatCurrency } from '../../utils/currency';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import IndependentSalesTrendChart from './IndependentSalesTrendChart';
+import IndependentOrdersChart from './IndependentOrdersChart';
 
 type DateRange = 'today' | 'week' | 'month' | 'custom';
 type Filter = {
@@ -35,18 +33,20 @@ type Filter = {
 const ModernReportsPage = () => {
   const [dateRange, setDateRange] = useState<DateRange>('today');
   const [activeFilters, setActiveFilters] = useState<Filter[]>([]);
-  const [chartResolution, setChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
-  const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
   const [paymentsSearchTerm, setPaymentsSearchTerm] = useState('');
   const [salesSortConfig, setSalesSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  
+  // Independent chart states
+  const [salesTrendTimeframe, setSalesTrendTimeframe] = useState<'hourly' | 'daily' | 'monthly'>('daily');
+  const [ordersTimeframe, setOrdersTimeframe] = useState<'daily' | 'weekly'>('daily');
 
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { sales, loading: salesLoading } = useSupabaseSales();
 
-  // Calculate date range
+  // Calculate date range for summary cards
   const getDateRange = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -69,7 +69,7 @@ const ModernReportsPage = () => {
 
   const { from: fromDate, to: toDate } = getDateRange();
 
-  // Filter sales data with proper property access
+  // Filter sales data for summary cards
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
@@ -89,17 +89,17 @@ const ModernReportsPage = () => {
         }
       });
       
-      return isInDateRange && matchesFilters && sale.total >= 0; // Exclude repayments
+      return isInDateRange && matchesFilters && sale.total >= 0;
     });
   }, [sales, fromDate, toDate, activeFilters, products]);
 
-  // Calculate real metrics
+  // Calculate metrics for summary cards
   const metrics = useMemo(() => {
     const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
     const totalOrders = filteredSales.length;
     const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
-      product.currentStock <= (product.lowStockThreshold || 10)
+      product.currentStock !== -1 && product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
     const cashRevenue = filteredSales
       .filter(s => s.paymentMethod === 'cash')
@@ -118,93 +118,6 @@ const ModernReportsPage = () => {
     };
   }, [filteredSales, products]);
 
-  // Real-time chart data
-  const salesTrendData = useMemo(() => {
-    const now = new Date();
-    let bucketSize: number;
-    let formatString: string;
-    
-    switch (chartResolution) {
-      case 'hourly':
-        bucketSize = 60 * 60 * 1000; // 1 hour in ms
-        formatString = 'HH:00';
-        break;
-      case 'daily':
-        bucketSize = 24 * 60 * 60 * 1000; // 1 day in ms
-        formatString = 'MMM dd';
-        break;
-      case 'monthly':
-        bucketSize = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
-        formatString = 'MMM yyyy';
-        break;
-      default:
-        bucketSize = 24 * 60 * 60 * 1000;
-        formatString = 'MMM dd';
-    }
-
-    const groupedData: { [key: string]: number } = {};
-    
-    filteredSales.forEach(sale => {
-      const saleDate = new Date(sale.timestamp);
-      let key: string;
-      
-      switch (chartResolution) {
-        case 'hourly':
-          key = saleDate.toISOString().substring(0, 13) + ':00';
-          break;
-        case 'daily':
-          key = saleDate.toISOString().substring(0, 10);
-          break;
-        case 'monthly':
-          key = saleDate.toISOString().substring(0, 7);
-          break;
-        default:
-          key = saleDate.toISOString().substring(0, 10);
-      }
-      
-      groupedData[key] = (groupedData[key] || 0) + sale.total;
-    });
-    
-    return Object.entries(groupedData)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, revenue]) => ({
-        date: new Date(date).toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric',
-          hour: chartResolution === 'hourly' ? 'numeric' : undefined
-        }),
-        revenue
-      }));
-  }, [filteredSales, chartResolution]);
-
-  const ordersPerHourData = useMemo(() => {
-    const hourlyData: { [key: number]: number } = {};
-    
-    // Initialize all hours
-    for (let i = 0; i < 24; i++) {
-      hourlyData[i] = 0;
-    }
-    
-    const relevantSales = ordersChartView === 'daily' 
-      ? filteredSales.filter(sale => {
-          const saleDate = new Date(sale.timestamp);
-          const today = new Date();
-          return saleDate.toDateString() === today.toDateString();
-        })
-      : filteredSales;
-    
-    relevantSales.forEach(sale => {
-      const hour = new Date(sale.timestamp).getHours();
-      hourlyData[hour]++;
-    });
-    
-    return Object.entries(hourlyData).map(([hour, orders]) => ({
-      hour: `${hour}:00`,
-      orders
-    }));
-  }, [filteredSales, ordersChartView]);
-
-  // Real table data with search and sort
   const salesTableData = useMemo(() => {
     let data = filteredSales.map(sale => ({
       productName: sale.productName,
@@ -214,7 +127,6 @@ const ModernReportsPage = () => {
       date: new Date(sale.timestamp).toLocaleDateString()
     }));
 
-    // Apply search filter
     if (salesSearchTerm) {
       data = data.filter(item =>
         Object.values(item).some(value =>
@@ -223,7 +135,6 @@ const ModernReportsPage = () => {
       );
     }
 
-    // Apply sorting
     if (salesSortConfig) {
       data.sort((a, b) => {
         const aValue = a[salesSortConfig.key as keyof typeof a];
@@ -249,8 +160,7 @@ const ModernReportsPage = () => {
       })), [filteredSales]
   );
 
-  // Real alerts data
-  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).slice(0, 5);
+  const lowStockProducts = products.filter(p => p.currentStock !== -1 && p.currentStock <= (p.lowStockThreshold || 10)).slice(0, 5);
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0).slice(0, 5);
 
   const removeFilter = (filterToRemove: Filter) => {
@@ -292,16 +202,6 @@ const ModernReportsPage = () => {
     setShowExportMenu(false);
   };
 
-  // Real-time subscription for live updates
-  useEffect(() => {
-    // This will automatically update when the hooks detect changes
-    console.log('Reports data updated:', { 
-      salesCount: sales.length, 
-      productsCount: products.length, 
-      customersCount: customers.length 
-    });
-  }, [sales, products, customers]);
-
   if (salesLoading || productsLoading || customersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -312,7 +212,7 @@ const ModernReportsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Modern Top Bar - Updated to match new aesthetic */}
+      {/* Modern Top Bar */}
       <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
@@ -365,7 +265,6 @@ const ModernReportsPage = () => {
         <Card className="border border-gray-300 dark:border-gray-600 rounded-lg bg-transparent">
           <CardContent className="p-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              {/* Date Range */}
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-gray-500" />
                 <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -385,7 +284,6 @@ const ModernReportsPage = () => {
                 </div>
               </div>
 
-              {/* Active Filters */}
               <div className="flex items-center gap-2">
                 {activeFilters.map((filter, index) => (
                   <Badge
@@ -404,7 +302,6 @@ const ModernReportsPage = () => {
                 ))}
               </div>
 
-              {/* Export */}
               <div className="relative">
                 <Button
                   variant="outline"
@@ -434,121 +331,18 @@ const ModernReportsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Charts Section */}
+        {/* Independent Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Sales Trend Chart */}
-          <Card className="bg-white dark:bg-gray-800 rounded-2xl shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl font-mono font-bold uppercase tracking-wide text-gray-900 dark:text-white flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-purple-600" />
-                SALES TREND
-              </CardTitle>
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                {(['hourly', 'daily', 'monthly'] as const).map((resolution) => (
-                  <button
-                    key={resolution}
-                    onClick={() => setChartResolution(resolution)}
-                    className={`px-3 py-1 text-xs font-mono font-medium rounded transition-all ${
-                      chartResolution === resolution
-                        ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400'
-                    }`}
-                  >
-                    {resolution.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={salesTrendData}>
-                    <defs>
-                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#6b7280" 
-                      fontSize={12} 
-                      tickLine={false} 
-                    />
-                    <YAxis 
-                      stroke="#6b7280" 
-                      fontSize={12} 
-                      tickLine={false} 
-                      tickFormatter={(value) => formatCurrency(value)}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1f2937', 
-                        border: 'none', 
-                        borderRadius: '12px', 
-                        color: '#fff' 
-                      }}
-                      formatter={(value: number) => [formatCurrency(value), 'Revenue']}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#8b5cf6"
-                      strokeWidth={3}
-                      fill="url(#salesGradient)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Orders Per Hour Chart */}
-          <Card className="bg-white dark:bg-gray-800 rounded-2xl shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl font-mono font-bold uppercase tracking-wide text-gray-900 dark:text-white flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-600" />
-                ORDERS PER HOUR
-              </CardTitle>
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                {(['daily', 'weekly'] as const).map((view) => (
-                  <button
-                    key={view}
-                    onClick={() => setOrdersChartView(view)}
-                    className={`px-3 py-1 text-xs font-mono font-medium rounded transition-all ${
-                      ordersChartView === view
-                        ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400'
-                    }`}
-                  >
-                    {view.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ordersPerHourData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                    <XAxis dataKey="hour" stroke="#6b7280" fontSize={12} tickLine={false} />
-                    <YAxis stroke="#6b7280" fontSize={12} tickLine={false} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1f2937', 
-                        border: 'none', 
-                        borderRadius: '12px', 
-                        color: '#fff' 
-                      }}
-                      formatter={(value: number) => [value, 'Orders']}
-                    />
-                    <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+          <IndependentSalesTrendChart
+            sales={sales}
+            timeframe={salesTrendTimeframe}
+            onTimeframeChange={setSalesTrendTimeframe}
+          />
+          <IndependentOrdersChart
+            sales={sales}
+            timeframe={ordersTimeframe}
+            onTimeframeChange={setOrdersTimeframe}
+          />
         </div>
 
         {/* Tables Section */}
@@ -675,11 +469,10 @@ const ModernReportsPage = () => {
 
         {/* Alerts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Low Stock Alerts */}
           <Card className="border border-orange-300 dark:border-orange-600 rounded-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                <AlertTriangle className="w-5 h-5" />
+                <Package className="w-5 h-5" />
                 Low Stock Alerts
               </CardTitle>
             </CardHeader>
@@ -706,11 +499,10 @@ const ModernReportsPage = () => {
             </CardContent>
           </Card>
 
-          {/* Overdue Payments */}
           <Card className="border border-red-300 dark:border-red-600 rounded-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                <Clock className="w-5 h-5" />
+                <Users className="w-5 h-5" />
                 Overdue Payments
               </CardTitle>
             </CardHeader>
