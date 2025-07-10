@@ -9,6 +9,7 @@ import AuthForm from "./components/AuthForm";
 import AppLayout from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Dashboard from "./components/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +27,9 @@ function App() {
             path="/app/*"
             element={
               <ProtectedRoute>
-                <AppLayout />
+                <AppLayout>
+                  <Dashboard />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
