@@ -46,8 +46,11 @@ const DashboardTopbar = () => {
   const { customers } = useSupabaseCustomers();
   const { sales } = useSupabaseSales();
 
-  // Get low stock alerts - exclude products with unspecified stock (-1)
-  const lowStockAlerts = products.filter(p => p.currentStock !== -1 && p.currentStock <= p.lowStockThreshold);
+  // Enhanced low stock alerts - exclude products with unspecified stock (-1)
+  const lowStockAlerts = products.filter(p => 
+    p.currentStock !== -1 && 
+    p.currentStock <= p.lowStockThreshold
+  );
   const unreadNotifications = lowStockAlerts.length;
 
   // Global search with debounce
@@ -77,7 +80,7 @@ const DashboardTopbar = () => {
           id: product.id,
           type: 'product',
           title: product.name,
-          subtitle: `${formatCurrency(product.sellingPrice)} • Stock: ${product.currentStock}`,
+          subtitle: `${formatCurrency(product.sellingPrice)} • Stock: ${product.currentStock === -1 ? 'Unspecified' : product.currentStock}`,
           route: '/inventory'
         });
       });

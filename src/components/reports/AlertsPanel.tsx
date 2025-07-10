@@ -14,6 +14,12 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({
   lowStockProducts,
   overdueCustomers
 }) => {
+  // Filter out products with unspecified stock (-1) from low stock alerts
+  const filteredLowStockProducts = lowStockProducts.filter(product => 
+    product.currentStock !== -1 && 
+    product.currentStock <= product.lowStockThreshold
+  );
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Low Stock Alerts */}
@@ -24,12 +30,12 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({
             Low Stock Alerts
           </h3>
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {lowStockProducts.length} items
+            {filteredLowStockProducts.length} items
           </span>
         </div>
         
         <div className="space-y-3">
-          {lowStockProducts.slice(0, 5).map((product) => (
+          {filteredLowStockProducts.slice(0, 5).map((product) => (
             <div key={product.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
               <div className="flex-1">
                 <p className="font-medium text-gray-900 dark:text-white text-sm">
@@ -47,15 +53,15 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({
             </div>
           ))}
           
-          {lowStockProducts.length === 0 && (
+          {filteredLowStockProducts.length === 0 && (
             <p className="text-center text-gray-500 dark:text-gray-400 py-8">
               No low stock alerts
             </p>
           )}
           
-          {lowStockProducts.length > 5 && (
+          {filteredLowStockProducts.length > 5 && (
             <button className="w-full text-orange-600 hover:text-orange-700 text-sm font-medium flex items-center justify-center gap-1 pt-2">
-              View All ({lowStockProducts.length - 5} more)
+              View All ({filteredLowStockProducts.length - 5} more)
               <ArrowRight className="w-4 h-4" />
             </button>
           )}

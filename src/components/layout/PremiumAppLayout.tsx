@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { PremiumSidebar } from './PremiumSidebar';
+import { EnhancedSidebar } from './EnhancedSidebar';
 import { BottomNavigation } from './BottomNavigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import EnhancedTopbar from './EnhancedTopbar';
@@ -19,15 +19,15 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
       <EnhancedTopbar />
 
       <div className="flex flex-1 pt-16">
-        {/* Premium Sidebar */}
-        <PremiumSidebar 
+        {/* Enhanced Sidebar */}
+        <EnhancedSidebar 
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
 
         {/* Main Content */}
         <main className={`flex-1 transition-all duration-300 ${
-          !isMobile ? (sidebarOpen ? 'ml-[280px]' : 'ml-20') : ''
+          !isMobile ? (sidebarOpen ? 'ml-64' : 'ml-16') : ''
         } ${isMobile ? 'pb-20' : ''} bg-gray-50 dark:bg-gray-900 min-h-screen`}>
           {children}
         </main>
