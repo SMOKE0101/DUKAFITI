@@ -5,9 +5,9 @@ const MOBILE_BREAKPOINT = 768
 const TABLET_BREAKPOINT = 1024
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean>(false)
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
@@ -30,13 +30,14 @@ export function useIsMobile() {
     }
   }, [])
 
-  return isMobile
+  // Return false during SSR to prevent hydration mismatch
+  return isMobile ?? false
 }
 
 export function useIsTablet() {
-  const [isTablet, setIsTablet] = React.useState<boolean>(false)
+  const [isTablet, setIsTablet] = React.useState<boolean | undefined>(undefined)
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const checkTablet = () => {
       const width = window.innerWidth
       setIsTablet(width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT)
@@ -60,5 +61,6 @@ export function useIsTablet() {
     }
   }, [])
 
-  return isTablet
+  // Return false during SSR to prevent hydration mismatch
+  return isTablet ?? false
 }
