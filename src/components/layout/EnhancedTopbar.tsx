@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelLeft, Bell, Search, Moon, Sun, X, LogOut, Check, UserCircle2, FileText } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { PanelLeft, Bell, Search, X, LogOut, UserCircle2, FileText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +25,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   onSidebarToggle, 
   sidebarCollapsed 
 }) => {
-  const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { products } = useSupabaseProducts();
@@ -110,10 +108,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     navigate(result.route);
     setSearchTerm('');
     setShowSearchDropdown(false);
-  };
-
-  const handleThemeToggle = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   const handleNotificationClick = () => {
@@ -224,7 +218,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
         </div>
 
         {/* Right section - Actions and User */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Notifications */}
           <div className="relative" ref={notificationsRef}>
             <Button
@@ -248,12 +242,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Low Stock Alerts
                   </h3>
-                  {!hasUnreadNotifications && (
-                    <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                      <Check className="w-4 h-4" />
-                      <span className="text-xs font-medium">All read</span>
-                    </div>
-                  )}
                 </div>
                 <div className="p-2">
                   {lowStockProducts.length > 0 ? (
@@ -292,32 +280,24 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
             )}
           </div>
 
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleThemeToggle}
-            className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-105"
-          >
-            <div className="relative">
-              {theme === 'dark' ? (
-                <Sun className="w-5 h-5 text-yellow-500 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] animate-in spin-in-180" />
-              ) : (
-                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] animate-in spin-in-180" />
-              )}
-            </div>
-          </Button>
-
           {/* User Profile */}
           <div className="relative" ref={profileRef}>
             <Button
               variant="ghost"
               size="sm"
-              className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-105"
+              className="flex items-center gap-2 px-3 py-2 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-105 border border-gray-200 dark:border-gray-700"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
                 <UserCircle2 className="w-5 h-5 text-white" />
+              </div>
+              <div className="hidden sm:block text-left">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  {user?.email?.split('@')[0] || 'User'}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Admin
+                </div>
               </div>
             </Button>
 
@@ -326,8 +306,8 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-scale-in">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
-                      <UserCircle2 className="w-5 h-5 text-white" />
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
+                      <UserCircle2 className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -341,7 +321,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 </div>
                 <div className="p-2">
                   <button
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 text-gray-700 dark:text-gray-300 transition-colors duration-150"
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-3 text-gray-700 dark:text-gray-300 transition-colors duration-150"
                     onClick={() => {
                       navigate('/reports');
                       setShowProfileMenu(false);
@@ -351,27 +331,21 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                     Reports
                   </button>
                   <button
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 text-gray-700 dark:text-gray-300 transition-colors duration-150"
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-3 text-gray-700 dark:text-gray-300 transition-colors duration-150"
                     onClick={() => {
-                      handleThemeToggle();
+                      navigate('/settings');
                       setShowProfileMenu(false);
                     }}
                   >
-                    <div className="w-4 h-4 flex items-center justify-center">
-                      {theme === 'dark' ? (
-                        <Sun className="w-4 h-4 text-yellow-500 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]" />
-                      ) : (
-                        <Moon className="w-4 h-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]" />
-                      )}
-                    </div>
-                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    <Settings className="w-4 h-4" />
+                    Settings
                   </button>
                   <button
-                    className="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400 transition-colors duration-150"
+                    className="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-3 text-red-600 dark:text-red-400 transition-colors duration-150"
                     onClick={handleSignOut}
                   >
                     <LogOut className="w-4 h-4" />
-                    Sign Out
+                    Logout
                   </button>
                 </div>
               </div>

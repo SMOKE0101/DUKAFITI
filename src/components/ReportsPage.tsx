@@ -1,9 +1,9 @@
 
 import React from 'react';
-import ModernReportsPage from './reports/ModernReportsPage';
+import HybridReportsPage from './reports/HybridReportsPage';
 
 const ReportsPage = () => {
-  return <ModernReportsPage />;
+  return <HybridReportsPage />;
 };
 
 export default ReportsPage;
