@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -50,7 +51,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     }
   };
 
-  // Desktop Sidebar only - Enhanced with better animations
+  // Desktop Sidebar only - Enhanced with better animations and GPU acceleration
   return (
     <div className={`hidden lg:block ${className}`}>
       <div 
@@ -62,16 +63,20 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           isCollapsed ? 'w-20' : 'w-72'
         )}
       >
-        {/* Brand Section - Enhanced */}
-        <div className="p-6 border-b border-gray-200/50 flex-shrink-0 min-h-[88px] flex items-center overflow-hidden bg-gradient-to-br from-purple-50/80 to-blue-50/80">
+        {/* Brand Section - Enhanced with smooth animations */}
+        <div className={cn(
+          "p-6 border-b border-gray-200/50 flex-shrink-0 min-h-[88px] flex items-center overflow-hidden",
+          "bg-gradient-to-br from-purple-50/80 to-blue-50/80"
+        )}>
           <div className={cn(
             "flex items-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
             "transform-gpu will-change-transform",
             isCollapsed ? 'justify-center' : 'gap-3'
           )}>
             <div className={cn(
-              "rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-xl shadow-purple-500/25",
-              "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu will-change-transform",
+              "rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0",
+              "shadow-xl shadow-purple-500/25 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+              "transform-gpu will-change-transform",
               isCollapsed ? 'w-10 h-10' : 'w-12 h-12'
             )}>
               <span className={cn(
@@ -101,7 +106,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           </div>
         </div>
 
-        {/* Navigation Links - Enhanced animations */}
+        {/* Navigation Links - Enhanced animations with staggered entrance */}
         <nav className={cn(
           "flex-1 p-4 space-y-2 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
           "transform-gpu will-change-[overflow]",
@@ -130,7 +135,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   transitionDelay: `${index * 50}ms`,
                 }}
               >
-                {/* Enhanced active background */}
+                {/* Enhanced active background with GPU acceleration */}
                 {isActive && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-blue-600/5 rounded-xl animate-pulse" />
@@ -177,7 +182,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           })}
         </nav>
 
-        {/* Bottom Section - Logout - Enhanced */}
+        {/* Bottom Section - Logout - Enhanced with smooth animations */}
         <div className="p-4 border-t border-gray-200/50 space-y-2 flex-shrink-0 bg-gradient-to-br from-red-50/50 to-orange-50/50">
           <button
             onClick={handleSignOut}
@@ -221,7 +226,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           </button>
         </div>
 
-        {/* Enhanced Toggle Button */}
+        {/* Enhanced Toggle Button with spring animation */}
         <div className="p-4 border-t border-gray-200/50 flex-shrink-0">
           <button
             onClick={onToggle}

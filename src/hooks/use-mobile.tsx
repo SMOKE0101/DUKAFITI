@@ -22,28 +22,38 @@ const useDebounce = (value: any, delay: number) => {
   return debouncedValue
 }
 
+// Type-safe layout preferences
+type LayoutType = 'mobile' | 'tablet' | 'desktop'
+
+interface LayoutPreferences {
+  lastKnownWidth: number
+  preferredLayout: LayoutType
+}
+
 // Enhanced state management with persistence
 const useResponsiveState = () => {
   const [windowWidth, setWindowWidth] = React.useState<number>(0)
   const [mounted, setMounted] = React.useState(false)
-  const [layoutPreferences, setLayoutPreferences] = React.useState<{
-    lastKnownWidth: number
-    preferredLayout: 'mobile' | 'tablet' | 'desktop'
-  }>({
+  const [layoutPreferences, setLayoutPreferences] = React.useState<LayoutPreferences>({
     lastKnownWidth: 0,
     preferredLayout: 'desktop'
   })
 
   // Debounce window width changes to prevent layout thrashing
-  const debouncedWidth = useDebounce(windowWidth, 100)
+  const debouncedWidth = useDebounce(windowWidth, 150)
 
   React.useLayoutEffect(() => {
-    // Load preferences from localStorage
+    // Load preferences from localStorage with proper validation
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
-        const preferences = JSON.parse(stored)
-        setLayoutPreferences(preferences)
+        const preferences = JSON.parse(stored) as LayoutPreferences
+        // Validate the preferences structure
+        if (preferences && 
+            typeof preferences.lastKnownWidth === 'number' &&
+            ['mobile', 'tablet', 'desktop'].includes(preferences.preferredLayout)) {
+          setLayoutPreferences(preferences)
+        }
       }
     } catch (error) {
       console.warn('Failed to load layout preferences:', error)
@@ -59,9 +69,11 @@ const useResponsiveState = () => {
     updateWidth()
     setMounted(true)
 
-    // Create optimized resize handler
+    // Create optimized resize handler with throttling
+    let timeoutId: NodeJS.Timeout
     const handleResize = () => {
-      updateWidth()
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(updateWidth, 16) // ~60fps
     }
 
     // Use passive listener for better performance
@@ -69,27 +81,30 @@ const useResponsiveState = () => {
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      clearTimeout(timeoutId)
     }
   }, [])
 
-  // Update preferences when width changes
+  // Update preferences when width changes with proper typing
   React.useEffect(() => {
     if (!mounted || debouncedWidth === 0) return
 
-    const newLayout = debouncedWidth < MOBILE_BREAKPOINT 
-      ? 'mobile' 
-      : debouncedWidth < TABLET_BREAKPOINT 
-        ? 'tablet' 
-        : 'desktop'
+    const getLayoutType = (width: number): LayoutType => {
+      if (width < MOBILE_BREAKPOINT) return 'mobile'
+      if (width < TABLET_BREAKPOINT) return 'tablet'
+      return 'desktop'
+    }
 
-    const newPreferences = {
+    const newLayout = getLayoutType(debouncedWidth)
+
+    const newPreferences: LayoutPreferences = {
       lastKnownWidth: debouncedWidth,
       preferredLayout: newLayout
     }
 
     setLayoutPreferences(newPreferences)
 
-    // Persist to localStorage
+    // Persist to localStorage with error handling
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newPreferences))
     } catch (error) {

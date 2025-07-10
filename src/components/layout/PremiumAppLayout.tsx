@@ -41,7 +41,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
     );
   }
 
-  // Mobile layout - Enhanced with better spacing and no layout shifts
+  // Mobile layout - Enhanced with better spacing and full utilization
   if (isMobile) {
     return (
       <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-x-hidden">
@@ -51,27 +51,27 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
           sidebarCollapsed={false}
         />
 
-        {/* Mobile Main Content - Enhanced for better space utilization */}
-        <main className="flex-1 pt-16 pb-20 overflow-x-hidden min-h-[calc(100vh-5rem)] w-full">
+        {/* Mobile Main Content - Enhanced for full space utilization */}
+        <main className="flex-1 pt-16 pb-20 overflow-x-hidden min-h-[calc(100vh-9rem)] w-full">
           <div className={cn(
             "h-full w-full transition-all duration-300 ease-out",
-            "px-3 py-4" // Optimized padding for mobile
+            "px-2 py-2" // Minimal padding for maximum space utilization
           )}>
-            <div className="max-w-full mx-auto h-full">
+            <div className="w-full h-full">
               {children}
             </div>
           </div>
         </main>
 
         {/* Mobile Bottom Navigation - Enhanced with better positioning */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl shadow-purple-500/10">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl shadow-purple-500/10">
           <BottomNavigation />
         </div>
       </div>
     );
   }
 
-  // Tablet layout - Enhanced with optimized grid and spacing
+  // Tablet layout - Enhanced with optimized spacing and better content density
   if (isTablet) {
     return (
       <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-x-hidden">
@@ -82,26 +82,26 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         />
 
         {/* Tablet Main Content - Enhanced for better content density */}
-        <main className="flex-1 pt-16 pb-20 overflow-x-hidden min-h-[calc(100vh-5rem)] w-full">
+        <main className="flex-1 pt-16 pb-20 overflow-x-hidden min-h-[calc(100vh-9rem)] w-full">
           <div className={cn(
             "h-full w-full transition-all duration-300 ease-out",
-            "px-4 py-6" // Optimized padding for tablet
+            "px-3 py-3" // Optimized padding for tablet
           )}>
-            <div className="max-w-full mx-auto h-full">
+            <div className="w-full h-full">
               {children}
             </div>
           </div>
         </main>
 
         {/* Tablet Bottom Navigation - Enhanced positioning */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl shadow-purple-500/10">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl shadow-purple-500/10">
           <BottomNavigation />
         </div>
       </div>
     );
   }
 
-  // Desktop layout - Enhanced with better sidebar integration and animations
+  // Desktop layout - Enhanced with better sidebar integration and smooth animations
   return (
     <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-x-hidden">
       {/* Desktop Topbar */}
@@ -118,15 +118,15 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
           onToggle={handleSidebarToggle}
         />
 
-        {/* Desktop Main Content - Enhanced with smooth transitions and better space utilization */}
+        {/* Desktop Main Content - Enhanced with smooth transitions and perfect space utilization */}
         <main 
           className={cn(
             "flex-1 min-h-[calc(100vh-4rem)] overflow-x-hidden",
             "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
             "transform-gpu will-change-[margin,width]",
             sidebarCollapsed 
-              ? 'ml-[72px] w-[calc(100vw-72px)]' 
-              : 'ml-[280px] w-[calc(100vw-280px)]'
+              ? 'ml-[80px] w-[calc(100vw-80px)]' 
+              : 'ml-[288px] w-[calc(100vw-288px)]'
           )}
         >
           <div className={cn(
@@ -134,7 +134,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
             "transition-all duration-300 ease-out",
             "p-4 md:p-6 lg:p-8" // Responsive padding for desktop
           )}>
-            <div className="max-w-full mx-auto">
+            <div className="w-full">
               {children}
             </div>
           </div>
