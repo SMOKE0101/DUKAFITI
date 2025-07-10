@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelLeft, Bell, Search, User, Moon, Sun, X, LogOut } from 'lucide-react';
+import { PanelLeft, Bell, Search, Moon, Sun, X, LogOut, Check, UserCircle2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,15 @@ import { useAuth } from '../../hooks/useAuth';
 interface EnhancedTopbarProps {
   onSidebarToggle: () => void;
   sidebarCollapsed: boolean;
+}
+
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  time: string;
+  unread: boolean;
+  type: 'info' | 'warning' | 'success';
 }
 
 const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ 
@@ -20,15 +29,35 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { 
+      id: 1, 
+      title: 'Low Stock Alert', 
+      message: 'Product ABC is running low on inventory', 
+      time: '5 min ago', 
+      unread: true,
+      type: 'warning'
+    },
+    { 
+      id: 2, 
+      title: 'New Sale Completed', 
+      message: 'Customer John made a purchase of KSh 2,500', 
+      time: '10 min ago', 
+      unread: true,
+      type: 'success'
+    },
+    { 
+      id: 3, 
+      title: 'Payment Received', 
+      message: 'Payment of KSh 1,250 received from Mary', 
+      time: '1 hour ago', 
+      unread: false,
+      type: 'info'
+    },
+  ]);
+
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-
-  // Mock notifications data
-  const notifications = [
-    { id: 1, title: 'Low Stock Alert', message: 'Product ABC is running low', time: '5 min ago', unread: true },
-    { id: 2, title: 'New Sale', message: 'Customer John made a purchase', time: '10 min ago', unread: true },
-    { id: 3, title: 'Payment Received', message: 'Payment of $250 received', time: '1 hour ago', unread: false },
-  ];
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
@@ -51,7 +80,19 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     e.preventDefault();
     if (searchTerm.trim()) {
       console.log('Searching for:', searchTerm);
-      // Implement search functionality here
+      // Add your search logic here
+    }
+  };
+
+  const handleThemeToggle = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleNotificationClick = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications) {
+      // Mark all as read when opening notifications
+      setNotifications(prev => prev.map(notif => ({ ...notif, unread: false })));
     }
   };
 
@@ -60,6 +101,15 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
       await signOut();
     }
     setShowProfileMenu(false);
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'warning': return '⚠️';
+      case 'success': return '✅';
+      case 'info': return 'ℹ️';
+      default: return '📢';
+    }
   };
 
   return (
@@ -133,11 +183,11 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               variant="ghost"
               size="sm"
               className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out relative"
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={handleNotificationClick}
             >
               <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               {unreadCount > 0 && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
                   <span className="text-xs text-white font-medium">{unreadCount}</span>
                 </div>
               )}
@@ -145,35 +195,44 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto animate-scale-in">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Notifications
                   </h3>
+                  {notifications.length > 0 && (
+                    <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <Check className="w-4 h-4" />
+                      <span className="text-xs font-medium">All read</span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-2">
-                  {notifications.map((notification) => (
-                    <div key={notification.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification) => (
+                      <div key={notification.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150">
+                        <div className="flex items-start gap-3">
+                          <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                          <div className="flex-1">
                             <div className="font-medium text-gray-900 dark:text-white text-sm">
                               {notification.title}
                             </div>
-                            {notification.unread && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            {notification.message}
-                          </div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {notification.time}
+                            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {notification.message}
+                            </div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              {notification.time}
+                            </div>
                           </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                      <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No notifications</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             )}
@@ -183,14 +242,16 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={handleThemeToggle}
             className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out"
           >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            ) : (
-              <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            )}
+            <div className="relative">
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5 text-yellow-500 animate-fade-in transition-all duration-300 ease-out" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 animate-fade-in transition-all duration-300 ease-out" />
+              )}
+            </div>
           </Button>
 
           {/* User Profile */}
@@ -201,19 +262,15 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
+              <UserCircle2 className="w-6 h-6 text-gray-600 dark:text-gray-400" />
             </Button>
 
             {/* Profile Dropdown */}
             {showProfileMenu && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-scale-in">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
-                    </div>
+                    <UserCircle2 className="w-10 h-10 text-gray-600 dark:text-gray-400" />
                     <div>
                       <p className="text-sm font-bold text-gray-900 dark:text-white">
                         {user?.email?.split('@')[0] || 'User'}
@@ -232,7 +289,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                       setShowProfileMenu(false);
                     }}
                   >
-                    <User className="w-4 h-4" />
+                    <UserCircle2 className="w-4 h-4" />
                     Profile Settings
                   </button>
                   <button

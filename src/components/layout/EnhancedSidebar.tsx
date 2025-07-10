@@ -9,8 +9,7 @@ import {
   BarChart3, 
   Settings,
   LogOut,
-  ChevronRight,
-  User
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -35,7 +34,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   className = '' 
 }) => {
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
     if (window.confirm('Are you sure you want to sign out?')) {
@@ -43,7 +42,6 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     }
   };
 
-  // Calculate effective width - no hover expansion
   const effectiveWidth = isCollapsed ? '72px' : '280px';
 
   return (
@@ -51,51 +49,32 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
       {/* Desktop Sidebar */}
       <div className={`hidden md:block ${className}`}>
         <div 
-          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 transition-all duration-300 ease-out shadow-lg"
+          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 transition-all duration-300 ease-out shadow-lg overflow-hidden"
           style={{ 
             width: effectiveWidth,
           }}
         >
-          {/* Brand & Profile Section */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          {/* Brand Section */}
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
                 <span className="text-white font-black text-lg">D</span>
               </div>
-              {!isCollapsed && (
-                <div className="min-w-0 transition-all duration-300 ease-out transform">
-                  <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
-                    DUKASMART
-                  </h1>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                    Smart Business
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {/* User Profile */}
-            {!isCollapsed && user && (
-              <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-out">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                      {user.email?.split('@')[0] || 'User'}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      Owner
-                    </p>
-                  </div>
-                </div>
+              <div className={`min-w-0 transition-all duration-300 ease-out ${
+                isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+              }`}>
+                <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
+                  DUKASMART
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  Smart Business
+                </p>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -123,18 +102,18 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   `}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  {!isCollapsed && (
-                    <span className="font-semibold text-sm min-w-0 truncate transition-all duration-250 ease-out transform translate-x-0">
-                      {item.name}
-                    </span>
-                  )}
+                  <span className={`font-semibold text-sm min-w-0 truncate transition-all duration-250 ease-out ${
+                    isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+                  }`}>
+                    {item.name}
+                  </span>
                 </NavLink>
               );
             })}
           </nav>
 
-          {/* Bottom Utilities - Logout only */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+          {/* Bottom Section - Logout */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 flex-shrink-0">
             <button
               onClick={handleSignOut}
               className={`
@@ -150,16 +129,16 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
               `}>
                 <LogOut className="w-5 h-5" />
               </div>
-              {!isCollapsed && (
-                <span className="font-semibold text-sm transition-all duration-250 ease-out transform translate-x-0">
-                  Logout
-                </span>
-              )}
+              <span className={`font-semibold text-sm transition-all duration-250 ease-out ${
+                isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+              }`}>
+                Logout
+              </span>
             </button>
           </div>
 
-          {/* Toggle Button - Bottom Center */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Toggle Button */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
             <button
               onClick={onToggle}
               className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
