@@ -7,7 +7,7 @@ import ModernLanding from "./pages/ModernLanding";
 import Landing from "./pages/Landing";
 import BrandDemo from "./pages/BrandDemo";
 import AuthForm from "./components/AuthForm";
-import AppLayout from "./components/layout/AppLayout";
+import PremiumAppLayout from "./components/layout/PremiumAppLayout";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./components/Dashboard";
@@ -21,6 +21,8 @@ import Settings from "./pages/Settings";
 const queryClient = new QueryClient();
 
 function App() {
+  console.log('App component rendering');
+  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -37,9 +39,9 @@ function App() {
               path="/app"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <Dashboard />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -47,9 +49,9 @@ function App() {
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <Dashboard />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -57,9 +59,9 @@ function App() {
               path="/inventory"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <InventoryPage />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -67,9 +69,9 @@ function App() {
               path="/products"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <InventoryPage />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -77,9 +79,9 @@ function App() {
               path="/customers"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <CustomersPage />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -87,9 +89,9 @@ function App() {
               path="/sales"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <SalesManagement />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -97,9 +99,9 @@ function App() {
               path="/history"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <TransactionHistory />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -107,9 +109,9 @@ function App() {
               path="/debts"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <TransactionHistory />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -117,9 +119,9 @@ function App() {
               path="/reports"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <ReportsPage />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
@@ -127,9 +129,9 @@ function App() {
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
+                  <PremiumAppLayout>
                     <Settings />
-                  </AppLayout>
+                  </PremiumAppLayout>
                 </ProtectedRoute>
               }
             />
