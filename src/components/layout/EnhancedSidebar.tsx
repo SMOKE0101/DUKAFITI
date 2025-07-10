@@ -49,20 +49,20 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
       {/* Desktop Sidebar */}
       <div className={`hidden md:block ${className}`}>
         <div 
-          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 transition-all duration-300 ease-out shadow-lg overflow-hidden"
+          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 shadow-lg overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
           style={{ 
             width: effectiveWidth,
           }}
         >
           {/* Brand Section */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+            <div className={`flex items-center transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
                 <span className="text-white font-black text-lg">D</span>
               </div>
-              <div className={`min-w-0 transition-all duration-300 ease-out ${
-                isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
-              }`}>
+              <div className={`min-w-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
+              }`} style={{ transitionDelay: isCollapsed ? '0ms' : '150ms' }}>
                 <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
                   DUKASMART
                 </h1>
@@ -84,16 +84,16 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   key={item.name}
                   to={item.href}
                   className={`
-                    group flex items-center rounded-xl transition-all duration-250 ease-out relative
+                    group flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] relative
                     ${isCollapsed ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
                     ${isActive 
-                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-lg border-l-4 border-purple-600' 
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400'
+                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-lg border-l-4 border-purple-600 transform scale-[1.02]' 
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400 hover:transform hover:scale-[1.02]'
                     }
                   `}
                 >
                   <div className={`
-                    flex items-center justify-center rounded-lg transition-all duration-250 ease-out flex-shrink-0
+                    flex items-center justify-center rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex-shrink-0
                     ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
                     ${isActive 
                       ? 'text-purple-700 dark:text-purple-400' 
@@ -102,9 +102,9 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   `}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className={`font-semibold text-sm min-w-0 truncate transition-all duration-250 ease-out ${
-                    isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
-                  }`}>
+                  <span className={`font-semibold text-sm min-w-0 truncate transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                    isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
+                  }`} style={{ transitionDelay: isCollapsed ? '0ms' : '200ms' }}>
                     {item.name}
                   </span>
                 </NavLink>
@@ -117,21 +117,21 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             <button
               onClick={handleSignOut}
               className={`
-                group flex items-center rounded-xl transition-all duration-250 ease-out w-full relative
+                group flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-full relative
                 ${isCollapsed ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
-                text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
+                text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:transform hover:scale-[1.02]
               `}
             >
               <div className={`
-                flex items-center justify-center rounded-lg transition-all duration-250 ease-out flex-shrink-0
+                flex items-center justify-center rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex-shrink-0
                 ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
                 text-red-600 dark:text-red-400
               `}>
                 <LogOut className="w-5 h-5" />
               </div>
-              <span className={`font-semibold text-sm transition-all duration-250 ease-out ${
-                isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
-              }`}>
+              <span className={`font-semibold text-sm transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
+              }`} style={{ transitionDelay: isCollapsed ? '0ms' : '200ms' }}>
                 Logout
               </span>
             </button>
@@ -141,14 +141,14 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
             <button
               onClick={onToggle}
-              className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
+              className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group hover:transform hover:scale-105"
               aria-expanded={!isCollapsed}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <div className="p-1 transition-transform duration-250 ease-out" style={{
-                transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
+              <div className="p-1 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]" style={{
+                transform: isCollapsed ? 'rotate(0deg) scale(1.1)' : 'rotate(180deg) scale(1.1)'
               }}>
-                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400" />
+                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300" />
               </div>
             </button>
           </div>
@@ -168,10 +168,10 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   key={item.name}
                   to={item.href}
                   className={`
-                    flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-250 ease-out
+                    flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
                     ${isActive 
-                      ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20' 
-                      : 'text-gray-600 dark:text-gray-400'
+                      ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 transform scale-105' 
+                      : 'text-gray-600 dark:text-gray-400 hover:transform hover:scale-105'
                     }
                   `}
                 >

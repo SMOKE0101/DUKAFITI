@@ -1,10 +1,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelLeft, Bell, Search, Moon, Sun, X, LogOut, Check, UserCircle2 } from 'lucide-react';
+import { PanelLeft, Bell, Search, Moon, Sun, X, LogOut, Check, UserCircle2, FileText } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 interface EnhancedTopbarProps {
   onSidebarToggle: () => void;
@@ -26,6 +27,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 }) => {
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -122,11 +124,11 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
             variant="ghost"
             size="sm"
             onClick={onSidebarToggle}
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out group"
+            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] group hover:scale-105"
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <PanelLeft 
-              className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-all duration-250 ease-out" 
+              className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]" 
               style={{
                 transform: sidebarCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
               }}
@@ -158,7 +160,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 placeholder="Search products, customers, orders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-250 ease-out"
+                className="pl-10 pr-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
               />
               {searchTerm && (
                 <Button
@@ -182,7 +184,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out relative"
+              className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] relative hover:scale-105"
               onClick={handleNotificationClick}
             >
               <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -243,13 +245,13 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleThemeToggle}
-            className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out"
+            className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-105"
           >
             <div className="relative">
               {theme === 'dark' ? (
-                <Sun className="w-5 h-5 text-yellow-500 animate-fade-in transition-all duration-300 ease-out" />
+                <Sun className="w-5 h-5 text-yellow-500 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] animate-in spin-in-180" />
               ) : (
-                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 animate-fade-in transition-all duration-300 ease-out" />
+                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] animate-in spin-in-180" />
               )}
             </div>
           </Button>
@@ -259,10 +261,14 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out"
+              className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-105"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
             >
-              <UserCircle2 className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
             </Button>
 
             {/* Profile Dropdown */}
@@ -270,7 +276,11 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-scale-in">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-3">
-                    <UserCircle2 className="w-10 h-10 text-gray-600 dark:text-gray-400" />
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                      <span className="text-white font-semibold">
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900 dark:text-white">
                         {user?.email?.split('@')[0] || 'User'}
@@ -285,12 +295,25 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                   <button
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 text-gray-700 dark:text-gray-300 transition-colors duration-150"
                     onClick={() => {
-                      console.log('Navigate to profile settings');
+                      navigate('/reports');
                       setShowProfileMenu(false);
                     }}
                   >
-                    <UserCircle2 className="w-4 h-4" />
-                    Profile Settings
+                    <FileText className="w-4 h-4" />
+                    Reports
+                  </button>
+                  <button
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 text-gray-700 dark:text-gray-300 transition-colors duration-150"
+                    onClick={handleThemeToggle}
+                  >
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      {theme === 'dark' ? (
+                        <Sun className="w-4 h-4 text-yellow-500 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]" />
+                      ) : (
+                        <Moon className="w-4 h-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]" />
+                      )}
+                    </div>
+                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                   </button>
                   <button
                     className="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400 transition-colors duration-150"
