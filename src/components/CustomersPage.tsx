@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { Customer } from '../types';
@@ -19,15 +18,15 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
-import { AddCustomerModal } from './customers/AddCustomerModal';
-import { EditCustomerModal } from './customers/EditCustomerModal';
-import { DeleteCustomerModal } from './customers/DeleteCustomerModal';
-import { CustomerHistoryModal } from './customers/CustomerHistoryModal';
+import AddCustomerModal from './customers/AddCustomerModal';
+import EditCustomerModal from './customers/EditCustomerModal';
+import DeleteCustomerModal from './customers/DeleteCustomerModal';
+import CustomerHistoryModal from './customers/CustomerHistoryModal';
 import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
-import { RefinedCustomerCard } from './customers/RefinedCustomerCard';
+import RefinedCustomerCard from './customers/RefinedCustomerCard';
 
 const CustomersPage = () => {
-  const { customers, isLoading } = useSupabaseCustomers();
+  const { customers, loading } = useSupabaseCustomers();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -95,7 +94,7 @@ const CustomersPage = () => {
   const totalOutstandingDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
   const totalPurchasesValue = customers.reduce((sum, c) => sum + c.totalPurchases, 0);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <div className="container mx-auto px-4 py-8">

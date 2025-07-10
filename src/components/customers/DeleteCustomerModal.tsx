@@ -4,21 +4,42 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { Customer } from '../../types';
+import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
+import { useToast } from '../../hooks/use-toast';
 
 interface DeleteCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
   customer: Customer | null;
 }
 
 const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
   isOpen,
   onClose,
-  onConfirm,
   customer
 }) => {
+  const { deleteCustomer } = useSupabaseCustomers();
+  const { toast } = useToast();
+
   if (!customer) return null;
+
+  const handleConfirm = async () => {
+    try {
+      await deleteCustomer(customer.id);
+      toast({
+        title: "Customer Deleted",
+        description: `${customer.name} has been deleted successfully.`,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Failed to delete customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -52,7 +73,7 @@ const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={onConfirm}
+              onClick={handleConfirm}
               className="flex-1 bg-red-600 text-white hover:bg-red-700"
             >
               Delete
