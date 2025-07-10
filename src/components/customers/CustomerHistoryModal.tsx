@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Package, CreditCard, Smartphone, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
@@ -26,7 +26,7 @@ interface Order {
 interface Payment {
   id: string;
   date: string;
-  method: 'cash' | 'mpesa';
+  method: 'cash' | 'mpesa' | 'bank';
   amount: number;
   reference?: string;
 }
@@ -43,13 +43,8 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    if (isOpen && customer) {
-      fetchData();
-    }
-  }, [isOpen, customer]);
-
-  const fetchData = async () => {
+  // Fetch initial data
+  const fetchInitialData = useCallback(async () => {
     if (!customer) return;
     
     setLoading(true);
@@ -75,24 +70,24 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         setOrders(ordersData);
       }
 
-      // Fetch actual payment data from transactions table
+      // Fetch payment data (including negative sales entries which represent payments)
       const { data: paymentsData, error: paymentsError } = await supabase
-        .from('transactions')
+        .from('sales')
         .select('*')
         .eq('customer_id', customer.id)
-        .eq('paid', true)
-        .order('paid_date', { ascending: false })
+        .lt('total_amount', 0) // Negative amounts are payments
+        .order('timestamp', { ascending: false })
         .limit(20);
 
       if (paymentsError) {
         console.error('Error fetching payments:', paymentsError);
       } else {
-        const paymentsFormatted = paymentsData?.map(transaction => ({
-          id: transaction.id,
-          date: transaction.paid_date || transaction.date || '',
-          method: 'cash' as const, // Default to cash, could be enhanced with payment method field
-          amount: transaction.total_amount,
-          reference: transaction.notes || undefined
+        const paymentsFormatted = paymentsData?.map(payment => ({
+          id: payment.id,
+          date: payment.timestamp || payment.created_at || '',
+          method: payment.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
+          amount: Math.abs(payment.total_amount), // Convert negative to positive for display
+          reference: payment.payment_details?.reference || undefined
         })) || [];
         setPayments(paymentsFormatted);
       }
@@ -102,7 +97,110 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [customer]);
+
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!isOpen || !customer) return;
+
+    // Fetch initial data
+    fetchInitialData();
+
+    // Set up real-time subscription for sales (orders)
+    const salesChannel = supabase
+      .channel(`sales-changes-${customer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sales',
+          filter: `customer_id=eq.${customer.id}`,
+        },
+        (payload) => {
+          console.log('Sales change detected:', payload);
+          
+          if (payload.eventType === 'INSERT' && payload.new) {
+            const newSale = payload.new;
+            
+            if (newSale.total_amount >= 0) {
+              // Positive amount = order
+              const newOrder: Order = {
+                id: newSale.id,
+                date: newSale.timestamp || newSale.created_at || '',
+                orderNumber: `ORD-${String(orders.length + 1).padStart(3, '0')}`,
+                items: newSale.product_name,
+                total: newSale.total_amount
+              };
+              
+              setOrders(prev => {
+                // Avoid duplicates
+                if (prev.some(order => order.id === newOrder.id)) return prev;
+                return [newOrder, ...prev].slice(0, 20); // Keep only latest 20
+              });
+            } else {
+              // Negative amount = payment
+              const newPayment: Payment = {
+                id: newSale.id,
+                date: newSale.timestamp || newSale.created_at || '',
+                method: newSale.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
+                amount: Math.abs(newSale.total_amount),
+                reference: newSale.payment_details?.reference || undefined
+              };
+              
+              setPayments(prev => {
+                // Avoid duplicates
+                if (prev.some(payment => payment.id === newPayment.id)) return prev;
+                return [newPayment, ...prev].slice(0, 20); // Keep only latest 20
+              });
+            }
+          }
+          
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const updatedSale = payload.new;
+            
+            if (updatedSale.total_amount >= 0) {
+              // Update order
+              setOrders(prev => prev.map(order => 
+                order.id === updatedSale.id 
+                  ? {
+                      ...order,
+                      items: updatedSale.product_name,
+                      total: updatedSale.total_amount,
+                      date: updatedSale.timestamp || updatedSale.created_at || order.date
+                    }
+                  : order
+              ));
+            } else {
+              // Update payment
+              setPayments(prev => prev.map(payment => 
+                payment.id === updatedSale.id 
+                  ? {
+                      ...payment,
+                      method: updatedSale.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
+                      amount: Math.abs(updatedSale.total_amount),
+                      date: updatedSale.timestamp || updatedSale.created_at || payment.date,
+                      reference: updatedSale.payment_details?.reference || undefined
+                    }
+                  : payment
+              ));
+            }
+          }
+          
+          if (payload.eventType === 'DELETE' && payload.old) {
+            const deletedId = payload.old.id;
+            setOrders(prev => prev.filter(order => order.id !== deletedId));
+            setPayments(prev => prev.filter(payment => payment.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription when modal closes
+    return () => {
+      supabase.removeChannel(salesChannel);
+    };
+  }, [customer, isOpen, fetchInitialData, orders.length]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';
@@ -122,6 +220,16 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     }
     setExpandedOrders(newExpanded);
   };
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setOrders([]);
+      setPayments([]);
+      setExpandedOrders(new Set());
+      setActiveTab('orders');
+    }
+  }, [isOpen]);
 
   if (!customer) return null;
 
@@ -299,7 +407,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                               <Banknote className="w-4 h-4 text-blue-600" />
                             )}
                             <span className="text-sm capitalize">
-                              {payment.method === 'mpesa' ? 'M-Pesa' : 'Cash'}
+                              {payment.method === 'mpesa' ? 'M-Pesa' : payment.method}
                             </span>
                           </div>
                           <span className="font-semibold text-green-700 dark:text-green-400">

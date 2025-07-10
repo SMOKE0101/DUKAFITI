@@ -39,15 +39,15 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       
-      // Update customer balance
+      // Update customer balance first
       await updateCustomer(customer.id, {
         outstandingDebt: newBalance,
         lastPurchaseDate: new Date().toISOString()
       });
 
       // Create a payment record in the sales table as a negative entry
-      // This helps track payment history
-      await supabase
+      // This helps track payment history and will trigger real-time updates
+      const { error: salesError } = await supabase
         .from('sales')
         .insert({
           user_id: user.id,
@@ -56,26 +56,19 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
           product_id: '00000000-0000-0000-0000-000000000000', // Placeholder for payment
           product_name: 'Payment Received',
           quantity: 1,
-          selling_price: -paymentAmount,
+          selling_price: -paymentAmount, // Negative amount indicates payment
           cost_price: 0,
-          total_amount: -paymentAmount,
+          total_amount: -paymentAmount, // Negative amount indicates payment
           profit: 0,
           payment_method: method,
           payment_details: reference ? { reference } : {},
           timestamp: new Date().toISOString()
         });
 
-      // Trigger real-time update by broadcasting the change
-      supabase.channel('payments').send({
-        type: 'broadcast',
-        event: 'payment_recorded',
-        payload: {
-          customer_id: customer.id,
-          amount: paymentAmount,
-          method,
-          reference
-        }
-      });
+      if (salesError) {
+        console.error('Error creating payment record:', salesError);
+        throw salesError;
+      }
 
       // Reset form
       setAmount('');
