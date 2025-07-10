@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,8 @@ import CustomerHistoryModal from './customers/CustomerHistoryModal';
 import EditCustomerModal from './customers/EditCustomerModal';
 import DeleteCustomerModal from './customers/DeleteCustomerModal';
 import RepaymentDrawer from './customers/RepaymentDrawer';
+import { supabase } from '../integrations/supabase/client';
+import { useAuth } from '../hooks/useAuth';
 
 interface CustomerStats {
   totalCustomers: number;
@@ -45,8 +47,9 @@ const CustomersPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [updatingCustomers, setUpdatingCustomers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
-  const { customers, loading, createCustomer, deleteCustomer } = useSupabaseCustomers();
+  const { customers, loading, createCustomer, deleteCustomer, refreshCustomers } = useSupabaseCustomers();
   const { sales } = useSupabaseSales();
+  const { user } = useAuth();
 
   const [newCustomerForm, setNewCustomerForm] = useState({
     name: '',
@@ -58,6 +61,56 @@ const CustomersPage = () => {
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Set up real-time subscriptions for instant updates
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('Setting up real-time subscriptions for customers...');
+
+    // Subscribe to customer changes
+    const customersChannel = supabase
+      .channel('customers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customers',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Customer change detected:', payload);
+          refreshCustomers();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to sales changes (affects customer outstanding debt)
+    const salesChannel = supabase
+      .channel('sales-customer-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sales',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Sales change detected (customer impact):', payload);
+          // Refresh customers when sales change as they affect outstanding debt
+          refreshCustomers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up real-time subscriptions');
+      supabase.removeChannel(customersChannel);
+      supabase.removeChannel(salesChannel);
+    };
+  }, [user, refreshCustomers]);
 
   // Calculate refined statistics with real-time data
   const stats: CustomerStats = useMemo(() => {
@@ -292,12 +345,12 @@ const CustomersPage = () => {
           <h1 className="text-3xl font-display text-primary">Customers</h1>
           <Button 
             onClick={() => setShowAddModal(true)}
-            className="px-6 py-2 bg-accent text-white rounded-xl shadow-lg hover:bg-accent/90 transition-all duration-200 flex items-center gap-2"
+            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 text-lg font-semibold transform hover:scale-105"
           >
-            <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-              <UserPlus className="w-3 h-3" />
+            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+              <UserPlus className="w-4 h-4" />
             </div>
-            New Customer
+            Add New Customer
           </Button>
         </div>
 

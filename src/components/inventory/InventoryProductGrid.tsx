@@ -7,7 +7,7 @@ interface InventoryProductGridProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  onRestock: (product: Product) => void;
+  onRestock: (product: Product, quantity: number, buyingPrice: number) => Promise<void>;
 }
 
 const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({

@@ -12,11 +12,12 @@ interface ProductCardProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  onRestock: (product: Product) => void;
+  onRestock: (product: Product, quantity: number, buyingPrice: number) => Promise<void>;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, onRestock }) => {
   const [showRestockModal, setShowRestockModal] = useState(false);
+  const [isRestocking, setIsRestocking] = useState(false);
   
   const isLowStock = product.currentStock <= product.lowStockThreshold && product.currentStock !== -1;
   const isOutOfStock = product.currentStock === 0;
@@ -35,9 +36,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
     return <Badge variant="secondary">In Stock</Badge>;
   };
 
-  const handleRestock = (quantity: number, buyingPrice: number) => {
-    onRestock(product);
-    setShowRestockModal(false);
+  const handleRestock = async (quantity: number, buyingPrice: number) => {
+    if (!product || isUnspecifiedQuantity) return;
+    
+    setIsRestocking(true);
+    try {
+      await onRestock(product, quantity, buyingPrice);
+      setShowRestockModal(false);
+    } catch (error) {
+      console.error('Failed to restock product:', error);
+    } finally {
+      setIsRestocking(false);
+    }
   };
 
   return (
@@ -119,7 +129,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
       <RestockModal
         isOpen={showRestockModal}
         onClose={() => setShowRestockModal(false)}
+        onSave={handleRestock}
         product={product}
+        isLoading={isRestocking}
       />
     </>
   );

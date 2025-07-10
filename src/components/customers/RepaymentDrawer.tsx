@@ -46,34 +46,62 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       
-      // Update customer balance first
-      await updateCustomer(customer.id, {
-        outstandingDebt: newBalance,
-        lastPurchaseDate: new Date().toISOString()
+      // Use a transaction to ensure data integrity
+      const { error: transactionError } = await supabase.rpc('record_customer_payment', {
+        p_customer_id: customer.id,
+        p_payment_amount: paymentAmount,
+        p_payment_method: method,
+        p_payment_reference: reference || null,
+        p_user_id: user.id,
+        p_customer_name: customer.name
       });
 
-      // Create a payment record in the sales table as a negative entry
-      const { error: salesError } = await supabase
-        .from('sales')
-        .insert({
-          user_id: user.id,
-          customer_id: customer.id,
-          customer_name: customer.name,
-          product_id: '00000000-0000-0000-0000-000000000000', // Placeholder for payment
-          product_name: 'Payment Received',
-          quantity: 1,
-          selling_price: -paymentAmount, // Negative amount indicates payment
-          cost_price: 0,
-          total_amount: -paymentAmount, // Negative amount indicates payment
-          profit: 0,
-          payment_method: method,
-          payment_details: reference ? { reference } : {},
-          timestamp: new Date().toISOString()
+      if (transactionError) {
+        console.error('Transaction error:', transactionError);
+        
+        // Fallback to manual transaction handling
+        console.log('Attempting manual transaction...');
+        
+        // Step 1: Create payment record first
+        const { data: paymentData, error: salesError } = await supabase
+          .from('sales')
+          .insert({
+            user_id: user.id,
+            customer_id: customer.id,
+            customer_name: customer.name,
+            product_id: '00000000-0000-0000-0000-000000000000',
+            product_name: 'Payment Received',
+            quantity: 1,
+            selling_price: -paymentAmount,
+            cost_price: 0,
+            total_amount: -paymentAmount,
+            profit: 0,
+            payment_method: method,
+            payment_details: reference ? { reference } : {},
+            timestamp: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (salesError) {
+          console.error('Error creating payment record:', salesError);
+          throw new Error(`Failed to record payment: ${salesError.message}`);
+        }
+
+        console.log('Payment record created:', paymentData);
+
+        // Step 2: Update customer balance only after payment record is created
+        const { error: updateError } = await updateCustomer(customer.id, {
+          outstandingDebt: newBalance,
+          lastPurchaseDate: new Date().toISOString()
         });
 
-      if (salesError) {
-        console.error('Error creating payment record:', salesError);
-        throw salesError;
+        if (updateError) {
+          console.error('Error updating customer balance:', updateError);
+          // Rollback: Delete the payment record if customer update fails
+          await supabase.from('sales').delete().eq('id', paymentData.id);
+          throw new Error('Failed to update customer balance. Payment not recorded.');
+        }
       }
 
       // Reset form
@@ -91,7 +119,7 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       console.error('Failed to record payment:', error);
       toast({
         title: "Error",
-        description: "Failed to record payment. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to record payment. Please try again.",
         variant: "destructive",
       });
     } finally {
