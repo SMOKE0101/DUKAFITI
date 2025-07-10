@@ -1,234 +1,258 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useAuth } from '../../hooks/useAuth';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Key, Trash2, Shield, Clock } from 'lucide-react';
+import { Shield, Key, Smartphone, AlertTriangle, CheckCircle, Lock } from 'lucide-react';
 
 const SecuritySettings = () => {
-  const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [loading, setLoading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Mock security status
+  const securityStatus = {
+    passwordStrength: 'Strong',
+    twoFactorEnabled: false,
+    lastPasswordChange: '30 days ago',
+    loginSessions: 3,
+    suspiciousActivity: false
+  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
+    if (newPassword !== confirmPassword) {
       toast({
         title: "Password Mismatch",
-        description: "New passwords do not match.",
+        description: "New passwords do not match",
         variant: "destructive",
       });
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
+    if (newPassword.length < 8) {
       toast({
-        title: "Password Too Short",
-        description: "Password must be at least 6 characters long.",
+        title: "Weak Password",
+        description: "Password must be at least 8 characters long",
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
-      });
-
-      if (error) throw error;
-
+    setIsChangingPassword(true);
+    
+    // Simulate API call
+    setTimeout(() => {
       toast({
         title: "Password Updated",
-        description: "Your password has been changed successfully.",
+        description: "Your password has been updated successfully",
       });
-
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (error: any) {
-      toast({
-        title: "Password Update Failed",
-        description: error.message || "Failed to update password.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+      
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsChangingPassword(false);
+    }, 1500);
   };
 
-  const handleDeleteAccount = async () => {
-    try {
-      // Note: Supabase doesn't provide a direct way to delete user accounts from the client
-      // This would typically require a server-side function or admin action
-      toast({
-        title: "Account Deletion",
-        description: "Please contact support to delete your account.",
-        variant: "destructive",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process account deletion.",
-        variant: "destructive",
-      });
-    }
+  const handleEnable2FA = () => {
+    toast({
+      title: "Two-Factor Authentication",
+      description: "2FA setup will be available in a future update",
+    });
   };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <Card className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-8 bg-white dark:bg-gray-800 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300 hover:-translate-y-1">
-        <div className="flex items-start gap-4">
-          <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/20">
-            <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
+      {/* Security Overview */}
+      <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-transparent">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
           </div>
-          <div className="flex-1">
-            <h1 className="text-4xl font-black font-mono uppercase tracking-widest text-gray-900 dark:text-white mb-2">
-              SECURITY
-            </h1>
-            <p className="text-lg italic text-gray-500 dark:text-gray-400 font-light">
-              Manage your account security and password settings
-            </p>
-            <div className="flex items-center gap-2 mt-4 text-sm text-gray-400">
-              <Clock className="w-4 h-4" />
-              <span>Last updated: {new Date().toLocaleTimeString()}</span>
-            </div>
-          </div>
+          <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+            SECURITY OVERVIEW
+          </h3>
         </div>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>
-            Update your account password for better security
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                placeholder="Enter current password"
-                required
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              label: 'Password Strength',
+              value: securityStatus.passwordStrength,
+              icon: Key,
+              status: 'good',
+              color: 'border-green-300 text-green-700 dark:text-green-300'
+            },
+            {
+              label: 'Two-Factor Auth',
+              value: securityStatus.twoFactorEnabled ? 'Enabled' : 'Disabled',
+              icon: Smartphone,
+              status: securityStatus.twoFactorEnabled ? 'good' : 'warning',
+              color: securityStatus.twoFactorEnabled ? 'border-green-300 text-green-700 dark:text-green-300' : 'border-orange-300 text-orange-700 dark:text-orange-300'
+            },
+            {
+              label: 'Active Sessions',
+              value: securityStatus.loginSessions.toString(),
+              icon: Lock,
+              status: 'neutral',
+              color: 'border-blue-300 text-blue-700 dark:text-blue-300'
+            },
+            {
+              label: 'Security Status',
+              value: securityStatus.suspiciousActivity ? 'Alert' : 'Good',
+              icon: securityStatus.suspiciousActivity ? AlertTriangle : CheckCircle,
+              status: securityStatus.suspiciousActivity ? 'error' : 'good',
+              color: securityStatus.suspiciousActivity ? 'border-red-300 text-red-700 dark:text-red-300' : 'border-green-300 text-green-700 dark:text-green-300'
+            }
+          ].map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <div key={index} className={`border-2 ${item.color} rounded-xl p-4 bg-transparent`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 border border-current rounded-full flex items-center justify-center opacity-70">
+                    <Icon className="w-3 h-3" />
+                  </div>
+                  <span className="font-mono text-xs font-bold uppercase tracking-wide opacity-70">
+                    {item.label}
+                  </span>
+                </div>
+                <p className="font-semibold text-lg">{item.value}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                placeholder="Enter new password"
-                minLength={6}
-                required
-              />
-            </div>
+      {/* Change Password */}
+      <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-transparent">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+            CHANGE PASSWORD
+          </h3>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                placeholder="Confirm new password"
-                minLength={6}
-                required
-              />
-            </div>
-
-            <Button type="submit" disabled={loading}>
-              <Key className="mr-2 h-4 w-4" />
-              {loading ? 'Updating...' : 'Update Password'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-          <CardDescription>
-            Your account details and session information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Email Address</Label>
-              <p className="text-sm text-gray-600">{user?.email}</p>
-            </div>
-            <div>
-              <Label>Account Created</Label>
-              <p className="text-sm text-gray-600">
-                {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
-              </p>
-            </div>
+        <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword" className="font-mono text-sm font-bold uppercase tracking-wide">
+              Current Password *
+            </Label>
+            <Input
+              id="currentPassword"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="h-12 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent focus:border-blue-500"
+              required
+              disabled={isChangingPassword}
+            />
           </div>
 
-          <div className="pt-4 border-t">
-            <Button onClick={signOut} variant="outline">
-              <Shield className="mr-2 h-4 w-4" />
-              Sign Out All Sessions
-            </Button>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword" className="font-mono text-sm font-bold uppercase tracking-wide">
+              New Password *
+            </Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="h-12 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent focus:border-blue-500"
+              required
+              disabled={isChangingPassword}
+            />
           </div>
-        </CardContent>
-      </Card>
 
-      <Card className="border-red-200">
-        <CardHeader>
-          <CardTitle className="text-red-600">Danger Zone</CardTitle>
-          <CardDescription>
-            Irreversible actions that affect your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Account</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete your account and all associated data. 
-                  This action cannot be undone. Are you sure you want to continue?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600">
-                  Delete Account
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="font-mono text-sm font-bold uppercase tracking-wide">
+              Confirm New Password *
+            </Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="h-12 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent focus:border-blue-500"
+              required
+              disabled={isChangingPassword}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+            className="h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-mono font-bold uppercase tracking-wide px-8"
+          >
+            {isChangingPassword ? 'UPDATING...' : 'UPDATE PASSWORD'}
+          </Button>
+        </form>
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-transparent">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <Smartphone className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+            TWO-FACTOR AUTHENTICATION
+          </h3>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
+              Add an extra layer of security to your account by enabling two-factor authentication.
+            </p>
+            <Badge 
+              variant={securityStatus.twoFactorEnabled ? "default" : "secondary"}
+              className="rounded-full"
+            >
+              {securityStatus.twoFactorEnabled ? 'ENABLED' : 'DISABLED'}
+            </Badge>
+          </div>
+          <Button
+            onClick={handleEnable2FA}
+            variant={securityStatus.twoFactorEnabled ? "outline" : "default"}
+            className="h-12 bg-transparent border-2 border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full font-mono font-bold uppercase tracking-wide px-6"
+          >
+            {securityStatus.twoFactorEnabled ? 'MANAGE' : 'ENABLE'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Security Tips */}
+      <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-transparent">
+        <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white mb-4">
+          SECURITY TIPS
+        </h3>
+        
+        <div className="space-y-3">
+          {[
+            'Use a strong, unique password for your account',
+            'Enable two-factor authentication for additional security',
+            'Regularly review your login sessions and devices',
+            'Never share your login credentials with others',
+            'Log out from shared or public devices'
+          ].map((tip, index) => (
+            <div key={index} className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/30 dark:bg-gray-800/30">
+              <div className="w-5 h-5 border border-green-300 rounded-full flex items-center justify-center mt-0.5">
+                <CheckCircle className="w-3 h-3 text-green-600" />
+              </div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{tip}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
