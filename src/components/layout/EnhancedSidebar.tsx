@@ -14,7 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useIsMobile } from '../../hooks/use-mobile';
+import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -39,122 +39,18 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   const location = useLocation();
   const { signOut } = useAuth();
   const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isTablet = useIsTablet();
+
+  // Completely hide sidebar on mobile and tablet
+  if (isMobile || isTablet) {
+    return null;
+  }
 
   const handleSignOut = async () => {
     if (window.confirm('Are you sure you want to sign out?')) {
       await signOut();
     }
   };
-
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
-
-  const closeMobileMenu = () => {
-    setMobileMenuOpen(false);
-  };
-
-  // Mobile Hamburger Menu
-  if (isMobile) {
-    return (
-      <>
-        {/* Mobile Menu Button */}
-        <button
-          onClick={toggleMobileMenu}
-          className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-700"
-        >
-          <Menu className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-        </button>
-
-        {/* Mobile Menu Overlay */}
-        {mobileMenuOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-500"
-            onClick={closeMobileMenu}
-          />
-        )}
-
-        {/* Mobile Sidebar Drawer */}
-        <div className={`
-          fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 z-50 transform transition-all duration-500 ease-in-out lg:hidden shadow-2xl
-          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
-          {/* Mobile Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
-                <span className="text-white font-black text-lg">D</span>
-              </div>
-              <div>
-                <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white">
-                  DUKASMART
-                </h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  Smart Business
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={closeMobileMenu}
-              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-            </button>
-          </div>
-
-          {/* Mobile Navigation */}
-          <nav className="flex-1 p-4 space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  onClick={closeMobileMenu}
-                  className={`
-                    group flex items-center rounded-2xl transition-all duration-300 p-4 gap-4
-                    ${isActive 
-                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-lg border-l-4 border-purple-600' 
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400'
-                    }
-                  `}
-                >
-                  <div className={`
-                    flex items-center justify-center rounded-lg transition-all duration-300 w-8 h-8
-                    ${isActive 
-                      ? 'text-purple-700 dark:text-purple-400' 
-                      : 'text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400'
-                    }
-                  `}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className="font-semibold text-sm">
-                    {item.name}
-                  </span>
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          {/* Mobile Logout */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center rounded-2xl transition-all duration-300 p-4 gap-4 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              <div className="flex items-center justify-center rounded-lg w-8 h-8 text-red-600 dark:text-red-400">
-                <LogOut className="w-5 h-5" />
-              </div>
-              <span className="font-semibold text-sm">Logout</span>
-            </button>
-          </div>
-        </div>
-      </>
-    );
-  }
 
   // Desktop/Tablet Sidebar with ultra-smooth animations
   return (

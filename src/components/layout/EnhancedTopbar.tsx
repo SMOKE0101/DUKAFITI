@@ -164,8 +164,8 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
         <div className="flex items-center justify-between px-4 md:px-6 h-full">
           {/* Left - Brand and Sidebar Toggle */}
           <div className="flex items-center gap-4">
-            {/* Sidebar Toggle - Only show on desktop */}
-            {!hideSidebarToggle && onSidebarToggle && (
+            {/* Sidebar Toggle - Only show on desktop when not hidden */}
+            {!hideSidebarToggle && onSidebarToggle && !isMobile && !isTablet && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -266,13 +266,15 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 )}
               </Button>
 
-              {/* Notifications Dropdown - Responsive positioning */}
+              {/* Notifications Dropdown - Better mobile positioning */}
               {showNotifications && (
                 <div className={`
                   absolute top-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border z-50 max-h-80 overflow-y-auto
-                  ${isMobile || isTablet 
-                    ? 'right-0 w-80 max-w-[calc(100vw-2rem)]' 
-                    : 'right-0 w-80'
+                  ${isMobile 
+                    ? 'right-0 w-[calc(100vw-2rem)] max-w-sm' 
+                    : isTablet 
+                      ? 'right-0 w-80 max-w-[calc(100vw-2rem)]' 
+                      : 'right-0 w-80'
                   }
                 `}>
                   <div className="p-4 border-b">

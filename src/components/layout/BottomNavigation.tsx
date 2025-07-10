@@ -54,7 +54,7 @@ export const BottomNavigation: React.FC = () => {
   const location = useLocation();
 
   return (
-    <nav className="bg-white dark:bg-gray-900 h-20 border-t border-gray-200 dark:border-gray-700 shadow-lg safe-area-pb">
+    <nav className="bg-white dark:bg-gray-900 h-20 border-t border-gray-200 dark:border-gray-700 shadow-lg">
       <div className="grid grid-cols-6 h-full max-w-full mx-auto">
         {navigationItems.map((item) => {
           const Icon = item.icon;

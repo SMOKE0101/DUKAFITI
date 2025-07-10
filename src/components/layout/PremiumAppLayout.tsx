@@ -37,7 +37,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
-      {/* Enhanced Topbar - Hide sidebar toggle on mobile/tablet */}
+      {/* Enhanced Topbar - Hide sidebar toggle completely on mobile/tablet */}
       <EnhancedTopbar 
         onSidebarToggle={showSidebar ? handleSidebarToggle : undefined}
         sidebarCollapsed={sidebarCollapsed}
@@ -45,7 +45,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
       />
 
       <div className="flex flex-1 pt-16 relative">
-        {/* Enhanced Sidebar - Only visible on desktop */}
+        {/* Enhanced Sidebar - Only render on desktop, completely hidden on mobile/tablet */}
         {showSidebar && (
           <EnhancedSidebar 
             isCollapsed={sidebarCollapsed}
@@ -53,12 +53,12 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
           />
         )}
 
-        {/* Main Content */}
+        {/* Main Content - Full width on mobile/tablet, proper margins on desktop */}
         <main 
           className={`
             flex-1 bg-gray-50 dark:bg-gray-900 transition-all duration-300 ease-out
             ${showBottomNav
-              ? 'pb-20 ml-0 w-full min-h-[calc(100vh-4rem-5rem)]' 
+              ? 'pb-20 w-full min-h-[calc(100vh-4rem-5rem)]' 
               : sidebarCollapsed 
                 ? 'ml-[72px] w-[calc(100vw-72px)] min-h-[calc(100vh-4rem)]' 
                 : 'ml-[280px] w-[calc(100vw-280px)] min-h-[calc(100vh-4rem)]'
@@ -81,7 +81,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         </main>
       </div>
 
-      {/* Mobile/Tablet Bottom Navigation - Always visible */}
+      {/* Mobile/Tablet Bottom Navigation - Always visible on mobile/tablet */}
       {showBottomNav && (
         <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <BottomNavigation />
