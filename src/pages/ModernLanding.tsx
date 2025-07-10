@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { ArrowRight, Play, Check, Star, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const ModernLanding = () => {
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
@@ -131,18 +131,18 @@ const ModernLanding = () => {
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-muted-foreground hover:text-foreground">Features</a>
-              <a href="#how-it-works" className="text-muted-foreground hover:text-foreground">How it Works</a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground">Pricing</a>
-              <a href="#about" className="text-muted-foreground hover:text-foreground">About</a>
+              <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
+              <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">How it Works</a>
+              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+              <a href="#about" className="text-muted-foreground hover:text-foreground transition-colors">About</a>
             </nav>
 
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" asChild>
-                <a href="/signin">Login</a>
+              <Button variant="ghost" asChild className="hover:bg-muted/50">
+                <Link to="/signin">Login</Link>
               </Button>
-              <Button asChild>
-                <a href="/signup">Sign Up</a>
+              <Button asChild className="bg-primary hover:bg-primary/90">
+                <Link to="/signup">Sign Up</Link>
               </Button>
             </div>
           </div>
@@ -263,78 +263,141 @@ const ModernLanding = () => {
         </div>
       </section>
 
-      {/* Sign Up Section */}
-      <section className="py-20">
+      {/* Enhanced Sign Up Section */}
+      <section className="py-20 bg-gradient-to-br from-muted/20 to-accent/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              <h2 className="text-4xl font-bold text-primary">
-                Sign Up to Discover Dukasmart Features
-              </h2>
-              
-              {signUpError && (
-                <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
-                  {signUpError}
-                </div>
-              )}
-              
-              <form onSubmit={handleSignUpSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">NAME</label>
-                  <input 
-                    type="text" 
-                    name="name"
-                    value={signUpData.name}
-                    onChange={handleInputChange}
-                    placeholder="Your name"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">EMAIL</label>
-                  <input 
-                    type="email" 
-                    name="email"
-                    value={signUpData.email}
-                    onChange={handleInputChange}
-                    placeholder="Your email"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">PASSWORD</label>
-                  <input 
-                    type="password" 
-                    name="password"
-                    value={signUpData.password}
-                    onChange={handleInputChange}
-                    placeholder="Your password"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-                
-                <Button 
-                  type="submit" 
-                  disabled={isSigningUp}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3"
-                >
-                  {isSigningUp ? 'Signing Up...' : 'Sign Up'}
-                </Button>
-                
-                <p className="text-sm text-muted-foreground text-center">
-                  By signing up you agree to Our Terms and Privacy Policy
+              <div>
+                <h2 className="text-4xl font-bold text-primary mb-4">
+                  Ready to Transform Your Business?
+                </h2>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  Join thousands of Kenyan shop owners who trust Dukasmart to manage their business efficiently.
                 </p>
-              </form>
+              </div>
+
+              <div className="bg-white rounded-2xl p-8 shadow-lg border border-border/50">
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-2xl font-semibold text-foreground mb-2">Get Started Today</h3>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-success/10 rounded-lg border border-success/20">
+                      <span className="text-2xl">✨</span>
+                      <span className="text-sm font-medium text-success">14-day free trial • No credit card required</span>
+                    </div>
+                  </div>
+
+                  {/* Google Sign Up */}
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full py-3 text-base font-semibold rounded-xl border-2 hover:bg-muted/50 transition-all hover:scale-[1.02]"
+                    asChild
+                  >
+                    <Link to="/signup">
+                      <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                      Continue with Google
+                    </Link>
+                  </Button>
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-3 bg-white text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+
+                  {signUpError && (
+                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
+                      {signUpError}
+                    </div>
+                  )}
+                  
+                  <form onSubmit={handleSignUpSubmit} className="space-y-4">
+                    <div>
+                      <input 
+                        type="text" 
+                        name="name"
+                        value={signUpData.name}
+                        onChange={handleInputChange}
+                        placeholder="Full Name"
+                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <input 
+                        type="email" 
+                        name="email"
+                        value={signUpData.email}
+                        onChange={handleInputChange}
+                        placeholder="Email Address"
+                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <input 
+                        type="password" 
+                        name="password"
+                        value={signUpData.password}
+                        onChange={handleInputChange}
+                        placeholder="Password (min. 6 characters)"
+                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        required
+                      />
+                    </div>
+                    
+                    <Button 
+                      type="submit" 
+                      disabled={isSigningUp}
+                      className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 text-base font-semibold rounded-xl transition-all hover:scale-[1.02] disabled:hover:scale-100"
+                    >
+                      {isSigningUp ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Creating Account...
+                        </div>
+                      ) : (
+                        'Start Free Trial'
+                      )}
+                    </Button>
+                  </form>
+
+                  <p className="text-center text-xs text-muted-foreground">
+                    Already have an account?{' '}
+                    <Link to="/signin" className="text-primary hover:underline underline-offset-4 font-medium">
+                      Sign In
+                    </Link>
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="relative">
               <div className="bg-gradient-to-br from-emerald-400 via-purple-500 to-pink-500 rounded-3xl aspect-square relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center p-8">
+                  <div className="text-center text-white">
+                    <div className="text-6xl mb-6">🏪</div>
+                    <h3 className="text-2xl font-bold mb-4">Your Success Story Starts Here</h3>
+                    <div className="space-y-2 text-lg opacity-90">
+                      <p>✓ 10,000+ Happy Shop Owners</p>
+                      <p>✓ 99.9% Uptime Guarantee</p>
+                      <p>✓ 24/7 Customer Support</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
