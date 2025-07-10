@@ -37,10 +37,11 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
-      {/* Enhanced Topbar */}
+      {/* Enhanced Topbar - Hide sidebar toggle on mobile/tablet */}
       <EnhancedTopbar 
-        onSidebarToggle={handleSidebarToggle}
+        onSidebarToggle={showSidebar ? handleSidebarToggle : undefined}
         sidebarCollapsed={sidebarCollapsed}
+        hideSidebarToggle={!showSidebar}
       />
 
       <div className="flex flex-1 pt-16 relative">
@@ -67,9 +68,9 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
           <div className={`
             h-full overflow-x-hidden overflow-y-auto
             ${isMobile 
-              ? 'p-2 pt-2' 
+              ? 'p-3 pt-4' 
               : isTablet 
-                ? 'p-3 pt-3' 
+                ? 'p-4 pt-6' 
                 : 'p-4 md:p-6 lg:p-8'
             }
           `}>
@@ -80,9 +81,9 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         </main>
       </div>
 
-      {/* Mobile/Tablet Bottom Navigation */}
+      {/* Mobile/Tablet Bottom Navigation - Always visible */}
       {showBottomNav && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 dark:border-gray-700">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <BottomNavigation />
         </div>
       )}
