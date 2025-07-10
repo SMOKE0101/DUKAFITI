@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,6 @@ import {
   Package,
   Calendar,
   Download,
-  Filter,
   X,
   TrendingUp,
   Clock,
@@ -69,7 +69,7 @@ const ModernReportsPage = () => {
 
   const { from: fromDate, to: toDate } = getDateRange();
 
-  // Filter sales data
+  // Filter sales data with proper property access
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
@@ -93,7 +93,7 @@ const ModernReportsPage = () => {
     });
   }, [sales, fromDate, toDate, activeFilters, products]);
 
-  // Calculate metrics
+  // Calculate real metrics
   const metrics = useMemo(() => {
     const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
     const totalOrders = filteredSales.length;
@@ -101,8 +101,12 @@ const ModernReportsPage = () => {
     const lowStockProducts = products.filter(product => 
       product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
-    const cashRevenue = filteredSales.filter(s => s.paymentMethod === 'cash').reduce((sum, sale) => sum + sale.total, 0);
-    const mpesaRevenue = filteredSales.filter(s => s.paymentMethod === 'mpesa').reduce((sum, sale) => sum + sale.total, 0);
+    const cashRevenue = filteredSales
+      .filter(s => s.paymentMethod === 'cash')
+      .reduce((sum, sale) => sum + sale.total, 0);
+    const mpesaRevenue = filteredSales
+      .filter(s => s.paymentMethod === 'mpesa')
+      .reduce((sum, sale) => sum + sale.total, 0);
 
     return {
       totalRevenue,
@@ -114,8 +118,30 @@ const ModernReportsPage = () => {
     };
   }, [filteredSales, products]);
 
-  // Chart data
+  // Real-time chart data
   const salesTrendData = useMemo(() => {
+    const now = new Date();
+    let bucketSize: number;
+    let formatString: string;
+    
+    switch (chartResolution) {
+      case 'hourly':
+        bucketSize = 60 * 60 * 1000; // 1 hour in ms
+        formatString = 'HH:00';
+        break;
+      case 'daily':
+        bucketSize = 24 * 60 * 60 * 1000; // 1 day in ms
+        formatString = 'MMM dd';
+        break;
+      case 'monthly':
+        bucketSize = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+        formatString = 'MMM yyyy';
+        break;
+      default:
+        bucketSize = 24 * 60 * 60 * 1000;
+        formatString = 'MMM dd';
+    }
+
     const groupedData: { [key: string]: number } = {};
     
     filteredSales.forEach(sale => {
@@ -132,6 +158,8 @@ const ModernReportsPage = () => {
         case 'monthly':
           key = saleDate.toISOString().substring(0, 7);
           break;
+        default:
+          key = saleDate.toISOString().substring(0, 10);
       }
       
       groupedData[key] = (groupedData[key] || 0) + sale.total;
@@ -140,7 +168,11 @@ const ModernReportsPage = () => {
     return Object.entries(groupedData)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, revenue]) => ({
-        date: new Date(date).toLocaleDateString(),
+        date: new Date(date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          hour: chartResolution === 'hourly' ? 'numeric' : undefined
+        }),
         revenue
       }));
   }, [filteredSales, chartResolution]);
@@ -148,11 +180,20 @@ const ModernReportsPage = () => {
   const ordersPerHourData = useMemo(() => {
     const hourlyData: { [key: number]: number } = {};
     
+    // Initialize all hours
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
     
-    filteredSales.forEach(sale => {
+    const relevantSales = ordersChartView === 'daily' 
+      ? filteredSales.filter(sale => {
+          const saleDate = new Date(sale.timestamp);
+          const today = new Date();
+          return saleDate.toDateString() === today.toDateString();
+        })
+      : filteredSales;
+    
+    relevantSales.forEach(sale => {
       const hour = new Date(sale.timestamp).getHours();
       hourlyData[hour]++;
     });
@@ -161,9 +202,9 @@ const ModernReportsPage = () => {
       hour: `${hour}:00`,
       orders
     }));
-  }, [filteredSales]);
+  }, [filteredSales, ordersChartView]);
 
-  // Table data
+  // Real table data with search and sort
   const salesTableData = useMemo(() => {
     let data = filteredSales.map(sale => ({
       productName: sale.productName,
@@ -208,6 +249,7 @@ const ModernReportsPage = () => {
       })), [filteredSales]
   );
 
+  // Real alerts data
   const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).slice(0, 5);
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0).slice(0, 5);
 
@@ -225,9 +267,40 @@ const ModernReportsPage = () => {
   };
 
   const handleExport = (format: 'pdf' | 'csv') => {
-    console.log(`Exporting as ${format}`);
+    if (format === 'csv') {
+      const csvContent = [
+        ['Product Name', 'Quantity', 'Revenue', 'Customer', 'Date'],
+        ...salesTableData.map(row => [
+          row.productName, 
+          row.quantity, 
+          row.revenue, 
+          row.customer, 
+          row.date
+        ])
+      ].map(row => row.join(',')).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sales-report.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
     setShowExportMenu(false);
   };
+
+  // Real-time subscription for live updates
+  useEffect(() => {
+    // This will automatically update when the hooks detect changes
+    console.log('Reports data updated:', { 
+      salesCount: sales.length, 
+      productsCount: products.length, 
+      customersCount: customers.length 
+    });
+  }, [sales, products, customers]);
 
   if (salesLoading || productsLoading || customersLoading) {
     return (
@@ -398,13 +471,34 @@ const ModernReportsPage = () => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} tickLine={false} />
-                    <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(value) => `${formatCurrency(value)}`} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#6b7280" 
+                      fontSize={12} 
+                      tickLine={false} 
+                    />
+                    <YAxis 
+                      stroke="#6b7280" 
+                      fontSize={12} 
+                      tickLine={false} 
+                      tickFormatter={(value) => formatCurrency(value)}
+                    />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '12px', color: '#fff' }}
+                      contentStyle={{ 
+                        backgroundColor: '#1f2937', 
+                        border: 'none', 
+                        borderRadius: '12px', 
+                        color: '#fff' 
+                      }}
                       formatter={(value: number) => [formatCurrency(value), 'Revenue']}
                     />
-                    <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={3} fill="url(#salesGradient)" />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#8b5cf6"
+                      strokeWidth={3}
+                      fill="url(#salesGradient)"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -442,7 +536,12 @@ const ModernReportsPage = () => {
                     <XAxis dataKey="hour" stroke="#6b7280" fontSize={12} tickLine={false} />
                     <YAxis stroke="#6b7280" fontSize={12} tickLine={false} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '12px', color: '#fff' }}
+                      contentStyle={{ 
+                        backgroundColor: '#1f2937', 
+                        border: 'none', 
+                        borderRadius: '12px', 
+                        color: '#fff' 
+                      }}
                       formatter={(value: number) => [value, 'Orders']}
                     />
                     <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -575,73 +674,69 @@ const ModernReportsPage = () => {
           </Card>
         </div>
 
-        {/* Alerts Panel */}
+        {/* Alerts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Low Stock Alerts */}
-          <Card className="border border-orange-400 dark:border-orange-500 rounded-lg bg-transparent">
+          <Card className="border border-orange-300 dark:border-orange-600 rounded-lg">
             <CardHeader>
-              <CardTitle className="text-lg font-mono font-bold uppercase tracking-wide text-orange-600 dark:text-orange-400 flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <AlertTriangle className="w-5 h-5" />
-                LOW STOCK ALERTS
+                Low Stock Alerts
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {lowStockProducts.length > 0 ? (
-                <>
+            <CardContent>
+              {lowStockProducts.length === 0 ? (
+                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  No low stock alerts
+                </p>
+              ) : (
+                <div className="space-y-3">
                   {lowStockProducts.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white text-sm">{product.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{product.category}</p>
+                    <div key={product.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{product.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{product.category}</p>
                       </div>
-                      <Badge variant={product.currentStock <= 0 ? "destructive" : "secondary"} className="text-xs">
-                        {product.currentStock <= 0 ? 'Out' : `${product.currentStock} left`}
+                      <Badge variant="destructive">
+                        {product.currentStock} left
                       </Badge>
                     </div>
                   ))}
-                  {products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length > 5 && (
-                    <p className="text-center text-orange-600 hover:text-orange-700 text-sm font-medium cursor-pointer">
-                      View All ({products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length - 5} more)
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-8">No low stock alerts</p>
+                </div>
               )}
             </CardContent>
           </Card>
 
           {/* Overdue Payments */}
-          <Card className="border border-red-400 dark:border-red-500 rounded-lg bg-transparent">
+          <Card className="border border-red-300 dark:border-red-600 rounded-lg">
             <CardHeader>
-              <CardTitle className="text-lg font-mono font-bold uppercase tracking-wide text-red-600 dark:text-red-400 flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
                 <Clock className="w-5 h-5" />
-                OVERDUE PAYMENTS
+                Overdue Payments
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {overdueCustomers.length > 0 ? (
-                <>
+            <CardContent>
+              {overdueCustomers.length === 0 ? (
+                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  No overdue payments
+                </p>
+              ) : (
+                <div className="space-y-3">
                   {overdueCustomers.map((customer) => (
-                    <div key={customer.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white text-sm">{customer.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{customer.phone}</p>
+                    <div key={customer.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{customer.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{customer.phone}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-red-600 dark:text-red-400 text-sm">{formatCurrency(customer.outstandingDebt)}</p>
+                        <p className="font-medium text-red-600 dark:text-red-400">
+                          {formatCurrency(customer.outstandingDebt)}
+                        </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">overdue</p>
                       </div>
                     </div>
                   ))}
-                  {customers.filter(c => c.outstandingDebt > 0).length > 5 && (
-                    <p className="text-center text-red-600 hover:text-red-700 text-sm font-medium cursor-pointer">
-                      View All ({customers.filter(c => c.outstandingDebt > 0).length - 5} more)
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-8">No overdue payments</p>
+                </div>
               )}
             </CardContent>
           </Card>

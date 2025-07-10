@@ -82,12 +82,22 @@ const InventoryPage = () => {
     setSelectedProduct(null);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    return deleteProduct(id);
+  const handleDeleteProduct = async (id: string) => {
+    await deleteProduct(id);
+    setShowDeleteModal(false);
+    setSelectedProduct(null);
   };
 
-  const handleRestockSave = async (id: string, updates: Partial<Product>) => {
-    await updateProduct(id, updates);
+  const handleRestockSave = async (quantity: number, buyingPrice: number) => {
+    if (!selectedProduct) return;
+    
+    const updates = {
+      currentStock: selectedProduct.currentStock + quantity,
+      costPrice: buyingPrice,
+      updatedAt: new Date().toISOString()
+    };
+    
+    await updateProduct(selectedProduct.id, updates);
     setShowRestockModal(false);
     setSelectedProduct(null);
   };
@@ -349,7 +359,7 @@ const InventoryPage = () => {
             isOpen={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}
             product={selectedProduct}
-            onDelete={handleDeleteProduct}
+            onDelete={() => handleDeleteProduct(selectedProduct.id)}
           />
 
           <RestockModal
