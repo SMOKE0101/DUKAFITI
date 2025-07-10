@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Package, TrendingUp } from 'lucide-react';
+import { Plus, Package, TrendingUp, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
+import { useIsMobile } from '../../hooks/use-mobile';
 
 interface InventoryHeaderProps {
   totalProducts: number;
@@ -17,6 +18,71 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   lowStockCount,
   onAddProduct 
 }) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+              <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Inventory</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Manage products</p>
+            </div>
+          </div>
+          
+          <Button 
+            onClick={onAddProduct}
+            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2"
+            size="sm"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add
+          </Button>
+        </div>
+
+        {/* Mobile Stats Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border">
+            <div className="flex items-center gap-2 mb-1">
+              <Package className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Products</span>
+            </div>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{totalProducts}</p>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-4 h-4 text-green-600" />
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Value</span>
+            </div>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalValue)}</p>
+          </div>
+        </div>
+
+        {/* Low Stock Alert */}
+        {lowStockCount > 0 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div>
+                <p className="font-medium text-red-900 dark:text-red-100">Low Stock Alert</p>
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  {lowStockCount} product{lowStockCount !== 1 ? 's' : ''} running low
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
       <div className="space-y-3">

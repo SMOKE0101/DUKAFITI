@@ -35,7 +35,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main 
           className={`
-            flex-1 bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-out
+            flex-1 bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]
             ${isMobile 
               ? 'pb-20 ml-0' 
               : sidebarCollapsed 
@@ -44,9 +44,14 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
             }
           `}
         >
-          {children}
+          <div className="p-4 md:p-6 lg:p-8 max-w-full overflow-x-hidden">
+            {children}
+          </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <BottomNavigation />}
     </div>
   );
 };

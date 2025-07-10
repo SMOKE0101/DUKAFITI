@@ -9,9 +9,12 @@ import {
   BarChart3, 
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Menu,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useIsMobile } from '../../hooks/use-mobile';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -35,6 +38,8 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
 }) => {
   const location = useLocation();
   const { signOut } = useAuth();
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     if (window.confirm('Are you sure you want to sign out?')) {
@@ -42,31 +47,39 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     }
   };
 
-  const effectiveWidth = isCollapsed ? '72px' : '280px';
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
 
-  return (
-    <>
-      {/* Desktop Sidebar */}
-      <div className={`hidden md:block ${className}`}>
-        <div 
-          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 shadow-lg transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
-          style={{ 
-            width: effectiveWidth,
-          }}
-        >
-          {/* Brand Section */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <div className={`flex items-center transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
+  // Mobile Hamburger Menu
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+            onClick={closeMobileMenu}
+          />
+        )}
+
+        {/* Mobile Sidebar Drawer */}
+        <div className={`
+          fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] lg:hidden shadow-2xl
+          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
                 <span className="text-white font-black text-lg">D</span>
               </div>
-              <div className={`min-w-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
-              }`} style={{ 
-                transitionDelay: isCollapsed ? '0ms' : '150ms',
-                transform: isCollapsed ? 'translateX(-10px) scale(0.9)' : 'translateX(0) scale(1)'
-              }}>
-                <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
+              <div>
+                <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white">
                   DUKASMART
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -74,9 +87,15 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                 </p>
               </div>
             </div>
+            <button
+              onClick={closeMobileMenu}
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            </button>
           </div>
 
-          {/* Navigation Links */}
+          {/* Mobile Navigation */}
           <nav className="flex-1 p-4 space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon;
@@ -86,18 +105,17 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                 <NavLink
                   key={item.name}
                   to={item.href}
+                  onClick={closeMobileMenu}
                   className={`
-                    group flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] relative
-                    ${isCollapsed ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
+                    group flex items-center rounded-2xl transition-all duration-300 p-4 gap-4
                     ${isActive 
-                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-lg border-l-4 border-purple-600 transform scale-[1.02]' 
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400 hover:transform hover:scale-[1.02]'
+                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-lg border-l-4 border-purple-600' 
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400'
                     }
                   `}
                 >
                   <div className={`
-                    flex items-center justify-center rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex-shrink-0
-                    ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
+                    flex items-center justify-center rounded-lg transition-all duration-300 w-8 h-8
                     ${isActive 
                       ? 'text-purple-700 dark:text-purple-400' 
                       : 'text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400'
@@ -105,12 +123,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   `}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className={`font-semibold text-sm min-w-0 truncate transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                    isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
-                  }`} style={{ 
-                    transitionDelay: isCollapsed ? '0ms' : '200ms',
-                    transform: isCollapsed ? 'translateX(-10px) scale(0.9)' : 'translateX(0) scale(1)'
-                  }}>
+                  <span className="font-semibold text-sm">
                     {item.name}
                   </span>
                 </NavLink>
@@ -118,83 +131,156 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             })}
           </nav>
 
-          {/* Bottom Section - Logout */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 flex-shrink-0">
+          {/* Mobile Logout */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={handleSignOut}
-              className={`
-                group flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-full relative
-                ${isCollapsed ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
-                text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:transform hover:scale-[1.02]
-              `}
+              className="w-full flex items-center rounded-2xl transition-all duration-300 p-4 gap-4 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
-              <div className={`
-                flex items-center justify-center rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex-shrink-0
-                ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
-                text-red-600 dark:text-red-400
-              `}>
+              <div className="flex items-center justify-center rounded-lg w-8 h-8 text-red-600 dark:text-red-400">
                 <LogOut className="w-5 h-5" />
               </div>
-              <span className={`font-semibold text-sm transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
-              }`} style={{ 
+              <span className="font-semibold text-sm">Logout</span>
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Desktop Sidebar with improved animations
+  return (
+    <div className={`hidden lg:block ${className}`}>
+      <div 
+        className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 shadow-lg transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] overflow-hidden"
+        style={{ 
+          width: isCollapsed ? '72px' : '280px',
+        }}
+      >
+        {/* Brand Section */}
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[88px] flex items-center">
+          <div className={`flex items-center transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg transition-all duration-300">
+              <span className="text-white font-black text-lg">D</span>
+            </div>
+            <div 
+              className={`min-w-0 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
+                isCollapsed 
+                  ? 'opacity-0 w-0 scale-75 translate-x-[-20px] pointer-events-none' 
+                  : 'opacity-100 w-auto scale-100 translate-x-0'
+              }`}
+              style={{ 
                 transitionDelay: isCollapsed ? '0ms' : '200ms',
-                transform: isCollapsed ? 'translateX(-10px) scale(0.9)' : 'translateX(0) scale(1)'
-              }}>
-                Logout
-              </span>
-            </button>
-          </div>
-
-          {/* Toggle Button */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <button
-              onClick={onToggle}
-              className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group hover:transform hover:scale-105"
-              aria-expanded={!isCollapsed}
-              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              }}
             >
-              <div className="p-1 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]" style={{
-                transform: isCollapsed ? 'rotate(0deg) scale(1.1)' : 'rotate(180deg) scale(1.1)'
-              }}>
-                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300" />
-              </div>
-            </button>
+              <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white whitespace-nowrap">
+                DUKASMART
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                Smart Business
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        <div className="bg-white dark:bg-gray-900 border-t-2 border-gray-300 dark:border-gray-600 px-4 py-2 shadow-lg">
-          <div className="flex items-center justify-around">
-            {navigation.slice(0, 5).map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={`
-                    flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
-                    ${isActive 
-                      ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 transform scale-105' 
-                      : 'text-gray-600 dark:text-gray-400 hover:transform hover:scale-105'
-                    }
-                  `}
-                >
+        {/* Navigation Links */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {navigation.map((item, index) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.href;
+            
+            return (
+              <NavLink
+                key={item.name}
+                to={item.href}
+                className={`
+                  group flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] relative
+                  ${isCollapsed ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
+                  ${isActive 
+                    ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-md border-l-4 border-purple-600' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400'
+                  }
+                `}
+              >
+                <div className={`
+                  flex items-center justify-center rounded-lg transition-all duration-300 flex-shrink-0
+                  ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
+                  ${isActive 
+                    ? 'text-purple-700 dark:text-purple-400' 
+                    : 'text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400'
+                  }
+                `}>
                   <Icon className="w-5 h-5" />
-                  <span className="text-xs font-semibold">
-                    {item.name}
-                  </span>
-                </NavLink>
-              );
-            })}
-          </div>
+                </div>
+                <span 
+                  className={`font-semibold text-sm min-w-0 truncate transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
+                    isCollapsed 
+                      ? 'opacity-0 w-0 scale-75 translate-x-[-20px] pointer-events-none' 
+                      : 'opacity-100 w-auto scale-100 translate-x-0'
+                  }`}
+                  style={{ 
+                    transitionDelay: isCollapsed ? '0ms' : `${150 + index * 50}ms`,
+                  }}
+                >
+                  {item.name}
+                </span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Section - Logout */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 flex-shrink-0">
+          <button
+            onClick={handleSignOut}
+            className={`
+              group flex items-center rounded-xl transition-all duration-300 w-full relative
+              ${isCollapsed ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
+              text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
+            `}
+          >
+            <div className={`
+              flex items-center justify-center rounded-lg transition-all duration-300 flex-shrink-0
+              ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
+              text-red-600 dark:text-red-400
+            `}>
+              <LogOut className="w-5 h-5" />
+            </div>
+            <span 
+              className={`font-semibold text-sm transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
+                isCollapsed 
+                  ? 'opacity-0 w-0 scale-75 translate-x-[-20px] pointer-events-none' 
+                  : 'opacity-100 w-auto scale-100 translate-x-0'
+              }`}
+              style={{ 
+                transitionDelay: isCollapsed ? '0ms' : '300ms',
+              }}
+            >
+              Logout
+            </span>
+          </button>
+        </div>
+
+        {/* Toggle Button */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <button
+            onClick={onToggle}
+            className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
+            aria-expanded={!isCollapsed}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <div 
+              className="p-1 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]" 
+              style={{
+                transform: isCollapsed ? 'rotate(0deg) scale(1.1)' : 'rotate(180deg) scale(1.1)'
+              }}
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300" />
+            </div>
+          </button>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
