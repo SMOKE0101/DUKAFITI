@@ -69,7 +69,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
 
         {/* Mobile Sidebar Drawer */}
         <div className={`
-          fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] lg:hidden shadow-2xl
+          fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 z-50 transform transition-transform duration-300 ease-in-out lg:hidden shadow-2xl
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           {/* Mobile Header */}
@@ -148,30 +148,31 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     );
   }
 
-  // Desktop Sidebar with improved animations
+  // Desktop Sidebar with smooth animations
   return (
     <div className={`hidden lg:block ${className}`}>
       <div 
-        className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 shadow-lg transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] overflow-hidden"
-        style={{ 
-          width: isCollapsed ? '72px' : '280px',
-        }}
+        className={`
+          fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 
+          flex flex-col z-40 shadow-lg overflow-hidden
+          transition-all duration-500 ease-in-out
+          ${isCollapsed ? 'w-16' : 'w-72'}
+        `}
       >
         {/* Brand Section */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[88px] flex items-center">
-          <div className={`flex items-center transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+          <div className={`flex items-center transition-all duration-500 ease-in-out ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg transition-all duration-300">
               <span className="text-white font-black text-lg">D</span>
             </div>
             <div 
-              className={`min-w-0 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
-                isCollapsed 
-                  ? 'opacity-0 w-0 scale-75 translate-x-[-20px] pointer-events-none' 
-                  : 'opacity-100 w-auto scale-100 translate-x-0'
-              }`}
-              style={{ 
-                transitionDelay: isCollapsed ? '0ms' : '200ms',
-              }}
+              className={`
+                min-w-0 transition-all duration-500 ease-in-out overflow-hidden
+                ${isCollapsed 
+                  ? 'opacity-0 w-0 max-w-0' 
+                  : 'opacity-100 w-auto max-w-none'
+                }
+              `}
             >
               <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white whitespace-nowrap">
                 DUKASMART
@@ -194,7 +195,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                 key={item.name}
                 to={item.href}
                 className={`
-                  group flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] relative
+                  group flex items-center rounded-xl transition-all duration-300 ease-in-out relative
                   ${isCollapsed ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
                   ${isActive 
                     ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-md border-l-4 border-purple-600' 
@@ -213,17 +214,22 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   <Icon className="w-5 h-5" />
                 </div>
                 <span 
-                  className={`font-semibold text-sm min-w-0 truncate transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
-                    isCollapsed 
-                      ? 'opacity-0 w-0 scale-75 translate-x-[-20px] pointer-events-none' 
-                      : 'opacity-100 w-auto scale-100 translate-x-0'
-                  }`}
-                  style={{ 
-                    transitionDelay: isCollapsed ? '0ms' : `${150 + index * 50}ms`,
-                  }}
+                  className={`
+                    font-semibold text-sm min-w-0 truncate transition-all duration-500 ease-in-out overflow-hidden
+                    ${isCollapsed 
+                      ? 'opacity-0 w-0 max-w-0' 
+                      : 'opacity-100 w-auto max-w-none'
+                    }
+                  `}
                 >
                   {item.name}
                 </span>
+                {/* Tooltip for collapsed state */}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                    {item.name}
+                  </div>
+                )}
               </NavLink>
             );
           })}
@@ -247,17 +253,22 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
               <LogOut className="w-5 h-5" />
             </div>
             <span 
-              className={`font-semibold text-sm transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
-                isCollapsed 
-                  ? 'opacity-0 w-0 scale-75 translate-x-[-20px] pointer-events-none' 
-                  : 'opacity-100 w-auto scale-100 translate-x-0'
-              }`}
-              style={{ 
-                transitionDelay: isCollapsed ? '0ms' : '300ms',
-              }}
+              className={`
+                font-semibold text-sm transition-all duration-500 ease-in-out overflow-hidden
+                ${isCollapsed 
+                  ? 'opacity-0 w-0 max-w-0' 
+                  : 'opacity-100 w-auto max-w-none'
+                }
+              `}
             >
               Logout
             </span>
+            {/* Tooltip for collapsed state */}
+            {isCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                Logout
+              </div>
+            )}
           </button>
         </div>
 
@@ -270,10 +281,10 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <div 
-              className="p-1 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]" 
-              style={{
-                transform: isCollapsed ? 'rotate(0deg) scale(1.1)' : 'rotate(180deg) scale(1.1)'
-              }}
+              className={`
+                p-1 transition-all duration-500 ease-in-out
+                ${isCollapsed ? 'rotate-0' : 'rotate-180'}
+              `}
             >
               <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300" />
             </div>

@@ -3,9 +3,61 @@ import { useState } from 'react';
 import { ArrowRight, Play, Check, Star, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const ModernLanding = () => {
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [signUpData, setSignUpData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signUpError, setSignUpError] = useState('');
+  
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignUpError('');
+    
+    if (!signUpData.name || !signUpData.email || !signUpData.password) {
+      setSignUpError('Please fill in all fields');
+      return;
+    }
+
+    if (signUpData.password.length < 6) {
+      setSignUpError('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsSigningUp(true);
+    
+    try {
+      const { error } = await signUp(signUpData.email, signUpData.password, {
+        full_name: signUpData.name
+      });
+      
+      if (error) {
+        setSignUpError(error.message);
+      } else {
+        navigate('/app');
+      }
+    } catch (err) {
+      setSignUpError('An unexpected error occurred');
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignUpData({
+      ...signUpData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const features = [
     {
@@ -87,10 +139,10 @@ const ModernLanding = () => {
 
             <div className="flex items-center space-x-4">
               <Button variant="ghost" asChild>
-                <a href="/auth">Login</a>
+                <a href="/signin">Login</a>
               </Button>
               <Button asChild>
-                <a href="/auth">Sign Up</a>
+                <a href="/signup">Sign Up</a>
               </Button>
             </div>
           </div>
@@ -110,7 +162,7 @@ const ModernLanding = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
-                  <a href="/auth">
+                  <a href="/signup">
                     Get Started - Free 14-day Trial
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </a>
@@ -220,13 +272,23 @@ const ModernLanding = () => {
                 Sign Up to Discover Dukasmart Features
               </h2>
               
-              <div className="space-y-6">
+              {signUpError && (
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
+                  {signUpError}
+                </div>
+              )}
+              
+              <form onSubmit={handleSignUpSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">NAME</label>
                   <input 
                     type="text" 
+                    name="name"
+                    value={signUpData.name}
+                    onChange={handleInputChange}
                     placeholder="Your name"
                     className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
                   />
                 </div>
                 
@@ -234,8 +296,12 @@ const ModernLanding = () => {
                   <label className="block text-sm font-medium text-foreground mb-2">EMAIL</label>
                   <input 
                     type="email" 
+                    name="email"
+                    value={signUpData.email}
+                    onChange={handleInputChange}
                     placeholder="Your email"
                     className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
                   />
                 </div>
                 
@@ -243,19 +309,27 @@ const ModernLanding = () => {
                   <label className="block text-sm font-medium text-foreground mb-2">PASSWORD</label>
                   <input 
                     type="password" 
+                    name="password"
+                    value={signUpData.password}
+                    onChange={handleInputChange}
                     placeholder="Your password"
                     className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
                   />
                 </div>
                 
-                <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3">
-                  Sign Up
+                <Button 
+                  type="submit" 
+                  disabled={isSigningUp}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3"
+                >
+                  {isSigningUp ? 'Signing Up...' : 'Sign Up'}
                 </Button>
                 
                 <p className="text-sm text-muted-foreground text-center">
                   By signing up you agree to Our Terms and Privacy Policy
                 </p>
-              </div>
+              </form>
             </div>
 
             <div className="relative">
