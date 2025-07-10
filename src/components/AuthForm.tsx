@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Eye, EyeOff, Store, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const AuthForm = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +19,15 @@ const AuthForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/app');
+    }
+  }, [user, navigate]);
 
   const validateForm = (isSignUp: boolean) => {
     const newErrors: {[key: string]: string} = {};
@@ -72,8 +83,10 @@ const AuthForm = () => {
           title: "Welcome!",
           description: "Your account has been created successfully.",
         });
+        navigate('/app');
       }
     } catch (error: any) {
+      console.error('Sign up error:', error);
       const errorMessage = error.message;
       if (errorMessage.includes('already registered')) {
         setErrors({ email: 'This email is already registered. Try signing in instead.' });
@@ -108,7 +121,9 @@ const AuthForm = () => {
         title: "Welcome Back!",
         description: "Successfully signed in to your shop.",
       });
+      navigate('/app');
     } catch (error: any) {
+      console.error('Sign in error:', error);
       const errorMessage = error.message;
       if (errorMessage.includes('Invalid login credentials')) {
         setErrors({ 
@@ -133,7 +148,7 @@ const AuthForm = () => {
         <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader className="text-center pb-4 px-4 sm:px-6">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="p-2.5 sm:p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg">
+              <div className="p-2.5 sm:p-3 bg-white rounded-xl shadow-lg border">
                 <img 
                   src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
                   alt="DukaFiti Logo" 
@@ -144,7 +159,7 @@ const AuthForm = () => {
                 <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   DukaFiti
                 </CardTitle>
-                <p className="text-xs sm:text-sm text-gray-600 -mt-1">Shop Management System</p>
+                <p className="text-xs sm:text-sm text-gray-600 -mt-1">DUKAFITI NI DUKABORA</p>
               </div>
             </div>
             <p className="text-gray-600 text-xs sm:text-sm">Access your shop from anywhere</p>
