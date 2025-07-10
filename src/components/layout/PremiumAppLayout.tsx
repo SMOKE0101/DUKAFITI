@@ -10,7 +10,6 @@ interface PremiumAppLayoutProps {
 }
 
 const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
 
   return (
@@ -20,15 +19,12 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
 
       <div className="flex flex-1 pt-16">
         {/* Enhanced Sidebar */}
-        <EnhancedSidebar 
-          isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen(!sidebarOpen)}
-        />
+        <EnhancedSidebar />
 
         {/* Main Content */}
         <main className={`flex-1 transition-all duration-300 ${
-          !isMobile ? (sidebarOpen ? 'ml-64' : 'ml-16') : ''
-        } ${isMobile ? 'pb-20' : ''} bg-gray-50 dark:bg-gray-900 min-h-screen`}>
+          isMobile ? 'pb-20' : ''
+        } bg-gray-50 dark:bg-gray-900 min-h-screen`}>
           {children}
         </main>
       </div>
