@@ -52,17 +52,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
 
   return (
     <>
-      <Card className={`bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700 ${isUnspecifiedQuantity ? 'opacity-90' : ''}`}>
-        <CardContent className="p-6">
+      <Card className={`bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700 ${isUnspecifiedQuantity ? 'opacity-90' : ''} flex flex-col h-full`}>
+        <CardContent className="p-6 flex flex-col h-full">
           <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>
               <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-2">#{product.id.slice(0, 8).toUpperCase()}</p>
             </div>
-            {getStockBadge()}
+            <div className="flex-shrink-0 ml-2">
+              {getStockBadge()}
+            </div>
           </div>
           
-          <div className="space-y-3 text-sm">
+          <div className="space-y-3 text-sm flex-1">
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Category:</span>
               <span className="font-medium text-gray-900 dark:text-white px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">{product.category}</span>
@@ -89,43 +91,47 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
             )}
           </div>
 
-          <div className="flex gap-2 mt-6">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(product)}
-              className="flex-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
-            >
-              <Edit className="w-4 h-4 mr-1" />
-              Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowRestockModal(true)}
-              disabled={isUnspecifiedQuantity}
-              className={`flex-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 ${isUnspecifiedQuantity ? 'cursor-not-allowed opacity-50' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'}`}
-              title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
-            >
-              <Package className="w-4 h-4 mr-1" />
-              Restock
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDelete(product)}
-              className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-
+          {/* Low stock warning moved above buttons for better layout */}
           {isLowStock && !isUnspecifiedQuantity && (
             <div className="mt-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <span className="text-xs font-medium text-amber-800 dark:text-amber-200">Stock is running low!</span>
             </div>
           )}
+
+          {/* Buttons container with improved positioning */}
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit(product)}
+                className="flex items-center justify-center gap-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-xs px-2 py-1.5 min-h-[32px]"
+              >
+                <Edit className="w-3 h-3" />
+                <span className="hidden sm:inline">Edit</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRestockModal(true)}
+                disabled={isUnspecifiedQuantity}
+                className={`flex items-center justify-center gap-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-xs px-2 py-1.5 min-h-[32px] ${isUnspecifiedQuantity ? 'cursor-not-allowed opacity-50' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'}`}
+                title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
+              >
+                <Package className="w-3 h-3" />
+                <span className="hidden sm:inline">Stock</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete(product)}
+                className="flex items-center justify-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-xs px-2 py-1.5 min-h-[32px]"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

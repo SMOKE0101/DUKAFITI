@@ -38,6 +38,7 @@ const EnhancedTopbar = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [notificationsRead, setNotificationsRead] = useState(false);
 
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
@@ -51,7 +52,7 @@ const EnhancedTopbar = () => {
 
   // Get low stock alerts
   const lowStockAlerts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
-  const unreadNotifications = lowStockAlerts.length;
+  const unreadNotifications = notificationsRead ? 0 : lowStockAlerts.length;
 
   // Get overdue customers
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
@@ -119,6 +120,14 @@ const EnhancedTopbar = () => {
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  const handleNotificationClick = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications) {
+      // Mark notifications as read when opened
+      setNotificationsRead(true);
     }
   };
 
@@ -221,8 +230,8 @@ const EnhancedTopbar = () => {
             )}
           </div>
 
-          {/* Right - Actions */}
-          <div className="flex items-center gap-2">
+          {/* Right - Actions - Fixed positioning */}
+          <div className="flex items-center gap-3 ml-auto">
             {/* Mobile Search */}
             <Button
               variant="ghost"
@@ -238,8 +247,8 @@ const EnhancedTopbar = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="relative text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 w-10 h-10 rounded-full p-0"
+                onClick={handleNotificationClick}
               >
                 <Bell className="w-5 h-5" />
                 {unreadNotifications > 0 && (
@@ -322,7 +331,7 @@ const EnhancedTopbar = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8 rounded-full p-0"
+                className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 w-10 h-10 rounded-full p-0"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
                 <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
