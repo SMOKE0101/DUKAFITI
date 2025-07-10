@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { EnhancedSidebar } from './EnhancedSidebar';
+import EnhancedSidebar from './EnhancedSidebar';
 import { BottomNavigation } from './BottomNavigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import EnhancedTopbar from './EnhancedTopbar';

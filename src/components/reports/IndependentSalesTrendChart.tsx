@@ -19,93 +19,91 @@ const IndependentSalesTrendChart: React.FC<IndependentSalesTrendChartProps> = ({
 }) => {
   const chartData = useMemo(() => {
     const now = new Date();
-    let startDate: Date;
     let groupedData: { [key: string]: number } = {};
     
-    switch (timeframe) {
-      case 'hourly':
-        // Last 24 hours
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        
-        // Initialize all 24 hours
-        for (let i = 0; i < 24; i++) {
-          const hour = String(i).padStart(2, '0') + ':00';
-          groupedData[hour] = 0;
+    if (timeframe === 'hourly') {
+      // Last 24 hours
+      const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      // Initialize all 24 hours
+      for (let i = 0; i < 24; i++) {
+        const hour = String(i).padStart(2, '0') + ':00';
+        groupedData[hour] = 0;
+      }
+      
+      // Group sales by hour
+      sales.forEach(sale => {
+        const saleDate = new Date(sale.timestamp);
+        if (saleDate >= startDate && saleDate <= now) {
+          const hour = String(saleDate.getHours()).padStart(2, '0') + ':00';
+          groupedData[hour] = (groupedData[hour] || 0) + sale.total;
         }
-        
-        // Group sales by hour
-        sales.forEach(sale => {
-          const saleDate = new Date(sale.timestamp);
-          if (saleDate >= startDate && saleDate <= now) {
-            const hour = String(saleDate.getHours()).padStart(2, '0') + ':00';
-            groupedData[hour] = (groupedData[hour] || 0) + sale.total;
-          }
-        });
-        
-        return Object.entries(groupedData).map(([time, revenue]) => ({
-          time,
+      });
+      
+      return Object.entries(groupedData).map(([time, revenue]) => ({
+        time,
+        revenue,
+        displayTime: time,
+        fullTime: time
+      }));
+      
+    } else if (timeframe === 'daily') {
+      // Last 14 days
+      const startDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      
+      // Initialize all 14 days
+      for (let i = 13; i >= 0; i--) {
+        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateKey = date.toISOString().split('T')[0];
+        groupedData[dateKey] = 0;
+      }
+      
+      // Group sales by day
+      sales.forEach(sale => {
+        const saleDate = new Date(sale.timestamp);
+        if (saleDate >= startDate && saleDate <= now) {
+          const dateKey = saleDate.toISOString().split('T')[0];
+          groupedData[dateKey] = (groupedData[dateKey] || 0) + sale.total;
+        }
+      });
+      
+      return Object.entries(groupedData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, revenue]) => ({
+          time: date,
           revenue,
-          displayTime: time
+          displayTime: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          fullTime: date
         }));
         
-      case 'daily':
-        // Last 14 days
-        startDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-        
-        // Initialize all 14 days
-        for (let i = 13; i >= 0; i--) {
-          const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-          const dateKey = date.toISOString().split('T')[0];
-          groupedData[dateKey] = 0;
+    } else {
+      // Last 12 months
+      const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      
+      // Initialize all 12 months
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+        groupedData[monthKey] = 0;
+      }
+      
+      // Group sales by month
+      sales.forEach(sale => {
+        const saleDate = new Date(sale.timestamp);
+        if (saleDate >= startDate && saleDate <= now) {
+          const monthKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+          groupedData[monthKey] = (groupedData[monthKey] || 0) + sale.total;
         }
-        
-        // Group sales by day
-        sales.forEach(sale => {
-          const saleDate = new Date(sale.timestamp);
-          if (saleDate >= startDate && saleDate <= now) {
-            const dateKey = saleDate.toISOString().split('T')[0];
-            groupedData[dateKey] = (groupedData[dateKey] || 0) + sale.total;
-          }
-        });
-        
-        return Object.entries(groupedData)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([date, revenue]) => ({
-            time: date,
-            revenue,
-            displayTime: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          }));
-          
-      case 'monthly':
-        // Last 12 months
-        startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-        
-        // Initialize all 12 months
-        for (let i = 11; i >= 0; i--) {
-          const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
-          groupedData[monthKey] = 0;
-        }
-        
-        // Group sales by month
-        sales.forEach(sale => {
-          const saleDate = new Date(sale.timestamp);
-          if (saleDate >= startDate && saleDate <= now) {
-            const monthKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
-            groupedData[monthKey] = (groupedData[monthKey] || 0) + sale.total;
-          }
-        });
-        
-        return Object.entries(groupedData)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([month, revenue]) => ({
-            time: month,
-            revenue,
-            displayTime: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-          }));
-          
-      default:
-        return [];
+      });
+      
+      return Object.entries(groupedData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, revenue]) => ({
+          time: month,
+          revenue,
+          displayTime: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          fullTime: month
+        }));
     }
   }, [sales, timeframe]);
 
