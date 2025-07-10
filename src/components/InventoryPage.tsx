@@ -1,410 +1,431 @@
 
-import React, { useState, useEffect } from 'react';
-import { useToast } from '../hooks/use-toast';
-import { Product } from '../types';
+import React, { useState } from 'react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import InventoryHeader from './inventory/InventoryHeader';
-import InventoryFilters from './inventory/InventoryFilters';
-import InventoryProductGrid from './inventory/InventoryProductGrid';
-import PremiumStatsCards from './inventory/PremiumStatsCards';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Search, 
+  Plus, 
+  Filter,
+  SortAsc,
+  SortDesc,
+  Package,
+  TrendingUp,
+  AlertTriangle,
+  Eye,
+  Edit,
+  Trash2,
+  ShoppingCart
+} from 'lucide-react';
+import { formatCurrency } from '../utils/currency';
 import AddProductModal from './inventory/AddProductModal';
-import RestockModal from './inventory/RestockModal';
-import { Plus } from 'lucide-react';
+import EditProductModal from './inventory/EditProductModal';
+import DeleteProductModal from './inventory/DeleteProductModal';
+import InventoryModal from './InventoryModal';
+import { Product } from '../types';
 
 const InventoryPage = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const { products, loading, createProduct, updateProduct, deleteProduct, addStock } = useSupabaseProducts();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
-  const [showModal, setShowModal] = useState(false);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterBy, setFilterBy] = useState('all');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [showRestockModal, setShowRestockModal] = useState(false);
-  const [restockingProduct, setRestockingProduct] = useState<Product | null>(null);
-  const [isRestocking, setIsRestocking] = useState(false);
-
-  const { products, loading, createProduct, updateProduct, deleteProduct, refetch } = useSupabaseProducts();
-  const { toast } = useToast();
-
-  // Get unique categories and sort them alphabetically
-  const categories = ['all', ...Array.from(new Set(products.map(product => product.category))).sort()];
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   // Filter and sort products
-  const filteredProducts = products
-    .filter(product => {
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = activeFilter === 'all' || 
-        (activeFilter === 'low-stock' && product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold) ||
-        (activeFilter === 'in-stock' && (product.currentStock === -1 || product.currentStock > product.lowStockThreshold));
-      return matchesCategory && matchesSearch && matchesFilter;
-    })
-    .sort((a, b) => {
+  const filteredAndSortedProducts = React.useMemo(() => {
+    let filtered = products.filter(product => 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Apply filter
+    if (filterBy === 'low-stock') {
+      filtered = filtered.filter(product => product.currentStock <= (product.lowStockThreshold || 10));
+    } else if (filterBy === 'out-of-stock') {
+      filtered = filtered.filter(product => product.currentStock === 0);
+    } else if (filterBy !== 'all') {
+      filtered = filtered.filter(product => product.category === filterBy);
+    }
+
+    // Apply sort
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
         case 'stock':
-          // Handle unspecified stock (-1) by treating it as 0 for sorting
-          const aStock = a.currentStock === -1 ? 0 : a.currentStock;
-          const bStock = b.currentStock === -1 ? 0 : b.currentStock;
-          return bStock - aStock;
+          aValue = a.currentStock;
+          bValue = b.currentStock;
+          break;
         case 'price':
-          return b.sellingPrice - a.sellingPrice;
+          aValue = a.sellingPrice;
+          bValue = b.sellingPrice;
+          break;
+        case 'category':
+          aValue = a.category.toLowerCase();
+          bValue = b.category.toLowerCase();
+          break;
         default:
-          return 0;
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
       }
-    });
 
-  // Calculate stats (exclude unspecified stock from calculations)
-  const totalProducts = products.length;
-  const totalValue = products.reduce((sum, product) => {
-    // Only count products with specified stock
-    if (product.currentStock === -1) return sum;
-    return sum + (product.sellingPrice * product.currentStock);
-  }, 0);
-  const lowStockCount = products.filter(product => 
-    product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold
-  ).length;
-
-  const handleEdit = (product: Product) => {
-    console.log('Edit button clicked for product:', product);
-    setEditingProduct(product);
-    setShowModal(true);
-  };
-
-  const handleDeleteClick = (product: Product) => {
-    setProductToDelete(product);
-    setShowDeleteModal(true);
-  };
-
-  const handleRestock = (product: Product) => {
-    setRestockingProduct(product);
-    setShowRestockModal(true);
-  };
-
-  const handleRestockSave = async (quantity: number, buyingPrice: number): Promise<void> => {
-    if (!restockingProduct) return;
-
-    setIsRestocking(true);
-    try {
-      const newStock = restockingProduct.currentStock === -1 ? quantity : restockingProduct.currentStock + quantity;
-      
-      await updateProduct(restockingProduct.id, {
-        ...restockingProduct,
-        currentStock: newStock,
-        costPrice: buyingPrice, // Update cost price with latest buying price
-      });
-
-      toast({
-        title: "Product Restocked",
-        description: `${restockingProduct.name} has been restocked with ${quantity} units.`,
-      });
-
-      setShowRestockModal(false);
-      setRestockingProduct(null);
-      await refetch();
-    } catch (error) {
-      console.error('Error restocking product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to restock product. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRestocking(false);
-    }
-  };
-
-  const handleProductRestock = async (product: Product, quantity: number, buyingPrice: number): Promise<void> => {
-    const newStock = product.currentStock === -1 ? quantity : product.currentStock + quantity;
-    
-    await updateProduct(product.id, {
-      ...product,
-      currentStock: newStock,
-      costPrice: buyingPrice,
-    });
-
-    toast({
-      title: "Product Restocked",
-      description: `${product.name} has been restocked with ${quantity} units.`,
-    });
-
-    await refetch();
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!productToDelete) return;
-    
-    try {
-      await deleteProduct(productToDelete.id);
-      toast({
-        title: "Product Deleted",
-        description: `${productToDelete.name} has been removed from your inventory.`,
-      });
-      setShowDeleteModal(false);
-      setProductToDelete(null);
-      // Refetch data to update UI immediately
-      await refetch();
-    } catch (error) {
-      console.error('Error deleting product:', error);
-    }
-  };
-
-  const handleCreateProduct = () => {
-    setEditingProduct(null);
-    setShowModal(true);
-  };
-
-  const handleCardClick = (filter: string) => {
-    setActiveFilter(filter);
-    if (filter === 'low-stock') {
-      setSelectedCategory('all');
-      setSearchTerm('');
-    }
-  };
-
-  const handleSaveProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, productData);
-        toast({
-          title: "Product Updated",
-          description: `${productData.name} has been updated successfully.`,
-        });
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
       } else {
-        await createProduct(productData);
-        toast({
-          title: "Product Created",
-          description: `${productData.name} has been added to your inventory.`,
-        });
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       }
-      
-      setShowModal(false);
-      setEditingProduct(null);
-      // Refetch data to update UI immediately
-      await refetch();
+    });
+
+    return filtered;
+  }, [products, searchTerm, sortBy, sortOrder, filterBy]);
+
+  // Calculate summary stats
+  const totalProducts = products.length;
+  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
+  const totalValue = products.reduce((sum, p) => sum + (p.sellingPrice * p.currentStock), 0);
+  const outOfStockProducts = products.filter(p => p.currentStock === 0).length;
+
+  // Get unique categories and sort them alphabetically
+  const categories = Array.from(new Set(products.map(p => p.category))).sort();
+
+  const handleAddStock = async (productId: string, quantity: number, buyingPrice: number, supplier?: string) => {
+    try {
+      await addStock(productId, quantity, buyingPrice, supplier);
+      setIsInventoryModalOpen(false);
     } catch (error) {
-      console.error('Error saving product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save product. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Failed to add stock:', error);
     }
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingProduct(null);
-  };
-
-  const handleCloseRestockModal = () => {
-    setShowRestockModal(false);
-    setRestockingProduct(null);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="p-6 space-y-8 max-w-7xl mx-auto">
-        {/* Blocky Header with Smooth Cards */}
-        <div className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700">
-          <div className="relative z-10">
-            <h1 className="font-mono text-4xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Page Title - Consistent with other pages */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
               INVENTORY
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Manage your products and stock levels</p>
-            
-            {/* Quick Stats in smooth pills */}
-            <div className="flex items-center gap-6 mt-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{totalProducts} Products</span>
-              </div>
-              {lowStockCount > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-200 dark:border-red-800">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-red-700 dark:text-red-300">{lowStockCount} Low Stock</span>
-                </div>
-              )}
-            </div>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
+              Manage your products and track stock levels
+            </p>
           </div>
           
-          <Button 
-            variant="outline"
-            onClick={handleCreateProduct}
-            className="absolute top-8 right-8 px-6 py-3 bg-transparent border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Add New Product
-          </Button>
-        </div>
-
-        {/* Summary Stats with Smooth Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">TOTAL SKUS</h3>
-                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">{totalProducts}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">INVENTORY VALUE</h3>
-                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">KES {totalValue.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">LOW STOCK</h3>
-                <p className="text-3xl font-semibold text-red-600 dark:text-red-400 mt-2">{lowStockCount}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">CATEGORIES</h3>
-                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">{categories.length - 1}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filter indicator with smooth styling */}
-        {activeFilter !== 'all' && (
-          <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
-            <span className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">ACTIVE FILTER:</span>
-            <span className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full text-sm font-semibold shadow-md">
-              {activeFilter === 'low-stock' ? 'Low Stock Items' : 
-               activeFilter === 'in-stock' ? 'In Stock Items' : 'All Items'}
-            </span>
-            <button
-              onClick={() => setActiveFilter('all')}
-              className="px-3 py-1 text-sm text-purple-600 hover:text-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full transition-all duration-200 font-medium"
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => setIsInventoryModalOpen(true)}
+              className="bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border-2 border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
             >
-              Clear filter
-            </button>
+              <Plus className="w-4 h-4 mr-2 stroke-2" />
+              ADD INVENTORY
+            </Button>
+            
+            <Button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-2 stroke-2" />
+              ADD PRODUCT
+            </Button>
           </div>
-        )}
-
-        {/* Filters with smooth styling */}
-        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
-          <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-4">FILTERS</h3>
-          <InventoryFilters
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-          />
         </div>
+      </div>
 
-        {/* Product Grid with smooth cards */}
-        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
-          <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-6">PRODUCTS</h3>
-          <InventoryProductGrid
-            products={filteredProducts}
-            onEdit={handleEdit}
-            onDelete={handleDeleteClick}
-            onRestock={handleProductRestock}
-          />
-        </div>
-
-        {/* Enhanced Add/Edit Product Modal */}
-        <AddProductModal
-          isOpen={showModal}
-          onClose={handleCloseModal}
-          onSave={handleSaveProduct}
-          editingProduct={editingProduct}
-        />
-
-        {/* Restock Modal */}
-        <RestockModal
-          isOpen={showRestockModal}
-          onClose={handleCloseRestockModal}
-          onSave={handleRestockSave}
-          product={restockingProduct}
-          isLoading={isRestocking}
-        />
-
-        {/* Enhanced Delete Confirmation Modal */}
-        {showDeleteModal && productToDelete && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl border border-gray-200 dark:border-gray-700">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+      <div className="container mx-auto px-6 py-8 space-y-8">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400">
+                    TOTAL PRODUCTS
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {totalProducts}
+                  </p>
                 </div>
-                <h2 className="font-mono text-xl font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2">DELETE PRODUCT</h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-white">"{productToDelete.name}"</span>? This action cannot be undone.
-                </p>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl">
+                  <Package className="w-8 h-8 text-blue-600 dark:text-blue-400 stroke-2" />
+                </div>
               </div>
-              
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleDeleteConfirm}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
-                >
-                  Delete Product
-                </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-orange-600 dark:text-orange-400">
+                    LOW STOCK ITEMS
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {lowStockProducts}
+                  </p>
+                </div>
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-700 rounded-xl">
+                  <AlertTriangle className="w-8 h-8 text-orange-600 dark:text-orange-400 stroke-2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-green-200 dark:border-green-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-green-600 dark:text-green-400">
+                    TOTAL VALUE
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {formatCurrency(totalValue)}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-xl">
+                  <TrendingUp className="w-8 h-8 text-green-600 dark:text-green-400 stroke-2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-red-200 dark:border-red-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-red-600 dark:text-red-400">
+                    OUT OF STOCK
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {outOfStockProducts}
+                  </p>
+                </div>
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-700 rounded-xl">
+                  <Package className="w-8 h-8 text-red-600 dark:text-red-400 stroke-2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters and Search */}
+        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 stroke-2" />
+                <Input
+                  placeholder="Search products by name or category..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600"
+                />
+              </div>
+
+              {/* Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500 stroke-2" />
+                <Select value={filterBy} onValueChange={setFilterBy}>
+                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Products</SelectItem>
+                    <SelectItem value="low-stock">Low Stock</SelectItem>
+                    <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort */}
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="category">Category</SelectItem>
+                    <SelectItem value="stock">Stock Level</SelectItem>
+                    <SelectItem value="price">Price</SelectItem>
+                  </SelectContent>
+                </Select>
+                
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setProductToDelete(null);
-                  }}
-                  className="flex-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl border-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600"
                 >
-                  Cancel
+                  {sortOrder === 'asc' ? <SortAsc className="w-4 h-4 stroke-2" /> : <SortDesc className="w-4 h-4 stroke-2" />}
                 </Button>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+
+        {/* Results Summary */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600 dark:text-gray-400 font-mono font-bold uppercase tracking-tight">
+            SHOWING {filteredAndSortedProducts.length} OF {totalProducts} PRODUCTS
+          </p>
+        </div>
+
+        {/* Product Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredAndSortedProducts.map((product) => (
+            <Card key={product.id} className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 group">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">{product.name}</CardTitle>
+                    <Badge className="mt-1 text-xs font-mono font-bold uppercase border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-700">
+                      {product.category}
+                    </Badge>
+                  </div>
+                  <Badge className={`text-xs font-mono font-bold uppercase border ${
+                    product.currentStock === 0 
+                      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700' 
+                      : product.currentStock <= (product.lowStockThreshold || 10)
+                      ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-700'
+                      : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-700'
+                  }`}>
+                    STOCK: {product.currentStock}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">Selling Price:</span>
+                    <span className="font-bold text-green-600 dark:text-green-400">{formatCurrency(product.sellingPrice)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">Cost Price:</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(product.costPrice)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">Value:</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(product.sellingPrice * product.currentStock)}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 grid grid-cols-3 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold"
+                    onClick={() => {/* View functionality */}}
+                  >
+                    <Eye className="w-4 h-4 stroke-2" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-yellow-200 dark:border-yellow-700 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 font-semibold"
+                    onClick={() => setEditingProduct(product)}
+                  >
+                    <Edit className="w-4 h-4 stroke-2" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-white/50 dark:bg-gray-700/50 border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold"
+                    onClick={() => setDeletingProduct(product)}
+                  >
+                    <Trash2 className="w-4 h-4 stroke-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {filteredAndSortedProducts.length === 0 && (
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Package className="w-8 h-8 text-gray-400 stroke-2" />
+              </div>
+              <h3 className="text-lg font-mono font-bold uppercase tracking-tight text-gray-600 dark:text-gray-400 mb-2">
+                {searchTerm || filterBy !== 'all' ? 'NO PRODUCTS FOUND' : 'NO PRODUCTS YET'}
+              </h3>
+              <p className="text-gray-500 dark:text-gray-500 mb-6 font-medium">
+                {searchTerm || filterBy !== 'all' 
+                  ? 'Try adjusting your search or filter criteria'
+                  : 'Add your first product to get started'
+                }
+              </p>
+              {!searchTerm && filterBy === 'all' && (
+                <Button 
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2 stroke-2" />
+                  ADD PRODUCT
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Modals */}
+        <AddProductModal 
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSave={createProduct}
+        />
+        
+        <InventoryModal
+          isOpen={isInventoryModalOpen}
+          onClose={() => setIsInventoryModalOpen(false)}
+          products={products}
+          onAddStock={handleAddStock}
+        />
+        
+        {editingProduct && (
+          <EditProductModal
+            isOpen={!!editingProduct}
+            onClose={() => setEditingProduct(null)}
+            product={editingProduct}
+            onSave={updateProduct}
+          />
+        )}
+        
+        {deletingProduct && (
+          <DeleteProductModal
+            isOpen={!!deletingProduct}
+            onClose={() => setDeletingProduct(null)}
+            product={deletingProduct}
+            onDelete={deleteProduct}
+          />
         )}
       </div>
     </div>

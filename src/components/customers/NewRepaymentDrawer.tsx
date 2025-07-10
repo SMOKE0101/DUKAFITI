@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const { refreshCustomers } = useSupabaseCustomers();
+  const { updateCustomer, refreshCustomers } = useSupabaseCustomers();
   const { user } = useAuth();
 
   const handleSavePayment = async () => {
@@ -45,28 +46,31 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       
-      // Create a payment record in transactions table
-      const { error: transactionError } = await supabase
-        .from('transactions')
+      // Create a sales record with negative amount to indicate payment
+      const { error: salesError } = await supabase
+        .from('sales')
         .insert({
           user_id: user.id,
           customer_id: customer.id,
-          item_id: customer.id, // Use customer ID as item reference for payments
+          customer_name: customer.name,
+          product_id: '00000000-0000-0000-0000-000000000001', // Dummy product ID for payments
+          product_name: 'Payment Received',
           quantity: 1,
-          unit_price: paymentAmount,
-          total_amount: paymentAmount,
-          paid: true,
-          paid_date: new Date().toISOString(),
-          notes: `Payment received via ${method}${reference ? ` (Ref: ${reference})` : ''}`,
-          date: new Date().toISOString()
+          selling_price: -paymentAmount, // Negative amount to indicate payment
+          cost_price: 0,
+          total_amount: -paymentAmount,
+          profit: 0,
+          payment_method: method,
+          payment_details: reference ? { reference } : {},
+          timestamp: new Date().toISOString()
         });
 
-      if (transactionError) {
-        console.error('Error creating payment record:', transactionError);
-        throw new Error(`Failed to record payment: ${transactionError.message}`);
+      if (salesError) {
+        console.error('Error creating payment record:', salesError);
+        throw new Error(`Failed to record payment: ${salesError.message}`);
       }
 
-      // Update customer balance
+      // Update customer balance directly
       const { error: updateError } = await supabase
         .from('customers')
         .update({
@@ -87,12 +91,12 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
       setMethod('cash');
       setReference('');
       
-      // Trigger refresh to update UI
+      // Refresh customers to update UI
       await refreshCustomers();
       
       toast({
         title: "Payment Recorded",
-        description: `Payment of ${formatCurrency(paymentAmount)} recorded for ${customer.name}`,
+        description: `Payment of ${formatCurrency(paymentAmount)} recorded for ${customer.name}. New balance: ${formatCurrency(newBalance)}`,
       });
 
       onClose();

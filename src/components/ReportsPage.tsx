@@ -1,153 +1,354 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, Package, Users, DollarSign, BarChart3, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePickerWithRange } from '@/components/ui/date-picker';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  AreaChart,
+  Area
+} from 'recharts';
+import {
+  TrendingUp,
+  DollarSign,
+  ShoppingCart,
+  Users,
+  Package,
+  Download,
+  Calendar,
+  Filter,
+  FileText,
+  BarChart3
+} from 'lucide-react';
+import { formatCurrency } from '../utils/currency';
+
+// Mock data for reports
+const salesData = [
+  { name: 'Jan', sales: 4000, profit: 2400, orders: 240 },
+  { name: 'Feb', sales: 3000, profit: 1398, orders: 139 },
+  { name: 'Mar', sales: 2000, profit: 9800, orders: 980 },
+  { name: 'Apr', sales: 2780, profit: 3908, orders: 390 },
+  { name: 'May', sales: 1890, profit: 4800, orders: 480 },
+  { name: 'Jun', sales: 2390, profit: 3800, orders: 380 },
+];
+
+const topProducts = [
+  { name: 'iPhone 13', sales: 89, revenue: 45000, profit: 15000 },
+  { name: 'Samsung TV', sales: 67, revenue: 35000, profit: 12000 },
+  { name: 'Laptop', sales: 45, revenue: 25000, profit: 8000 },
+  { name: 'Headphones', sales: 34, revenue: 15000, profit: 5000 },
+  { name: 'Tablet', sales: 23, revenue: 12000, profit: 4000 },
+];
+
+const categoryData = [
+  { name: 'Electronics', value: 400, color: '#3b82f6' },
+  { name: 'Clothing', value: 300, color: '#10b981' },
+  { name: 'Food', value: 300, color: '#f59e0b' },
+  { name: 'Books', value: 200, color: '#ef4444' },
+];
 
 const ReportsPage = () => {
+  const [dateRange, setDateRange] = useState<any>(null);
+  const [reportType, setReportType] = useState('sales');
+  const [period, setPeriod] = useState('monthly');
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="p-6 space-y-8 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700">
-          <div className="relative z-10">
-            <h1 className="font-mono text-4xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Page Title - Consistent with other pages */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
               REPORTS
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Analyze your business performance and insights</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
+              Analyze your business performance with detailed insights
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button 
+              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-2 border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+            >
+              <Download className="w-4 h-4 mr-2 stroke-2" />
+              EXPORT PDF
+            </Button>
+            
+            <Button 
+              className="bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border-2 border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+            >
+              <FileText className="w-4 h-4 mr-2 stroke-2" />
+              GENERATE REPORT
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Quick Stats */}
+      <div className="container mx-auto px-6 py-8 space-y-8">
+        {/* Filters */}
+        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500 stroke-2" />
+                <Select value={reportType} onValueChange={setReportType}>
+                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sales">Sales Report</SelectItem>
+                    <SelectItem value="inventory">Inventory Report</SelectItem>
+                    <SelectItem value="customers">Customer Report</SelectItem>
+                    <SelectItem value="profit">Profit Report</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-500 stroke-2" />
+                <Select value={period} onValueChange={setPeriod}>
+                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1">
+                <DatePickerWithRange 
+                  date={dateRange}
+                  onDateChange={setDateRange}
+                  className="bg-white/50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">TODAY'S SALES</h3>
-                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">KES 12,450</p>
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400">
+                    TOTAL REVENUE
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {formatCurrency(125000)}
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
+                    +12% from last period
+                  </p>
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl">
+                  <DollarSign className="w-8 h-8 text-blue-600 dark:text-blue-400 stroke-2" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-            <div className="text-xs text-green-600 mt-1">+15% from yesterday</div>
+            </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">PROFIT</h3>
-                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">KES 3,120</p>
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-green-200 dark:border-green-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-green-600 dark:text-green-400">
+                    TOTAL PROFIT
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {formatCurrency(45000)}
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
+                    +8% from last period
+                  </p>
+                </div>
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-xl">
+                  <TrendingUp className="w-8 h-8 text-green-600 dark:text-green-400 stroke-2" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-            <div className="text-xs text-blue-600 mt-1">25% margin</div>
+            </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">CUSTOMERS</h3>
-                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">47</p>
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-purple-200 dark:border-purple-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-purple-600 dark:text-purple-400">
+                    TOTAL ORDERS
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    856
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
+                    +15% from last period
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl">
+                  <ShoppingCart className="w-8 h-8 text-purple-600 dark:text-purple-400 stroke-2" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-            <div className="text-xs text-purple-600 mt-1">12 new today</div>
+            </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">LOW STOCK</h3>
-                <p className="text-3xl font-semibold text-red-600 dark:text-red-400 mt-2">3</p>
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-mono font-bold uppercase tracking-tight text-orange-600 dark:text-orange-400">
+                    AVG ORDER VALUE
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {formatCurrency(146)}
+                  </p>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">
+                    -3% from last period
+                  </p>
+                </div>
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-700 rounded-xl">
+                  <BarChart3 className="w-8 h-8 text-orange-600 dark:text-orange-400 stroke-2" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                <Package className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-            <div className="text-xs text-red-600 mt-1">Needs restocking</div>
+            </CardContent>
           </Card>
         </div>
 
-        {/* Reports Content */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
-          <Tabs defaultValue="overview" className="p-6">
-            <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-              <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
-              <TabsTrigger value="sales" className="rounded-lg">Sales</TabsTrigger>
-              <TabsTrigger value="products" className="rounded-lg">Products</TabsTrigger>
-              <TabsTrigger value="customers" className="rounded-lg">Customers</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="overview" className="mt-6">
-              <div className="space-y-6">
-                <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white">BUSINESS OVERVIEW</h3>
-                <div className="grid gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5" />
-                        Sales Performance
-                      </CardTitle>
-                      <CardDescription>Your sales trend over time</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-64 flex items-center justify-center text-gray-500">
-                        <div className="text-center">
-                          <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                          <p>Chart visualization would be displayed here</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Sales Trend */}
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-mono font-bold uppercase tracking-tight text-gray-900 dark:text-white">
+                  SALES TREND
+                </CardTitle>
+                <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-700 font-mono font-bold uppercase">
+                  6 MONTHS
+                </Badge>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="sales" className="mt-6">
-              <div className="space-y-6">
-                <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white">SALES ANALYSIS</h3>
-                <div className="grid gap-4">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="font-semibold mb-2">Top Selling Products Today</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Milk 1L</span>
-                        <span className="font-semibold">24 sold - KES 2,880</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Bread</span>
-                        <span className="font-semibold">18 sold - KES 1,800</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Sugar 2kg</span>
-                        <span className="font-semibold">12 sold - KES 2,880</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={salesData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="name" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip 
+                      formatter={(value) => [formatCurrency(Number(value)), '']}
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '12px'
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sales"
+                      stroke="#3b82f6"
+                      fill="#3b82f6"
+                      fillOpacity={0.1}
+                      strokeWidth={3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="products" className="mt-6">
-              <div className="space-y-6">
-                <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white">PRODUCT ANALYSIS</h3>
-                <p className="text-gray-600 dark:text-gray-400">Product performance and inventory insights</p>
+            </CardContent>
+          </Card>
+
+          {/* Category Distribution */}
+          <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-mono font-bold uppercase tracking-tight text-gray-900 dark:text-white">
+                  SALES BY CATEGORY
+                </CardTitle>
+                <Badge className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-700 font-mono font-bold uppercase">
+                  THIS MONTH
+                </Badge>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="customers" className="mt-6">
-              <div className="space-y-6">
-                <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white">CUSTOMER ANALYSIS</h3>
-                <p className="text-gray-600 dark:text-gray-400">Customer behavior and retention metrics</p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value) => [value, 'Sales']}
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '12px'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            </TabsContent>
-          </Tabs>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Top Products Table */}
+        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-mono font-bold uppercase tracking-tight text-gray-900 dark:text-white">
+              TOP PERFORMING PRODUCTS
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 font-mono font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Product</th>
+                    <th className="text-right py-3 font-mono font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Sales</th>
+                    <th className="text-right py-3 font-mono font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Revenue</th>
+                    <th className="text-right py-3 font-mono font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Profit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topProducts.map((product, index) => (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="py-3 font-medium text-gray-900 dark:text-white">{product.name}</td>
+                      <td className="py-3 text-right font-bold text-purple-600 dark:text-purple-400">{product.sales}</td>
+                      <td className="py-3 text-right font-bold text-blue-600 dark:text-blue-400">{formatCurrency(product.revenue)}</td>
+                      <td className="py-3 text-right font-bold text-green-600 dark:text-green-400">{formatCurrency(product.profit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
