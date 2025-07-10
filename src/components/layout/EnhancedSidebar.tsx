@@ -59,17 +59,25 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   if (isMobile) {
     return (
       <>
+        {/* Mobile Menu Button */}
+        <button
+          onClick={toggleMobileMenu}
+          className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-700"
+        >
+          <Menu className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+        </button>
+
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
           <div 
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-500"
             onClick={closeMobileMenu}
           />
         )}
 
         {/* Mobile Sidebar Drawer */}
         <div className={`
-          fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 z-50 transform transition-transform duration-300 ease-in-out lg:hidden shadow-2xl
+          fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 z-50 transform transition-all duration-500 ease-in-out lg:hidden shadow-2xl
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           {/* Mobile Header */}
@@ -96,7 +104,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           </div>
 
           {/* Mobile Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -132,7 +140,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           </nav>
 
           {/* Mobile Logout */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
             <button
               onClick={handleSignOut}
               className="w-full flex items-center rounded-2xl transition-all duration-300 p-4 gap-4 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -154,13 +162,13 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
       <div 
         className={`
           fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 
-          flex flex-col z-40 shadow-lg overflow-hidden
-          transition-all duration-700 ease-in-out transform
-          ${isCollapsed ? 'w-16' : 'w-72'}
+          flex flex-col z-40 shadow-lg
+          transition-all duration-700 ease-in-out
+          ${isCollapsed ? 'w-20' : 'w-72'}
         `}
         style={{
-          transitionProperty: 'width, transform',
-          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          transitionProperty: 'width',
+          transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         }}
       >
         {/* Brand Section */}
@@ -191,28 +199,8 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
         {/* Navigation Links */}
         <nav className={`
           flex-1 p-4 space-y-2 transition-all duration-700 ease-in-out
-          ${isCollapsed ? 'overflow-hidden' : 'overflow-y-auto'}
-        `}
-        style={{
-          scrollbarWidth: isCollapsed ? 'none' : 'auto',
-          msOverflowStyle: isCollapsed ? 'none' : 'auto',
-        }}>
-          <style jsx>{`
-            nav::-webkit-scrollbar {
-              display: ${isCollapsed ? 'none' : 'block'};
-              width: 6px;
-            }
-            nav::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            nav::-webkit-scrollbar-thumb {
-              background: #d1d5db;
-              border-radius: 3px;
-            }
-            nav::-webkit-scrollbar-thumb:hover {
-              background: #9ca3af;
-            }
-          `}</style>
+          ${isCollapsed ? 'overflow-hidden' : 'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600'}
+        `}>
           {navigation.map((item, index) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
@@ -324,7 +312,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                 ${isCollapsed ? 'rotate-0' : 'rotate-180'}
               `}
               style={{
-                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
               }}
             >
               <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300" />
@@ -332,6 +320,41 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Custom scrollbar styles */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .scrollbar-thin {
+            scrollbar-width: thin;
+          }
+          .scrollbar-thumb-gray-300 {
+            scrollbar-color: rgb(209, 213, 219) transparent;
+          }
+          .dark .scrollbar-thumb-gray-600 {
+            scrollbar-color: rgb(75, 85, 99) transparent;
+          }
+          .scrollbar-thin::-webkit-scrollbar {
+            width: 4px;
+          }
+          .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+            background-color: rgb(209, 213, 219);
+            border-radius: 2px;
+          }
+          .dark .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+            background-color: rgb(75, 85, 99);
+            border-radius: 2px;
+          }
+          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background-color: rgb(156, 163, 175);
+          }
+          .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background-color: rgb(107, 114, 128);
+          }
+        `
+      }} />
     </div>
   );
 };
