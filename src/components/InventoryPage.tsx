@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { Product } from '../types';
 import { useToast } from '../hooks/use-toast';
@@ -12,7 +12,8 @@ import AddProductModal from './inventory/AddProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Package, RefreshCw } from 'lucide-react';
+import { Package, RefreshCw, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const InventoryPage = () => {
   const { 
@@ -164,25 +165,32 @@ const InventoryPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-6">
-          <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
-            INVENTORY
-          </h1>
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <Package className="w-4 h-4 text-red-500" />
+            </div>
+            <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              INVENTORY
+            </h1>
+          </div>
         </div>
 
         <div className="p-6 space-y-8 max-w-7xl mx-auto">
           <div className="text-center py-12">
-            <Package className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Failed to Load Inventory
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
-            <button
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              {error}
+            </p>
+            <Button
               onClick={handleRetry}
-              className="px-6 py-2 bg-blue-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+              className="px-6 py-3 bg-blue-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
             >
               <RefreshCw className="w-4 h-4" />
               RETRY
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -194,9 +202,14 @@ const InventoryPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-6">
-          <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
-            INVENTORY
-          </h1>
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <Package className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-pulse" />
+            </div>
+            <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              INVENTORY
+            </h1>
+          </div>
         </div>
 
         <div className="p-6 space-y-8 max-w-7xl mx-auto">

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,8 @@ import {
   AlertTriangle,
   Search,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  BarChart3
 } from 'lucide-react';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
@@ -311,23 +311,22 @@ const ModernReportsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Page Header */}
-      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 px-6 py-6">
-        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
-                  REPORTS
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal italic">
-                  Your sales and performance overview
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Modern Top Bar - Updated to match new aesthetic */}
+      <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <BarChart3 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div>
+            <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              REPORTS
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+              Your sales and performance overview
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Product, Customer } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
@@ -225,30 +224,35 @@ const SalesManagement = () => {
     return cart.length > 0 && !isProcessing && (paymentMethod !== 'debt' || selectedCustomer);
   };
 
-  // Mobile Header Component
+  // Mobile Header Component with new aesthetic
   const MobileHeader = () => (
-    <div className="lg:hidden sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 h-14">
+    <div className="lg:hidden h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between px-4 h-full">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm">
-            <Menu className="h-5 w-5" />
-          </Button>
-          <h1 className="font-semibold text-lg">POS</h1>
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <ShoppingCart className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+              POS
+            </h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => setShowMobileSearch(!showMobileSearch)}
+            className="border border-gray-300 dark:border-gray-600"
           >
-            <Search className="h-5 w-5" />
+            <Search className="h-4 w-4" />
           </Button>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="relative">
-                <ShoppingCart className="h-5 w-5" />
+              <Button variant="ghost" size="sm" className="relative border border-gray-300 dark:border-gray-600">
+                <ShoppingCart className="h-4 w-4" />
                 {cart.length > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-blue-600">
                     {cart.length}
                   </Badge>
                 )}
@@ -256,7 +260,7 @@ const SalesManagement = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-full sm:w-96">
               <SheetHeader>
-                <SheetTitle>Cart ({cart.length})</SheetTitle>
+                <SheetTitle className="font-mono uppercase tracking-wide">Cart ({cart.length})</SheetTitle>
               </SheetHeader>
               <CartContent />
             </SheetContent>
@@ -266,7 +270,7 @@ const SalesManagement = () => {
       
       {/* Mobile Search Overlay */}
       {showMobileSearch && (
-        <div className="absolute inset-x-0 top-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
+        <div className="absolute inset-x-0 top-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 z-10">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -274,7 +278,7 @@ const SalesManagement = () => {
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10"
+              className="pl-10 pr-10 border-2 border-gray-300 dark:border-gray-600"
             />
             <Button
               variant="ghost"
@@ -290,7 +294,7 @@ const SalesManagement = () => {
     </div>
   );
 
-  // Search Component
+  // Search Component with new aesthetic
   const SearchSection = () => (
     <div className="hidden lg:block mb-6">
       <div className="relative">
@@ -300,7 +304,7 @@ const SalesManagement = () => {
           placeholder="Search products..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 pr-10 h-12 text-base rounded-xl"
+          className="pl-10 pr-10 h-12 text-base rounded-xl border-2 border-gray-300 dark:border-gray-600"
         />
         {searchTerm && (
           <Button
@@ -316,12 +320,12 @@ const SalesManagement = () => {
       
       {/* Search Results Dropdown */}
       {searchTerm && filteredProducts.length > 0 && (
-        <Card className="absolute z-10 w-full mt-2 max-h-64 overflow-y-auto">
+        <Card className="absolute z-10 w-full mt-2 max-h-64 overflow-y-auto border-2 border-gray-300 dark:border-gray-600">
           <CardContent className="p-2">
             {filteredProducts.slice(0, 8).map(product => (
               <div
                 key={product.id}
-                className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors"
                 onClick={() => {
                   addToCart(product);
                   setSearchTerm('');
@@ -331,7 +335,7 @@ const SalesManagement = () => {
                   <p className="font-medium">{product.name}</p>
                   <p className="text-sm text-gray-500">{formatCurrency(product.sellingPrice)}</p>
                 </div>
-                <Badge variant={product.currentStock > 0 ? "default" : "destructive"}>
+                <Badge variant={product.currentStock > 0 ? "default" : "destructive"} className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white">
                   {product.currentStock}
                 </Badge>
               </div>
@@ -345,69 +349,74 @@ const SalesManagement = () => {
   // Add Customer Modal Component
   const AddCustomerModal = () => (
     <Dialog open={showCustomerModal} onOpenChange={setShowCustomerModal}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md border-2 border-gray-300 dark:border-gray-600">
         <DialogHeader>
-          <DialogTitle>Add New Customer</DialogTitle>
+          <DialogTitle className="font-mono uppercase tracking-wide">Add New Customer</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="customer-name">Name *</Label>
+            <Label htmlFor="customer-name" className="font-mono text-sm">Name *</Label>
             <Input
               id="customer-name"
               value={newCustomerData.name}
               onChange={(e) => setNewCustomerData({...newCustomerData, name: e.target.value})}
               placeholder="Customer name"
+              className="border-2 border-gray-300 dark:border-gray-600"
             />
           </div>
           <div>
-            <Label htmlFor="customer-phone">Phone *</Label>
+            <Label htmlFor="customer-phone" className="font-mono text-sm">Phone *</Label>
             <Input
               id="customer-phone"
               value={newCustomerData.phone}
               onChange={(e) => setNewCustomerData({...newCustomerData, phone: e.target.value})}
-              placeholder="Phone number"
+              placeholder="Phone number" 
+              className="border-2 border-gray-300 dark:border-gray-600"
             />
           </div>
           <div>
-            <Label htmlFor="customer-email">Email</Label>
+            <Label htmlFor="customer-email" className="font-mono text-sm">Email</Label>
             <Input
               id="customer-email"
               type="email"
               value={newCustomerData.email}
               onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
               placeholder="Email (optional)"
+              className="border-2 border-gray-300 dark:border-gray-600"
             />
           </div>
           <div>
-            <Label htmlFor="customer-address">Address</Label>
+            <Label htmlFor="customer-address" className="font-mono text-sm">Address</Label>
             <Input
               id="customer-address"
               value={newCustomerData.address}
               onChange={(e) => setNewCustomerData({...newCustomerData, address: e.target.value})}
               placeholder="Address (optional)"
+              className="border-2 border-gray-300 dark:border-gray-600"
             />
           </div>
           <div>
-            <Label htmlFor="customer-credit">Credit Limit</Label>
+            <Label htmlFor="customer-credit" className="font-mono text-sm">Credit Limit</Label>
             <Input
               id="customer-credit"
               type="number"
               value={newCustomerData.creditLimit}
               onChange={(e) => setNewCustomerData({...newCustomerData, creditLimit: Number(e.target.value)})}
               placeholder="1000"
+              className="border-2 border-gray-300 dark:border-gray-600"
             />
           </div>
           <div className="flex gap-3 pt-4">
             <Button
               variant="outline"
               onClick={() => setShowCustomerModal(false)}
-              className="flex-1"
+              className="flex-1 border-2 border-gray-300 dark:border-gray-600"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateCustomer}
-              className="flex-1"
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
               disabled={!newCustomerData.name.trim() || !newCustomerData.phone.trim()}
             >
               Add Customer
@@ -418,24 +427,24 @@ const SalesManagement = () => {
     </Dialog>
   );
 
-  // Cart Content Component
+  // Cart Content Component with new aesthetic
   const CartContent = () => (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 py-4">
         {cart.length === 0 ? (
           <div className="text-center py-8">
             <ShoppingCart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-500">Cart is empty</p>
+            <p className="text-gray-500 font-mono">Cart is empty</p>
             <p className="text-sm text-gray-400">Add products to get started</p>
           </div>
         ) : (
           <div className="space-y-3">
             {cart.map(item => (
-              <Card key={item.product.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+              <Card key={item.product.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <h4 className="font-medium">{item.product.name}</h4>
+                      <h4 className="font-medium font-mono">{item.product.name}</h4>
                       <p className="text-sm text-gray-500">{formatCurrency(item.product.sellingPrice)} each</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -443,7 +452,7 @@ const SalesManagement = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 border-2 border-gray-300 dark:border-gray-600"
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                         >
                           <Minus className="h-3 w-3" />
@@ -453,24 +462,24 @@ const SalesManagement = () => {
                           min="1"
                           value={item.quantity}
                           onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 1)}
-                          className="w-16 h-8 text-center text-sm"
+                          className="w-16 h-8 text-center text-sm border-2 border-gray-300 dark:border-gray-600"
                         />
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 border-2 border-gray-300 dark:border-gray-600"
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
                       <div className="text-right min-w-[80px]">
-                        <p className="font-medium">{formatCurrency(item.product.sellingPrice * item.quantity)}</p>
+                        <p className="font-medium font-mono">{formatCurrency(item.product.sellingPrice * item.quantity)}</p>
                       </div>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={() => removeFromCart(item.product.id)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -485,16 +494,16 @@ const SalesManagement = () => {
       </ScrollArea>
 
       {cart.length > 0 && (
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+        <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-4 space-y-4">
           {/* Customer Selection */}
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="text-sm font-mono font-medium text-gray-700 dark:text-gray-300">
                 Customer {paymentMethod === 'debt' && <span className="text-red-500">*</span>}
               </label>
               <Dialog open={showCustomerModal} onOpenChange={setShowCustomerModal}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-sm">
+                  <Button variant="ghost" size="sm" className="text-sm font-mono border border-gray-300 dark:border-gray-600">
                     <UserPlus className="h-4 w-4 mr-1" />
                     New
                   </Button>
@@ -502,7 +511,7 @@ const SalesManagement = () => {
               </Dialog>
             </div>
             <Select value={selectedCustomer?.id || ""} onValueChange={handleCustomerSelect}>
-              <SelectTrigger>
+              <SelectTrigger className="border-2 border-gray-300 dark:border-gray-600">
                 <SelectValue placeholder="Select customer (optional)" />
               </SelectTrigger>
               <SelectContent>
@@ -524,46 +533,58 @@ const SalesManagement = () => {
 
           {/* Payment Method Selection */}
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+            <label className="text-sm font-mono font-medium text-gray-700 dark:text-gray-300 mb-2 block">
               Payment Method
             </label>
             <div className="grid grid-cols-3 gap-2">
               <Button
                 variant={paymentMethod === 'cash' ? "default" : "outline"}
-                className="flex flex-col items-center gap-1 h-16"
+                className={`flex flex-col items-center gap-1 h-16 border-2 ${
+                  paymentMethod === 'cash' 
+                    ? 'bg-green-600 hover:bg-green-700 border-green-600' 
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 onClick={() => setPaymentMethod('cash')}
               >
                 <Banknote className="h-4 w-4" />
-                <span className="text-xs">Cash</span>
+                <span className="text-xs font-mono">Cash</span>
               </Button>
               <Button
                 variant={paymentMethod === 'mpesa' ? "default" : "outline"}
-                className="flex flex-col items-center gap-1 h-16"
+                className={`flex flex-col items-center gap-1 h-16 border-2 ${
+                  paymentMethod === 'mpesa' 
+                    ? 'bg-green-600 hover:bg-green-700 border-green-600' 
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 onClick={() => setPaymentMethod('mpesa')}
               >
                 <Smartphone className="h-4 w-4" />
-                <span className="text-xs">M-Pesa</span>
+                <span className="text-xs font-mono">M-Pesa</span>
               </Button>
               <Button
                 variant={paymentMethod === 'debt' ? "default" : "outline"}
-                className="flex flex-col items-center gap-1 h-16"
+                className={`flex flex-col items-center gap-1 h-16 border-2 ${
+                  paymentMethod === 'debt' 
+                    ? 'bg-orange-600 hover:bg-orange-700 border-orange-600' 
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 onClick={() => setPaymentMethod('debt')}
               >
                 <CreditCard className="h-4 w-4" />
-                <span className="text-xs">Credit</span>
+                <span className="text-xs font-mono">Credit</span>
               </Button>
             </div>
           </div>
 
           {/* Total and Action Buttons */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-lg font-medium">Total:</span>
-              <span className="text-2xl font-bold text-green-600">{formatCurrency(total)}</span>
+              <span className="text-lg font-mono font-medium">Total:</span>
+              <span className="text-2xl font-bold font-mono text-green-600">{formatCurrency(total)}</span>
             </div>
             <div className="space-y-2">
               <Button
-                className="w-full h-12 text-lg font-semibold"
+                className="w-full h-12 text-lg font-mono font-semibold bg-blue-600 hover:bg-blue-700"
                 onClick={handleCompleteSale}
                 disabled={!canCompleteSale()}
               >
@@ -572,7 +593,7 @@ const SalesManagement = () => {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-2 border-gray-300 dark:border-gray-600 font-mono"
                   onClick={clearCart}
                 >
                   <Trash className="h-4 w-4 mr-2" />
@@ -587,8 +608,27 @@ const SalesManagement = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <MobileHeader />
+      
+      {/* Desktop Header */}
+      <div className="hidden lg:block h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-6 h-full">
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <ShoppingCart className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+                POINT OF SALE
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                Process sales and manage transactions
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <div className="lg:flex lg:h-screen">
         {/* Left Panel - Products */}
@@ -600,13 +640,13 @@ const SalesManagement = () => {
             {/* All Products Grid - Mobile/Tablet */}
             {searchTerm && (
               <div className="lg:hidden mt-6">
-                <h3 className="text-lg font-semibold mb-4">Search Results</h3>
+                <h3 className="text-lg font-mono font-semibold mb-4 uppercase tracking-wide">Search Results</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {filteredProducts.map(product => (
-                    <Card key={product.id} className="hover:shadow-md transition-shadow">
+                    <Card key={product.id} className="hover:shadow-md transition-shadow border-2 border-gray-200 dark:border-gray-700">
                       <CardContent className="p-4">
                         <div className="text-center">
-                          <h3 className="font-medium text-sm mb-1">{product.name}</h3>
+                          <h3 className="font-medium font-mono text-sm mb-1">{product.name}</h3>
                           <p className="text-sm text-gray-500 mb-2">
                             {formatCurrency(product.sellingPrice)}
                           </p>
@@ -615,7 +655,7 @@ const SalesManagement = () => {
                           </Badge>
                           <Button
                             onClick={() => addToCart(product)}
-                            className="w-full"
+                            className="w-full bg-blue-600 hover:bg-blue-700 font-mono"
                             size="sm"
                             disabled={product.currentStock === 0}
                           >
@@ -633,9 +673,9 @@ const SalesManagement = () => {
         </div>
 
         {/* Right Panel - Cart (Desktop) */}
-        <div className="hidden lg:block lg:w-2/5 lg:border-l lg:border-gray-200 lg:dark:border-gray-700">
+        <div className="hidden lg:block lg:w-2/5 lg:border-l-2 lg:border-gray-200 lg:dark:border-gray-700">
           <div className="h-full p-6">
-            <h2 className="text-xl font-semibold mb-4">Cart ({cart.length})</h2>
+            <h2 className="text-xl font-mono font-semibold mb-4 uppercase tracking-wide">Cart ({cart.length})</h2>
             <CartContent />
           </div>
         </div>
