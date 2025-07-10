@@ -45,7 +45,9 @@ const RoughBlockyDashboard = () => {
       title: 'TOTAL SALES TODAY',
       value: formatCurrency(totalSalesToday),
       icon: DollarSign,
-      bgGradient: 'from-green-500 to-emerald-600',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      iconColor: 'text-green-600 dark:text-green-400',
+      borderColor: 'border-green-200 dark:border-green-800',
       route: '/sales',
       details: `${todaySales.length} transactions recorded today`
     },
@@ -54,7 +56,9 @@ const RoughBlockyDashboard = () => {
       title: 'ORDERS TODAY',
       value: totalOrdersToday.toString(),
       icon: ShoppingCart,
-      bgGradient: 'from-blue-500 to-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      borderColor: 'border-blue-200 dark:border-blue-800',
       route: '/sales',
       details: `Average: ${totalOrdersToday ? (totalSalesToday / totalOrdersToday).toFixed(2) : '0'} per order`
     },
@@ -63,7 +67,9 @@ const RoughBlockyDashboard = () => {
       title: 'ACTIVE CUSTOMERS',
       value: activeCustomers.toString(),
       icon: Users,
-      bgGradient: 'from-purple-500 to-purple-600',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+      borderColor: 'border-purple-200 dark:border-purple-800',
       route: '/customers',
       details: `${overdueCustomers.length} with outstanding debt`
     },
@@ -72,7 +78,9 @@ const RoughBlockyDashboard = () => {
       title: 'LOW STOCK ALERTS',
       value: lowStockProducts.length.toString(),
       icon: lowStockProducts.length > 0 ? AlertTriangle : Package,
-      bgGradient: lowStockProducts.length > 0 ? 'from-red-500 to-red-600' : 'from-green-500 to-emerald-600',
+      bgColor: lowStockProducts.length > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20',
+      iconColor: lowStockProducts.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400',
+      borderColor: lowStockProducts.length > 0 ? 'border-red-200 dark:border-red-800' : 'border-green-200 dark:border-green-800',
       route: '/inventory',
       details: lowStockProducts.length > 0 ? 'Immediate attention required' : 'All items well stocked'
     }
@@ -99,7 +107,7 @@ const RoughBlockyDashboard = () => {
 
       {/* Main Content */}
       <div className="p-6 max-w-7xl mx-auto">
-        {/* Summary Cards - 2x2 Grid with Smooth Cards */}
+        {/* Summary Cards - 2x2 Grid with Outlined Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {summaryCards.map((card) => {
             const Icon = card.icon;
@@ -108,7 +116,7 @@ const RoughBlockyDashboard = () => {
             return (
               <Card 
                 key={card.id}
-                className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border-0"
+                className={`relative overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border ${card.borderColor}`}
                 style={{ 
                   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
                   transformStyle: 'preserve-3d',
@@ -116,7 +124,7 @@ const RoughBlockyDashboard = () => {
                 }}
                 onClick={() => handleCardFlip(card.id)}
               >
-                <CardContent className="p-6" style={{ backfaceVisibility: 'hidden' }}>
+                <CardContent className={`p-6 ${card.bgColor}`} style={{ backfaceVisibility: 'hidden' }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-black tracking-widest text-gray-600 dark:text-gray-400 mb-3 uppercase"
@@ -127,15 +135,15 @@ const RoughBlockyDashboard = () => {
                         {card.value}
                       </p>
                     </div>
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${card.bgGradient} flex items-center justify-center shadow-lg`}>
-                      <Icon className="w-6 h-6 text-white" />
+                    <div className={`w-12 h-12 rounded-full ${card.bgColor} border ${card.borderColor} flex items-center justify-center shadow-sm`}>
+                      <Icon className={`w-6 h-6 ${card.iconColor}`} />
                     </div>
                   </div>
                 </CardContent>
                 
                 {/* Flipped Content */}
                 <div 
-                  className="absolute inset-0 p-6 flex items-center justify-center text-center bg-white dark:bg-gray-900"
+                  className={`absolute inset-0 p-6 flex items-center justify-center text-center bg-white dark:bg-gray-900 ${card.bgColor} border ${card.borderColor}`}
                   style={{ 
                     backfaceVisibility: 'hidden',
                     transform: 'rotateY(180deg)'
@@ -145,15 +153,15 @@ const RoughBlockyDashboard = () => {
                     <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-4">
                       {card.details}
                     </p>
-                    <Button
+                    <div
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(card.route);
                       }}
-                      className={`bg-gradient-to-r ${card.bgGradient} hover:opacity-90 text-white font-semibold px-6 py-2 rounded-full shadow-lg transition-all duration-200`}
+                      className={`inline-flex items-center px-4 py-2 ${card.bgColor} border ${card.borderColor} rounded-xl text-sm font-medium ${card.iconColor} hover:bg-opacity-80 transition-all duration-200 cursor-pointer`}
                     >
                       VIEW MORE
-                    </Button>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -161,10 +169,10 @@ const RoughBlockyDashboard = () => {
           })}
         </div>
 
-        {/* Alerts & Quick Actions Panel - Smooth Containers */}
+        {/* Alerts & Quick Actions Panel - Outlined Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Low Stock Alerts */}
-          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-0">
+          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-6">
               <h3 className="font-black text-lg tracking-wide text-gray-900 dark:text-white mb-4 uppercase"
                   style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-0.5px' }}>
@@ -177,7 +185,7 @@ const RoughBlockyDashboard = () => {
                       <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
                         {product.name}
                       </span>
-                      <Badge className="bg-red-500 text-white font-semibold rounded-full px-2 py-1">
+                      <Badge className="bg-red-50 border border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 font-semibold rounded-full px-2 py-1">
                         {product.currentStock}
                       </Badge>
                     </div>
@@ -191,8 +199,8 @@ const RoughBlockyDashboard = () => {
             </div>
           </Card>
 
-          {/* Overdue Payments */}
-          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-0">
+          {/* Overdue Customer Payments */}
+          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-6">
               <h3 className="font-black text-lg tracking-wide text-gray-900 dark:text-white mb-4 uppercase"
                   style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-0.5px' }}>
@@ -219,8 +227,8 @@ const RoughBlockyDashboard = () => {
             </div>
           </Card>
 
-          {/* Quick Actions */}
-          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-0">
+          {/* Quick Actions - Outlined Cards */}
+          <Card className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-6">
               <h3 className="font-black text-lg tracking-wide text-gray-900 dark:text-white mb-4 uppercase"
                   style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '-0.5px' }}>

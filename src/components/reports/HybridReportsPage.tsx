@@ -20,12 +20,9 @@ type Filter = {
 };
 
 const HybridReportsPage = () => {
-  // Global date range for summary cards only
   const [globalDateRange, setGlobalDateRange] = useState<DateRange>('today');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date }>();
   const [activeFilters, setActiveFilters] = useState<Filter[]>([]);
-  
-  // Independent chart controls
   const [salesChartResolution, setSalesChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
   const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
 
@@ -33,7 +30,6 @@ const HybridReportsPage = () => {
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { sales, loading: salesLoading } = useSupabaseSales();
 
-  // Calculate date range for summary cards only
   const getGlobalDateRange = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -58,7 +54,6 @@ const HybridReportsPage = () => {
 
   const { from: globalFromDate, to: globalToDate } = getGlobalDateRange();
 
-  // Filter sales data for summary cards using global date range
   const summaryCardsSales = useMemo(() => {
     return sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
@@ -82,28 +77,25 @@ const HybridReportsPage = () => {
     });
   }, [sales, globalFromDate, globalToDate, activeFilters, products]);
 
-  // Calculate metrics for summary cards including payment methods
   const summaryMetrics = useMemo(() => {
-    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + sale.total_amount, 0);
     const totalOrders = summaryCardsSales.length;
     const activeCustomers = new Set(summaryCardsSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
       product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
 
-    // Payment method breakdowns - using correct payment method values
     const revenueByCash = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'cash')
-      .reduce((sum, sale) => sum + sale.total, 0);
+      .reduce((sum, sale) => sum + sale.total_amount, 0);
     
     const revenueByMpesa = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'mpesa')
-      .reduce((sum, sale) => sum + sale.total, 0);
+      .reduce((sum, sale) => sum + sale.total_amount, 0);
     
-    // Use 'debt' instead of 'credit' as per the database schema
     const revenueByDebt = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'debt')
-      .reduce((sum, sale) => sum + sale.total, 0);
+      .reduce((sum, sale) => sum + sale.total_amount, 0);
 
     return { 
       totalRevenue, 
@@ -116,7 +108,6 @@ const HybridReportsPage = () => {
     };
   }, [summaryCardsSales, products]);
 
-  // Prepare chart data - Sales Trend Chart with improved accuracy
   const salesTrendData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
@@ -127,7 +118,6 @@ const HybridReportsPage = () => {
       case 'hourly':
         chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         bucketFormat = 'hour';
-        // Generate all 24 hours
         for (let i = 0; i < 24; i++) {
           const hour = new Date(chartFromDate);
           hour.setHours(i, 0, 0, 0);
@@ -137,7 +127,6 @@ const HybridReportsPage = () => {
       case 'daily':
         chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         bucketFormat = 'day';
-        // Generate all 30 days
         for (let i = 0; i < 30; i++) {
           const day = new Date(chartFromDate);
           day.setDate(day.getDate() + i);
@@ -147,7 +136,6 @@ const HybridReportsPage = () => {
       case 'monthly':
         chartFromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         bucketFormat = 'month';
-        // Generate all 12 months
         for (let i = 0; i < 12; i++) {
           const month = new Date(chartFromDate);
           month.setMonth(month.getMonth() + i);
@@ -164,13 +152,11 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    // Initialize all time points with 0
     const groupedData: { [key: string]: number } = {};
     timePoints.forEach(point => {
       groupedData[point] = 0;
     });
     
-    // Fill in actual sales data
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
       let key: string;
@@ -190,7 +176,7 @@ const HybridReportsPage = () => {
       }
       
       if (groupedData.hasOwnProperty(key)) {
-        groupedData[key] += sale.total;
+        groupedData[key] += sale.total_amount;
       }
     });
     
@@ -202,7 +188,6 @@ const HybridReportsPage = () => {
       }));
   }, [sales, salesChartResolution]);
 
-  // Helper function to format date labels
   const formatDateLabel = (dateStr: string, format: string) => {
     const date = new Date(dateStr);
     switch (format) {
@@ -221,7 +206,6 @@ const HybridReportsPage = () => {
     return salesTrendData.reduce((sum, item) => sum + item.revenue, 0);
   }, [salesTrendData]);
 
-  // Prepare Orders Per Hour data with improved accuracy
   const ordersPerHourData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
@@ -242,13 +226,11 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    // Initialize all 24 hours with 0
     const hourlyData: { [key: number]: number } = {};
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
     
-    // Fill in actual orders data
     chartSales.forEach(sale => {
       const hour = new Date(sale.timestamp).getHours();
       hourlyData[hour]++;
@@ -260,12 +242,11 @@ const HybridReportsPage = () => {
     }));
   }, [sales, ordersChartView]);
 
-  // Table data using filtered sales for consistency
   const salesTableData = useMemo(() => 
     summaryCardsSales.map(sale => ({
       productName: sale.productName,
       quantity: sale.quantity,
-      revenue: formatCurrency(sale.total),
+      revenue: formatCurrency(sale.total_amount),
       customer: sale.customerName || 'Walk-in Customer',
       date: new Date(sale.timestamp).toLocaleDateString()
     })), [summaryCardsSales]
@@ -276,13 +257,12 @@ const HybridReportsPage = () => {
       .filter(sale => sale.customerName)
       .map(sale => ({
         customer: sale.customerName,
-        amount: formatCurrency(sale.total),
+        amount: formatCurrency(sale.total_amount),
         method: sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1),
         date: new Date(sale.timestamp).toLocaleDateString()
       })), [summaryCardsSales]
   );
 
-  // Alerts data
   const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
 
@@ -341,7 +321,7 @@ const HybridReportsPage = () => {
         </h1>
       </div>
 
-      {/* Global Filters Panel - Only affects summary cards */}
+      {/* Global Filters Panel */}
       <ReportsFiltersPanel
         dateRange={globalDateRange}
         onDateRangeChange={setGlobalDateRange}
@@ -363,7 +343,6 @@ const HybridReportsPage = () => {
             iconColor="text-green-600 dark:text-green-400"
             iconBgColor="bg-green-100 dark:bg-green-900/20"
             delay={0}
-            className="font-mono font-black uppercase tracking-tight text-xs"
           />
           <MetricCard
             title="TOTAL ORDERS"
@@ -372,7 +351,6 @@ const HybridReportsPage = () => {
             iconColor="text-blue-600 dark:text-blue-400"
             iconBgColor="bg-blue-100 dark:bg-blue-900/20"
             delay={100}
-            className="font-mono font-black uppercase tracking-tight text-xs"
           />
           <MetricCard
             title="ACTIVE CUSTOMERS"
@@ -381,7 +359,6 @@ const HybridReportsPage = () => {
             iconColor="text-purple-600 dark:text-purple-400"
             iconBgColor="bg-purple-100 dark:bg-purple-900/20"
             delay={200}
-            className="font-mono font-black uppercase tracking-tight text-xs"
           />
           <MetricCard
             title="LOW STOCK"
@@ -390,7 +367,6 @@ const HybridReportsPage = () => {
             iconColor="text-orange-600 dark:text-orange-400"
             iconBgColor="bg-orange-100 dark:bg-orange-900/20"
             delay={300}
-            className="font-mono font-black uppercase tracking-tight text-xs"
           />
           <MetricCard
             title="CASH REVENUE"
@@ -399,7 +375,6 @@ const HybridReportsPage = () => {
             iconColor="text-emerald-600 dark:text-emerald-400"
             iconBgColor="bg-emerald-100 dark:bg-emerald-900/20"
             delay={400}
-            className="font-mono font-black uppercase tracking-tight text-xs"
           />
           <MetricCard
             title="M-PESA REVENUE"
@@ -408,7 +383,6 @@ const HybridReportsPage = () => {
             iconColor="text-cyan-600 dark:text-cyan-400"
             iconBgColor="bg-cyan-100 dark:bg-cyan-900/20"
             delay={500}
-            className="font-mono font-black uppercase tracking-tight text-xs"
           />
           <MetricCard
             title="DEBT REVENUE"
@@ -417,11 +391,10 @@ const HybridReportsPage = () => {
             iconColor="text-amber-600 dark:text-amber-400"
             iconBgColor="bg-amber-100 dark:bg-amber-900/20"
             delay={600}
-            className="font-mono font-black uppercase tracking-tight text-xs"
           />
         </div>
 
-        {/* Charts Section - Each with independent controls */}
+        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SalesTrendChart
             data={salesTrendData}

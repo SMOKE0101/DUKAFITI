@@ -9,7 +9,6 @@ interface MetricCardProps {
   iconColor: string;
   iconBgColor: string;
   delay?: number;
-  className?: string;
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({
@@ -18,8 +17,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   icon: Icon,
   iconColor,
   iconBgColor,
-  delay = 0,
-  className = ""
+  delay = 0
 }) => {
   const [displayValue, setDisplayValue] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
@@ -38,13 +36,12 @@ const MetricCard: React.FC<MetricCardProps> = ({
     if (!isVisible) return;
 
     let startTime: number;
-    const duration = 1000; // 1 second animation
+    const duration = 1000;
 
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
       const progress = Math.min((currentTime - startTime) / duration, 1);
       
-      // Easing function for smooth animation
       const easeOutQuart = 1 - Math.pow(1 - progress, 4);
       setDisplayValue(Math.floor(numericValue * easeOutQuart));
 
@@ -57,7 +54,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   }, [isVisible, numericValue]);
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-fade-in ${className}`}>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-fade-in">
       <div className="flex items-start justify-between">
         <div className="space-y-3">
           <p className="text-sm uppercase font-black font-mono tracking-tight text-gray-500 dark:text-gray-400">
