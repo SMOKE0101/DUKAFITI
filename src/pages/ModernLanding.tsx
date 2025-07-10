@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Play, Check, Star, ChevronDown } from 'lucide-react';
+import { ArrowRight, Play, Check, Star, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,10 +11,13 @@ const ModernLanding = () => {
   const [signUpData, setSignUpData] = useState({
     name: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signUpError, setSignUpError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -23,8 +26,13 @@ const ModernLanding = () => {
     e.preventDefault();
     setSignUpError('');
     
-    if (!signUpData.name || !signUpData.email || !signUpData.password) {
+    if (!signUpData.name || !signUpData.email || !signUpData.password || !signUpData.confirmPassword) {
       setSignUpError('Please fill in all fields');
+      return;
+    }
+
+    if (signUpData.password !== signUpData.confirmPassword) {
+      setSignUpError('Passwords do not match');
       return;
     }
 
@@ -346,16 +354,42 @@ const ModernLanding = () => {
                       />
                     </div>
                     
-                    <div>
+                    <div className="relative">
                       <input 
-                        type="password" 
+                        type={showPassword ? 'text' : 'password'}
                         name="password"
                         value={signUpData.password}
                         onChange={handleInputChange}
                         placeholder="Password (min. 6 characters)"
-                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        className="w-full px-4 py-3 pr-12 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <input 
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        value={signUpData.confirmPassword}
+                        onChange={handleInputChange}
+                        placeholder="Confirm Password"
+                        className="w-full px-4 py-3 pr-12 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
                     </div>
                     
                     <Button 

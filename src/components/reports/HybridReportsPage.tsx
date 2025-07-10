@@ -25,9 +25,9 @@ const HybridReportsPage = () => {
   const [salesChartResolution, setSalesChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
   const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
 
-  const { customers, loading: customersLoading } = useSupabaseCustomers();
-  const { products, loading: productsLoading } = useSupabaseProducts();
-  const { sales, loading: salesLoading } = useSupabaseSales();
+  const { customers = [], loading: customersLoading } = useSupabaseCustomers();
+  const { products = [], loading: productsLoading } = useSupabaseProducts();
+  const { sales = [], loading: salesLoading } = useSupabaseSales();
 
   const getGlobalDateRange = () => {
     const now = new Date();
@@ -51,7 +51,9 @@ const HybridReportsPage = () => {
     }
   };
 
-  const { from: globalFromDate, to: globalToDate } = getGlobalDateRange();
+  const dateRange = getGlobalDateRange();
+  const globalFromDate = dateRange.from;
+  const globalToDate = dateRange.to;
 
   const summaryCardsSales = useMemo(() => {
     return sales.filter(sale => {
@@ -109,9 +111,9 @@ const HybridReportsPage = () => {
 
   const salesTrendData = useMemo(() => {
     const now = new Date();
-    let chartFromDate: Date;
-    let bucketFormat: string;
-    let timePoints: string[] = [];
+    let chartFromDate;
+    let bucketFormat;
+    let timePoints = [];
     
     switch (salesChartResolution) {
       case 'hourly':
@@ -151,14 +153,14 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    const groupedData: { [key: string]: number } = {};
+    const groupedData = {};
     timePoints.forEach(point => {
       groupedData[point] = 0;
     });
     
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
-      let key: string;
+      let key;
       
       switch (bucketFormat) {
         case 'hour':
@@ -187,7 +189,7 @@ const HybridReportsPage = () => {
       }));
   }, [sales, salesChartResolution]);
 
-  const formatDateLabel = (dateStr: string, format: string) => {
+  const formatDateLabel = (dateStr, format) => {
     const date = new Date(dateStr);
     switch (format) {
       case 'hour':
@@ -207,7 +209,7 @@ const HybridReportsPage = () => {
 
   const ordersPerHourData = useMemo(() => {
     const now = new Date();
-    let chartFromDate: Date;
+    let chartFromDate;
     
     switch (ordersChartView) {
       case 'daily':
@@ -225,7 +227,7 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    const hourlyData: { [key: number]: number } = {};
+    const hourlyData = {};
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
@@ -265,7 +267,7 @@ const HybridReportsPage = () => {
   const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
 
-  const removeFilter = (filterToRemove: Filter) => {
+  const removeFilter = (filterToRemove) => {
     setActiveFilters(prev => prev.filter(f => 
       f.type !== filterToRemove.type || f.value !== filterToRemove.value
     ));

@@ -4,7 +4,12 @@ import HybridReportsPage from './reports/HybridReportsPage';
 
 const ReportsPage = () => {
   console.log('ReportsPage component rendering');
-  return <HybridReportsPage />;
+  
+  return (
+    <div className="w-full h-full">
+      <HybridReportsPage />
+    </div>
+  );
 };
 
 export default ReportsPage;
