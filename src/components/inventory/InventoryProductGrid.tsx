@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Product } from '../../types';
 import ProductCard from './ProductCard';
@@ -23,7 +22,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
   if (products.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shadow-lg shadow-purple-500/10">
           <span className="text-2xl">📦</span>
         </div>
         <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">No products found</p>
@@ -32,10 +31,10 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
     );
   }
 
-  // Mobile layout - Single column with proper spacing
+  // Mobile layout - Enhanced with better spacing
   if (isMobile) {
     return (
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-4 px-1">
         {products.map((product) => (
           <ProductCard
             key={product.id}
@@ -49,10 +48,10 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
     );
   }
 
-  // Tablet layout - 2 columns optimized for tablet screens
+  // Tablet layout - Enhanced for better space utilization
   if (isTablet) {
     return (
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 px-2">
         {products.map((product) => (
           <ProductCard
             key={product.id}
@@ -66,7 +65,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
     );
   }
 
-  // Desktop layout - Responsive grid with proper breakpoints
+  // Desktop layout - Keep existing responsive grid
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {products.map((product) => (
