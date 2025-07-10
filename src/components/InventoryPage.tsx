@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,8 @@ import {
   ArrowDown, 
   ArrowUp,
   AlertTriangle,
-  DollarSign
+  DollarSign,
+  Clock
 } from 'lucide-react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { formatCurrency } from '../utils/currency';
@@ -133,27 +135,31 @@ const InventoryPage = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Page Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
-        <Card className="bg-white/80 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
-                  INVENTORY
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1 font-normal">
-                  Manage your products and stock levels
-                </p>
-              </div>
-              
-              <Button 
-                onClick={() => setShowAddModal(true)}
-                className="bg-green-600 hover:bg-green-500 text-white rounded-lg px-6 py-3 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all hover:scale-105"
-              >
-                <Plus className="w-5 h-5" />
-                Add Product
-              </Button>
+        <Card className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-8 bg-white dark:bg-gray-800 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/20">
+              <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
-          </CardContent>
+            <div className="flex-1">
+              <h1 className="text-4xl font-black font-mono uppercase tracking-widest text-gray-900 dark:text-white mb-2">
+                INVENTORY
+              </h1>
+              <p className="text-lg italic text-gray-500 dark:text-gray-400 font-light">
+                Manage your products and stock levels
+              </p>
+              <div className="flex items-center gap-2 mt-4 text-sm text-gray-400">
+                <Clock className="w-4 h-4" />
+                <span>Last updated: {new Date().toLocaleTimeString()}</span>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-green-600 hover:bg-green-500 text-white rounded-lg px-6 py-3 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all hover:scale-105"
+            >
+              <Plus className="w-5 h-5" />
+              Add Product
+            </Button>
+          </div>
         </Card>
       </div>
 

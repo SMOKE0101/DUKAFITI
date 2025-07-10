@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Key, Trash2, Shield } from 'lucide-react';
+import { Key, Trash2, Shield, Clock } from 'lucide-react';
 
 const SecuritySettings = () => {
   const { user, signOut } = useAuth();
@@ -90,6 +90,27 @@ const SecuritySettings = () => {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
+      <Card className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-8 bg-white dark:bg-gray-800 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300 hover:-translate-y-1">
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/20">
+            <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-4xl font-black font-mono uppercase tracking-widest text-gray-900 dark:text-white mb-2">
+              SECURITY
+            </h1>
+            <p className="text-lg italic text-gray-500 dark:text-gray-400 font-light">
+              Manage your account security and password settings
+            </p>
+            <div className="flex items-center gap-2 mt-4 text-sm text-gray-400">
+              <Clock className="w-4 h-4" />
+              <span>Last updated: {new Date().toLocaleTimeString()}</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Change Password</CardTitle>
