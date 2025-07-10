@@ -36,7 +36,7 @@ const NavigationHeader = () => {
         <div className="flex items-center justify-between">
           {/* DukaFiti Brand Logo */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-green-500 rounded-xl flex items-center justify-center shadow-lg p-1">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg p-1">
               <img 
                 src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
                 alt="DukaFiti Logo" 
@@ -48,7 +48,7 @@ const NavigationHeader = () => {
                 DukaFiti
               </span>
               <span className="text-xs text-green-400 font-medium -mt-1">
-                Jua Duka Yako
+                Ni DukaBora
               </span>
             </div>
           </div>
