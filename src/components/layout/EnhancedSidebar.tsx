@@ -49,7 +49,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
       {/* Desktop Sidebar */}
       <div className={`hidden md:block ${className}`}>
         <div 
-          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 shadow-lg overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 shadow-lg transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
           style={{ 
             width: effectiveWidth,
           }}
@@ -62,7 +62,10 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
               </div>
               <div className={`min-w-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
                 isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
-              }`} style={{ transitionDelay: isCollapsed ? '0ms' : '150ms' }}>
+              }`} style={{ 
+                transitionDelay: isCollapsed ? '0ms' : '150ms',
+                transform: isCollapsed ? 'translateX(-10px) scale(0.9)' : 'translateX(0) scale(1)'
+              }}>
                 <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
                   DUKASMART
                 </h1>
@@ -104,7 +107,10 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   </div>
                   <span className={`font-semibold text-sm min-w-0 truncate transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
                     isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
-                  }`} style={{ transitionDelay: isCollapsed ? '0ms' : '200ms' }}>
+                  }`} style={{ 
+                    transitionDelay: isCollapsed ? '0ms' : '200ms',
+                    transform: isCollapsed ? 'translateX(-10px) scale(0.9)' : 'translateX(0) scale(1)'
+                  }}>
                     {item.name}
                   </span>
                 </NavLink>
@@ -131,7 +137,10 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
               </div>
               <span className={`font-semibold text-sm transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
                 isCollapsed ? 'opacity-0 w-0 scale-90 translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
-              }`} style={{ transitionDelay: isCollapsed ? '0ms' : '200ms' }}>
+              }`} style={{ 
+                transitionDelay: isCollapsed ? '0ms' : '200ms',
+                transform: isCollapsed ? 'translateX(-10px) scale(0.9)' : 'translateX(0) scale(1)'
+              }}>
                 Logout
               </span>
             </button>
