@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,7 @@ import CustomerDetailsDrawer from './customers/CustomerDetailsDrawer';
 import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
 
 const CustomersPage = () => {
-  const { customers, loading, createCustomer } = useSupabaseCustomers();
+  const { customers, loading, createCustomer, updateCustomer, deleteCustomer } = useSupabaseCustomers();
   const { toast } = useToast();
 
   // Modal states
@@ -109,6 +110,44 @@ const CustomersPage = () => {
   const handleViewCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowDetailsDrawer(true);
+  };
+
+  const handleEditCustomer = async (id: string, updates: Partial<Customer>) => {
+    try {
+      await updateCustomer(id, updates);
+      toast({
+        title: "Success",
+        description: "Customer updated successfully",
+      });
+      // Update the selected customer if it's currently being viewed
+      if (selectedCustomer && selectedCustomer.id === id) {
+        setSelectedCustomer({ ...selectedCustomer, ...updates });
+      }
+    } catch (error) {
+      console.error('Failed to update customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update customer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCustomer = async (id: string) => {
+    try {
+      await deleteCustomer(id);
+      toast({
+        title: "Success",
+        description: "Customer deleted successfully",
+      });
+    } catch (error) {
+      console.error('Failed to delete customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRecordPayment = (customer: Customer) => {
@@ -340,6 +379,8 @@ const CustomersPage = () => {
         isOpen={showDetailsDrawer}
         onClose={() => setShowDetailsDrawer(false)}
         customer={selectedCustomer}
+        onEdit={handleEditCustomer}
+        onDelete={handleDeleteCustomer}
       />
 
       <NewRepaymentDrawer

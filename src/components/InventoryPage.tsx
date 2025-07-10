@@ -12,11 +12,13 @@ import AddProductModal from './inventory/AddProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Package } from 'lucide-react';
 
 const InventoryPage = () => {
   const { 
     products, 
     loading, 
+    error,
     createProduct, 
     updateProduct, 
     deleteProduct, 
@@ -32,6 +34,12 @@ const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
+
+  console.log('InventoryPage: Render state:', { 
+    productsCount: products.length, 
+    loading, 
+    error 
+  });
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -145,24 +153,39 @@ const InventoryPage = () => {
     }
   };
 
-  // Calculate stats
-  const totalProducts = products.length;
-  const totalValue = products.reduce((sum, product) => {
-    if (product.currentStock === -1) return sum;
-    return sum + (product.sellingPrice * product.currentStock);
-  }, 0);
-  const lowStockCount = products.filter(product => 
-    product.currentStock !== -1 && product.currentStock <= (product.lowStockThreshold || 10)
-  ).length;
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-6">
+          <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+            INVENTORY
+          </h1>
+        </div>
 
-  console.log('InventoryPage: Loading state:', loading);
-  console.log('InventoryPage: Products count:', products.length);
-  console.log('InventoryPage: Filtered products count:', filteredProducts.length);
+        <div className="p-6 space-y-8 max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <Package className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Failed to Load Inventory
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors"
+            >
+              RETRY
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        {/* Modern Top Bar */}
         <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-6">
           <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
             INVENTORY
@@ -199,9 +222,14 @@ const InventoryPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         {/* Modern Top Bar */}
         <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
-          <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
-            INVENTORY
-          </h1>
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <Package className="w-4 h-4 text-green-600 dark:text-green-400" />
+            </div>
+            <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              INVENTORY
+            </h1>
+          </div>
           <button
             onClick={() => setShowAddModal(true)}
             className="px-6 py-2 bg-transparent border-2 border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full font-mono text-sm font-bold uppercase tracking-wide transition-all duration-200"
@@ -237,13 +265,18 @@ const InventoryPage = () => {
             </h2>
             {filteredProducts.length === 0 && !loading ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">No products found</p>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="px-6 py-2 bg-green-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-green-700 transition-colors"
-                >
-                  ADD YOUR FIRST PRODUCT
-                </button>
+                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  {products.length === 0 ? "No products found" : "No products match your search"}
+                </p>
+                {products.length === 0 && (
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="px-6 py-2 bg-green-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-green-700 transition-colors"
+                  >
+                    ADD YOUR FIRST PRODUCT
+                  </button>
+                )}
               </div>
             ) : (
               <InventoryProductGrid
