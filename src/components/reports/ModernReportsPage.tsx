@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,20 +89,20 @@ const ModernReportsPage = () => {
         }
       });
       
-      return isInDateRange && matchesFilters && sale.totalAmount >= 0; // Exclude repayments
+      return isInDateRange && matchesFilters && sale.total >= 0; // Exclude repayments
     });
   }, [sales, fromDate, toDate, activeFilters, products]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
     const totalOrders = filteredSales.length;
     const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
       product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
-    const cashRevenue = filteredSales.filter(s => s.paymentMethod === 'cash').reduce((sum, sale) => sum + sale.totalAmount, 0);
-    const mpesaRevenue = filteredSales.filter(s => s.paymentMethod === 'mpesa').reduce((sum, sale) => sum + sale.totalAmount, 0);
+    const cashRevenue = filteredSales.filter(s => s.paymentMethod === 'cash').reduce((sum, sale) => sum + sale.total, 0);
+    const mpesaRevenue = filteredSales.filter(s => s.paymentMethod === 'mpesa').reduce((sum, sale) => sum + sale.total, 0);
 
     return {
       totalRevenue,
@@ -135,7 +134,7 @@ const ModernReportsPage = () => {
           break;
       }
       
-      groupedData[key] = (groupedData[key] || 0) + sale.totalAmount;
+      groupedData[key] = (groupedData[key] || 0) + sale.total;
     });
     
     return Object.entries(groupedData)
@@ -169,7 +168,7 @@ const ModernReportsPage = () => {
     let data = filteredSales.map(sale => ({
       productName: sale.productName,
       quantity: sale.quantity,
-      revenue: sale.totalAmount,
+      revenue: sale.total,
       customer: sale.customerName || 'Walk-in Customer',
       date: new Date(sale.timestamp).toLocaleDateString()
     }));
@@ -203,7 +202,7 @@ const ModernReportsPage = () => {
       .filter(sale => sale.customerName)
       .map(sale => ({
         customer: sale.customerName,
-        amount: sale.totalAmount,
+        amount: sale.total,
         method: sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1),
         date: new Date(sale.timestamp).toLocaleDateString()
       })), [filteredSales]

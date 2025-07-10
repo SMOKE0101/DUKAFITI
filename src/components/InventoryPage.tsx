@@ -11,7 +11,8 @@ import {
   Trash2, 
   ArrowDown, 
   ArrowUp,
-  AlertTriangle
+  AlertTriangle,
+  DollarSign
 } from 'lucide-react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { formatCurrency } from '../utils/currency';
@@ -83,6 +84,12 @@ const InventoryPage = () => {
 
   const handleDeleteProduct = (id: string) => {
     return deleteProduct(id);
+  };
+
+  const handleRestockSave = async (id: string, updates: Partial<Product>) => {
+    await updateProduct(id, updates);
+    setShowRestockModal(false);
+    setSelectedProduct(null);
   };
 
   const openEditModal = (product: Product) => {
@@ -349,6 +356,7 @@ const InventoryPage = () => {
             isOpen={showRestockModal}
             onClose={() => setShowRestockModal(false)}
             product={selectedProduct}
+            onSave={handleRestockSave}
           />
         </>
       )}

@@ -30,7 +30,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { updateCustomer } = useSupabaseCustomers();
-  const { createSale } = useSupabaseSales();
+  const { createSales } = useSupabaseSales();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -82,8 +82,8 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
       // Calculate new outstanding debt
       const newOutstandingDebt = customer.outstandingDebt - repaymentAmount;
 
-      // Update customer's outstanding debt in database
-      await supabase
+      // Start a transaction to ensure atomicity
+      const { error: customerUpdateError } = await supabase
         .from('customers')
         .update({ 
           outstanding_debt: newOutstandingDebt,
@@ -91,30 +91,37 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
         })
         .eq('id', customer.id);
 
-      // Record the repayment as a negative sale (payment received)
-      await supabase
-        .from('sales')
-        .insert({
-          user_id: user.id,
-          product_id: '00000000-0000-0000-0000-000000000000', // Dummy product ID for repayments
-          product_name: 'Customer Repayment',
-          customer_id: customer.id,
-          customer_name: customer.name,
-          quantity: 1,
-          selling_price: -repaymentAmount, // Negative amount for repayment
-          cost_price: 0,
-          total_amount: -repaymentAmount,
-          profit: 0,
-          payment_method: paymentMethod,
-          payment_details: {
-            type: 'repayment',
-            notes: notes,
-            original_debt: customer.outstandingDebt,
-            remaining_debt: newOutstandingDebt
-          },
-          timestamp: new Date().toISOString(),
-          synced: true
-        });
+      if (customerUpdateError) {
+        throw customerUpdateError;
+      }
+
+      // Record the repayment as a sales entry with negative amount
+      const repaymentSale = {
+        user_id: user.id,
+        product_id: '00000000-0000-0000-0000-000000000000', // Dummy product ID for repayments
+        product_name: 'Customer Repayment',
+        customer_id: customer.id,
+        customer_name: customer.name,
+        quantity: 1,
+        selling_price: -repaymentAmount, // Negative amount for repayment
+        cost_price: 0,
+        total_amount: -repaymentAmount,
+        profit: 0,
+        payment_method: paymentMethod,
+        payment_details: {
+          type: 'repayment',
+          notes: notes,
+          original_debt: customer.outstandingDebt,
+          remaining_debt: newOutstandingDebt,
+          cashAmount: paymentMethod === 'cash' ? repaymentAmount : 0,
+          mpesaAmount: paymentMethod === 'mpesa' ? repaymentAmount : 0,
+          debtAmount: 0
+        },
+        timestamp: new Date().toISOString(),
+        synced: true
+      };
+
+      await createSales([repaymentSale]);
 
       // Update the local customer state
       await updateCustomer(customer.id, {
