@@ -11,9 +11,7 @@ import {
   UserPlus, 
   Package,
   TrendingUp,
-  Plus,
-  FileUp,
-  RefreshCw
+  Plus
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { Customer, Product } from '../../types';
@@ -164,7 +162,7 @@ const DashboardBottomSection: React.FC<DashboardBottomSectionProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <Button 
               className="h-12 bg-green-600 hover:bg-green-500 text-white rounded-lg flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all hover:scale-105"
               onClick={() => navigate('/sales')}
@@ -187,22 +185,6 @@ const DashboardBottomSection: React.FC<DashboardBottomSectionProps> = ({
             >
               <UserPlus className="w-5 h-5" />
               <span className="hidden sm:inline">Add Customer</span>
-            </Button>
-            
-            <Button 
-              variant="outline"
-              className="h-12 rounded-lg flex items-center justify-center gap-2 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all hover:scale-105"
-            >
-              <FileUp className="w-5 h-5" />
-              <span className="hidden sm:inline">Import CSV</span>
-            </Button>
-            
-            <Button 
-              variant="outline"
-              className="h-12 rounded-lg flex items-center justify-center gap-2 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all hover:scale-105"
-            >
-              <RefreshCw className="w-5 h-5" />
-              <span className="hidden sm:inline">Sync Now</span>
             </Button>
           </div>
         </CardContent>

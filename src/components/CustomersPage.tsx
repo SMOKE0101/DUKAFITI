@@ -1,673 +1,336 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+
+import React, { useState } from 'react';
+import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { Customer } from '../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { 
   Search, 
-  UserPlus, 
+  Plus, 
+  Filter,
+  SortAsc,
+  SortDesc,
   Users,
-  Coins,
-  Clock,
-  Zap
+  CreditCard,
+  TrendingUp,
+  AlertTriangle
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
-import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useSupabaseSales } from '../hooks/useSupabaseSales';
-import { Customer } from '../types';
-import RefinedCustomerCard from './customers/RefinedCustomerCard';
-import CustomerHistoryModal from './customers/CustomerHistoryModal';
-import EditCustomerModal from './customers/EditCustomerModal';
-import DeleteCustomerModal from './customers/DeleteCustomerModal';
-import RepaymentDrawer from './customers/RepaymentDrawer';
-import { supabase } from '../integrations/supabase/client';
-import { useAuth } from '../hooks/useAuth';
-
-interface CustomerStats {
-  totalCustomers: number;
-  totalOutstandingDebt: number;
-  overdueAccounts: number;
-  recentActivity: number;
-}
+import { AddCustomerModal } from './customers/AddCustomerModal';
+import { EditCustomerModal } from './customers/EditCustomerModal';
+import { DeleteCustomerModal } from './customers/DeleteCustomerModal';
+import { CustomerHistoryModal } from './customers/CustomerHistoryModal';
+import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
+import { RefinedCustomerCard } from './customers/RefinedCustomerCard';
 
 const CustomersPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('name-asc');
-  const [filterType, setFilterType] = useState('all');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showRepaymentDrawer, setShowRepaymentDrawer] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [updatingCustomers, setUpdatingCustomers] = useState<Set<string>>(new Set());
-  const { toast } = useToast();
-  const { customers, loading, createCustomer, deleteCustomer, refreshCustomers } = useSupabaseCustomers();
-  const { sales } = useSupabaseSales();
-  const { user } = useAuth();
-
-  const [newCustomerForm, setNewCustomerForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
-    initialBalance: '',
-    creditLimit: 1000
-  });
-
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  // Set up real-time subscriptions for instant updates
-  useEffect(() => {
-    if (!user) return;
-
-    console.log('Setting up real-time subscriptions for customers...');
-
-    // Subscribe to customer changes
-    const customersChannel = supabase
-      .channel('customers-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'customers',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('Customer change detected:', payload);
-          refreshCustomers();
-        }
-      )
-      .subscribe();
-
-    // Subscribe to sales changes (affects customer outstanding debt)
-    const salesChannel = supabase
-      .channel('sales-customer-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sales',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('Sales change detected (customer impact):', payload);
-          // Refresh customers when sales change as they affect outstanding debt
-          refreshCustomers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('Cleaning up real-time subscriptions');
-      supabase.removeChannel(customersChannel);
-      supabase.removeChannel(salesChannel);
-    };
-  }, [user, refreshCustomers]);
-
-  // Calculate refined statistics with real-time data
-  const stats: CustomerStats = useMemo(() => {
-    const totalCustomers = customers.length;
-    const totalOutstandingDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
-    
-    // Calculate overdue accounts (debt unpaid for > 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const overdueAccounts = customers.filter(c => 
-      c.outstandingDebt > 0 && 
-      c.lastPurchaseDate && 
-      new Date(c.lastPurchaseDate) < sevenDaysAgo
-    ).length;
-    
-    // Calculate recent activity from actual sales and transactions (last 24 hours)
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-    
-    const recentSales = sales.filter(sale => 
-      sale.timestamp && new Date(sale.timestamp) > twentyFourHoursAgo
-    ).length;
-    
-    const recentActivity = recentSales;
-    
-    return {
-      totalCustomers,
-      totalOutstandingDebt,
-      overdueAccounts,
-      recentActivity
-    };
-  }, [customers, sales]);
+  const { customers, isLoading } = useSupabaseCustomers();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterBy, setFilterBy] = useState('all');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
+  const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
+  const [repaymentCustomer, setRepaymentCustomer] = useState<Customer | null>(null);
 
   // Filter and sort customers
-  const filteredAndSortedCustomers = useMemo(() => {
-    let filtered = customers.filter(customer =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery) ||
-      (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredAndSortedCustomers = React.useMemo(() => {
+    let filtered = customers.filter(customer => 
+      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.phone.includes(searchTerm) ||
+      (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
-    // Apply filter type
-    if (filterType === 'overdue') {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      filtered = filtered.filter(c => 
-        c.outstandingDebt > 0 && 
-        c.lastPurchaseDate && 
-        new Date(c.lastPurchaseDate) < sevenDaysAgo
-      );
-    } else if (filterType === 'with-debt') {
-      filtered = filtered.filter(c => c.outstandingDebt > 0);
+    // Apply filter
+    if (filterBy === 'debt') {
+      filtered = filtered.filter(customer => customer.outstandingDebt > 0);
+    } else if (filterBy === 'no-debt') {
+      filtered = filtered.filter(customer => customer.outstandingDebt === 0);
     }
 
+    // Apply sort
     filtered.sort((a, b) => {
+      let aValue, bValue;
+      
       switch (sortBy) {
-        case 'name-asc':
-          return a.name.localeCompare(b.name);
-        case 'balance-asc':
-          return a.outstandingDebt - b.outstandingDebt;
-        case 'balance-desc':
-          return b.outstandingDebt - a.outstandingDebt;
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'debt':
+          aValue = a.outstandingDebt;
+          bValue = b.outstandingDebt;
+          break;
+        case 'total-purchases':
+          aValue = a.totalPurchases;
+          bValue = b.totalPurchases;
+          break;
+        case 'last-purchase':
+          aValue = a.lastPurchaseDate ? new Date(a.lastPurchaseDate).getTime() : 0;
+          bValue = b.lastPurchaseDate ? new Date(b.lastPurchaseDate).getTime() : 0;
+          break;
         default:
-          return 0;
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       }
     });
 
     return filtered;
-  }, [customers, searchQuery, sortBy, filterType]);
+  }, [customers, searchTerm, sortBy, sortOrder, filterBy]);
 
-  const validateAddCustomerForm = () => {
-    const errors: Record<string, string> = {};
-    
-    if (!newCustomerForm.name.trim()) errors.name = 'Name is required';
-    if (!newCustomerForm.phone.trim()) errors.phone = 'Phone is required';
-    
-    // Email validation if provided
-    if (newCustomerForm.email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(newCustomerForm.email.trim())) {
-        errors.email = 'Please enter a valid email address';
-      }
-    }
+  // Calculate summary stats
+  const totalCustomers = customers.length;
+  const customersWithDebt = customers.filter(c => c.outstandingDebt > 0).length;
+  const totalOutstandingDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
+  const totalPurchasesValue = customers.reduce((sum, c) => sum + c.totalPurchases, 0);
 
-    // Credit limit validation
-    if (newCustomerForm.creditLimit < 0) {
-      errors.creditLimit = 'Credit limit must be positive';
-    }
-    
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleAddCustomer = async () => {
-    if (!validateAddCustomerForm()) return;
-
-    try {
-      await createCustomer({
-        name: newCustomerForm.name.trim(),
-        phone: newCustomerForm.phone.trim(),
-        email: newCustomerForm.email.trim(),
-        address: newCustomerForm.address.trim(),
-        createdDate: new Date().toISOString(),
-        totalPurchases: 0,
-        outstandingDebt: parseFloat(newCustomerForm.initialBalance) || 0,
-        creditLimit: newCustomerForm.creditLimit,
-        riskRating: 'low',
-        lastPurchaseDate: null
-      });
-
-      toast({
-        title: "Customer Added",
-        description: `${newCustomerForm.name} has been added successfully`,
-      });
-
-      setShowAddModal(false);
-      setNewCustomerForm({ name: '', phone: '', email: '', address: '', initialBalance: '', creditLimit: 1000 });
-      setFormErrors({});
-    } catch (error) {
-      console.error('Failed to add customer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add customer. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleViewHistory = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setShowHistoryModal(true);
-  };
-
-  const handleEditCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setShowEditModal(true);
-  };
-
-  const handleDeleteCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setShowDeleteModal(true);
-  };
-
-  const handleRecordRepayment = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setShowRepaymentDrawer(true);
-  };
-
-  const confirmDeleteCustomer = async () => {
-    if (!selectedCustomer) return;
-
-    setUpdatingCustomers(prev => new Set(prev).add(selectedCustomer.id));
-
-    try {
-      await deleteCustomer(selectedCustomer.id);
-      
-      toast({
-        title: "Customer Deleted",
-        description: `${selectedCustomer.name} has been deleted`,
-      });
-
-      setShowDeleteModal(false);
-      setSelectedCustomer(null);
-    } catch (error) {
-      console.error('Failed to delete customer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete customer. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingCustomers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(selectedCustomer.id);
-        return newSet;
-      });
-    }
-  };
-
-  const handleStatsCardClick = (filter: string) => {
-    setFilterType(filter);
-  };
-
-  const statsCards = [
-    {
-      id: 'total-customers',
-      title: 'Total Customers',
-      value: stats.totalCustomers,
-      subtitle: 'Customers',
-      icon: Users,
-      iconColor: 'text-primary',
-      bgColor: 'bg-primary/10',
-      onClick: () => handleStatsCardClick('all')
-    },
-    {
-      id: 'total-debt',
-      title: 'Total Outstanding Debt',
-      value: formatCurrency(stats.totalOutstandingDebt),
-      subtitle: 'Total Debt',
-      icon: Coins,
-      iconColor: 'text-orange-600',
-      bgColor: 'bg-orange-100',
-      onClick: () => handleStatsCardClick('with-debt')
-    },
-    {
-      id: 'overdue',
-      title: 'Overdue Accounts',
-      value: stats.overdueAccounts,
-      subtitle: 'Overdue > 7 days',
-      icon: Clock,
-      iconColor: 'text-red-600',
-      bgColor: 'bg-red-100',
-      onClick: () => handleStatsCardClick('overdue')
-    },
-    {
-      id: 'recent-activity',
-      title: 'Recent Activity',
-      value: stats.recentActivity,
-      subtitle: 'Last 24 hours',
-      icon: Zap,
-      iconColor: 'text-green-600',
-      bgColor: 'bg-green-100',
-      onClick: () => handleStatsCardClick('all')
-    }
-  ];
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6 p-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <h1 className="text-3xl font-display text-primary">Customers</h1>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Customer Management
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Manage your customer relationships and track outstanding debts
+            </p>
+          </div>
+          
           <Button 
-            onClick={() => setShowAddModal(true)}
-            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 text-lg font-semibold transform hover:scale-105"
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
           >
-            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-              <UserPlus className="w-4 h-4" />
-            </div>
-            Add New Customer
+            <Plus className="w-4 h-4 mr-2" />
+            Add Customer
           </Button>
         </div>
 
-        {/* Summary Cards with Real-time Updates */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statsCards.map((card) => (
-            <Card 
-              key={card.id}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 ease-out cursor-pointer group hover:scale-105"
-              onClick={card.onClick}
-            >
-              <CardContent className="p-0">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`w-12 h-12 ${card.bgColor} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200 group-hover:animate-pulse`}>
-                    <card.icon className={`w-6 h-6 ${card.iconColor}`} />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs uppercase text-muted-foreground font-medium tracking-wide">
-                      {card.title}
-                    </div>
-                  </div>
-                </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Total Customers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                {totalCustomers}
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="space-y-2">
-                  <div className="text-3xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">
-                    {card.value}
-                  </div>
-                  
-                  <div className="text-sm text-muted-foreground">
-                    {card.subtitle}
-                  </div>
+          <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                With Outstanding Debt
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                {customersWithDebt}
+              </div>
+            </CardContent>
+          </Card>
 
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                    <span className="text-xs text-primary font-medium">
-                      Live data
-                    </span>
-                  </div>
-                </div>
+          <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Total Outstanding Debt
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {formatCurrency(totalOutstandingDebt)}
+              </div>
+            </CardContent>
+          </Card>
 
-                {/* Micro chart for debt card */}
-                {card.id === 'total-debt' && (
-                  <div className="mt-3 flex items-center gap-1">
-                    {Array.from({ length: 7 }).map((_, i) => (
-                      <div 
-                        key={i}
-                        className="w-1 bg-orange-300 rounded-full"
-                        style={{ 
-                          height: `${8 + Math.random() * 12}px`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Total Sales Value
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {formatCurrency(totalPurchasesValue)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters and Search */}
+        <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search customers by name, phone, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600"
+                />
+              </div>
+
+              {/* Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <Select value={filterBy} onValueChange={setFilterBy}>
+                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Customers</SelectItem>
+                    <SelectItem value="debt">With Debt</SelectItem>
+                    <SelectItem value="no-debt">No Debt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort */}
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="debt">Outstanding Debt</SelectItem>
+                    <SelectItem value="total-purchases">Total Purchases</SelectItem>
+                    <SelectItem value="last-purchase">Last Purchase</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="bg-white/50 dark:bg-gray-700/50"
+                >
+                  {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Results Summary */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Showing {filteredAndSortedCustomers.length} of {totalCustomers} customers
+          </p>
+        </div>
+
+        {/* Customer Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredAndSortedCustomers.map((customer) => (
+            <RefinedCustomerCard
+              key={customer.id}
+              customer={customer}
+              onEdit={() => setEditingCustomer(customer)}
+              onDelete={() => setDeletingCustomer(customer)}
+              onViewHistory={() => setHistoryCustomer(customer)}
+              onRecordPayment={() => setRepaymentCustomer(customer)}
+            />
           ))}
         </div>
 
-        {/* Search & Sort Bar */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search by name, phone, or email…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 py-4"
-            />
-          </div>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name-asc">A–Z</SelectItem>
-              <SelectItem value="balance-asc">Balance ↑</SelectItem>
-              <SelectItem value="balance-desc">Balance ↓</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Filter indicator */}
-        {filterType !== 'all' && (
-          <div className="flex items-center gap-2">
-            <div className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
-              Filter: {filterType === 'overdue' ? 'Overdue Accounts' : 'Customers with Debt'}
-              <button 
-                onClick={() => setFilterType('all')}
-                className="text-purple-600 hover:text-purple-800"
+        {/* Empty State */}
+        {filteredAndSortedCustomers.length === 0 && (
+          <div className="text-center py-12">
+            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+              {searchTerm || filterBy !== 'all' ? 'No customers found' : 'No customers yet'}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-500 mb-6">
+              {searchTerm || filterBy !== 'all' 
+                ? 'Try adjusting your search or filter criteria'
+                : 'Add your first customer to get started'
+              }
+            </p>
+            {!searchTerm && filterBy === 'all' && (
+              <Button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
               >
-                ×
-              </button>
-            </div>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Customer
+              </Button>
+            )}
           </div>
         )}
 
-        {/* Customer List */}
-        <div className="space-y-4">
-          {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i} className="rounded-2xl">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-muted animate-pulse rounded-full" />
-                      <div className="space-y-2">
-                        <div className="h-4 bg-muted animate-pulse rounded w-32" />
-                        <div className="h-3 bg-muted animate-pulse rounded w-24" />
-                        <div className="h-3 bg-muted animate-pulse rounded w-28" />
-                        <div className="h-3 bg-muted animate-pulse rounded w-36" />
-                      </div>
-                    </div>
-                    <div className="h-6 bg-muted animate-pulse rounded w-20" />
-                  </div>
-                  <div className="flex gap-3 justify-end mt-6">
-                    <div className="h-9 bg-muted animate-pulse rounded w-10" />
-                    <div className="h-9 bg-muted animate-pulse rounded w-10" />
-                    <div className="h-9 bg-muted animate-pulse rounded w-10" />
-                    <div className="h-9 bg-muted animate-pulse rounded w-10" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : filteredAndSortedCustomers.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredAndSortedCustomers.map((customer) => (
-                <RefinedCustomerCard
-                  key={customer.id}
-                  customer={customer}
-                  onViewHistory={handleViewHistory}
-                  onEdit={handleEditCustomer}
-                  onDelete={handleDeleteCustomer}
-                  onRecordRepayment={handleRecordRepayment}
-                  isUpdating={updatingCustomers.has(customer.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="rounded-2xl">
-              <CardContent className="p-8 text-center">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No customers found</h3>
-                <p className="text-muted-foreground mb-4">
-                  {searchQuery || filterType !== 'all' ? 'Try adjusting your search or filters.' : 'Start by adding your first customer.'}
-                </p>
-                {!searchQuery && filterType === 'all' && (
-                  <Button onClick={() => setShowAddModal(true)} className="bg-accent hover:bg-accent/90">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    New Customer
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Add Customer Modal */}
-        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-          <DialogContent className="sm:max-w-md rounded-2xl p-6 animate-in fade-in-0 scale-in-95 duration-200">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">New Customer</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="name" className="text-sm font-semibold">Name *</Label>
-                <Input
-                  id="name"
-                  value={newCustomerForm.name}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Customer name"
-                  className={`text-base ${formErrors.name ? 'border-red-500' : ''}`}
-                  aria-label="Customer name"
-                />
-                {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="phone" className="text-sm font-semibold">Phone *</Label>
-                <Input
-                  id="phone"
-                  value={newCustomerForm.phone}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="0712345678"
-                  className={`text-base ${formErrors.phone ? 'border-red-500' : ''}`}
-                  aria-label="Customer phone number"
-                />
-                {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="creditLimit" className="text-sm font-semibold">Credit Limit (KES)</Label>
-                <Input
-                  id="creditLimit"
-                  type="number"
-                  value={newCustomerForm.creditLimit}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, creditLimit: Number(e.target.value) }))}
-                  placeholder="1000"
-                  min="0"
-                  className={`text-base ${formErrors.creditLimit ? 'border-red-500' : ''}`}
-                  aria-label="Credit limit"
-                />
-                {formErrors.creditLimit && <p className="text-red-500 text-sm mt-1">{formErrors.creditLimit}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newCustomerForm.email}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="customer@example.com"
-                  className={`text-base ${formErrors.email ? 'border-red-500' : ''}`}
-                  aria-label="Customer email address"
-                />
-                {formErrors.email && <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="address" className="text-sm font-semibold">Address</Label>
-                <Textarea
-                  id="address"
-                  value={newCustomerForm.address}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Customer address"
-                  className="text-base resize-none"
-                  rows={3}
-                  aria-label="Customer address"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="initialBalance" className="text-sm font-semibold">Initial Balance (Optional)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                    KES
-                  </span>
-                  <Input
-                    id="initialBalance"
-                    type="number"
-                    step="0.01"
-                    value={newCustomerForm.initialBalance}
-                    onChange={(e) => setNewCustomerForm(prev => ({ ...prev, initialBalance: e.target.value }))}
-                    className="pl-12 text-base"
-                    placeholder="0.00"
-                    aria-label="Initial balance"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-6">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setFormErrors({});
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddCustomer}
-                  disabled={!newCustomerForm.name || !newCustomerForm.phone}
-                  className="flex-1 bg-accent hover:bg-accent/90 transition-all duration-200"
-                >
-                  Save
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Customer History Modal */}
-        <CustomerHistoryModal
-          isOpen={showHistoryModal}
-          onClose={() => {
-            setShowHistoryModal(false);
-            setSelectedCustomer(null);
-          }}
-          customer={selectedCustomer}
+        {/* Modals */}
+        <AddCustomerModal 
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
         />
-
-        {/* Edit Customer Modal */}
-        <EditCustomerModal
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedCustomer(null);
-          }}
-          customer={selectedCustomer}
-        />
-
-        {/* Delete Customer Modal */}
-        <DeleteCustomerModal
-          isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setSelectedCustomer(null);
-          }}
-          onConfirm={confirmDeleteCustomer}
-          customer={selectedCustomer}
-        />
-
-        {/* Repayment Drawer */}
-        <RepaymentDrawer
-          isOpen={showRepaymentDrawer}
-          onClose={() => {
-            setShowRepaymentDrawer(false);
-            setSelectedCustomer(null);
-          }}
-          customer={selectedCustomer}
-        />
+        
+        {editingCustomer && (
+          <EditCustomerModal
+            isOpen={!!editingCustomer}
+            onClose={() => setEditingCustomer(null)}
+            customer={editingCustomer}
+          />
+        )}
+        
+        {deletingCustomer && (
+          <DeleteCustomerModal
+            isOpen={!!deletingCustomer}
+            onClose={() => setDeletingCustomer(null)}
+            customer={deletingCustomer}
+          />
+        )}
+        
+        {historyCustomer && (
+          <CustomerHistoryModal
+            isOpen={!!historyCustomer}
+            onClose={() => setHistoryCustomer(null)}
+            customer={historyCustomer}
+          />
+        )}
+        
+        {repaymentCustomer && (
+          <NewRepaymentDrawer
+            isOpen={!!repaymentCustomer}
+            onClose={() => setRepaymentCustomer(null)}
+            customer={repaymentCustomer}
+          />
+        )}
       </div>
-    </TooltipProvider>
+    </div>
   );
 };
 
