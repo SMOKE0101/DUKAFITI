@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Product } from '../../types';
 import { formatCurrency } from '../../utils/currency';
+import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 interface PremiumStatsCardsProps {
   products: Product[];
@@ -17,6 +18,8 @@ interface PremiumStatsCardsProps {
 
 const PremiumStatsCards: React.FC<PremiumStatsCardsProps> = ({ products, onCardClick }) => {
   const [animatedValues, setAnimatedValues] = useState({ products: 0, value: 0, lowStock: 0 });
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
 
   // Calculate metrics - exclude unspecified stock from calculations
   const totalProducts = products.length;
@@ -98,6 +101,121 @@ const PremiumStatsCards: React.FC<PremiumStatsCardsProps> = ({ products, onCardC
     }
   ];
 
+  // Mobile layout - Stack cards vertically
+  if (isMobile) {
+    return (
+      <div className="grid grid-cols-1 gap-4 mb-6">
+        {cards.map((card) => (
+          <Tooltip key={card.id}>
+            <TooltipTrigger asChild>
+              <Card 
+                className={`
+                  relative overflow-hidden cursor-pointer transition-all duration-300 ease-out
+                  bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md
+                  border-l-4 ${card.borderColor}
+                  hover:-translate-y-0.5 active:scale-95
+                  ${card.dimmed ? 'opacity-75' : ''}
+                `}
+                onClick={card.onClick}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`
+                          w-8 h-8 rounded-lg flex items-center justify-center
+                          ${card.iconBg}
+                        `}>
+                          <card.icon className={`w-4 h-4 ${card.iconColor}`} />
+                        </div>
+                        <h3 className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400 tracking-wide">
+                          {card.title}
+                        </h3>
+                      </div>
+                      <div className="space-y-1">
+                        <div className={`
+                          text-2xl font-bold
+                          ${card.dimmed ? 'text-gray-400' : 'text-gray-900 dark:text-white'}
+                        `}>
+                          {card.value}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {card.subtitle}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{card.tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    );
+  }
+
+  // Tablet layout - 3 columns with proper spacing
+  if (isTablet) {
+    return (
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        {cards.map((card) => (
+          <Tooltip key={card.id}>
+            <TooltipTrigger asChild>
+              <Card 
+                className={`
+                  relative overflow-hidden cursor-pointer transition-all duration-300 ease-out
+                  bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm hover:shadow-lg
+                  border-l-4 ${card.borderColor}
+                  hover:-translate-y-1 hover:scale-[1.02]
+                  ${card.dimmed ? 'opacity-75' : ''}
+                `}
+                onClick={card.onClick}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`
+                          w-9 h-9 rounded-xl flex items-center justify-center
+                          ${card.iconBg}
+                        `}>
+                          <card.icon className={`w-5 h-5 ${card.iconColor}`} />
+                        </div>
+                        <h3 className="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 tracking-wide">
+                          {card.title}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className={`
+                      text-2xl font-bold transition-colors duration-200
+                      ${card.dimmed ? 'text-gray-400' : 'text-gray-900 dark:text-white'}
+                    `}>
+                      {card.value}
+                    </div>
+                    
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {card.subtitle}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{card.tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop layout - Full 3 columns with enhanced styling
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       {cards.map((card) => (

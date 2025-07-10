@@ -32,61 +32,94 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
     );
   }
 
-  const showBottomNav = isMobile || isTablet;
-  const showSidebar = !isMobile && !isTablet;
+  // Mobile layout - No sidebar, bottom navigation only
+  if (isMobile) {
+    return (
+      <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900">
+        {/* Mobile Topbar - No sidebar toggle */}
+        <EnhancedTopbar 
+          hideSidebarToggle={true}
+          sidebarCollapsed={false}
+        />
 
+        {/* Mobile Main Content - Full width, proper spacing */}
+        <main className="flex-1 bg-gray-50 dark:bg-gray-900 pt-16 pb-20 overflow-x-hidden">
+          <div className="h-full p-3 pt-4 max-w-full">
+            <div className="max-w-full mx-auto">
+              {children}
+            </div>
+          </div>
+        </main>
+
+        {/* Mobile Bottom Navigation - Always visible and sticky */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+          <BottomNavigation />
+        </div>
+      </div>
+    );
+  }
+
+  // Tablet layout - Bottom navigation with optimized spacing
+  if (isTablet) {
+    return (
+      <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900">
+        {/* Tablet Topbar - No sidebar toggle */}
+        <EnhancedTopbar 
+          hideSidebarToggle={true}
+          sidebarCollapsed={false}
+        />
+
+        {/* Tablet Main Content - Full width with tablet-optimized spacing */}
+        <main className="flex-1 bg-gray-50 dark:bg-gray-900 pt-16 pb-20 overflow-x-hidden">
+          <div className="h-full p-4 pt-6 max-w-full">
+            <div className="max-w-full mx-auto">
+              {children}
+            </div>
+          </div>
+        </main>
+
+        {/* Tablet Bottom Navigation - Always visible */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+          <BottomNavigation />
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop layout - Sidebar with proper responsive behavior
   return (
     <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
-      {/* Enhanced Topbar - Hide sidebar toggle completely on mobile/tablet */}
+      {/* Desktop Topbar with sidebar toggle */}
       <EnhancedTopbar 
-        onSidebarToggle={showSidebar ? handleSidebarToggle : undefined}
+        onSidebarToggle={handleSidebarToggle}
         sidebarCollapsed={sidebarCollapsed}
-        hideSidebarToggle={!showSidebar}
+        hideSidebarToggle={false}
       />
 
       <div className="flex flex-1 pt-16 relative">
-        {/* Enhanced Sidebar - Only render on desktop, completely hidden on mobile/tablet */}
-        {showSidebar && (
-          <EnhancedSidebar 
-            isCollapsed={sidebarCollapsed}
-            onToggle={handleSidebarToggle}
-          />
-        )}
+        {/* Desktop Sidebar */}
+        <EnhancedSidebar 
+          isCollapsed={sidebarCollapsed}
+          onToggle={handleSidebarToggle}
+        />
 
-        {/* Main Content - Full width on mobile/tablet, proper margins on desktop */}
+        {/* Desktop Main Content with proper sidebar margins */}
         <main 
           className={`
-            flex-1 bg-gray-50 dark:bg-gray-900 transition-all duration-300 ease-out
-            ${showBottomNav
-              ? 'pb-20 w-full min-h-[calc(100vh-4rem-5rem)]' 
-              : sidebarCollapsed 
-                ? 'ml-[72px] w-[calc(100vw-72px)] min-h-[calc(100vh-4rem)]' 
-                : 'ml-[280px] w-[calc(100vw-280px)] min-h-[calc(100vh-4rem)]'
+            flex-1 bg-gray-50 dark:bg-gray-900 transition-all duration-300 ease-out min-h-[calc(100vh-4rem)]
+            ${sidebarCollapsed 
+              ? 'ml-[72px] w-[calc(100vw-72px)]' 
+              : 'ml-[280px] w-[calc(100vw-280px)]'
             }
           `}
         >
-          <div className={`
-            h-full overflow-x-hidden overflow-y-auto
-            ${isMobile 
-              ? 'p-3 pt-4' 
-              : isTablet 
-                ? 'p-4 pt-6' 
-                : 'p-4 md:p-6 lg:p-8'
-            }
-          `}>
+          <div className="h-full overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
             <div className="max-w-full mx-auto">
               {children}
             </div>
           </div>
         </main>
       </div>
-
-      {/* Mobile/Tablet Bottom Navigation - Always visible on mobile/tablet */}
-      {showBottomNav && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <BottomNavigation />
-        </div>
-      )}
     </div>
   );
 };

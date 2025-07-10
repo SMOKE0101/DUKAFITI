@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -9,9 +9,7 @@ import {
   BarChart3, 
   Settings,
   LogOut,
-  ChevronRight,
-  Menu,
-  X
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
@@ -41,7 +39,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
 
-  // Completely hide sidebar on mobile and tablet
+  // Completely hide sidebar on mobile and tablet - return null immediately
   if (isMobile || isTablet) {
     return null;
   }
@@ -52,7 +50,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     }
   };
 
-  // Desktop/Tablet Sidebar with ultra-smooth animations
+  // Desktop Sidebar only
   return (
     <div className={`hidden lg:block ${className}`}>
       <div 
@@ -101,19 +99,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             ? 'overflow-hidden' 
             : 'overflow-y-auto'
           }
-        `}
-        style={{
-          scrollbarWidth: isCollapsed ? 'none' : 'thin',
-          msOverflowStyle: isCollapsed ? 'none' : 'auto',
-        }}
-        >
-          <style>
-            {isCollapsed && `
-              nav::-webkit-scrollbar {
-                display: none;
-              }
-            `}
-          </style>
+        `}>
           {navigation.map((item, index) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;

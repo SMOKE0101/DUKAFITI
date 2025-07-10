@@ -59,16 +59,20 @@ export const BottomNavigation: React.FC = () => {
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path || 
-            (item.path === '/dashboard' && (location.pathname === '/' || location.pathname === '/app'));
+            (item.path === '/dashboard' && (
+              location.pathname === '/' || 
+              location.pathname === '/app' || 
+              location.pathname === '/dashboard'
+            ));
           
           return (
             <NavLink
               key={item.id}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center px-1 py-2 text-xs transition-all duration-200 min-h-0",
+                "flex flex-col items-center justify-center px-1 py-2 text-xs transition-all duration-200 min-h-0 rounded-lg mx-1 my-1",
                 isActive 
-                  ? "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20" 
+                  ? "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 shadow-md" 
                   : "text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-800"
               )}
             >

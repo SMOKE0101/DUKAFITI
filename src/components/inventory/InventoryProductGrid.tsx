@@ -2,7 +2,7 @@
 import React from 'react';
 import { Product } from '../../types';
 import ProductCard from './ProductCard';
-import { useIsMobile } from '../../hooks/use-mobile';
+import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 interface InventoryProductGridProps {
   products: Product[];
@@ -18,6 +18,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
   onRestock,
 }) => {
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
 
   if (products.length === 0) {
     return (
@@ -31,13 +32,43 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
     );
   }
 
+  // Mobile layout - Single column with proper spacing
+  if (isMobile) {
+    return (
+      <div className="grid grid-cols-1 gap-4">
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onRestock={onRestock}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Tablet layout - 2 columns optimized for tablet screens
+  if (isTablet) {
+    return (
+      <div className="grid grid-cols-2 gap-6">
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onRestock={onRestock}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop layout - Responsive grid with proper breakpoints
   return (
-    <div className={`
-      ${isMobile 
-        ? 'grid grid-cols-1 gap-4' 
-        : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-      }
-    `}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {products.map((product) => (
         <ProductCard
           key={product.id}

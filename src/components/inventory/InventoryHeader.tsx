@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Package, TrendingUp, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
-import { useIsMobile } from '../../hooks/use-mobile';
+import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 interface InventoryHeaderProps {
   totalProducts: number;
@@ -19,6 +19,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   onAddProduct 
 }) => {
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
 
   if (isMobile) {
     return (
@@ -37,7 +38,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           
           <Button 
             onClick={onAddProduct}
-            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2"
+            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
             size="sm"
           >
             <Plus className="w-4 h-4 mr-1" />
@@ -47,7 +48,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
         {/* Mobile Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <Package className="w-4 h-4 text-blue-600" />
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Products</span>
@@ -55,12 +56,12 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
             <p className="text-xl font-bold text-gray-900 dark:text-white">{totalProducts}</p>
           </div>
           
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="w-4 h-4 text-green-600" />
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Value</span>
             </div>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalValue)}</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(totalValue)}</p>
           </div>
         </div>
 
@@ -78,6 +79,63 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (isTablet) {
+    return (
+      <div className="space-y-6">
+        {/* Tablet Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center">
+              <Package className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
+              <p className="text-gray-500 dark:text-gray-400">Manage your products and stock levels</p>
+            </div>
+          </div>
+          
+          <Button 
+            onClick={onAddProduct}
+            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
+            size="lg"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Product
+          </Button>
+        </div>
+
+        {/* Tablet Stats Grid */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <Package className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Products</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalProducts}</p>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <TrendingUp className="w-5 h-5 text-green-600" />
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Value</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalValue)}</p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <AlertTriangle className={`w-5 h-5 ${lowStockCount > 0 ? 'text-red-600' : 'text-gray-400'}`} />
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Low Stock</span>
+            </div>
+            <p className={`text-2xl font-bold ${lowStockCount > 0 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+              {lowStockCount}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
