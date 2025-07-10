@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +27,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const { refetch } = useSupabaseCustomers();
+  const { refreshCustomers } = useSupabaseCustomers();
   const { user } = useAuth();
 
   const handleSavePayment = async () => {
@@ -88,8 +87,8 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
       setMethod('cash');
       setReference('');
       
-      // Trigger refetch to update UI
-      await refetch();
+      // Trigger refresh to update UI
+      await refreshCustomers();
       
       toast({
         title: "Payment Recorded",

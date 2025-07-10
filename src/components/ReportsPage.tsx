@@ -1,9 +1,9 @@
 
 import React from 'react';
-import UltraPolishedReportsPage from './reports/UltraPolishedReportsPage';
+import HybridReportsPage from './reports/HybridReportsPage';
 
 const ReportsPage = () => {
-  return <UltraPolishedReportsPage />;
+  return <HybridReportsPage />;
 };
 
 export default ReportsPage;
