@@ -118,6 +118,23 @@ const InventoryPage = () => {
     }
   };
 
+  const handleProductRestock = async (product: Product, quantity: number, buyingPrice: number): Promise<void> => {
+    const newStock = product.currentStock === -1 ? quantity : product.currentStock + quantity;
+    
+    await updateProduct(product.id, {
+      ...product,
+      currentStock: newStock,
+      costPrice: buyingPrice,
+    });
+
+    toast({
+      title: "Product Restocked",
+      description: `${product.name} has been restocked with ${quantity} units.`,
+    });
+
+    await refetch();
+  };
+
   const handleDeleteConfirm = async () => {
     if (!productToDelete) return;
     
@@ -198,99 +215,126 @@ const InventoryPage = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <InventoryHeader 
-        totalProducts={totalProducts}
-        totalValue={totalValue}
-        lowStockCount={lowStockCount}
-        onAddProduct={handleCreateProduct}
-      />
-
-      <PremiumStatsCards 
-        products={products}
-        onCardClick={handleCardClick}
-      />
-
-      {/* Filter indicator */}
-      {activeFilter !== 'all' && (
-        <div className="flex items-center gap-2 pb-2">
-          <span className="text-sm text-muted-foreground">Filtered by:</span>
-          <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-            {activeFilter === 'low-stock' ? 'Low Stock Items' : 
-             activeFilter === 'in-stock' ? 'In Stock Items' : 'All Items'}
-          </span>
-          <button
-            onClick={() => setActiveFilter('all')}
-            className="text-sm text-primary hover:text-primary/80 underline"
-          >
-            Clear filter
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="p-6 space-y-8 max-w-7xl mx-auto">
+        {/* Enhanced Header with Gradient Background */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-8 shadow-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <InventoryHeader 
+              totalProducts={totalProducts}
+              totalValue={totalValue}
+              lowStockCount={lowStockCount}
+              onAddProduct={handleCreateProduct}
+            />
+          </div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
         </div>
-      )}
 
-      <InventoryFilters
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-      />
+        {/* Premium Stats Cards with Enhanced Styling */}
+        <div className="relative">
+          <PremiumStatsCards 
+            products={products}
+            onCardClick={handleCardClick}
+          />
+        </div>
 
-      <InventoryProductGrid
-        products={filteredProducts}
-        onEdit={handleEdit}
-        onDelete={handleDeleteClick}
-        onRestock={handleRestockSave}
-      />
+        {/* Filter indicator with Glass Morphism */}
+        {activeFilter !== 'all' && (
+          <div className="flex items-center gap-3 p-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-xl border border-white/20 shadow-lg">
+            <span className="text-sm font-medium text-muted-foreground">Active Filter:</span>
+            <span className="px-4 py-2 bg-gradient-to-r from-primary/20 to-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/20">
+              {activeFilter === 'low-stock' ? 'Low Stock Items' : 
+               activeFilter === 'in-stock' ? 'In Stock Items' : 'All Items'}
+            </span>
+            <button
+              onClick={() => setActiveFilter('all')}
+              className="px-3 py-1 text-sm text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full transition-all duration-200 font-medium"
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
 
-      {/* Enhanced Add/Edit Product Modal */}
-      <AddProductModal
-        isOpen={showModal}
-        onClose={handleCloseModal}
-        onSave={handleSaveProduct}
-        editingProduct={editingProduct}
-      />
+        {/* Enhanced Filters with Glass Effect */}
+        <div className="p-6 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl">
+          <InventoryFilters
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+          />
+        </div>
 
-      {/* Restock Modal */}
-      <RestockModal
-        isOpen={showRestockModal}
-        onClose={handleCloseRestockModal}
-        onSave={handleRestockSave}
-        product={restockingProduct}
-        isLoading={isRestocking}
-      />
+        {/* Product Grid with Enhanced Container */}
+        <div className="p-6 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-white/10 shadow-lg">
+          <InventoryProductGrid
+            products={filteredProducts}
+            onEdit={handleEdit}
+            onDelete={handleDeleteClick}
+            onRestock={handleProductRestock}
+          />
+        </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && productToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-xl font-semibold mb-4">Delete Product</h2>
-            <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete "{productToDelete.name}"? This action cannot be undone.
-            </p>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={handleDeleteConfirm}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-              >
-                Delete
-              </button>
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setProductToDelete(null);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
+        {/* Enhanced Add/Edit Product Modal */}
+        <AddProductModal
+          isOpen={showModal}
+          onClose={handleCloseModal}
+          onSave={handleSaveProduct}
+          editingProduct={editingProduct}
+        />
+
+        {/* Restock Modal */}
+        <RestockModal
+          isOpen={showRestockModal}
+          onClose={handleCloseRestockModal}
+          onSave={handleRestockSave}
+          product={restockingProduct}
+          isLoading={isRestocking}
+        />
+
+        {/* Enhanced Delete Confirmation Modal with Glass Effect */}
+        {showDeleteModal && productToDelete && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl border border-white/20">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold mb-2">Delete Product</h2>
+                <p className="text-muted-foreground">
+                  Are you sure you want to delete <span className="font-semibold text-foreground">"{productToDelete.name}"</span>? This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  Delete Product
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setProductToDelete(null);
+                  }}
+                  className="flex-1 bg-white/50 hover:bg-white/70 backdrop-blur-sm border-2 hover:shadow-lg transition-all duration-200"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

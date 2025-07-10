@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,13 +70,13 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       }
 
       // Update customer balance
-      const { error: updateError } = await updateCustomer(customer.id, {
+      const updateResult = await updateCustomer(customer.id, {
         outstandingDebt: newBalance,
         lastPurchaseDate: new Date().toISOString()
       });
 
-      if (updateError) {
-        console.error('Error updating customer balance:', updateError);
+      if (updateResult && 'error' in updateResult && updateResult.error) {
+        console.error('Error updating customer balance:', updateResult.error);
         throw new Error('Failed to update customer balance.');
       }
 
