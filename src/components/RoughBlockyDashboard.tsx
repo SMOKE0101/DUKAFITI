@@ -131,23 +131,6 @@ const RoughBlockyDashboard = () => {
       </div>
 
       <div className="p-6 space-y-8 max-w-7xl mx-auto">
-        
-        {/* Welcome Card */}
-        <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 border border-purple-300 dark:border-purple-700 rounded-full flex items-center justify-center">
-              <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div className="flex-1">
-              <h2 className="font-mono text-2xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
-                BUSINESS OVERVIEW
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 font-light">
-                Quick glance at your key metrics and performance indicators
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Summary Metrics: Outlined Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

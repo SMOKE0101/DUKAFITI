@@ -100,6 +100,7 @@ const InventoryPage = () => {
   const handleConfirmDelete = async (id: string) => {
     try {
       await deleteProduct(id);
+      setDeletingProduct(null);
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -151,8 +152,12 @@ const InventoryPage = () => {
     return sum + (product.sellingPrice * product.currentStock);
   }, 0);
   const lowStockCount = products.filter(product => 
-    product.currentStock !== -1 && product.currentStock <= product.lowStockThreshold
+    product.currentStock !== -1 && product.currentStock <= (product.lowStockThreshold || 10)
   ).length;
+
+  console.log('InventoryPage: Loading state:', loading);
+  console.log('InventoryPage: Products count:', products.length);
+  console.log('InventoryPage: Filtered products count:', filteredProducts.length);
 
   if (loading) {
     return (
@@ -230,12 +235,24 @@ const InventoryPage = () => {
             <h2 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white mb-6">
               PRODUCTS ({filteredProducts.length})
             </h2>
-            <InventoryProductGrid
-              products={filteredProducts}
-              onEdit={handleEditProduct}
-              onDelete={handleDeleteProduct}
-              onRestock={handleRestock}
-            />
+            {filteredProducts.length === 0 && !loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">No products found</p>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="px-6 py-2 bg-green-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-green-700 transition-colors"
+                >
+                  ADD YOUR FIRST PRODUCT
+                </button>
+              </div>
+            ) : (
+              <InventoryProductGrid
+                products={filteredProducts}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteProduct}
+                onRestock={handleRestock}
+              />
+            )}
           </div>
         </div>
 
