@@ -185,12 +185,9 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
                     <SelectValue placeholder="Select payment method" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-2 border-gray-300 dark:border-gray-600">
+                <SelectContent className="rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 z-50">
                   <SelectItem value="cash" className="rounded-lg">Cash</SelectItem>
                   <SelectItem value="mpesa" className="rounded-lg">M-Pesa</SelectItem>
-                  <SelectItem value="bank_transfer" className="rounded-lg">Bank Transfer</SelectItem>
-                  <SelectItem value="card" className="rounded-lg">Card Payment</SelectItem>
-                  <SelectItem value="other" className="rounded-lg">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>

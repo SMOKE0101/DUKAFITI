@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -16,7 +17,7 @@ export const useSupabaseProducts = () => {
   // Load products from database
   const loadProducts = async () => {
     if (!user) {
-      console.log('useSupabaseProducts: No user, skipping load');
+      console.log('useSupabaseProducts: No user, clearing products');
       setLoading(false);
       setError(null);
       setProducts([]);
@@ -32,6 +33,7 @@ export const useSupabaseProducts = () => {
       const { data, error: supabaseError } = await supabase
         .from('products')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       console.log('useSupabaseProducts: Supabase response:', { data, error: supabaseError });
@@ -312,179 +314,10 @@ export const useSupabaseProducts = () => {
     products,
     loading,
     error,
-    createProduct: async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-      if (!user) {
-        console.error('useSupabaseProducts: No user for createProduct');
-        return;
-      }
-
-      console.log('useSupabaseProducts: Creating product:', productData);
-
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .insert({
-            user_id: user.id,
-            name: productData.name,
-            category: productData.category,
-            cost_price: productData.costPrice,
-            selling_price: productData.sellingPrice,
-            current_stock: productData.currentStock,
-            low_stock_threshold: productData.lowStockThreshold,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('useSupabaseProducts: Create error:', error);
-          throw error;
-        }
-
-        console.log('useSupabaseProducts: Product created:', data);
-
-        const newProduct: Product = {
-          id: data.id,
-          name: data.name,
-          category: data.category,
-          costPrice: Number(data.cost_price || 0),
-          sellingPrice: Number(data.selling_price || 0),
-          currentStock: Number(data.current_stock || 0),
-          lowStockThreshold: Number(data.low_stock_threshold || 10),
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
-        };
-
-        setProducts(prev => [newProduct, ...prev]);
-        return newProduct;
-      } catch (error) {
-        console.error('useSupabaseProducts: Error creating product:', error);
-        toast({
-          title: "Error",
-          description: "Failed to create product",
-          variant: "destructive",
-        });
-        throw error;
-      }
-    },
-    updateProduct: async (id: string, updates: Partial<Product>) => {
-      if (!user) return;
-
-      console.log('useSupabaseProducts: Updating product:', id, updates);
-
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .update({
-            name: updates.name,
-            category: updates.category,
-            cost_price: updates.costPrice,
-            selling_price: updates.sellingPrice,
-            current_stock: updates.currentStock,
-            low_stock_threshold: updates.lowStockThreshold,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const updatedProduct: Product = {
-          id: data.id,
-          name: data.name,
-          category: data.category,
-          costPrice: Number(data.cost_price || 0),
-          sellingPrice: Number(data.selling_price || 0),
-          currentStock: Number(data.current_stock || 0),
-          lowStockThreshold: Number(data.low_stock_threshold || 10),
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
-        };
-
-        setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p));
-        return updatedProduct;
-      } catch (error) {
-        console.error('useSupabaseProducts: Error updating product:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update product",
-          variant: "destructive",
-        });
-        throw error;
-      }
-    },
-    deleteProduct: async (id: string) => {
-      if (!user) return;
-
-      console.log('useSupabaseProducts: Deleting product:', id);
-
-      try {
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        setProducts(prev => prev.filter(p => p.id !== id));
-      } catch (error) {
-        console.error('useSupabaseProducts: Error deleting product:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete product",
-          variant: "destructive",
-        });
-        throw error;
-      }
-    },
-    addStock: async (id: string, quantity: number, buyingPrice: number) => {
-      if (!user) return;
-
-      console.log('useSupabaseProducts: Adding stock:', id, quantity, buyingPrice);
-
-      try {
-        const product = products.find(p => p.id === id);
-        if (!product) throw new Error('Product not found');
-
-        const newStock = product.currentStock + quantity;
-        
-        const { data, error } = await supabase
-          .from('products')
-          .update({
-            current_stock: newStock,
-            cost_price: buyingPrice,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const updatedProduct: Product = {
-          id: data.id,
-          name: data.name,
-          category: data.category,
-          costPrice: Number(data.cost_price || 0),
-          sellingPrice: Number(data.selling_price || 0),
-          currentStock: Number(data.current_stock || 0),
-          lowStockThreshold: Number(data.low_stock_threshold || 10),
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
-        };
-
-        setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p));
-        return updatedProduct;
-      } catch (error) {
-        console.error('useSupabaseProducts: Error adding stock:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add stock",
-          variant: "destructive",
-        });
-        throw error;
-      }
-    },
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    addStock,
     refreshProducts: loadProducts,
   };
 };

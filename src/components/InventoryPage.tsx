@@ -12,7 +12,7 @@ import AddProductModal from './inventory/AddProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Package } from 'lucide-react';
+import { Package, RefreshCw } from 'lucide-react';
 
 const InventoryPage = () => {
   const { 
@@ -22,7 +22,8 @@ const InventoryPage = () => {
     createProduct, 
     updateProduct, 
     deleteProduct, 
-    addStock 
+    addStock,
+    refreshProducts
   } = useSupabaseProducts();
   
   const { toast } = useToast();
@@ -153,6 +154,11 @@ const InventoryPage = () => {
     }
   };
 
+  const handleRetry = () => {
+    console.log('InventoryPage: Retrying to load products');
+    refreshProducts();
+  };
+
   // Show error state
   if (error) {
     return (
@@ -171,9 +177,10 @@ const InventoryPage = () => {
             </h2>
             <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
             <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors"
+              onClick={handleRetry}
+              className="px-6 py-2 bg-blue-600 text-white rounded-full font-mono text-sm font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
             >
+              <RefreshCw className="w-4 h-4" />
               RETRY
             </button>
           </div>
