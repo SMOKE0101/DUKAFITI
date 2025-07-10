@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { DollarSign, ShoppingCart, Users, Package } from 'lucide-react';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
@@ -278,7 +277,6 @@ const UltraPolishedReportsPage = () => {
         onCustomDateRangeChange={setCustomDateRange}
         activeFilters={activeFilters}
         onRemoveFilter={removeFilter}
-        onExport={handleExport}
       />
 
       {/* Main Content */}

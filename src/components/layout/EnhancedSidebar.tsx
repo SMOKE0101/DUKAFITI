@@ -8,7 +8,6 @@ import {
   Users, 
   BarChart3, 
   Settings,
-  HelpCircle,
   LogOut,
   ChevronRight,
   User
@@ -35,7 +34,6 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   onToggle, 
   className = '' 
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -45,13 +43,8 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     }
   };
 
-  // Calculate effective width - more precise hover expansion
-  const effectiveWidth = isCollapsed 
-    ? (isHovered ? '280px' : '72px') 
-    : '280px';
-
-  // Show expanded content when not collapsed OR when collapsed but hovered
-  const showExpandedContent = !isCollapsed || isHovered;
+  // Calculate effective width - no hover expansion
+  const effectiveWidth = isCollapsed ? '72px' : '280px';
 
   return (
     <>
@@ -62,17 +55,15 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           style={{ 
             width: effectiveWidth,
           }}
-          onMouseEnter={() => isCollapsed && setIsHovered(true)}
-          onMouseLeave={() => isCollapsed && setIsHovered(false)}
         >
           {/* Brand & Profile Section */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className={`flex items-center transition-all duration-300 ${!showExpandedContent ? 'justify-center' : 'gap-3'}`}>
+            <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
                 <span className="text-white font-black text-lg">D</span>
               </div>
-              {showExpandedContent && (
-                <div className="min-w-0 opacity-100 transition-opacity duration-300">
+              {!isCollapsed && (
+                <div className="min-w-0 transition-all duration-300 ease-out transform">
                   <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
                     DUKASMART
                   </h1>
@@ -84,8 +75,8 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             </div>
             
             {/* User Profile */}
-            {showExpandedContent && user && (
-              <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-all duration-300">
+            {!isCollapsed && user && (
+              <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-out">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
                     <User className="w-5 h-5 text-white" />
@@ -114,18 +105,17 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   key={item.name}
                   to={item.href}
                   className={`
-                    group flex items-center rounded-xl transition-all duration-200 relative
-                    ${!showExpandedContent ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
+                    group flex items-center rounded-xl transition-all duration-250 ease-out relative
+                    ${isCollapsed ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
                     ${isActive 
                       ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-lg border-l-4 border-purple-600' 
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400'
                     }
                   `}
-                  title={!showExpandedContent ? item.name : undefined}
                 >
                   <div className={`
-                    flex items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0
-                    ${!showExpandedContent ? 'w-6 h-6' : 'w-8 h-8'}
+                    flex items-center justify-center rounded-lg transition-all duration-250 ease-out flex-shrink-0
+                    ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
                     ${isActive 
                       ? 'text-purple-700 dark:text-purple-400' 
                       : 'text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400'
@@ -133,82 +123,37 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   `}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  {showExpandedContent && (
-                    <span className="font-semibold text-sm min-w-0 truncate transition-all duration-300">
+                  {!isCollapsed && (
+                    <span className="font-semibold text-sm min-w-0 truncate transition-all duration-250 ease-out transform translate-x-0">
                       {item.name}
                     </span>
-                  )}
-                  
-                  {/* Tooltip for collapsed state */}
-                  {!showExpandedContent && (
-                    <div className="absolute left-full ml-4 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
-                      {item.name}
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
-                    </div>
                   )}
                 </NavLink>
               );
             })}
           </nav>
 
-          {/* Bottom Utilities */}
+          {/* Bottom Utilities - Logout only */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-            <button
-              className={`
-                group flex items-center rounded-xl transition-all duration-200 w-full relative
-                ${!showExpandedContent ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
-                text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400
-              `}
-              title={!showExpandedContent ? 'Help' : undefined}
-            >
-              <div className={`
-                flex items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0
-                ${!showExpandedContent ? 'w-6 h-6' : 'w-8 h-8'}
-                text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400
-              `}>
-                <HelpCircle className="w-5 h-5" />
-              </div>
-              {showExpandedContent && (
-                <span className="font-semibold text-sm">
-                  Help
-                </span>
-              )}
-              
-              {!showExpandedContent && (
-                <div className="absolute left-full ml-4 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
-                  Help
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
-                </div>
-              )}
-            </button>
-
             <button
               onClick={handleSignOut}
               className={`
-                group flex items-center rounded-xl transition-all duration-200 w-full relative
-                ${!showExpandedContent ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
+                group flex items-center rounded-xl transition-all duration-250 ease-out w-full relative
+                ${isCollapsed ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
                 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
               `}
-              title={!showExpandedContent ? 'Logout' : undefined}
             >
               <div className={`
-                flex items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0
-                ${!showExpandedContent ? 'w-6 h-6' : 'w-8 h-8'}
+                flex items-center justify-center rounded-lg transition-all duration-250 ease-out flex-shrink-0
+                ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
                 text-red-600 dark:text-red-400
               `}>
                 <LogOut className="w-5 h-5" />
               </div>
-              {showExpandedContent && (
-                <span className="font-semibold text-sm">
+              {!isCollapsed && (
+                <span className="font-semibold text-sm transition-all duration-250 ease-out transform translate-x-0">
                   Logout
                 </span>
-              )}
-              
-              {!showExpandedContent && (
-                <div className="absolute left-full ml-4 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
-                  Logout
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
-                </div>
               )}
             </button>
           </div>
@@ -217,11 +162,11 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={onToggle}
-              className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
+              className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-250 ease-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
               aria-expanded={!isCollapsed}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <div className="p-1 transition-transform duration-300 ease-out" style={{
+              <div className="p-1 transition-transform duration-250 ease-out" style={{
                 transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
               }}>
                 <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400" />
@@ -244,7 +189,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   key={item.name}
                   to={item.href}
                   className={`
-                    flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-200
+                    flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-250 ease-out
                     ${isActive 
                       ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20' 
                       : 'text-gray-600 dark:text-gray-400'
