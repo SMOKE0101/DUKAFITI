@@ -134,7 +134,11 @@ const AuthForm = () => {
           <CardHeader className="text-center pb-4 px-4 sm:px-6">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="p-2.5 sm:p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg">
-                <Store className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+                <img 
+                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                  alt="DukaFiti Logo" 
+                  className="h-7 w-7 sm:h-8 sm:w-8"
+                />
               </div>
               <div>
                 <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
