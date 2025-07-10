@@ -18,6 +18,21 @@ type Filter = {
   value: string;
 };
 
+// Define the formatDateLabel function before it's used
+const formatDateLabel = (dateStr: string, format: string): string => {
+  const date = new Date(dateStr);
+  switch (format) {
+    case 'hour':
+      return date.getHours().toString().padStart(2, '0') + ':00';
+    case 'day':
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    case 'month':
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    default:
+      return date.toLocaleDateString();
+  }
+};
+
 const HybridReportsPage = () => {
   const [globalDateRange, setGlobalDateRange] = useState<DateRange>('today');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date }>();
@@ -79,7 +94,7 @@ const HybridReportsPage = () => {
   }, [sales, globalFromDate, globalToDate, activeFilters, products]);
 
   const summaryMetrics = useMemo(() => {
-    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
     const totalOrders = summaryCardsSales.length;
     const activeCustomers = new Set(summaryCardsSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
@@ -88,15 +103,15 @@ const HybridReportsPage = () => {
 
     const revenueByCash = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'cash')
-      .reduce((sum, sale) => sum + sale.total, 0);
+      .reduce((sum, sale) => sum + (sale.total || 0), 0);
     
     const revenueByMpesa = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'mpesa')
-      .reduce((sum, sale) => sum + sale.total, 0);
+      .reduce((sum, sale) => sum + (sale.total || 0), 0);
     
     const revenueByDebt = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'debt')
-      .reduce((sum, sale) => sum + sale.total, 0);
+      .reduce((sum, sale) => sum + (sale.total || 0), 0);
 
     return { 
       totalRevenue, 
@@ -111,9 +126,9 @@ const HybridReportsPage = () => {
 
   const salesTrendData = useMemo(() => {
     const now = new Date();
-    let chartFromDate;
-    let bucketFormat;
-    let timePoints = [];
+    let chartFromDate: Date;
+    let bucketFormat: string;
+    let timePoints: string[] = [];
     
     switch (salesChartResolution) {
       case 'hourly':
@@ -153,14 +168,14 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    const groupedData = {};
+    const groupedData: Record<string, number> = {};
     timePoints.forEach(point => {
       groupedData[point] = 0;
     });
     
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
-      let key;
+      let key: string;
       
       switch (bucketFormat) {
         case 'hour':
@@ -177,7 +192,7 @@ const HybridReportsPage = () => {
       }
       
       if (groupedData.hasOwnProperty(key)) {
-        groupedData[key] += sale.total;
+        groupedData[key] += (sale.total || 0);
       }
     });
     
@@ -189,27 +204,13 @@ const HybridReportsPage = () => {
       }));
   }, [sales, salesChartResolution]);
 
-  const formatDateLabel = (dateStr, format) => {
-    const date = new Date(dateStr);
-    switch (format) {
-      case 'hour':
-        return date.getHours().toString().padStart(2, '0') + ':00';
-      case 'day':
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      case 'month':
-        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      default:
-        return date.toLocaleDateString();
-    }
-  };
-
   const salesTrendTotal = useMemo(() => {
     return salesTrendData.reduce((sum, item) => sum + item.revenue, 0);
   }, [salesTrendData]);
 
   const ordersPerHourData = useMemo(() => {
     const now = new Date();
-    let chartFromDate;
+    let chartFromDate: Date;
     
     switch (ordersChartView) {
       case 'daily':
@@ -227,7 +228,7 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    const hourlyData = {};
+    const hourlyData: Record<number, number> = {};
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
@@ -267,7 +268,7 @@ const HybridReportsPage = () => {
   const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
   const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
 
-  const removeFilter = (filterToRemove) => {
+  const removeFilter = (filterToRemove: Filter) => {
     setActiveFilters(prev => prev.filter(f => 
       f.type !== filterToRemove.type || f.value !== filterToRemove.value
     ));
