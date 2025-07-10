@@ -91,7 +91,7 @@ const HybridReportsPage = () => {
       product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
 
-    // Payment method breakdowns
+    // Payment method breakdowns - using correct payment method values
     const revenueByCash = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'cash')
       .reduce((sum, sale) => sum + sale.total, 0);
@@ -100,8 +100,9 @@ const HybridReportsPage = () => {
       .filter(sale => sale.paymentMethod === 'mpesa')
       .reduce((sum, sale) => sum + sale.total, 0);
     
-    const revenueByCredit = summaryCardsSales
-      .filter(sale => sale.paymentMethod === 'credit')
+    // Use 'debt' instead of 'credit' as per the database schema
+    const revenueByDebt = summaryCardsSales
+      .filter(sale => sale.paymentMethod === 'debt')
       .reduce((sum, sale) => sum + sale.total, 0);
 
     return { 
@@ -111,28 +112,47 @@ const HybridReportsPage = () => {
       lowStockProducts,
       revenueByCash,
       revenueByMpesa,
-      revenueByCredit
+      revenueByDebt
     };
   }, [summaryCardsSales, products]);
 
-  // Prepare chart data - Sales Trend Chart with its own timeframe
+  // Prepare chart data - Sales Trend Chart with improved accuracy
   const salesTrendData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
     let bucketFormat: string;
+    let timePoints: string[] = [];
     
     switch (salesChartResolution) {
       case 'hourly':
-        chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Last 24 hours
+        chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         bucketFormat = 'hour';
+        // Generate all 24 hours
+        for (let i = 0; i < 24; i++) {
+          const hour = new Date(chartFromDate);
+          hour.setHours(i, 0, 0, 0);
+          timePoints.push(hour.toISOString().substring(0, 13) + ':00');
+        }
         break;
       case 'daily':
-        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // Last 30 days
+        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         bucketFormat = 'day';
+        // Generate all 30 days
+        for (let i = 0; i < 30; i++) {
+          const day = new Date(chartFromDate);
+          day.setDate(day.getDate() + i);
+          timePoints.push(day.toISOString().substring(0, 10));
+        }
         break;
       case 'monthly':
-        chartFromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // Last 12 months
+        chartFromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         bucketFormat = 'month';
+        // Generate all 12 months
+        for (let i = 0; i < 12; i++) {
+          const month = new Date(chartFromDate);
+          month.setMonth(month.getMonth() + i);
+          timePoints.push(month.toISOString().substring(0, 7));
+        }
         break;
       default:
         chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -144,8 +164,13 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
+    // Initialize all time points with 0
     const groupedData: { [key: string]: number } = {};
+    timePoints.forEach(point => {
+      groupedData[point] = 0;
+    });
     
+    // Fill in actual sales data
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
       let key: string;
@@ -164,22 +189,39 @@ const HybridReportsPage = () => {
           key = saleDate.toISOString().substring(0, 10);
       }
       
-      groupedData[key] = (groupedData[key] || 0) + sale.total;
+      if (groupedData.hasOwnProperty(key)) {
+        groupedData[key] += sale.total;
+      }
     });
     
     return Object.entries(groupedData)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, revenue]) => ({
-        date: new Date(date).toLocaleDateString(),
+        date: formatDateLabel(date, bucketFormat),
         revenue
       }));
   }, [sales, salesChartResolution]);
+
+  // Helper function to format date labels
+  const formatDateLabel = (dateStr: string, format: string) => {
+    const date = new Date(dateStr);
+    switch (format) {
+      case 'hour':
+        return date.getHours().toString().padStart(2, '0') + ':00';
+      case 'day':
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      case 'month':
+        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      default:
+        return date.toLocaleDateString();
+    }
+  };
 
   const salesTrendTotal = useMemo(() => {
     return salesTrendData.reduce((sum, item) => sum + item.revenue, 0);
   }, [salesTrendData]);
 
-  // Prepare Orders Per Hour data with its own timeframe
+  // Prepare Orders Per Hour data with improved accuracy
   const ordersPerHourData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
@@ -200,19 +242,20 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
+    // Initialize all 24 hours with 0
     const hourlyData: { [key: number]: number } = {};
-    
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
     
+    // Fill in actual orders data
     chartSales.forEach(sale => {
       const hour = new Date(sale.timestamp).getHours();
       hourlyData[hour]++;
     });
     
     return Object.entries(hourlyData).map(([hour, orders]) => ({
-      hour: `${hour}:00`,
+      hour: `${hour.padStart(2, '0')}:00`,
       orders
     }));
   }, [sales, ordersChartView]);
@@ -368,8 +411,8 @@ const HybridReportsPage = () => {
             className="font-mono font-black uppercase tracking-tight text-xs"
           />
           <MetricCard
-            title="CREDIT REVENUE"
-            value={formatCurrency(summaryMetrics.revenueByCredit)}
+            title="DEBT REVENUE"
+            value={formatCurrency(summaryMetrics.revenueByDebt)}
             icon={HandCoins}
             iconColor="text-amber-600 dark:text-amber-400"
             iconBgColor="bg-amber-100 dark:bg-amber-900/20"

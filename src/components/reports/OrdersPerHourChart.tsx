@@ -19,8 +19,10 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Orders Per Hour</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h3 className="text-xl font-mono font-black uppercase tracking-tight text-gray-900 dark:text-white">
+            ORDERS PER HOUR
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-normal">
             {view === 'daily' ? 'Today' : 'This Week'}
           </p>
         </div>
@@ -31,13 +33,20 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
               onClick={() => onViewChange(option)}
               className={`px-3 py-1 text-sm font-medium rounded transition-all ${
                 view === option
-                  ? 'bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm'
+                  ? 'bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm font-mono font-bold uppercase'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
             >
-              {option === 'daily' ? 'Today' : 'This Week'}
+              {option === 'daily' ? 'TODAY' : 'THIS WEEK'}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="w-3 h-3 rounded-sm" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}></div>
+          <span className="font-mono font-bold uppercase tracking-tight">Orders Count</span>
         </div>
       </div>
 
@@ -46,46 +55,58 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
           <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <defs>
               <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.4} />
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.9} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0.6} />
               </linearGradient>
               <linearGradient id="peakBarGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#059669" stopOpacity={1} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.6} />
+                <stop offset="50%" stopColor="#10b981" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#34d399" stopOpacity={0.6} />
               </linearGradient>
+              <filter id="roughEdges">
+                <feTurbulence baseFrequency="0.9" numOctaves="4" result="turbulence"/>
+                <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="1"/>
+              </filter>
             </defs>
             <XAxis 
               dataKey="hour" 
               stroke="#6b7280"
               fontSize={12}
+              fontFamily="'Space Mono', monospace"
+              fontWeight="bold"
               tickLine={false}
               axisLine={false}
             />
             <YAxis 
               stroke="#6b7280"
               fontSize={12}
+              fontFamily="'Space Mono', monospace"
+              fontWeight="bold"
               tickLine={false}
               axisLine={false}
             />
             <Tooltip 
               contentStyle={{
-                backgroundColor: '#1f2937',
-                border: 'none',
-                borderRadius: '12px',
+                backgroundColor: '#064e3b',
+                border: '2px solid #10b981',
+                borderRadius: '8px',
                 color: '#fff',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                fontSize: '14px',
+                fontWeight: '700',
+                fontFamily: "'Space Mono', monospace"
               }}
-              formatter={(value: number) => [value, 'Orders']}
-              labelFormatter={(label) => `Hour: ${label}`}
+              formatter={(value: number) => [value, 'ORDERS']}
+              labelFormatter={(label) => `HOUR: ${label}`}
             />
             <Bar 
               dataKey="orders" 
-              radius={[4, 4, 0, 0]}
+              radius={[2, 2, 0, 0]}
             >
               {data.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={entry.orders === maxOrders ? "url(#peakBarGradient)" : "url(#barGradient)"} 
+                  fill={entry.orders === maxOrders && maxOrders > 0 ? "url(#peakBarGradient)" : "url(#barGradient)"} 
                 />
               ))}
             </Bar>

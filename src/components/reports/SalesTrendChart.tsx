@@ -33,8 +33,10 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Sales Trend</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h3 className="text-xl font-mono font-black uppercase tracking-tight text-gray-900 dark:text-white">
+            SALES TREND
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-normal">
             {getDateRangeLabel()}
           </p>
         </div>
@@ -45,7 +47,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
               onClick={() => onResolutionChange(option)}
               className={`px-3 py-1 text-sm font-medium rounded transition-all ${
                 resolution === option
-                  ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                  ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm font-mono font-bold uppercase'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
             >
@@ -57,8 +59,8 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
 
       <div className="mb-4">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-          <span>Sales (KES)</span>
+          <div className="w-3 h-3 rounded-full" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' }}></div>
+          <span className="font-mono font-bold uppercase tracking-tight">Sales (KES)</span>
         </div>
       </div>
 
@@ -67,53 +69,69 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
           <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <defs>
               <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#8b5cf6" />
+                <stop offset="50%" stopColor="#a855f7" />
+                <stop offset="100%" stopColor="#c084fc" />
               </linearGradient>
             </defs>
             <XAxis 
               dataKey="date" 
               stroke="#6b7280"
               fontSize={12}
+              fontFamily="'Space Mono', monospace"
+              fontWeight="bold"
               tickLine={false}
               axisLine={false}
             />
             <YAxis 
               stroke="#6b7280"
               fontSize={12}
+              fontFamily="'Space Mono', monospace"
+              fontWeight="bold"
               tickLine={false}
               axisLine={false}
               tickFormatter={(value) => formatCurrency(value)}
             />
             <Tooltip 
               contentStyle={{
-                backgroundColor: 'white',
+                backgroundColor: '#1f2937',
                 border: 'none',
-                borderRadius: '12px',
-                color: '#1f2937',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                borderRadius: '16px',
+                color: '#fff',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                 fontSize: '14px',
-                fontWeight: '500'
+                fontWeight: '600',
+                fontFamily: "'Space Mono', monospace"
               }}
-              formatter={(value: number) => [`${formatCurrency(value)}`, 'Sales']}
-              labelFormatter={(label) => `Date: ${label}`}
+              formatter={(value: number) => [`${formatCurrency(value)}`, 'SALES']}
+              labelFormatter={(label) => `DATE: ${label}`}
             />
             <Area
               type="monotone"
               dataKey="revenue"
-              stroke="#8b5cf6"
-              strokeWidth={3}
+              stroke="url(#lineGradient)"
+              strokeWidth={4}
               fill="url(#salesGradient)"
-              dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
-              activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#8b5cf6' }}
+              dot={{ fill: '#8b5cf6', strokeWidth: 3, r: 6, stroke: '#fff' }}
+              activeDot={{ 
+                r: 8, 
+                stroke: '#8b5cf6', 
+                strokeWidth: 3, 
+                fill: '#fff',
+                style: { filter: 'drop-shadow(0 4px 6px rgba(139, 92, 246, 0.3))' }
+              }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-lg font-bold text-gray-900 dark:text-white">
-          Total: {formatCurrency(totalSales)}
+        <p className="text-lg font-mono font-black uppercase tracking-tight text-gray-900 dark:text-white">
+          TOTAL: {formatCurrency(totalSales)}
         </p>
       </div>
     </div>
