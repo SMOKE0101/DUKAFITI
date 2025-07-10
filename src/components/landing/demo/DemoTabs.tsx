@@ -1,42 +1,61 @@
 
-import { ShoppingCart, Package, Users, BarChart3 } from 'lucide-react';
-
-interface DemoTab {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
+import React, { Dispatch, SetStateAction } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import InventoryDemo from './InventoryDemo';
+import SalesDemo from './SalesDemo';
+import CustomerDemo from './CustomerDemo';
+import ReportsDemo from './ReportsDemo';
 
 interface DemoTabsProps {
-  activeDemo: string;
-  onDemoChange: (demoId: string) => void;
+  activeTab: string;
+  setActiveTab: Dispatch<SetStateAction<string>>;
 }
 
-const demoTabs: DemoTab[] = [
-  { id: 'sales', label: 'Record a Sale', icon: ShoppingCart },
-  { id: 'inventory', label: 'Add Inventory', icon: Package },
-  { id: 'customer', label: 'Manage Customer', icon: Users },
-  { id: 'reports', label: 'View Reports', icon: BarChart3 }
-];
-
-const DemoTabs = ({ activeDemo, onDemoChange }: DemoTabsProps) => {
+const DemoTabs: React.FC<DemoTabsProps> = ({ activeTab, setActiveTab }) => {
   return (
-    <div className="flex flex-wrap justify-center mb-8 gap-2">
-      {demoTabs.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => onDemoChange(tab.id)}
-          className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
-            activeDemo === tab.id
-              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-          }`}
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-4 bg-white/10 backdrop-blur-sm rounded-xl p-1">
+        <TabsTrigger 
+          value="inventory" 
+          className="data-[state=active]:bg-white data-[state=active]:text-gray-900 text-white/80 rounded-lg transition-all duration-200"
         >
-          <tab.icon className="w-4 h-4" />
-          <span className="hidden sm:inline">{tab.label}</span>
-        </button>
-      ))}
-    </div>
+          Inventory
+        </TabsTrigger>
+        <TabsTrigger 
+          value="sales" 
+          className="data-[state=active]:bg-white data-[state=active]:text-gray-900 text-white/80 rounded-lg transition-all duration-200"
+        >
+          Sales
+        </TabsTrigger>
+        <TabsTrigger 
+          value="customers" 
+          className="data-[state=active]:bg-white data-[state=active]:text-gray-900 text-white/80 rounded-lg transition-all duration-200"
+        >
+          Customers
+        </TabsTrigger>
+        <TabsTrigger 
+          value="reports" 
+          className="data-[state=active]:bg-white data-[state=active]:text-gray-900 text-white/80 rounded-lg transition-all duration-200"
+        >
+          Reports
+        </TabsTrigger>
+      </TabsList>
+      
+      <div className="mt-8">
+        <TabsContent value="inventory" className="mt-0">
+          <InventoryDemo />
+        </TabsContent>
+        <TabsContent value="sales" className="mt-0">
+          <SalesDemo />
+        </TabsContent>
+        <TabsContent value="customers" className="mt-0">
+          <CustomerDemo />
+        </TabsContent>
+        <TabsContent value="reports" className="mt-0">
+          <ReportsDemo />
+        </TabsContent>
+      </div>
+    </Tabs>
   );
 };
 
