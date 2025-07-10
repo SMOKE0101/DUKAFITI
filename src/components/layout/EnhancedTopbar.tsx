@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,8 @@ import {
   Users,
   ShoppingCart,
   X,
-  Menu
+  Menu,
+  PanelLeft
 } from 'lucide-react';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
@@ -31,7 +31,12 @@ interface SearchResult {
   route: string;
 }
 
-const EnhancedTopbar = () => {
+interface EnhancedTopbarProps {
+  onSidebarToggle?: () => void;
+  sidebarCollapsed?: boolean;
+}
+
+const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({ onSidebarToggle, sidebarCollapsed = false }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -164,9 +169,25 @@ const EnhancedTopbar = () => {
     <>
       <header className="sticky top-0 z-50 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/20 dark:border-gray-700/20 shadow-sm">
         <div className="flex items-center justify-between px-4 lg:px-6 h-full max-w-7xl mx-auto">
-          {/* Left - Hamburger & Logo */}
+          {/* Left - Sidebar Toggle & Logo */}
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="lg:hidden">
+            {/* Sidebar Toggle Button - Desktop */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSidebarToggle}
+              className="hidden md:flex text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 w-10 h-10 rounded-full p-0 transition-all duration-200"
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <PanelLeft 
+                className={`w-5 h-5 transition-transform duration-300 ease-out ${
+                  sidebarCollapsed ? 'rotate-180' : 'rotate-0'
+                }`} 
+              />
+            </Button>
+
+            {/* Mobile Menu Button */}
+            <Button variant="ghost" size="sm" className="md:hidden">
               <Menu className="w-5 h-5" />
             </Button>
             

@@ -13,16 +13,23 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isMobile = useIsMobile();
 
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   return (
     <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900">
-      {/* Enhanced Topbar - Fixed */}
-      <EnhancedTopbar />
+      {/* Enhanced Topbar - Fixed with sidebar toggle */}
+      <EnhancedTopbar 
+        onSidebarToggle={handleSidebarToggle}
+        sidebarCollapsed={sidebarCollapsed}
+      />
 
       <div className="flex flex-1 pt-16">
         {/* Enhanced Sidebar */}
         <EnhancedSidebar 
           isCollapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggle={handleSidebarToggle}
         />
 
         {/* Main Content with dynamic margin */}
