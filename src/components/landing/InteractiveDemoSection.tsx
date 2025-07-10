@@ -4,7 +4,7 @@ import DemoTabs from './demo/DemoTabs';
 import DemoContent from './demo/DemoContent';
 
 const InteractiveDemoSection = () => {
-  const [activeDemo, setActiveDemo] = useState('sales');
+  const [activeTab, setActiveTab] = useState('sales');
 
   return (
     <section id="demo" className="py-20 bg-slate-950" data-scroll-trigger>
@@ -22,8 +22,8 @@ const InteractiveDemoSection = () => {
         </div>
 
         <div className="max-w-6xl mx-auto">
-          <DemoTabs activeDemo={activeDemo} onDemoChange={setActiveDemo} />
-          <DemoContent activeDemo={activeDemo} />
+          <DemoTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+          <DemoContent activeDemo={activeTab} />
         </div>
       </div>
     </section>

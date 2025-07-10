@@ -43,47 +43,47 @@ const RoughBlockyDashboard = () => {
   const summaryCards = [
     {
       id: 'sales',
-      title: 'JUMLA YA MAUZO LEO',
+      title: 'TODAY\'S TOTAL SALES',
       value: formatCurrency(totalSalesToday),
       icon: DollarSign,
       bgColor: 'bg-success/5',
       iconColor: 'text-success',
       borderColor: 'border-success/20',
       route: '/sales',
-      details: `${todaySales.length} miamala ya leo`
+      details: `${todaySales.length} transactions today`
     },
     {
       id: 'orders',
-      title: 'MAHITAJI YA LEO',
+      title: 'TODAY\'S ORDERS',
       value: totalOrdersToday.toString(),
       icon: ShoppingCart,
       bgColor: 'bg-primary/5',
       iconColor: 'text-primary',
       borderColor: 'border-primary/20',
       route: '/sales',
-      details: `Wastani: ${totalOrdersToday ? (totalSalesToday / totalOrdersToday).toFixed(2) : '0'} kwa oda`
+      details: `Average: ${totalOrdersToday ? (totalSalesToday / totalOrdersToday).toFixed(2) : '0'} per order`
     },
     {
       id: 'customers',
-      title: 'WATEJA WAMILIFU',
+      title: 'ACTIVE CUSTOMERS',
       value: activeCustomers.toString(),
       icon: Users,
       bgColor: 'bg-chart-4/5',
       iconColor: 'text-chart-4',
       borderColor: 'border-chart-4/20',
       route: '/customers',
-      details: `${overdueCustomers.length} wana deni la kulipwa`
+      details: `${overdueCustomers.length} have outstanding debts`
     },
     {
       id: 'stock',
-      title: 'ONYO LA HISA',
+      title: 'STOCK ALERT',
       value: lowStockProducts.length.toString(),
       icon: lowStockProducts.length > 0 ? AlertTriangle : Package2,
       bgColor: lowStockProducts.length > 0 ? 'bg-destructive/5' : 'bg-success/5',
       iconColor: lowStockProducts.length > 0 ? 'text-destructive' : 'text-success',
       borderColor: lowStockProducts.length > 0 ? 'border-destructive/20' : 'border-success/20',
       route: '/inventory',
-      details: lowStockProducts.length > 0 ? 'Inahitaji umakini wa haraka' : 'Bidhaa zote zipo vizuri'
+      details: lowStockProducts.length > 0 ? 'Needs immediate attention' : 'All products in good stock'
     }
   ];
 
@@ -100,19 +100,19 @@ const RoughBlockyDashboard = () => {
             />
             <div>
               <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                DASHIBODI
+                DASHBOARD
               </h1>
-              <p className="brand-tagline text-xs">DUKAFITI NI DUKABORA</p>
+              <p className="brand-tagline text-xs">DUKAFITI IS THE BEST SHOP</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="status-success">
               <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-              Iko Mtandaoni
+              Online
             </div>
             <input 
               type="search" 
-              placeholder="Tafuta kitu chochote..." 
+              placeholder="Search anything..." 
               className="dukafiti-input w-64"
             />
           </div>
@@ -174,7 +174,7 @@ const RoughBlockyDashboard = () => {
                       className="dukafiti-button-primary"
                     >
                       <TrendingUp className="w-4 h-4" />
-                      ANGALIA ZAIDI
+                      VIEW MORE
                     </Button>
                   </div>
                 </div>
@@ -190,7 +190,7 @@ const RoughBlockyDashboard = () => {
             <div className="p-6">
               <h3 className="font-bold text-lg text-foreground mb-4 uppercase tracking-wide flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-warning" strokeWidth={2} />
-                ONYO LA HISA
+                STOCK ALERT
               </h3>
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {lowStockProducts.length > 0 ? (
@@ -208,7 +208,7 @@ const RoughBlockyDashboard = () => {
                   <div className="text-center py-8">
                     <Package2 className="w-12 h-12 mx-auto text-success mb-2" strokeWidth={2} />
                     <p className="text-sm font-medium text-muted-foreground">
-                      Bidhaa zote zipo vizuri!
+                      All products are well stocked!
                     </p>
                   </div>
                 )}
@@ -221,7 +221,7 @@ const RoughBlockyDashboard = () => {
             <div className="p-6">
               <h3 className="font-bold text-lg text-foreground mb-4 uppercase tracking-wide flex items-center gap-2">
                 <Users className="w-5 h-5 text-destructive" strokeWidth={2} />
-                MADENI YA KULIPWA
+                OUTSTANDING DEBTS
               </h3>
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {overdueCustomers.length > 0 ? (
@@ -239,7 +239,7 @@ const RoughBlockyDashboard = () => {
                   <div className="text-center py-8">
                     <Users className="w-12 h-12 mx-auto text-success mb-2" strokeWidth={2} />
                     <p className="text-sm font-medium text-muted-foreground">
-                      Madeni yote yameshalipiwa!
+                      All debts have been paid!
                     </p>
                   </div>
                 )}
@@ -252,7 +252,7 @@ const RoughBlockyDashboard = () => {
             <div className="p-6">
               <h3 className="font-bold text-lg text-foreground mb-4 uppercase tracking-wide flex items-center gap-2">
                 <Plus className="w-5 h-5 text-primary" strokeWidth={2} />
-                VITENDO VYA HARAKA
+                QUICK ACTIONS
               </h3>
               <div className="space-y-3">
                 <Button 
@@ -260,7 +260,7 @@ const RoughBlockyDashboard = () => {
                   onClick={() => navigate('/sales')}
                 >
                   <ShoppingCart className="w-5 h-5" strokeWidth={2} />
-                  Ongeza Mauzo
+                  Add Sale
                 </Button>
                 
                 <Button 
@@ -268,7 +268,7 @@ const RoughBlockyDashboard = () => {
                   onClick={() => navigate('/inventory')}
                 >
                   <Plus className="w-5 h-5" strokeWidth={2} />
-                  Ongeza Bidhaa
+                  Add Product
                 </Button>
                 
                 <Button 
@@ -276,7 +276,7 @@ const RoughBlockyDashboard = () => {
                   onClick={() => navigate('/customers')}
                 >
                   <UserPlus className="w-5 h-5" strokeWidth={2} />
-                  Ongeza Mteja
+                  Add Customer
                 </Button>
               </div>
             </div>
