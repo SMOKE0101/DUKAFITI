@@ -156,35 +156,37 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     );
   }
 
-  // Desktop Sidebar with enhanced smooth animations
+  // Desktop/Tablet Sidebar with ultra-smooth animations
   return (
     <div className={`hidden lg:block ${className}`}>
       <div 
         className={`
           fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 
           flex flex-col z-40 shadow-lg
-          transition-all duration-700 ease-in-out
+          transition-all duration-1000 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]
           ${isCollapsed ? 'w-20' : 'w-72'}
         `}
         style={{
-          transitionProperty: 'width',
-          transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          transitionProperty: 'width, transform',
         }}
       >
         {/* Brand Section */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[88px] flex items-center">
-          <div className={`flex items-center transition-all duration-700 ease-in-out ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg transition-all duration-300">
-              <span className="text-white font-black text-lg">D</span>
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[88px] flex items-center overflow-hidden">
+          <div className={`flex items-center transition-all duration-1000 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+            <div className={`rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg transition-all duration-700 ${isCollapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
+              <span className={`text-white font-black transition-all duration-700 ${isCollapsed ? 'text-sm' : 'text-lg'}`}>D</span>
             </div>
             <div 
               className={`
-                min-w-0 transition-all duration-700 ease-in-out overflow-hidden
+                min-w-0 transition-all duration-1000 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] overflow-hidden
                 ${isCollapsed 
-                  ? 'opacity-0 w-0 max-w-0 transform translate-x-4' 
-                  : 'opacity-100 w-auto max-w-none transform translate-x-0'
+                  ? 'opacity-0 w-0 max-w-0 transform translate-x-8 scale-95' 
+                  : 'opacity-100 w-auto max-w-none transform translate-x-0 scale-100'
                 }
               `}
+              style={{
+                transitionDelay: isCollapsed ? '0ms' : '300ms',
+              }}
             >
               <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white whitespace-nowrap">
                 DUKASMART
@@ -198,9 +200,24 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
 
         {/* Navigation Links */}
         <nav className={`
-          flex-1 p-4 space-y-2 transition-all duration-700 ease-in-out
-          ${isCollapsed ? 'overflow-hidden' : 'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600'}
-        `}>
+          flex-1 p-4 space-y-2 transition-all duration-1000 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]
+          ${isCollapsed 
+            ? 'overflow-hidden' 
+            : 'overflow-y-auto'
+          }
+        `}
+        style={{
+          scrollbarWidth: isCollapsed ? 'none' : 'thin',
+          msOverflowStyle: isCollapsed ? 'none' : 'auto',
+        }}
+        >
+          <style>
+            {isCollapsed && `
+              nav::-webkit-scrollbar {
+                display: none;
+              }
+            `}
+          </style>
           {navigation.map((item, index) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
@@ -210,7 +227,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                 key={item.name}
                 to={item.href}
                 className={`
-                  group flex items-center rounded-xl transition-all duration-500 ease-in-out relative
+                  group flex items-center rounded-xl transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] relative
                   ${isCollapsed ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
                   ${isActive 
                     ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-md border-l-4 border-purple-600' 
@@ -222,7 +239,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                 }}
               >
                 <div className={`
-                  flex items-center justify-center rounded-lg transition-all duration-500 flex-shrink-0
+                  flex items-center justify-center rounded-lg transition-all duration-700 flex-shrink-0
                   ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
                   ${isActive 
                     ? 'text-purple-700 dark:text-purple-400' 
@@ -233,21 +250,21 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                 </div>
                 <span 
                   className={`
-                    font-semibold text-sm min-w-0 truncate transition-all duration-700 ease-in-out overflow-hidden
+                    font-semibold text-sm min-w-0 truncate transition-all duration-1000 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] overflow-hidden
                     ${isCollapsed 
-                      ? 'opacity-0 w-0 max-w-0 transform translate-x-4' 
-                      : 'opacity-100 w-auto max-w-none transform translate-x-0'
+                      ? 'opacity-0 w-0 max-w-0 transform translate-x-8 scale-95' 
+                      : 'opacity-100 w-auto max-w-none transform translate-x-0 scale-100'
                     }
                   `}
                   style={{
-                    transitionDelay: isCollapsed ? '0ms' : '200ms',
+                    transitionDelay: isCollapsed ? '0ms' : '400ms',
                   }}
                 >
                   {item.name}
                 </span>
                 {/* Enhanced Tooltip for collapsed state */}
                 {isCollapsed && (
-                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none whitespace-nowrap z-50 shadow-lg">
                     {item.name}
                     <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
                   </div>
@@ -262,13 +279,13 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           <button
             onClick={handleSignOut}
             className={`
-              group flex items-center rounded-xl transition-all duration-500 w-full relative
+              group flex items-center rounded-xl transition-all duration-700 w-full relative
               ${isCollapsed ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
               text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
             `}
           >
             <div className={`
-              flex items-center justify-center rounded-lg transition-all duration-500 flex-shrink-0
+              flex items-center justify-center rounded-lg transition-all duration-700 flex-shrink-0
               ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'}
               text-red-600 dark:text-red-400
             `}>
@@ -276,21 +293,21 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             </div>
             <span 
               className={`
-                font-semibold text-sm transition-all duration-700 ease-in-out overflow-hidden
+                font-semibold text-sm transition-all duration-1000 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] overflow-hidden
                 ${isCollapsed 
-                  ? 'opacity-0 w-0 max-w-0 transform translate-x-4' 
-                  : 'opacity-100 w-auto max-w-none transform translate-x-0'
+                  ? 'opacity-0 w-0 max-w-0 transform translate-x-8 scale-95' 
+                  : 'opacity-100 w-auto max-w-none transform translate-x-0 scale-100'
                 }
               `}
               style={{
-                transitionDelay: isCollapsed ? '0ms' : '200ms',
+                transitionDelay: isCollapsed ? '0ms' : '400ms',
               }}
             >
               Logout
             </span>
             {/* Enhanced Tooltip for collapsed state */}
             {isCollapsed && (
-              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none whitespace-nowrap z-50 shadow-lg">
                 Logout
                 <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
               </div>
@@ -302,59 +319,21 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <button
             onClick={onToggle}
-            className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
+            className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
             aria-expanded={!isCollapsed}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <div 
               className={`
-                p-1 transition-all duration-700 ease-in-out
+                p-1 transition-all duration-1000 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]
                 ${isCollapsed ? 'rotate-0' : 'rotate-180'}
               `}
-              style={{
-                transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-              }}
             >
-              <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300" />
+              <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-500" />
             </div>
           </button>
         </div>
       </div>
-
-      {/* Custom scrollbar styles */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .scrollbar-thin {
-            scrollbar-width: thin;
-          }
-          .scrollbar-thumb-gray-300 {
-            scrollbar-color: rgb(209, 213, 219) transparent;
-          }
-          .dark .scrollbar-thumb-gray-600 {
-            scrollbar-color: rgb(75, 85, 99) transparent;
-          }
-          .scrollbar-thin::-webkit-scrollbar {
-            width: 4px;
-          }
-          .scrollbar-thin::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-            background-color: rgb(209, 213, 219);
-            border-radius: 2px;
-          }
-          .dark .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
-            background-color: rgb(75, 85, 99);
-            border-radius: 2px;
-          }
-          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background-color: rgb(156, 163, 175);
-          }
-          .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background-color: rgb(107, 114, 128);
-          }
-        `
-      }} />
     </div>
   );
 };

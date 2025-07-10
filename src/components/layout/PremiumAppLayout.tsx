@@ -18,15 +18,15 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
       {/* Enhanced Topbar */}
       <EnhancedTopbar 
         onSidebarToggle={handleSidebarToggle}
         sidebarCollapsed={sidebarCollapsed}
       />
 
-      <div className="flex flex-1 pt-16">
-        {/* Enhanced Sidebar - Hidden on mobile */}
+      <div className="flex flex-1 pt-16 relative">
+        {/* Enhanced Sidebar - Hidden on mobile, always visible on tablet+ */}
         {!isMobile && (
           <EnhancedSidebar 
             isCollapsed={sidebarCollapsed}
@@ -37,17 +37,17 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main 
           className={`
-            flex-1 bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]
+            flex-1 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)] transition-all duration-500 ease-out
             ${isMobile 
-              ? 'pb-20 ml-0' 
+              ? 'pb-20 ml-0 w-full' 
               : sidebarCollapsed 
-                ? 'ml-[72px]' 
-                : 'ml-[280px]'
+                ? 'ml-[72px] w-[calc(100vw-72px)]' 
+                : 'ml-[280px] w-[calc(100vw-280px)]'
             }
           `}
         >
           <div className={`
-            max-w-full overflow-x-hidden
+            h-full overflow-x-hidden
             ${isMobile ? 'p-3 pt-4' : 'p-4 md:p-6 lg:p-8'}
           `}>
             {children}
