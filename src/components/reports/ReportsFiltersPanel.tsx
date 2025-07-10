@@ -18,7 +18,6 @@ interface ReportsFiltersPanelProps {
   onCustomDateRangeChange: (range: { from: Date; to: Date }) => void;
   activeFilters: Filter[];
   onRemoveFilter: (filter: Filter) => void;
-  onExport?: (format: 'pdf' | 'csv') => void;
 }
 
 const ReportsFiltersPanel: React.FC<ReportsFiltersPanelProps> = ({

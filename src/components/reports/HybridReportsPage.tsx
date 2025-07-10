@@ -309,7 +309,7 @@ const HybridReportsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Page Title - Blocky Font */}
+      {/* Page Title */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
         <h1 className="text-3xl font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white">
           REPORTS
@@ -328,7 +328,7 @@ const HybridReportsPage = () => {
           onRemoveFilter={removeFilter}
         />
 
-        {/* Summary Metrics Cards - 7 Cards in Responsive Grid */}
+        {/* Summary Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           <MetricCard
             title="TOTAL REVENUE"

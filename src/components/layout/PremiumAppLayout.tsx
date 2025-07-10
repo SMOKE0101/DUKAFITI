@@ -19,7 +19,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-gray-50 dark:bg-gray-900">
-      {/* Enhanced Topbar - Fixed with sidebar toggle */}
+      {/* Enhanced Topbar */}
       <EnhancedTopbar 
         onSidebarToggle={handleSidebarToggle}
         sidebarCollapsed={sidebarCollapsed}
@@ -32,7 +32,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
           onToggle={handleSidebarToggle}
         />
 
-        {/* Main Content with dynamic margin */}
+        {/* Main Content */}
         <main 
           className={`
             flex-1 bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-out
@@ -40,12 +40,9 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
               ? 'pb-20 ml-0' 
               : sidebarCollapsed 
                 ? 'ml-[72px]' 
-                : 'ml-[240px]'
+                : 'ml-[280px]'
             }
           `}
-          style={{
-            '--sidebar-width': isMobile ? '0px' : sidebarCollapsed ? '72px' : '240px'
-          } as React.CSSProperties}
         >
           {children}
         </main>

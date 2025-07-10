@@ -11,11 +11,9 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
-  ChevronLeft,
   User
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../ui/button';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -47,34 +45,38 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     }
   };
 
-  // Calculate effective width for hover peek effect
-  const effectiveWidth = isCollapsed ? (isHovered ? '100px' : '72px') : '240px';
+  // Calculate effective width - more precise hover expansion
+  const effectiveWidth = isCollapsed 
+    ? (isHovered ? '280px' : '72px') 
+    : '280px';
+
+  // Show expanded content when not collapsed OR when collapsed but hovered
+  const showExpandedContent = !isCollapsed || isHovered;
 
   return (
     <>
       {/* Desktop Sidebar */}
       <div className={`hidden md:block ${className}`}>
         <div 
-          className="fixed left-0 top-0 h-full bg-white dark:bg-black border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transition-all duration-300 ease-out"
+          className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 transition-all duration-300 ease-out shadow-lg"
           style={{ 
             width: effectiveWidth,
-            '--sidebar-width': effectiveWidth
-          } as React.CSSProperties}
+          }}
           onMouseEnter={() => isCollapsed && setIsHovered(true)}
           onMouseLeave={() => isCollapsed && setIsHovered(false)}
         >
           {/* Brand & Profile Section */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div className={`flex items-center ${isCollapsed && !isHovered ? 'justify-center' : 'gap-3'}`}>
-              <div className="w-12 h-12 rounded-full border-2 border-purple-300 dark:border-purple-600 flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0">
-                <span className="text-white font-bold text-lg">D</span>
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className={`flex items-center transition-all duration-300 ${!showExpandedContent ? 'justify-center' : 'gap-3'}`}>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <span className="text-white font-black text-lg">D</span>
               </div>
-              {(!isCollapsed || isHovered) && (
-                <div className="min-w-0">
+              {showExpandedContent && (
+                <div className="min-w-0 opacity-100 transition-opacity duration-300">
                   <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 dark:text-white truncate">
                     DUKASMART
                   </h1>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                     Smart Business
                   </p>
                 </div>
@@ -82,17 +84,17 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             </div>
             
             {/* User Profile */}
-            {(!isCollapsed || isHovered) && user && (
-              <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            {showExpandedContent && user && (
+              <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-all duration-300">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono font-bold text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                       {user.email?.split('@')[0] || 'User'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                       Owner
                     </p>
                   </div>
@@ -102,7 +104,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -112,28 +114,37 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   key={item.name}
                   to={item.href}
                   className={`
-                    group flex items-center rounded-lg transition-all duration-200
-                    ${isCollapsed && !isHovered ? 'justify-center p-3' : 'p-4 gap-4'}
+                    group flex items-center rounded-xl transition-all duration-200 relative
+                    ${!showExpandedContent ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4'}
                     ${isActive 
-                      ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-600 text-purple-700 dark:text-purple-400' 
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-2 hover:border-purple-300'
+                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 shadow-lg border-l-4 border-purple-600' 
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400'
                     }
                   `}
-                  title={isCollapsed && !isHovered ? item.name : undefined}
+                  title={!showExpandedContent ? item.name : undefined}
                 >
                   <div className={`
-                    p-2 rounded-full border-2 transition-colors duration-200 flex-shrink-0
+                    flex items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0
+                    ${!showExpandedContent ? 'w-6 h-6' : 'w-8 h-8'}
                     ${isActive 
-                      ? 'border-purple-300 bg-purple-100 dark:bg-purple-900/30' 
-                      : 'border-gray-300 dark:border-gray-600 group-hover:border-purple-300'
+                      ? 'text-purple-700 dark:text-purple-400' 
+                      : 'text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400'
                     }
                   `}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  {(!isCollapsed || isHovered) && (
-                    <span className="font-mono font-bold uppercase tracking-tight text-sm min-w-0 truncate">
+                  {showExpandedContent && (
+                    <span className="font-semibold text-sm min-w-0 truncate transition-all duration-300">
                       {item.name}
                     </span>
+                  )}
+                  
+                  {/* Tooltip for collapsed state */}
+                  {!showExpandedContent && (
+                    <div className="absolute left-full ml-4 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
+                      {item.name}
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
+                    </div>
                   )}
                 </NavLink>
               );
@@ -144,38 +155,60 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
             <button
               className={`
-                group flex items-center rounded-lg transition-all duration-200 w-full
-                ${isCollapsed && !isHovered ? 'justify-center p-3' : 'p-4 gap-4'}
-                text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-2 hover:border-purple-300
+                group flex items-center rounded-xl transition-all duration-200 w-full relative
+                ${!showExpandedContent ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
+                text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400
               `}
-              title={isCollapsed && !isHovered ? 'Help' : undefined}
+              title={!showExpandedContent ? 'Help' : undefined}
             >
-              <div className="p-2 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-purple-300 transition-colors duration-200 flex-shrink-0">
+              <div className={`
+                flex items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0
+                ${!showExpandedContent ? 'w-6 h-6' : 'w-8 h-8'}
+                text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400
+              `}>
                 <HelpCircle className="w-5 h-5" />
               </div>
-              {(!isCollapsed || isHovered) && (
-                <span className="font-mono font-bold uppercase tracking-tight text-sm">
+              {showExpandedContent && (
+                <span className="font-semibold text-sm">
                   Help
                 </span>
+              )}
+              
+              {!showExpandedContent && (
+                <div className="absolute left-full ml-4 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
+                  Help
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
+                </div>
               )}
             </button>
 
             <button
               onClick={handleSignOut}
               className={`
-                group flex items-center rounded-lg transition-all duration-200 w-full
-                ${isCollapsed && !isHovered ? 'justify-center p-3' : 'p-4 gap-4'}
-                text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-2 hover:border-red-300
+                group flex items-center rounded-xl transition-all duration-200 w-full relative
+                ${!showExpandedContent ? 'justify-center p-3 h-12' : 'p-4 gap-4'}
+                text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
               `}
-              title={isCollapsed && !isHovered ? 'Logout' : undefined}
+              title={!showExpandedContent ? 'Logout' : undefined}
             >
-              <div className="p-2 rounded-full border-2 border-red-300 dark:border-red-600 group-hover:border-red-400 transition-colors duration-200 flex-shrink-0">
+              <div className={`
+                flex items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0
+                ${!showExpandedContent ? 'w-6 h-6' : 'w-8 h-8'}
+                text-red-600 dark:text-red-400
+              `}>
                 <LogOut className="w-5 h-5" />
               </div>
-              {(!isCollapsed || isHovered) && (
-                <span className="font-mono font-bold uppercase tracking-tight text-sm">
+              {showExpandedContent && (
+                <span className="font-semibold text-sm">
                   Logout
                 </span>
+              )}
+              
+              {!showExpandedContent && (
+                <div className="absolute left-full ml-4 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
+                  Logout
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
+                </div>
               )}
             </button>
           </div>
@@ -184,14 +217,14 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={onToggle}
-              className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group"
               aria-expanded={!isCollapsed}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <div className="p-1 transition-transform duration-300 ease-out" style={{
                 transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
               }}>
-                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400" />
               </div>
             </button>
           </div>
@@ -200,7 +233,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        <div className="bg-white dark:bg-black border-t-2 border-gray-300 dark:border-gray-600 px-4 py-2">
+        <div className="bg-white dark:bg-gray-900 border-t-2 border-gray-300 dark:border-gray-600 px-4 py-2 shadow-lg">
           <div className="flex items-center justify-around">
             {navigation.slice(0, 5).map((item) => {
               const Icon = item.icon;
@@ -211,23 +244,15 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                   key={item.name}
                   to={item.href}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-200
+                    flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-200
                     ${isActive 
                       ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20' 
                       : 'text-gray-600 dark:text-gray-400'
                     }
                   `}
                 >
-                  <div className={`
-                    p-1.5 rounded-full border transition-colors duration-200
-                    ${isActive 
-                      ? 'border-purple-300 bg-purple-100 dark:bg-purple-900/30' 
-                      : 'border-gray-300 dark:border-gray-600'
-                    }
-                  `}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-mono font-bold uppercase tracking-tight">
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-semibold">
                     {item.name}
                   </span>
                 </NavLink>
