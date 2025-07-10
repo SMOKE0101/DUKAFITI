@@ -217,48 +217,116 @@ const InventoryPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className="p-6 space-y-8 max-w-7xl mx-auto">
-        {/* Enhanced Header with Gradient Background */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-8 shadow-2xl">
-          <div className="absolute inset-0 bg-black/10"></div>
+        {/* Blocky Header with Smooth Cards */}
+        <div className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700">
           <div className="relative z-10">
-            <InventoryHeader 
-              totalProducts={totalProducts}
-              totalValue={totalValue}
-              lowStockCount={lowStockCount}
-              onAddProduct={handleCreateProduct}
-            />
+            <h1 className="font-mono text-4xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
+              INVENTORY
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 font-medium">Manage your products and stock levels</p>
+            
+            {/* Quick Stats in smooth pills */}
+            <div className="flex items-center gap-6 mt-6">
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{totalProducts} Products</span>
+              </div>
+              {lowStockCount > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-200 dark:border-red-800">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-red-700 dark:text-red-300">{lowStockCount} Low Stock</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+          
+          <Button 
+            onClick={handleCreateProduct}
+            className="absolute top-8 right-8 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+          >
+            Add New Product
+          </Button>
         </div>
 
-        {/* Premium Stats Cards with Enhanced Styling */}
-        <div className="relative">
-          <PremiumStatsCards 
-            products={products}
-            onCardClick={handleCardClick}
-          />
+        {/* Summary Stats with Smooth Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">TOTAL SKUS</h3>
+                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">{totalProducts}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">INVENTORY VALUE</h3>
+                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">KES {totalValue.toLocaleString()}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">LOW STOCK</h3>
+                <p className="text-3xl font-semibold text-red-600 dark:text-red-400 mt-2">{lowStockCount}</p>
+              </div>
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">CATEGORIES</h3>
+                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-2">{categories.length - 1}</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Filter indicator with Glass Morphism */}
+        {/* Filter indicator with smooth styling */}
         {activeFilter !== 'all' && (
-          <div className="flex items-center gap-3 p-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-xl border border-white/20 shadow-lg">
-            <span className="text-sm font-medium text-muted-foreground">Active Filter:</span>
-            <span className="px-4 py-2 bg-gradient-to-r from-primary/20 to-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/20">
+          <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
+            <span className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">ACTIVE FILTER:</span>
+            <span className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full text-sm font-semibold shadow-md">
               {activeFilter === 'low-stock' ? 'Low Stock Items' : 
                activeFilter === 'in-stock' ? 'In Stock Items' : 'All Items'}
             </span>
             <button
               onClick={() => setActiveFilter('all')}
-              className="px-3 py-1 text-sm text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full transition-all duration-200 font-medium"
+              className="px-3 py-1 text-sm text-purple-600 hover:text-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full transition-all duration-200 font-medium"
             >
               Clear filter
             </button>
           </div>
         )}
 
-        {/* Enhanced Filters with Glass Effect */}
-        <div className="p-6 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl">
+        {/* Filters with smooth styling */}
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
+          <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-4">FILTERS</h3>
           <InventoryFilters
             categories={categories}
             selectedCategory={selectedCategory}
@@ -270,8 +338,9 @@ const InventoryPage = () => {
           />
         </div>
 
-        {/* Product Grid with Enhanced Container */}
-        <div className="p-6 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-white/10 shadow-lg">
+        {/* Product Grid with smooth cards */}
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
+          <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-6">PRODUCTS</h3>
           <InventoryProductGrid
             products={filteredProducts}
             onEdit={handleEdit}
@@ -297,26 +366,26 @@ const InventoryPage = () => {
           isLoading={isRestocking}
         />
 
-        {/* Enhanced Delete Confirmation Modal with Glass Effect */}
+        {/* Enhanced Delete Confirmation Modal */}
         {showDeleteModal && productToDelete && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl border border-white/20">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl border border-gray-200 dark:border-gray-700">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold mb-2">Delete Product</h2>
-                <p className="text-muted-foreground">
-                  Are you sure you want to delete <span className="font-semibold text-foreground">"{productToDelete.name}"</span>? This action cannot be undone.
+                <h2 className="font-mono text-xl font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2">DELETE PRODUCT</h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-white">"{productToDelete.name}"</span>? This action cannot be undone.
                 </p>
               </div>
               
               <div className="flex gap-3">
                 <Button
                   onClick={handleDeleteConfirm}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
                 >
                   Delete Product
                 </Button>
@@ -326,7 +395,7 @@ const InventoryPage = () => {
                     setShowDeleteModal(false);
                     setProductToDelete(null);
                   }}
-                  className="flex-1 bg-white/50 hover:bg-white/70 backdrop-blur-sm border-2 hover:shadow-lg transition-all duration-200"
+                  className="flex-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl border-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
                 >
                   Cancel
                 </Button>

@@ -25,15 +25,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
 
   const getStockBadge = () => {
     if (isUnspecifiedQuantity) {
-      return <Badge variant="secondary">Unspecified</Badge>;
+      return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full px-3 py-1 text-xs font-medium">Unspecified</Badge>;
     }
     if (isOutOfStock) {
-      return <Badge variant="destructive">Out of Stock</Badge>;
+      return <Badge className="bg-red-100 text-red-700 hover:bg-red-200 rounded-full px-3 py-1 text-xs font-medium">Out of Stock</Badge>;
     }
     if (isLowStock) {
-      return <Badge variant="destructive">Low Stock</Badge>;
+      return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-full px-3 py-1 text-xs font-medium">Low Stock</Badge>;
     }
-    return <Badge variant="secondary">In Stock</Badge>;
+    return <Badge className="bg-green-100 text-green-700 hover:bg-green-200 rounded-full px-3 py-1 text-xs font-medium">In Stock</Badge>;
   };
 
   const handleRestock = async (quantity: number, buyingPrice: number) => {
@@ -52,46 +52,49 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
 
   return (
     <>
-      <Card className={`hover:shadow-md transition-shadow ${isUnspecifiedQuantity ? 'opacity-60' : ''}`}>
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+      <Card className={`bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700 ${isUnspecifiedQuantity ? 'opacity-90' : ''}`}>
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>
+              <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-2">#{product.id.slice(0, 8).toUpperCase()}</p>
+            </div>
             {getStockBadge()}
           </div>
           
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Category:</span>
-              <span className="font-medium">{product.category}</span>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-400">Category:</span>
+              <span className="font-medium text-gray-900 dark:text-white px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">{product.category}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Cost Price:</span>
-              <span className="font-medium">{formatCurrency(product.costPrice)}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-400">Cost Price:</span>
+              <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(product.costPrice)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Selling Price:</span>
-              <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-400">Selling Price:</span>
+              <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(product.sellingPrice)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Stock:</span>
-              <span className="font-medium">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-400">Stock:</span>
+              <span className={`font-semibold ${isLowStock ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
                 {product.currentStock === -1 ? 'Unspecified' : `${product.currentStock} units`}
               </span>
             </div>
             {!isUnspecifiedQuantity && (
-              <div className="flex justify-between">
-                <span>Low Stock Alert:</span>
-                <span className="font-medium">{product.lowStockThreshold} units</span>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
+                <span className="font-medium text-gray-900 dark:text-white">{product.lowStockThreshold} units</span>
               </div>
             )}
           </div>
 
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-6">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onEdit(product)}
-              className="flex-1"
+              className="flex-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
             >
               <Edit className="w-4 h-4 mr-1" />
               Edit
@@ -101,7 +104,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               size="sm"
               onClick={() => setShowRestockModal(true)}
               disabled={isUnspecifiedQuantity}
-              className={`flex-1 ${isUnspecifiedQuantity ? 'cursor-not-allowed opacity-50' : ''}`}
+              className={`flex-1 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 ${isUnspecifiedQuantity ? 'cursor-not-allowed opacity-50' : ''}`}
               title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
             >
               <Package className="w-4 h-4 mr-1" />
@@ -111,16 +114,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               variant="outline"
               size="sm"
               onClick={() => onDelete(product)}
-              className="text-red-600 hover:text-red-800"
+              className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl border-2 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
 
           {isLowStock && !isUnspecifiedQuantity && (
-            <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded flex items-center gap-2 text-orange-800">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="text-xs">Stock is running low!</span>
+            <div className="mt-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-medium text-amber-800 dark:text-amber-200">Stock is running low!</span>
             </div>
           )}
         </CardContent>

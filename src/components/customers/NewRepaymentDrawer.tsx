@@ -28,7 +28,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const { updateCustomer } = useSupabaseCustomers();
+  const { refetch } = useSupabaseCustomers();
   const { user } = useAuth();
 
   const handleSavePayment = async () => {
@@ -46,20 +46,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       
-      // Create a payment record in a separate payments table or transaction record
-      const paymentRecord = {
-        user_id: user.id,
-        customer_id: customer.id,
-        customer_name: customer.name,
-        amount: paymentAmount,
-        payment_method: method,
-        reference: reference || null,
-        payment_type: 'repayment',
-        created_at: new Date().toISOString(),
-        notes: `Payment received from ${customer.name}`
-      };
-
-      // Insert into transactions table instead of sales
+      // Create a payment record in transactions table
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -100,6 +87,9 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
       setAmount('');
       setMethod('cash');
       setReference('');
+      
+      // Trigger refetch to update UI
+      await refetch();
       
       toast({
         title: "Payment Recorded",
