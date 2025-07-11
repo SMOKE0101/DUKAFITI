@@ -232,7 +232,6 @@ const BlockyReportsPage = () => {
     });
 
     if (ordersChartView === 'daily') {
-      // Hourly data for daily view
       const hourlyData: Record<number, number> = {};
       for (let i = 0; i < 24; i++) {
         hourlyData[i] = 0;
@@ -248,10 +247,8 @@ const BlockyReportsPage = () => {
         orders
       }));
     } else {
-      // Daily data for 2-week view
       const dailyData: Record<string, number> = {};
       
-      // Initialize 14 days of data
       for (let i = 0; i < 14; i++) {
         const date = new Date(chartFromDate);
         date.setDate(date.getDate() + i);
@@ -344,11 +341,11 @@ const BlockyReportsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Page Header - Matching Dashboard */}
       <div className={`
         space-y-6 max-w-7xl mx-auto
         ${isMobile ? 'p-3' : isTablet ? 'p-4' : 'p-6'}
       `}>
+        {/* Page Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
@@ -371,7 +368,6 @@ const BlockyReportsPage = () => {
           </div>
         </div>
 
-        {/* Global Filters Panel */}
         <ReportsFiltersPanel
           dateRange={globalDateRange}
           onDateRangeChange={setGlobalDateRange}
@@ -381,7 +377,7 @@ const BlockyReportsPage = () => {
           onRemoveFilter={removeFilter}
         />
 
-        {/* Summary Metrics Cards - Blocky Style */}
+        {/* Summary Metrics Cards */}
         <div className={`
           grid gap-4
           ${isMobile 
@@ -456,8 +452,10 @@ const BlockyReportsPage = () => {
           />
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts Section - Mobile/Tablet Single Column */}
+        <div className={`grid gap-6 ${
+          isMobile || isTablet ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'
+        }`}>
           <SalesTrendChart
             data={salesTrendData}
             resolution={salesChartResolution}
@@ -500,7 +498,6 @@ const BlockyReportsPage = () => {
           />
         </div>
 
-        {/* Alerts Panel */}
         <AlertsPanel
           lowStockProducts={lowStockProducts}
           overdueCustomers={overdueCustomers}
