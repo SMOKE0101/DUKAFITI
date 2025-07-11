@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -81,7 +80,7 @@ const defaultSettings: ShopSettings = {
   debtReminderMessage: 'Hello {customerName}, you have an outstanding debt of KSh {amount}. Please settle by {dueDate}. Thank you.',
   paymentConfirmationMessage: 'Thank you {customerName}! Payment of KSh {amount} received. Outstanding balance: KSh {balance}.',
   lowStockMessage: 'Alert: {productName} is running low. Current stock: {currentStock}',
-  theme: 'light', // Changed default from 'light' to ensure it's explicitly light
+  theme: 'light', // Explicitly set to light as default
   currencyFormat: 'KSh {amount}',
   dateFormat: 'DD/MM/YYYY',
   language: 'en',
@@ -113,18 +112,30 @@ export const useSettings = () => {
 
         if (data && data.settings_value) {
           const savedSettings = data.settings_value as Partial<ShopSettings>;
-          setSettings({ ...defaultSettings, ...savedSettings });
+          // Ensure theme defaults to light if not specified
+          const settingsWithDefaults = { 
+            ...defaultSettings, 
+            ...savedSettings,
+            theme: savedSettings.theme || 'light'
+          };
+          setSettings(settingsWithDefaults);
         } else {
           // Fallback to localStorage
           const stored = localStorage.getItem(settingsKey);
           if (stored) {
             const parsedSettings = JSON.parse(stored);
-            setSettings({ ...defaultSettings, ...parsedSettings });
+            const settingsWithDefaults = { 
+              ...defaultSettings, 
+              ...parsedSettings,
+              theme: parsedSettings.theme || 'light'
+            };
+            setSettings(settingsWithDefaults);
           } else if (user?.user_metadata?.shop_name) {
             // Initialize with shop name from user metadata
             setSettings({
               ...defaultSettings,
               shopName: user.user_metadata.shop_name,
+              theme: 'light'
             });
           }
         }
@@ -133,7 +144,12 @@ export const useSettings = () => {
         const stored = localStorage.getItem(settingsKey);
         if (stored) {
           const parsedSettings = JSON.parse(stored);
-          setSettings({ ...defaultSettings, ...parsedSettings });
+          const settingsWithDefaults = { 
+            ...defaultSettings, 
+            ...parsedSettings,
+            theme: parsedSettings.theme || 'light'
+          };
+          setSettings(settingsWithDefaults);
         }
       }
     } catch (error) {

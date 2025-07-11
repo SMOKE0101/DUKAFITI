@@ -19,10 +19,12 @@ const AppearanceSettings = () => {
     }
   };
 
-  // Initialize theme on component mount
+  // Initialize theme on component mount - ensure light is default
   useEffect(() => {
     const root = window.document.documentElement;
-    if (settings.theme === 'dark') {
+    const currentTheme = settings.theme || 'light';
+    
+    if (currentTheme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
@@ -46,6 +48,9 @@ const AppearanceSettings = () => {
     );
   }
 
+  // Ensure we default to light theme if settings are not yet loaded
+  const currentTheme = settings.theme || 'light';
+
   return (
     <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
       {/* Theme Selection */}
@@ -66,13 +71,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('light')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              settings.theme === 'light'
+              currentTheme === 'light'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              settings.theme === 'light'
+              currentTheme === 'light'
                 ? 'bg-yellow-100 dark:bg-yellow-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>
@@ -88,13 +93,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('dark')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              settings.theme === 'dark'
+              currentTheme === 'dark'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              settings.theme === 'dark'
+              currentTheme === 'dark'
                 ? 'bg-blue-100 dark:bg-blue-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>

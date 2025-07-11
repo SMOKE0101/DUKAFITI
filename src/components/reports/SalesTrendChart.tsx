@@ -66,7 +66,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
 
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <AreaChart data={data} margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
             <defs>
               <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
@@ -114,9 +114,9 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
               type="monotone"
               dataKey="revenue"
               stroke="url(#lineGradient)"
-              strokeWidth={4}
+              strokeWidth={2}
               fill="url(#salesGradient)"
-              dot={{ fill: '#8b5cf6', strokeWidth: 3, r: 6, stroke: '#fff' }}
+              dot={false}
               activeDot={{ 
                 r: 8, 
                 stroke: '#8b5cf6', 
