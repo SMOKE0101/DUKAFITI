@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,11 +51,7 @@ const AuthForm = () => {
     try {
       let result;
       if (isSignUp) {
-        result = await signUp(formData.email, formData.password, {
-          full_name: formData.name,
-          store_name: formData.storeName,
-          phone: formData.phone
-        });
+        result = await signUp(formData.email, formData.password);
       } else {
         result = await signIn(formData.email, formData.password);
       }

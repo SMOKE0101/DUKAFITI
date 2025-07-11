@@ -44,9 +44,7 @@ const ModernLanding = () => {
     setIsSigningUp(true);
     
     try {
-      const { error } = await signUp(signUpData.email, signUpData.password, {
-        full_name: signUpData.name
-      });
+      const { error } = await signUp(signUpData.email, signUpData.password);
       
       if (error) {
         setSignUpError(error.message);

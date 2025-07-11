@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,9 +43,7 @@ const SignUp = () => {
     setIsLoading(true);
     
     try {
-      const { error } = await signUp(formData.email, formData.password, {
-        full_name: formData.name
-      });
+      const { error } = await signUp(formData.email, formData.password);
       
       if (error) {
         setError(error.message);
