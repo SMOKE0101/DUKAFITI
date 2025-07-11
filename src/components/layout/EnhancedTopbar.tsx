@@ -22,6 +22,8 @@ import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
 import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import { useTheme } from 'next-themes';
+import CubeLogo from '../branding/CubeLogo';
 
 interface SearchResult {
   id: string;
@@ -51,6 +53,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -190,10 +193,10 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-purple-600 dark:bg-purple-800 border-b shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b shadow-sm" style={{ backgroundColor: '#602d86' }}>
         <div className="flex items-center justify-between px-4 md:px-6 h-full">
           {/* Left - Brand and Sidebar Toggle */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Sidebar Toggle - Only show on desktop when not hidden */}
             {!hideSidebarToggle && onSidebarToggle && !isMobile && !isTablet && (
               <Button
@@ -205,8 +208,16 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 <Menu className="w-5 h-5" />
               </Button>
             )}
-            <div className={`font-bold text-white ${isMobile ? 'text-lg' : 'text-xl'}`}>
-              DukaSmart
+            
+            {/* Brand Section */}
+            <div className="flex items-center gap-2">
+              <CubeLogo 
+                size={isMobile ? 'sm' : 'md'} 
+                isDark={theme === 'dark'} 
+              />
+              <div className={`font-bold text-white ${isMobile ? 'text-lg' : 'text-xl'} tracking-wide`}>
+                DUKAFITI
+              </div>
             </div>
           </div>
 
