@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
@@ -5,18 +6,19 @@ import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { formatCurrency } from '../utils/currency';
 import { Product, Customer } from '../types';
+import { CartItem } from '../types/cart';
 import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
-import AddCustomerModal from './AddCustomerModal';
+import AddCustomerModal from './sales/AddCustomerModal';
 import { Clock } from 'lucide-react';
 
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const ModernSalesPage = () => {
-  console.log('🚀 ModernSalesPage component loaded - NEW BLOCKY AESTHETIC VERSION v2.0');
+  console.log('🚀 ModernSalesPage component loaded - BLOCKY AESTHETIC VERSION v3.0');
   const navigate = useNavigate();
-  const [cart, setCart] = useState<Product[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
@@ -53,7 +55,7 @@ const ModernSalesPage = () => {
   }, []);
 
   const total = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.selling_price * item.quantity, 0);
+    return cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   }, [cart]);
 
   const filteredProducts = useMemo(() => {
@@ -77,7 +79,8 @@ const ModernSalesPage = () => {
       );
       setCart(updatedCart);
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      const cartItem: CartItem = { ...product, quantity: 1 };
+      setCart([...cart, cartItem]);
     }
   };
 
@@ -113,30 +116,35 @@ const ModernSalesPage = () => {
       const customerId = selectedCustomerId === '' ? null : selectedCustomerId;
       const customer = customers.find(c => c.id === customerId);
 
+      // Prepare sales data for batch insert
+      const salesData = cart.map(item => ({
+        product_id: item.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        selling_price: item.sellingPrice,
+        cost_price: item.costPrice,
+        profit: (item.sellingPrice - item.costPrice) * item.quantity,
+        total_amount: item.sellingPrice * item.quantity,
+        customer_id: customerId,
+        customer_name: customer ? customer.name : null,
+        payment_method: paymentMethod,
+        timestamp: new Date().toISOString(),
+      }));
+
+      const { error: saleError } = await supabase
+        .from('sales')
+        .insert(salesData);
+
+      if (saleError) {
+        console.error('Error adding sales:', saleError);
+        throw new Error('Failed to record sales.');
+      }
+
+      // Update stock for each item
       for (const item of cart) {
-        const saleData = {
-          productId: item.id,
-          productName: item.name,
-          quantity: item.quantity,
-          total: item.selling_price * item.quantity,
-          customerId: customerId,
-          customerName: customer ? customer.name : null,
-          paymentMethod: paymentMethod,
-          timestamp: new Date().toISOString(),
-        };
-
-        const { error: saleError } = await supabase
-          .from('sales')
-          .insert([saleData]);
-
-        if (saleError) {
-          console.error('Error adding sale:', saleError);
-          throw new Error('Failed to record sale.');
-        }
-
         const { error: productError } = await supabase
           .from('products')
-          .update({ currentStock: item.currentStock - item.quantity })
+          .update({ current_stock: item.currentStock - item.quantity })
           .eq('id', item.id);
 
         if (productError) {
@@ -166,45 +174,45 @@ const ModernSalesPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Header - Matching Dashboard Style */}
+      {/* Header - Modern Blocky Style */}
       <div className={`
         space-y-6 max-w-7xl mx-auto
         ${isMobile ? 'p-3' : isTablet ? 'p-4' : 'p-6'}
       `}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
-              <ShoppingCart className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <div className="w-10 h-10 border-2 border-purple-400 rounded-xl bg-transparent flex items-center justify-center hover:border-purple-500 transition-colors">
+              <ShoppingCart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <h1 className={`
               font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white
               ${isMobile ? 'text-lg' : isTablet ? 'text-xl' : 'text-2xl'}
             `}>
-              SALES
+              SALES POINT
             </h1>
           </div>
           <div className={`
-            flex items-center gap-2 text-gray-500 dark:text-gray-400
+            flex items-center gap-2 text-gray-500 dark:text-gray-400 font-mono
             ${isMobile ? 'text-xs' : 'text-sm'}
           `}>
             <Clock className="w-4 h-4" />
-            <span className="hidden sm:inline">Total: {formatCurrency(total)}</span>
-            <span className="sm:hidden">{formatCurrency(total)}</span>
+            <span className="hidden sm:inline font-bold">TOTAL: {formatCurrency(total)}</span>
+            <span className="sm:hidden font-bold">{formatCurrency(total)}</span>
           </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Bar - Blocky Style */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-500 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="SEARCH PRODUCTS..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className={`
-              w-full pl-12 pr-4 py-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl 
-              bg-transparent font-mono text-gray-900 dark:text-white placeholder-gray-500 
-              focus:outline-none focus:border-purple-500 transition-colors
+              w-full pl-12 pr-4 py-4 border-2 border-purple-300 dark:border-purple-600 rounded-xl 
+              bg-transparent font-mono font-bold text-gray-900 dark:text-white placeholder-purple-400 
+              focus:outline-none focus:border-purple-500 focus:ring-0 transition-colors uppercase tracking-wide
               ${isMobile ? 'text-sm' : 'text-base'}
             `}
           />
@@ -226,44 +234,44 @@ const ModernSalesPage = () => {
                   key={product.id}
                   onClick={() => addToCart(product)}
                   className={`
-                    border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent cursor-pointer 
-                    transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-purple-500 
-                    group p-4
-                    ${product.currentStock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                    border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-white/50 dark:bg-gray-800/50 
+                    cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
+                    hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 group p-4
+                    ${product.currentStock <= 0 ? 'opacity-50 cursor-not-allowed border-gray-300' : ''}
                   `}
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className={`
-                          font-mono font-bold uppercase tracking-wide text-gray-900 dark:text-white 
+                          font-mono font-black uppercase tracking-wide text-gray-900 dark:text-white 
                           group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors
                           ${isMobile ? 'text-xs' : 'text-sm'}
                         `}>
                           {product.name}
                         </h3>
                         <p className={`
-                          text-gray-600 dark:text-gray-400 capitalize
+                          text-purple-600 dark:text-purple-400 uppercase font-mono font-bold
                           ${isMobile ? 'text-xs' : 'text-sm'}
                         `}>
                           {product.category}
                         </p>
                       </div>
-                      <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Package className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <div className="w-8 h-8 border-2 border-purple-300 dark:border-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-purple-500 transition-colors">
+                        <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`
-                          font-bold text-gray-900 dark:text-white
+                          font-mono font-black text-gray-900 dark:text-white
                           ${isMobile ? 'text-sm' : 'text-base'}
                         `}>
-                          {formatCurrency(product.selling_price)}
+                          {formatCurrency(product.sellingPrice)}
                         </p>
                         <p className={`
-                          text-gray-500 dark:text-gray-400
+                          text-purple-500 dark:text-purple-400 font-mono font-bold uppercase
                           ${isMobile ? 'text-xs' : 'text-sm'}
                         `}>
                           Stock: {product.currentStock}
@@ -276,7 +284,7 @@ const ModernSalesPage = () => {
             </div>
           </div>
 
-          {/* Cart Section */}
+          {/* Cart Section - Blocky Style */}
           <div className="space-y-6">
             {/* Cart Header */}
             <div className="flex items-center justify-between">
@@ -291,7 +299,7 @@ const ModernSalesPage = () => {
                   onClick={clearCart}
                   className={`
                     border-2 border-red-400 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 
-                    rounded-xl font-mono font-bold uppercase tracking-wide transition-colors
+                    rounded-xl font-mono font-black uppercase tracking-wide transition-colors
                     ${isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'}
                   `}
                 >
@@ -304,22 +312,24 @@ const ModernSalesPage = () => {
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {cart.length === 0 ? (
                 <div className="text-center py-8">
-                  <ShoppingCart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">Your cart is empty</p>
+                  <div className="w-16 h-16 border-2 border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <ShoppingCart className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 font-mono font-bold uppercase text-sm">Cart Empty</p>
                 </div>
               ) : (
                 cart.map((item) => (
-                  <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white/50 dark:bg-gray-800/50">
+                  <div key={item.id} className="border-2 border-purple-200 dark:border-purple-700 rounded-xl p-3 bg-white/50 dark:bg-gray-800/50">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className={`
-                        font-medium text-gray-900 dark:text-white
+                        font-mono font-bold uppercase text-gray-900 dark:text-white
                         ${isMobile ? 'text-sm' : 'text-base'}
                       `}>
                         {item.name}
                       </h4>
                       <button
                         onClick={() => removeFromCart(item.id)}
-                        className="text-red-500 hover:text-red-700 transition-colors"
+                        className="text-red-500 hover:text-red-700 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -328,20 +338,20 @@ const ModernSalesPage = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-6 h-6 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="w-7 h-7 border-2 border-purple-300 rounded-lg flex items-center justify-center hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="font-mono font-bold text-sm">{item.quantity}</span>
+                        <span className="font-mono font-black text-sm min-w-[20px] text-center">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-6 h-6 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="w-7 h-7 border-2 border-purple-300 rounded-lg flex items-center justify-center hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
-                      <p className="font-bold text-gray-900 dark:text-white text-sm">
-                        {formatCurrency(item.selling_price * item.quantity)}
+                      <p className="font-mono font-black text-gray-900 dark:text-white text-sm">
+                        {formatCurrency(item.sellingPrice * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -356,12 +366,12 @@ const ModernSalesPage = () => {
                   <select
                     value={selectedCustomerId || ''}
                     onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                    className="flex-1 p-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent font-mono text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="flex-1 p-3 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-transparent font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 transition-colors uppercase"
                   >
-                    <option value="">Walk-in Customer</option>
+                    <option value="">WALK-IN CUSTOMER</option>
                     {customers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name}
+                        {customer.name.toUpperCase()}
                       </option>
                     ))}
                   </select>
@@ -369,7 +379,7 @@ const ModernSalesPage = () => {
                     onClick={() => setShowAddCustomer(true)}
                     className={`
                       border-2 border-blue-400 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 
-                      rounded-xl font-mono font-bold uppercase tracking-wide transition-colors flex items-center gap-2
+                      rounded-xl font-mono font-black uppercase tracking-wide transition-colors flex items-center gap-2
                       ${isMobile ? 'px-3 py-3 text-xs' : 'px-4 py-3 text-sm'}
                     `}
                   >
@@ -389,10 +399,10 @@ const ModernSalesPage = () => {
                         key={method}
                         onClick={() => setPaymentMethod(method)}
                         className={`
-                          p-3 rounded-xl font-mono font-bold uppercase text-xs transition-all
+                          p-3 rounded-xl font-mono font-black uppercase text-xs transition-all
                           ${paymentMethod === method
-                            ? 'border-2 border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400'
-                            : 'border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400'
+                            ? 'border-2 border-purple-500 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                            : 'border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-purple-400'
                           }
                         `}
                       >
@@ -403,12 +413,12 @@ const ModernSalesPage = () => {
                 </div>
 
                 {/* Total and Checkout */}
-                <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="space-y-4 pt-4 border-t-2 border-purple-200 dark:border-purple-700">
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white">
                       TOTAL:
                     </span>
-                    <span className="font-bold text-xl text-gray-900 dark:text-white">
+                    <span className="font-mono font-black text-xl text-purple-600 dark:text-purple-400">
                       {formatCurrency(total)}
                     </span>
                   </div>
@@ -419,7 +429,8 @@ const ModernSalesPage = () => {
                     className={`
                       w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-mono font-black 
                       uppercase tracking-wider rounded-xl transition-all duration-300 hover:from-purple-700 
-                      hover:to-blue-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
+                      hover:to-blue-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 
+                      disabled:cursor-not-allowed disabled:transform-none
                       ${isMobile ? 'py-4 text-sm' : 'py-4 text-base'}
                     `}
                   >
@@ -435,8 +446,8 @@ const ModernSalesPage = () => {
       {/* Add Customer Modal */}
       {showAddCustomer && (
         <AddCustomerModal
-          isOpen={showAddCustomer}
-          onClose={() => setShowAddCustomer(false)}
+          open={showAddCustomer}
+          onOpenChange={setShowAddCustomer}
           onCustomerAdded={(customer) => {
             setSelectedCustomerId(customer.id);
             setShowAddCustomer(false);
