@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Eye, EyeOff, ArrowLeft, Mail, Lock, Smartphone, Shield, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const SignIn = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +18,11 @@ const SignIn = () => {
 
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
+
+  const logoSrc = theme === 'dark' 
+    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
+    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -81,19 +86,19 @@ const SignIn = () => {
             <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="Dukasmart Logo" 
+                  src={logoSrc}
+                  alt="DUKAFITI Logo" 
                   className="w-8 h-8"
                 />
               </div>
-              <span className="text-2xl font-bold text-primary">Dukasmart</span>
+              <span className="text-2xl font-bold text-primary">DUKAFITI</span>
             </Link>
             
             <h1 className="text-4xl font-bold text-primary mb-2">
               Welcome Back
             </h1>
             <p className="text-lg text-muted-foreground">
-              Sign in to continue managing your dukashop
+              Sign in to continue managing your duka
             </p>
           </div>
 
@@ -248,7 +253,7 @@ const SignIn = () => {
             <div className="text-center text-white max-w-md">
               <h2 className="text-4xl font-bold mb-6">Welcome Back!</h2>
               <p className="text-xl opacity-90 leading-relaxed mb-8">
-                Continue managing your dukashop with powerful POS features
+                Continue managing your duka with powerful POS features
               </p>
               <div className="grid grid-cols-1 gap-3 text-sm">
                 <div className="bg-white/10 rounded-lg p-3 text-left flex items-center gap-3">

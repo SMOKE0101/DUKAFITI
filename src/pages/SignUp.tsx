@@ -3,6 +3,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +20,11 @@ const SignUp = () => {
 
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
+
+  const logoSrc = theme === 'dark' 
+    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
+    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -93,19 +99,19 @@ const SignUp = () => {
             <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="Dukasmart Logo" 
+                  src={logoSrc}
+                  alt="DUKAFITI Logo" 
                   className="w-8 h-8"
                 />
               </div>
-              <span className="text-2xl font-bold text-primary">Dukasmart</span>
+              <span className="text-2xl font-bold text-primary">DUKAFITI</span>
             </Link>
             
             <h1 className="text-4xl font-bold text-primary mb-2">
               Create Your Account
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join thousands of shop owners using Dukasmart
+              Join thousands of shop owners using DUKAFITI
             </p>
             <div className="mt-4 px-4 py-2 bg-success/10 rounded-lg border border-success/20">
               <p className="text-sm text-success font-medium">✨ 14-day free trial, no credit card required</p>
@@ -287,7 +293,7 @@ const SignUp = () => {
             <div className="text-center text-white max-w-md">
               <h2 className="text-4xl font-bold mb-6">Join Thousands of Shop Owners</h2>
               <p className="text-xl opacity-90 leading-relaxed">
-                Transform your dukashop with smart POS technology designed for Kenyan businesses
+                Transform your duka with smart POS technology designed for Kenyan businesses
               </p>
               <div className="mt-8 grid grid-cols-2 gap-4 text-sm">
                 <div className="bg-white/10 rounded-lg p-3">
