@@ -11,7 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 // Pages
 import Landing from "./pages/Landing";
 import ModernLanding from "./pages/ModernLanding";
-import Index from "./pages/Index";
+import AuthHandler from "./pages/AuthHandler";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
@@ -79,23 +79,16 @@ function App() {
             <div className="min-h-screen bg-background">
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<ModernLanding />} />
                 <Route path="/landing" element={<Landing />} />
                 <Route path="/modern-landing" element={<ModernLanding />} />
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/demo" element={<BrandDemo />} />
                 <Route path="/offline" element={<Offline />} />
+                <Route path="/app" element={<AuthHandler />} />
                 
                 {/* Protected routes with layout */}
-                <Route path="/app" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Navigate to="/dashboard" replace />
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <PremiumAppLayout>
