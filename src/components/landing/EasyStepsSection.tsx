@@ -1,6 +1,5 @@
 
 import { Store, BarChart3, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 const EasyStepsSection = () => {
   const steps = [
@@ -28,7 +27,7 @@ const EasyStepsSection = () => {
   ];
 
   return (
-    <section id="overview" className="py-20 bg-white">
+    <section id="how-it-works" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
@@ -64,16 +63,6 @@ const EasyStepsSection = () => {
               </div>
             );
           })}
-        </div>
-
-        <div className="text-center mt-12">
-          <Button 
-            variant="outline"
-            className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 px-8 py-3 rounded-xl"
-            onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            Learn More About Features
-          </Button>
         </div>
       </div>
     </section>

@@ -10,11 +10,19 @@ const CleanNavigationHeader = () => {
   const { theme } = useTheme();
 
   const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
-    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
+    ? '/lovable-uploads/77d747ef-d8fb-4a5c-b4c7-3e43d709d5f3.png'
+    : '/lovable-uploads/b8e58169-8231-49d4-95c5-39d340fd66dd.png';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+    setIsMenuOpen(false);
   };
 
   return (
@@ -35,18 +43,36 @@ const CleanNavigationHeader = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a href="#overview" className="text-gray-600 hover:text-gray-900 font-medium">
+            <button 
+              onClick={() => scrollToSection('overview')}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
               Overview
-            </a>
-            <a href="#features" className="text-gray-600 hover:text-gray-900 font-medium">
+            </button>
+            <button 
+              onClick={() => scrollToSection('how-it-works')}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
+              How it Works
+            </button>
+            <button 
+              onClick={() => scrollToSection('features')}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
               Features
-            </a>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 font-medium">
-              Pricing
-            </a>
-            <a href="#about" className="text-gray-600 hover:text-gray-900 font-medium">
+            </button>
+            <button 
+              onClick={() => scrollToSection('invite')}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
+              Invite
+            </button>
+            <button 
+              onClick={() => scrollToSection('about')}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
               About
-            </a>
+            </button>
             <Link to="/signin" className="text-gray-600 hover:text-gray-900 font-medium">
               Login
             </Link>
@@ -73,34 +99,36 @@ const CleanNavigationHeader = () => {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 bg-white border-t border-gray-100">
-              <a
-                href="#overview"
-                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900"
-                onClick={toggleMenu}
+              <button
+                onClick={() => scrollToSection('overview')}
+                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 w-full text-left"
               >
                 Overview
-              </a>
-              <a
-                href="#features"
-                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900"
-                onClick={toggleMenu}
+              </button>
+              <button
+                onClick={() => scrollToSection('how-it-works')}
+                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 w-full text-left"
+              >
+                How it Works
+              </button>
+              <button
+                onClick={() => scrollToSection('features')}
+                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 w-full text-left"
               >
                 Features
-              </a>
-              <a
-                href="#pricing"
-                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900"
-                onClick={toggleMenu}
+              </button>
+              <button
+                onClick={() => scrollToSection('invite')}
+                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 w-full text-left"
               >
-                Pricing
-              </a>
-              <a
-                href="#about"
-                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900"
-                onClick={toggleMenu}
+                Invite
+              </button>
+              <button
+                onClick={() => scrollToSection('about')}
+                className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 w-full text-left"
               >
                 About
-              </a>
+              </button>
               <Link
                 to="/signin"
                 className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900"

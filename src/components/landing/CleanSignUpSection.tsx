@@ -2,10 +2,13 @@
 import { useState } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEmail } from '@/contexts/EmailContext';
 
 const CleanSignUpSection = () => {
   const [email, setEmail] = useState('');
+  const { setEmail: setGlobalEmail } = useEmail();
+  const navigate = useNavigate();
 
   const benefits = [
     "14-day free trial",
@@ -14,8 +17,15 @@ const CleanSignUpSection = () => {
     "24/7 customer support"
   ];
 
+  const handleGetStarted = () => {
+    if (email) {
+      setGlobalEmail(email);
+    }
+    navigate('/signup');
+  };
+
   return (
-    <section className="py-20 bg-gradient-to-r from-purple-600 to-teal-500">
+    <section id="invite" className="py-20 bg-gradient-to-r from-purple-600 to-teal-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           
@@ -52,12 +62,13 @@ const CleanSignUpSection = () => {
                 />
               </div>
               
-              <Link to="/signup" className="block">
-                <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold">
-                  Get Started – Free 14-day Trial
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
+              <Button 
+                onClick={handleGetStarted}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold"
+              >
+                Get Started – Free 14-day Trial
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
             </div>
 
             <p className="text-xs text-gray-500 mt-4 text-center">

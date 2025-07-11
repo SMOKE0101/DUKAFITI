@@ -34,8 +34,8 @@ const CleanHeroSection = () => {
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* CTA Button */}
+          <div className="flex justify-center">
             <Link to="/signup">
               <Button 
                 size="lg"
@@ -45,15 +45,6 @@ const CleanHeroSection = () => {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            
-            <Button 
-              variant="outline"
-              size="lg"
-              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-              className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 px-8 py-4 text-lg rounded-xl"
-            >
-              Learn More
-            </Button>
           </div>
 
           {/* Trust Indicators */}

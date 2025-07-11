@@ -1,4 +1,5 @@
 
+import { EmailProvider } from '@/contexts/EmailContext';
 import CleanNavigationHeader from '@/components/landing/CleanNavigationHeader';
 import CleanHeroSection from '@/components/landing/CleanHeroSection';
 import EasyStepsSection from '@/components/landing/EasyStepsSection';
@@ -8,14 +9,20 @@ import Footer from '@/components/landing/Footer';
 
 const CleanLanding = () => {
   return (
-    <div className="min-h-screen bg-white">
-      <CleanNavigationHeader />
-      <CleanHeroSection />
-      <EasyStepsSection />
-      <FeatureHighlightsSection />
-      <CleanSignUpSection />
-      <Footer />
-    </div>
+    <EmailProvider>
+      <div className="min-h-screen bg-white">
+        <CleanNavigationHeader />
+        <CleanHeroSection />
+        <div id="overview">
+          <EasyStepsSection />
+        </div>
+        <div id="features">
+          <FeatureHighlightsSection />
+        </div>
+        <CleanSignUpSection />
+        <Footer />
+      </div>
+    </EmailProvider>
   );
 };
 

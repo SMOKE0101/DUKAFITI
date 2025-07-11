@@ -1,9 +1,11 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTheme } from 'next-themes';
+import { useEmail } from '@/contexts/EmailContext';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -21,10 +23,18 @@ const SignUp = () => {
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { email: globalEmail } = useEmail();
 
   const logoSrc = theme === 'dark' 
     ? '/lovable-uploads/77d747ef-d8fb-4a5c-b4c7-3e43d709d5f3.png'
     : '/lovable-uploads/b8e58169-8231-49d4-95c5-39d340fd66dd.png';
+
+  // Auto-fill email from landing page
+  useEffect(() => {
+    if (globalEmail) {
+      setFormData(prev => ({ ...prev, email: globalEmail }));
+    }
+  }, [globalEmail]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
