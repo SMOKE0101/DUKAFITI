@@ -26,7 +26,7 @@ const UltraPolishedReportsPage = () => {
   
   // Independent chart controls
   const [salesChartResolution, setSalesChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
-  const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
+  const [ordersChartView, setOrdersChartView] = useState<'daily' | '2weeks'>('daily');
 
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { products, loading: productsLoading } = useSupabaseProducts();
@@ -157,7 +157,7 @@ const UltraPolishedReportsPage = () => {
     return salesTrendData.reduce((sum, item) => sum + item.revenue, 0);
   }, [salesTrendData]);
 
-  // Prepare Orders Per Hour data with its own timeframe
+  // Prepare Orders Per Hour/Day data with its own timeframe
   const ordersPerHourData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
@@ -166,8 +166,8 @@ const UltraPolishedReportsPage = () => {
       case 'daily':
         chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
-      case 'weekly':
-        chartFromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case '2weeks':
+        chartFromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
         break;
       default:
         chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -178,21 +178,50 @@ const UltraPolishedReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    const hourlyData: { [key: number]: number } = {};
-    
-    for (let i = 0; i < 24; i++) {
-      hourlyData[i] = 0;
+    if (ordersChartView === 'daily') {
+      // Hourly data for daily view
+      const hourlyData: { [key: number]: number } = {};
+      
+      for (let i = 0; i < 24; i++) {
+        hourlyData[i] = 0;
+      }
+      
+      chartSales.forEach(sale => {
+        const hour = new Date(sale.timestamp).getHours();
+        hourlyData[hour]++;
+      });
+      
+      return Object.entries(hourlyData).map(([hour, orders]) => ({
+        hour: `${hour}:00`,
+        orders
+      }));
+    } else {
+      // Daily data for 2-week view
+      const dailyData: { [key: string]: number } = {};
+      
+      // Initialize 14 days of data
+      for (let i = 0; i < 14; i++) {
+        const date = new Date(chartFromDate);
+        date.setDate(date.getDate() + i);
+        const dateKey = date.toISOString().substring(0, 10);
+        dailyData[dateKey] = 0;
+      }
+      
+      chartSales.forEach(sale => {
+        const saleDate = new Date(sale.timestamp);
+        const dateKey = saleDate.toISOString().substring(0, 10);
+        if (dailyData.hasOwnProperty(dateKey)) {
+          dailyData[dateKey]++;
+        }
+      });
+      
+      return Object.entries(dailyData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, orders]) => ({
+          hour: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          orders
+        }));
     }
-    
-    chartSales.forEach(sale => {
-      const hour = new Date(sale.timestamp).getHours();
-      hourlyData[hour]++;
-    });
-    
-    return Object.entries(hourlyData).map(([hour, orders]) => ({
-      hour: `${hour}:00`,
-      orders
-    }));
   }, [sales, ordersChartView]);
 
   // Table data using filtered sales for consistency
