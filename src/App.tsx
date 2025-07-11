@@ -9,7 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
-import Landing from "./pages/Landing";
+import CleanLanding from "./pages/CleanLanding";
 import ModernLanding from "./pages/ModernLanding";
 import AuthHandler from "./pages/AuthHandler";
 import SignIn from "./pages/SignIn";
@@ -79,8 +79,8 @@ function App() {
             <div className="min-h-screen bg-background">
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Landing />} />
-                <Route path="/landing" element={<Landing />} />
+                <Route path="/" element={<CleanLanding />} />
+                <Route path="/landing" element={<CleanLanding />} />
                 <Route path="/modern-landing" element={<ModernLanding />} />
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/signup" element={<SignUp />} />

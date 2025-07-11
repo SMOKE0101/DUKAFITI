@@ -3,7 +3,6 @@ import { Bell, Search, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useTheme } from 'next-themes';
 
 interface DashboardTopbarProps {
   onMenuClick: () => void;
@@ -11,12 +10,6 @@ interface DashboardTopbarProps {
 }
 
 const DashboardTopbar = ({ onMenuClick, sidebarOpen }: DashboardTopbarProps) => {
-  const { theme } = useTheme();
-  
-  const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
-    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
-
   return (
     <div className="h-16 bg-[#602d86] border-b border-border/40 flex items-center justify-between px-4 lg:px-6">
       {/* Left Side - Logo and Menu */}
@@ -31,11 +24,9 @@ const DashboardTopbar = ({ onMenuClick, sidebarOpen }: DashboardTopbarProps) => 
         </Button>
         
         <div className="flex items-center gap-3">
-          <img 
-            src={logoSrc}
-            alt="DUKAFITI Logo" 
-            className="h-8 w-auto"
-          />
+          <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-teal-500 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">D</span>
+          </div>
           <span className="text-xl font-bold text-white hidden sm:block">DUKAFITI</span>
         </div>
       </div>

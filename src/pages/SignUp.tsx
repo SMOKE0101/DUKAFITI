@@ -1,9 +1,9 @@
+
 import { useState } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -20,11 +20,6 @@ const SignUp = () => {
 
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
-  const { theme } = useTheme();
-
-  const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
-    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -81,13 +76,13 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-accent/10 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Left Panel - Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative">
         {/* Back Button */}
         <Link 
           to="/" 
-          className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+          className="absolute top-6 left-6 flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           <span className="text-sm font-medium">Back to Home</span>
@@ -97,31 +92,27 @@ const SignUp = () => {
           {/* Header */}
           <div className="text-center">
             <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                <img 
-                  src={logoSrc}
-                  alt="DUKAFITI Logo" 
-                  className="w-8 h-8"
-                />
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                <span className="text-white font-bold text-lg">D</span>
               </div>
-              <span className="text-2xl font-bold text-primary">DUKAFITI</span>
+              <span className="text-2xl font-bold text-gray-900">DUKAFITI</span>
             </Link>
             
-            <h1 className="text-4xl font-bold text-primary mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Create Your Account
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-gray-600">
               Join thousands of shop owners using DUKAFITI
             </p>
-            <div className="mt-4 px-4 py-2 bg-success/10 rounded-lg border border-success/20">
-              <p className="text-sm text-success font-medium">✨ 14-day free trial, no credit card required</p>
+            <div className="mt-4 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-sm text-green-700 font-medium">✨ 14-day free trial, no credit card required</p>
             </div>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-red-200 flex items-center justify-center">
                 <span className="text-xs">!</span>
               </div>
               {error}
@@ -134,7 +125,7 @@ const SignUp = () => {
             variant="outline" 
             onClick={handleGoogleSignUp}
             disabled={isGoogleLoading}
-            className="w-full py-3 text-base font-semibold rounded-xl border-2 hover:bg-muted/50 transition-all hover:scale-[1.02]"
+            className="w-full py-3 text-base font-semibold rounded-xl border-2 hover:bg-gray-50 transition-all hover:scale-[1.02]"
           >
             {isGoogleLoading ? (
               <div className="flex items-center gap-2">
@@ -157,10 +148,10 @@ const SignUp = () => {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
+              <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-background text-muted-foreground font-medium">Or sign up with email</span>
+              <span className="px-4 bg-gray-50 text-gray-500 font-medium">Or sign up with email</span>
             </div>
           </div>
 
@@ -168,7 +159,7 @@ const SignUp = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-semibold text-foreground mb-2">
+                <label htmlFor="name" className="block text-sm font-semibold text-gray-900 mb-2">
                   Full Name
                 </label>
                 <input
@@ -179,12 +170,12 @@ const SignUp = () => {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Enter your full name"
-                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-gray-300"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-2">
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">
                   Email Address
                 </label>
                 <input
@@ -195,12 +186,12 @@ const SignUp = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Enter your email"
-                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-gray-300"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-foreground mb-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-900 mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -212,21 +203,21 @@ const SignUp = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Create a strong password"
-                    className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 pr-12"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-gray-300 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Must be at least 6 characters</p>
+                <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-foreground mb-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-900 mb-2">
                   Confirm Password
                 </label>
                 <div className="relative">
@@ -238,12 +229,12 @@ const SignUp = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm your password"
-                    className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 pr-12"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-gray-300 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -254,7 +245,7 @@ const SignUp = () => {
             <Button 
               type="submit" 
               disabled={isLoading}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 text-base font-semibold rounded-xl transition-all hover:scale-[1.02] disabled:hover:scale-100"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-base font-semibold rounded-xl transition-all hover:scale-[1.02] disabled:hover:scale-100"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -267,16 +258,16 @@ const SignUp = () => {
             </Button>
 
             <div className="text-center space-y-4">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500">
                 By signing up you agree to our{' '}
-                <Link to="#" className="text-primary hover:underlineoffset-4 hover:underline font-medium">Terms of Service</Link>
+                <Link to="#" className="text-purple-600 hover:underline underline-offset-4 font-medium">Terms of Service</Link>
                 {' '}and{' '}
-                <Link to="#" className="text-primary hover:underline underline-offset-4 font-medium">Privacy Policy</Link>
+                <Link to="#" className="text-purple-600 hover:underline underline-offset-4 font-medium">Privacy Policy</Link>
               </p>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <Link to="/signin" className="text-primary hover:underline underline-offset-4 font-semibold">
+                <Link to="/signin" className="text-purple-600 hover:underline underline-offset-4 font-semibold">
                   Sign In
                 </Link>
               </p>
@@ -287,15 +278,13 @@ const SignUp = () => {
 
       {/* Right Panel - Image */}
       <div className="hidden lg:block lg:flex-1">
-        <div className="h-full bg-gradient-to-br from-emerald-400 via-purple-500 to-pink-500 relative overflow-hidden">
+        <div className="h-full bg-gradient-to-br from-teal-400 via-purple-500 to-pink-500 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           <div className="absolute inset-0 flex items-center justify-center p-12">
             <div className="text-center text-white max-w-md">
-              <img 
-                src="/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png"
-                alt="DUKAFITI POS System"
-                className="w-64 h-auto mx-auto mb-8 opacity-90"
-              />
+              <div className="w-24 h-24 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-8 backdrop-blur-sm">
+                <span className="text-white font-bold text-3xl">D</span>
+              </div>
               <h2 className="text-3xl font-bold mb-4">Join DUKAFITI Today</h2>
               <p className="text-lg opacity-90 leading-relaxed">
                 Transform your duka with smart POS technology designed for Kenyan businesses.

@@ -4,7 +4,6 @@ import { Eye, EyeOff, ArrowLeft, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 
 const SignIn = () => {
   const [formData, setFormData] = useState({
@@ -19,11 +18,6 @@ const SignIn = () => {
 
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
-  const { theme } = useTheme();
-
-  const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
-    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -69,13 +63,13 @@ const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-accent/10 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Left Panel - Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative">
         {/* Back Button */}
         <Link 
           to="/" 
-          className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+          className="absolute top-6 left-6 flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           <span className="text-sm font-medium">Back to Home</span>
@@ -85,28 +79,24 @@ const SignIn = () => {
           {/* Header */}
           <div className="text-center">
             <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                <img 
-                  src={logoSrc}
-                  alt="DUKAFITI Logo" 
-                  className="w-8 h-8"
-                />
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                <span className="text-white font-bold text-lg">D</span>
               </div>
-              <span className="text-2xl font-bold text-primary">DUKAFITI</span>
+              <span className="text-2xl font-bold text-gray-900">DUKAFITI</span>
             </Link>
             
-            <h1 className="text-4xl font-bold text-primary mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Welcome Back
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-gray-600">
               Sign in to continue managing your duka
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-red-200 flex items-center justify-center">
                 <span className="text-xs">!</span>
               </div>
               {error}
@@ -119,7 +109,7 @@ const SignIn = () => {
             variant="outline" 
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading}
-            className="w-full py-3 text-base font-semibold rounded-xl border-2 hover:bg-muted/50 transition-all hover:scale-[1.02]"
+            className="w-full py-3 text-base font-semibold rounded-xl border-2 hover:bg-gray-50 transition-all hover:scale-[1.02]"
           >
             {isGoogleLoading ? (
               <div className="flex items-center gap-2">
@@ -142,22 +132,22 @@ const SignIn = () => {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
+              <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-background text-muted-foreground font-medium">Or sign in with email</span>
+              <span className="px-4 bg-gray-50 text-gray-500 font-medium">Or sign in with email</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-2">
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <Mail className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     id="email"
@@ -167,18 +157,18 @@ const SignIn = () => {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Enter your email"
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-gray-300"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-foreground mb-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-900 mb-2">
                   Password
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-muted-foreground" />
+                    <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     id="password"
@@ -188,12 +178,12 @@ const SignIn = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Enter your password"
-                    className="w-full pl-10 pr-12 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-gray-300"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -209,14 +199,14 @@ const SignIn = () => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
+                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 text-sm text-muted-foreground">
+                <label htmlFor="remember-me" className="ml-2 text-sm text-gray-600">
                   Remember me
                 </label>
               </div>
 
-              <Link to="#" className="text-sm text-primary hover:underline underline-offset-4 font-medium">
+              <Link to="#" className="text-sm text-purple-600 hover:underline underline-offset-4 font-medium">
                 Forgot Password?
               </Link>
             </div>
@@ -224,7 +214,7 @@ const SignIn = () => {
             <Button 
               type="submit" 
               disabled={isLoading}
-              className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-base font-semibold rounded-xl transition-all hover:scale-[1.02] disabled:hover:scale-100"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-base font-semibold rounded-xl transition-all hover:scale-[1.02] disabled:hover:scale-100"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -236,9 +226,9 @@ const SignIn = () => {
               )}
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-primary hover:underline underline-offset-4 font-semibold">
+              <Link to="/signup" className="text-purple-600 hover:underline underline-offset-4 font-semibold">
                 Sign Up
               </Link>
             </p>
@@ -248,15 +238,13 @@ const SignIn = () => {
 
       {/* Right Panel - Image */}
       <div className="hidden lg:block lg:flex-1">
-        <div className="h-full bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600 relative overflow-hidden">
+        <div className="h-full bg-gradient-to-br from-purple-600 to-teal-500 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           <div className="absolute inset-0 flex items-center justify-center p-12">
             <div className="text-center text-white max-w-md">
-              <img 
-                src="/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png"
-                alt="DUKAFITI POS System"
-                className="w-64 h-auto mx-auto mb-8 opacity-90"
-              />
+              <div className="w-24 h-24 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-8 backdrop-blur-sm">
+                <span className="text-white font-bold text-3xl">D</span>
+              </div>
               <h2 className="text-3xl font-bold mb-4">Welcome Back to DUKAFITI</h2>
               <p className="text-lg opacity-90 leading-relaxed">
                 Continue managing your duka with powerful POS features designed for Kenyan businesses.
