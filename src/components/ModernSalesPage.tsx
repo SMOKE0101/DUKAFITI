@@ -1,580 +1,448 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Product, Customer } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useSupabaseSales } from '../hooks/useSupabaseSales';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import AddCustomerModal from './sales/AddCustomerModal';
-import { 
-  Plus, 
-  Minus, 
-  ShoppingCart, 
-  Search, 
-  Trash2, 
-  CreditCard, 
-  Smartphone, 
-  Banknote, 
-  UserPlus, 
-  Sparkles, 
-  TrendingUp, 
-  Zap,
-  CheckCircle,
-  X,
-  RotateCcw
-} from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
-import { useToast } from '../hooks/use-toast';
-import { useIsMobile } from '../hooks/use-mobile';
-
-interface CartItem {
-  product: Product;
-  quantity: number;
-}
+import { Product, Customer } from '../types';
+import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import AddCustomerModal from './AddCustomerModal';
+import { Clock } from 'lucide-react';
 
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const ModernSalesPage = () => {
-  console.log('🚀 ModernSalesPage component loaded - NEW AESTHETIC VERSION');
-  
+  console.log('🚀 ModernSalesPage component loaded - NEW BLOCKY AESTHETIC VERSION v2.0');
+  const navigate = useNavigate();
+  const [cart, setCart] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showCart, setShowCart] = useState(false);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
-
-  const { products } = useSupabaseProducts();
-  const { customers, refreshCustomers } = useSupabaseCustomers();
-  const { createSales } = useSupabaseSales();
-  const { toast } = useToast();
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+
+  const { sales, loading: salesLoading } = useSupabaseSales();
+  const { products, loading: productsLoading } = useSupabaseProducts();
+  const { customers, loading: customersLoading } = useSupabaseCustomers();
+
+  const isLoading = salesLoading || productsLoading || customersLoading;
+
+  useEffect(() => {
+    const productsChannel = supabase
+      .channel('products-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        console.log('Products updated:', payload);
+      })
+      .subscribe();
+
+    const customersChannel = supabase
+      .channel('customers-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
+        console.log('Customers updated:', payload);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(productsChannel);
+      supabase.removeChannel(customersChannel);
+    };
+  }, []);
+
+  const total = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.selling_price * item.quantity, 0);
+  }, [cart]);
 
   const filteredProducts = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     return products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      product.currentStock > 0
+      product.name.toLowerCase().includes(term) ||
+      product.category.toLowerCase().includes(term)
     );
   }, [products, searchTerm]);
 
-  const totalItems = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0);
-  }, [cart]);
+  const addToCart = (product: Product) => {
+    if (product.currentStock <= 0) {
+      alert('This product is out of stock.');
+      return;
+    }
 
-  useEffect(() => {
-    const newTotal = cart.reduce((acc, item) => acc + (item.product.sellingPrice * item.quantity), 0);
-    setTotal(newTotal);
-  }, [cart]);
-
-  const addToCart = (product: Product, quantity: number = 1) => {
-    const existingItem = cart.find(item => item.product.id === product.id);
+    const existingItem = cart.find(item => item.id === product.id);
     if (existingItem) {
       const updatedCart = cart.map(item =>
-        item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       );
       setCart(updatedCart);
     } else {
-      setCart([...cart, { product, quantity }]);
-    }
-    
-    if (isMobile) {
-      setShowCart(true);
+      setCart([...cart, { ...product, quantity: 1 }]);
     }
   };
 
   const removeFromCart = (productId: string) => {
-    const updatedCart = cart.filter(item => item.product.id !== productId);
+    const updatedCart = cart.filter(item => item.id !== productId);
     setCart(updatedCart);
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
+  const updateQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
       removeFromCart(productId);
       return;
     }
+
     const updatedCart = cart.map(item =>
-      item.product.id === productId ? { ...item, quantity } : item
+      item.id === productId ? { ...item, quantity: newQuantity } : item
     );
     setCart(updatedCart);
   };
 
-  const handleCompleteSale = async () => {
-    if (cart.length === 0) {
-      toast({
-        title: "Cart Empty",
-        description: "Please add items to the cart before completing the sale.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (paymentMethod === 'debt' && !selectedCustomer) {
-      toast({
-        title: "Customer Required",
-        description: "Please select a customer for credit sales.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const salesData = cart.map(item => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        quantity: item.quantity,
-        sellingPrice: item.product.sellingPrice,
-        costPrice: item.product.costPrice,
-        profit: (item.product.sellingPrice - item.product.costPrice) * item.quantity,
-        customerId: selectedCustomer?.id,
-        customerName: selectedCustomer?.name,
-        paymentMethod,
-        paymentDetails: {
-          cashAmount: paymentMethod === 'cash' ? total : 0,
-          mpesaAmount: paymentMethod === 'mpesa' ? total : 0,
-          debtAmount: paymentMethod === 'debt' ? total : 0,
-        },
-        total: item.product.sellingPrice * item.quantity,
-        timestamp: new Date().toISOString(),
-        synced: true,
-      }));
-
-      await createSales(salesData);
-      
-      toast({
-        title: "Sale Completed!",
-        description: `Successfully processed sale of ${formatCurrency(total)}`,
-      });
-      
-      clearCart();
-      setShowCart(false);
-    } catch (error) {
-      console.error("Error creating sale:", error);
-      toast({
-        title: "Error",
-        description: "Failed to process sale. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const clearCart = () => {
     setCart([]);
-    setTotal(0);
-    setSelectedCustomer(null);
-    setPaymentMethod('cash');
   };
 
-  const handleCustomerAdded = (newCustomer: Customer) => {
-    refreshCustomers();
-    setSelectedCustomer(newCustomer);
-    toast({
-      title: "Customer Added",
-      description: `${newCustomer.name} has been added and selected.`,
-    });
+  const handleCheckout = async () => {
+    if (cart.length === 0) {
+      alert('Your cart is empty.');
+      return;
+    }
+
+    setIsProcessingCheckout(true);
+    try {
+      const customerId = selectedCustomerId === '' ? null : selectedCustomerId;
+      const customer = customers.find(c => c.id === customerId);
+
+      for (const item of cart) {
+        const saleData = {
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          total: item.selling_price * item.quantity,
+          customerId: customerId,
+          customerName: customer ? customer.name : null,
+          paymentMethod: paymentMethod,
+          timestamp: new Date().toISOString(),
+        };
+
+        const { error: saleError } = await supabase
+          .from('sales')
+          .insert([saleData]);
+
+        if (saleError) {
+          console.error('Error adding sale:', saleError);
+          throw new Error('Failed to record sale.');
+        }
+
+        const { error: productError } = await supabase
+          .from('products')
+          .update({ currentStock: item.currentStock - item.quantity })
+          .eq('id', item.id);
+
+        if (productError) {
+          console.error('Error updating product stock:', productError);
+          throw new Error('Failed to update product stock.');
+        }
+      }
+
+      alert('Sale completed successfully!');
+      clearCart();
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to complete sale. Please try again.');
+    } finally {
+      setIsProcessingCheckout(false);
+    }
   };
 
-  const ProductCard = ({ product }: { product: Product }) => (
-    <Card 
-      className="group relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30 border-2 border-purple-100 hover:border-purple-300 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02] active:scale-95"
-      onClick={() => addToCart(product)}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      
-      <CardContent className="p-4 relative z-10">
-        <div className="flex-1 mb-4">
-          <div className="flex items-start justify-between mb-3">
-            <h3 className="font-bold text-lg text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors duration-300 leading-tight flex-1 mr-2">
-              {product.name}
-            </h3>
-            <Badge 
-              variant={product.currentStock > 10 ? "default" : product.currentStock > 0 ? "secondary" : "destructive"}
-              className="text-sm font-bold px-3 py-1 rounded-full shadow-sm flex-shrink-0"
-            >
-              {product.currentStock}
-            </Badge>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                {formatCurrency(product.sellingPrice)}
-              </span>
-              <div className="text-sm text-gray-500 bg-gray-100 rounded-full px-3 py-1">
-                {product.category}
-              </div>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Header - Matching Dashboard Style */}
+      <div className={`
+        space-y-6 max-w-7xl mx-auto
+        ${isMobile ? 'p-3' : isTablet ? 'p-4' : 'p-6'}
+      `}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <ShoppingCart className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
+            <h1 className={`
+              font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white
+              ${isMobile ? 'text-lg' : isTablet ? 'text-xl' : 'text-2xl'}
+            `}>
+              SALES
+            </h1>
+          </div>
+          <div className={`
+            flex items-center gap-2 text-gray-500 dark:text-gray-400
+            ${isMobile ? 'text-xs' : 'text-sm'}
+          `}>
+            <Clock className="w-4 h-4" />
+            <span className="hidden sm:inline">Total: {formatCurrency(total)}</span>
+            <span className="sm:hidden">{formatCurrency(total)}</span>
           </div>
         </div>
-        
-        <Button 
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transform transition-all duration-300 active:scale-95"
-          disabled={product.currentStock === 0}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add to Cart
-          <Sparkles className="h-5 w-5 ml-2" />
-        </Button>
-      </CardContent>
-    </Card>
-  );
 
-  const CartContent = () => (
-    <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-white">
-      <div className="flex-1 overflow-y-auto py-4">
-        {cart.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
-              <ShoppingCart className="h-12 w-12 text-purple-400" />
-            </div>
-            <p className="text-gray-500 text-xl font-bold mb-2">Cart is empty</p>
-            <p className="text-sm text-gray-400">Add products to get started</p>
-          </div>
-        ) : (
-          <div className="space-y-4 px-4">
-            {cart.map(item => (
-              <Card key={item.product.id} className="bg-white shadow-lg border-2 border-purple-100 hover:shadow-xl transition-all duration-300">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1 min-w-0 mr-3">
-                      <h4 className="font-bold text-base text-gray-900 truncate">{item.product.name}</h4>
-                      <p className="text-sm text-gray-500 font-medium">{formatCurrency(item.product.sellingPrice)} each</p>
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`
+              w-full pl-12 pr-4 py-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl 
+              bg-transparent font-mono text-gray-900 dark:text-white placeholder-gray-500 
+              focus:outline-none focus:border-purple-500 transition-colors
+              ${isMobile ? 'text-sm' : 'text-base'}
+            `}
+          />
+        </div>
+
+        {/* Product Grid and Cart Layout */}
+        <div className={`
+          grid gap-6
+          ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}
+        `}>
+          {/* Product Grid */}
+          <div className={`${!isMobile && 'lg:col-span-2'}`}>
+            <div className={`
+              grid gap-4
+              ${isMobile ? 'grid-cols-2' : isTablet ? 'grid-cols-3' : 'grid-cols-2 xl:grid-cols-3'}
+            `}>
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className={`
+                    border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent cursor-pointer 
+                    transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-purple-500 
+                    group p-4
+                    ${product.currentStock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`
+                          font-mono font-bold uppercase tracking-wide text-gray-900 dark:text-white 
+                          group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors
+                          ${isMobile ? 'text-xs' : 'text-sm'}
+                        `}>
+                          {product.name}
+                        </h3>
+                        <p className={`
+                          text-gray-600 dark:text-gray-400 capitalize
+                          ${isMobile ? 'text-xs' : 'text-sm'}
+                        `}>
+                          {product.category}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Package className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full flex-shrink-0"
-                      onClick={() => removeFromCart(item.product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`
+                          font-bold text-gray-900 dark:text-white
+                          ${isMobile ? 'text-sm' : 'text-base'}
+                        `}>
+                          {formatCurrency(product.selling_price)}
+                        </p>
+                        <p className={`
+                          text-gray-500 dark:text-gray-400
+                          ${isMobile ? 'text-xs' : 'text-sm'}
+                        `}>
+                          Stock: {product.currentStock}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-9 w-9 p-0 rounded-full border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50"
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cart Section */}
+          <div className="space-y-6">
+            {/* Cart Header */}
+            <div className="flex items-center justify-between">
+              <h2 className={`
+                font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white
+                ${isMobile ? 'text-sm' : 'text-base'}
+              `}>
+                CART ({cart.length})
+              </h2>
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className={`
+                    border-2 border-red-400 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 
+                    rounded-xl font-mono font-bold uppercase tracking-wide transition-colors
+                    ${isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'}
+                  `}
+                >
+                  CLEAR
+                </button>
+              )}
+            </div>
+
+            {/* Cart Items */}
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {cart.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingCart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Your cart is empty</p>
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white/50 dark:bg-gray-800/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className={`
+                        font-medium text-gray-900 dark:text-white
+                        ${isMobile ? 'text-sm' : 'text-base'}
+                      `}>
+                        {item.name}
+                      </h4>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors"
                       >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 1)}
-                        className="w-16 h-9 text-center text-base font-bold border-2 border-purple-200 rounded-lg"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-9 w-9 p-0 rounded-full border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50"
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="text-right">
-                      <p className="font-black text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                        {formatCurrency(item.product.sellingPrice * item.quantity)}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="w-6 h-6 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="font-mono font-bold text-sm">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="w-6 h-6 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm">
+                        {formatCurrency(item.selling_price * item.quantity)}
                       </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                ))
+              )}
+            </div>
+
+            {/* Customer Selection */}
+            {cart.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedCustomerId || ''}
+                    onChange={(e) => setSelectedCustomerId(e.target.value || null)}
+                    className="flex-1 p-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent font-mono text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 transition-colors"
+                  >
+                    <option value="">Walk-in Customer</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowAddCustomer(true)}
+                    className={`
+                      border-2 border-blue-400 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 
+                      rounded-xl font-mono font-bold uppercase tracking-wide transition-colors flex items-center gap-2
+                      ${isMobile ? 'px-3 py-3 text-xs' : 'px-4 py-3 text-sm'}
+                    `}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    {!isMobile && 'ADD'}
+                  </button>
+                </div>
+
+                {/* Payment Method Selection */}
+                <div className="space-y-3">
+                  <h3 className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white text-sm">
+                    PAYMENT METHOD
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['cash', 'mpesa', 'debt'] as PaymentMethod[]).map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => setPaymentMethod(method)}
+                        className={`
+                          p-3 rounded-xl font-mono font-bold uppercase text-xs transition-all
+                          ${paymentMethod === method
+                            ? 'border-2 border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400'
+                            : 'border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400'
+                          }
+                        `}
+                      >
+                        {method === 'mpesa' ? 'M-PESA' : method.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Total and Checkout */}
+                <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                      TOTAL:
+                    </span>
+                    <span className="font-bold text-xl text-gray-900 dark:text-white">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={handleCheckout}
+                    disabled={isProcessingCheckout}
+                    className={`
+                      w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-mono font-black 
+                      uppercase tracking-wider rounded-xl transition-all duration-300 hover:from-purple-700 
+                      hover:to-blue-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
+                      ${isMobile ? 'py-4 text-sm' : 'py-4 text-base'}
+                    `}
+                  >
+                    {isProcessingCheckout ? 'PROCESSING...' : 'COMPLETE SALE'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      {cart.length > 0 && (
-        <div className="border-t-2 border-purple-200 pt-6 space-y-6 bg-white/90 backdrop-blur-sm p-4">
-          {/* Customer Selection */}
-          <div>
-            <label className="text-sm font-bold text-gray-700 mb-3 block">
-              Customer {paymentMethod === 'debt' && <span className="text-red-500">*</span>}
-            </label>
-            <div className="flex gap-2">
-              <Select value={selectedCustomer?.id || ""} onValueChange={(value) => {
-                const customer = customers.find(c => c.id === value);
-                setSelectedCustomer(customer || null);
-              }}>
-                <SelectTrigger className="h-12 border-2 border-purple-200 rounded-xl flex-1">
-                  <SelectValue placeholder="Select customer (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map(customer => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-12 w-12 p-0 border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 rounded-xl flex-shrink-0"
-                onClick={() => setShowAddCustomer(true)}
-              >
-                <UserPlus className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Payment Method Selection */}
-          <div>
-            <label className="text-sm font-bold text-gray-700 mb-4 block">
-              Payment Method
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <Button
-                variant={paymentMethod === 'cash' ? "default" : "outline"}
-                className={`flex flex-col items-center gap-3 h-20 rounded-xl transition-all duration-300 ${
-                  paymentMethod === 'cash' 
-                    ? 'bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg scale-105' 
-                    : 'border-2 border-green-200 hover:border-green-400 hover:bg-green-50'
-                }`}
-                onClick={() => setPaymentMethod('cash')}
-              >
-                <Banknote className="h-6 w-6" />
-                <span className="font-bold text-sm">Cash</span>
-              </Button>
-              <Button
-                variant={paymentMethod === 'mpesa' ? "default" : "outline"}
-                className={`flex flex-col items-center gap-3 h-20 rounded-xl transition-all duration-300 ${
-                  paymentMethod === 'mpesa' 
-                    ? 'bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg scale-105' 
-                    : 'border-2 border-green-200 hover:border-green-400 hover:bg-green-50'
-                }`}
-                onClick={() => setPaymentMethod('mpesa')}
-              >
-                <Smartphone className="h-6 w-6" />
-                <span className="font-bold text-sm">M-Pesa</span>
-              </Button>
-              <Button
-                variant={paymentMethod === 'debt' ? "default" : "outline"}
-                className={`flex flex-col items-center gap-3 h-20 rounded-xl transition-all duration-300 ${
-                  paymentMethod === 'debt' 
-                    ? 'bg-gradient-to-br from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg scale-105' 
-                    : 'border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50'
-                }`}
-                onClick={() => setPaymentMethod('debt')}
-              >
-                <CreditCard className="h-6 w-6" />
-                <span className="font-bold text-sm">Credit</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Total and Actions */}
-          <div className="bg-gradient-to-br from-purple-100 via-white to-blue-100 rounded-2xl p-6 space-y-6 border-2 border-purple-200/50 shadow-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-gray-700 flex items-center gap-2">
-                <TrendingUp className="h-6 w-6" />
-                Total:
-              </span>
-              <span className="text-3xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                {formatCurrency(total)}
-              </span>
-            </div>
-            
-            <Button
-              className="w-full h-16 text-lg font-black bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 rounded-2xl shadow-2xl hover:shadow-3xl transform transition-all duration-500 active:scale-95"
-              onClick={handleCompleteSale}
-              disabled={isProcessing || (paymentMethod === 'debt' && !selectedCustomer)}
-            >
-              {isProcessing ? (
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
-                  <span>Processing...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6" />
-                  <span>Complete Sale - {formatCurrency(total)}</span>
-                  <Zap className="h-6 w-6" />
-                </div>
-              )}
-            </Button>
-            
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1 h-12 border-2 border-red-300 hover:border-red-400 hover:bg-red-50 rounded-xl text-red-600 hover:text-red-700 font-bold"
-                onClick={clearCart}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Clear Cart
-              </Button>
-              {isMobile && (
-                <Button
-                  variant="outline"
-                  className="h-12 px-4 border-2 border-gray-300 hover:border-gray-400 rounded-xl"
-                  onClick={() => setShowCart(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 w-full overflow-x-hidden">
-      {/* Mobile Layout */}
-      {isMobile ? (
-        <div className="pb-4 w-full">
-          {/* Mobile Header */}
-          <div className="bg-white/80 backdrop-blur-lg border-b-2 border-purple-200/50 p-4 sticky top-0 z-30 shadow-lg w-full">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
-                  <ShoppingCart className="w-6 h-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="font-black text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent truncate">
-                    Point of Sale
-                  </h1>
-                  <p className="text-sm text-gray-500 font-medium truncate">Modern sales experience</p>
-                </div>
-              </div>
-              
-              <Sheet open={showCart} onOpenChange={setShowCart}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="relative border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 rounded-xl h-12 w-12 p-0">
-                    <ShoppingCart className="h-5 w-5" />
-                    {cart.length > 0 && (
-                      <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs bg-gradient-to-r from-purple-600 to-blue-600 animate-pulse">
-                        {totalItems}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-full p-0 bg-gradient-to-br from-white to-purple-50 max-w-full">
-                  <SheetHeader className="p-4 border-b-2 border-purple-200">
-                    <SheetTitle className="text-xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                      Cart ({totalItems})
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="h-[calc(100vh-80px)]">
-                    <CartContent />
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-purple-400" />
-              <Input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 rounded-2xl border-2 border-purple-200 focus:border-purple-400 bg-white/80 backdrop-blur-sm text-base"
-              />
-            </div>
-          </div>
-
-          {/* Mobile Content - Stacked Layout */}
-          <div className="flex flex-col space-y-6 p-4 w-full overflow-y-auto">
-            {/* Products Grid */}
-            <div>
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Products</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredProducts.map(product => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-              
-              {filteredProducts.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">No products found</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Desktop Layout */
-        <div className="flex h-screen w-full overflow-hidden">
-          {/* Left Panel - Products */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              {/* Desktop Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-6 mb-6">
-                  <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 flex items-center justify-center shadow-xl">
-                    <ShoppingCart className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-4xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                      Point of Sale
-                    </h1>
-                    <p className="text-gray-500 text-lg font-medium">Modern sales experience</p>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-purple-400" />
-                  <Input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 h-14 rounded-2xl border-2 border-purple-200 focus:border-purple-400 bg-white/80 backdrop-blur-sm text-lg"
-                  />
-                </div>
-              </div>
-
-              {/* Products Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {filteredProducts.map(product => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-
-              {filteredProducts.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-xl">No products found</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Panel - Cart */}
-          <div className="w-96 border-l-2 border-purple-200/50 bg-white/80 backdrop-blur-lg shadow-2xl">
-            <div className="p-6 h-full">
-              <h2 className="text-2xl font-black mb-6 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                <ShoppingCart className="h-6 w-6 text-purple-600" />
-                Cart ({totalItems})
-              </h2>
-              <CartContent />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Add Customer Modal */}
-      <AddCustomerModal
-        open={showAddCustomer}
-        onOpenChange={setShowAddCustomer}
-        onCustomerAdded={handleCustomerAdded}
-      />
+      {showAddCustomer && (
+        <AddCustomerModal
+          isOpen={showAddCustomer}
+          onClose={() => setShowAddCustomer(false)}
+          onCustomerAdded={(customer) => {
+            setSelectedCustomerId(customer.id);
+            setShowAddCustomer(false);
+          }}
+        />
+      )}
     </div>
   );
 };
