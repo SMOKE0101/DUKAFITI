@@ -137,10 +137,10 @@ const BlockyReportsPage = () => {
       case 'hourly':
         chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         bucketFormat = 'hour';
+        // Generate 24 consecutive hourly buckets from 24 hours ago to now
         for (let i = 0; i < 24; i++) {
-          const hour = new Date(chartFromDate);
-          hour.setHours(i, 0, 0, 0);
-          timePoints.push(hour.toISOString().substring(0, 13) + ':00');
+          const hourTime = new Date(chartFromDate.getTime() + i * 60 * 60 * 1000);
+          timePoints.push(hourTime.toISOString().substring(0, 13) + ':00:00.000Z');
         }
         break;
       case 'daily':
@@ -182,7 +182,7 @@ const BlockyReportsPage = () => {
       
       switch (bucketFormat) {
         case 'hour':
-          key = saleDate.toISOString().substring(0, 13) + ':00';
+          key = saleDate.toISOString().substring(0, 13) + ':00:00.000Z';
           break;
         case 'day':
           key = saleDate.toISOString().substring(0, 10);

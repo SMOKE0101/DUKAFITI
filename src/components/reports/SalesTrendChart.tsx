@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '@/utils/currency';
@@ -47,6 +46,20 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
       return `${(value / 1000).toFixed(0)}K`;
     }
     return value.toString();
+  };
+
+  // Dynamic tooltip label formatter based on resolution
+  const getTooltipLabelFormatter = () => {
+    switch (resolution) {
+      case 'hourly':
+        return (label: string) => `Hour: ${label}`;
+      case 'daily':
+        return (label: string) => `Date: ${label}`;
+      case 'monthly':
+        return (label: string) => `Month: ${label}`;
+      default:
+        return (label: string) => `Date: ${label}`;
+    }
   };
 
   return (
@@ -122,7 +135,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
             />
             <Tooltip 
               formatter={(value: number) => [formatCurrency(value), 'Revenue']}
-              labelFormatter={(label) => `Date: ${label}`}
+              labelFormatter={getTooltipLabelFormatter()}
               contentStyle={{
                 backgroundColor: 'white',
                 border: '1px solid #e2e8f0',

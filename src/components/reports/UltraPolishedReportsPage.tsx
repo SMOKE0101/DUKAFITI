@@ -19,6 +19,20 @@ type Filter = {
   value: string;
 };
 
+const formatDateLabel = (dateStr: string, format: string): string => {
+  const date = new Date(dateStr);
+  switch (format) {
+    case 'hour':
+      return date.getHours().toString().padStart(2, '0') + ':00';
+    case 'day':
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    case 'month':
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    default:
+      return date.toLocaleDateString();
+  }
+};
+
 const UltraPolishedReportsPage = () => {
   const [globalDateRange, setGlobalDateRange] = useState<DateRange>('today');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date }>();
@@ -95,19 +109,35 @@ const UltraPolishedReportsPage = () => {
     const now = new Date();
     let chartFromDate: Date;
     let bucketFormat: string;
+    let timePoints: string[] = [];
     
     switch (salesChartResolution) {
       case 'hourly':
         chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         bucketFormat = 'hour';
+        // Generate 24 consecutive hourly buckets from 24 hours ago to now
+        for (let i = 0; i < 24; i++) {
+          const hourTime = new Date(chartFromDate.getTime() + i * 60 * 60 * 1000);
+          timePoints.push(hourTime.toISOString().substring(0, 13) + ':00:00.000Z');
+        }
         break;
       case 'daily':
         chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         bucketFormat = 'day';
+        for (let i = 0; i < 30; i++) {
+          const day = new Date(chartFromDate);
+          day.setDate(day.getDate() + i);
+          timePoints.push(day.toISOString().substring(0, 10));
+        }
         break;
       case 'monthly':
         chartFromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         bucketFormat = 'month';
+        for (let i = 0; i < 12; i++) {
+          const month = new Date(chartFromDate);
+          month.setMonth(month.getMonth() + i);
+          timePoints.push(month.toISOString().substring(0, 7));
+        }
         break;
       default:
         chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -119,7 +149,10 @@ const UltraPolishedReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    const groupedData: { [key: string]: number } = {};
+    const groupedData: Record<string, number> = {};
+    timePoints.forEach(point => {
+      groupedData[point] = 0;
+    });
     
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
@@ -127,7 +160,7 @@ const UltraPolishedReportsPage = () => {
       
       switch (bucketFormat) {
         case 'hour':
-          key = saleDate.toISOString().substring(0, 13) + ':00';
+          key = saleDate.toISOString().substring(0, 13) + ':00:00.000Z';
           break;
         case 'day':
           key = saleDate.toISOString().substring(0, 10);
@@ -139,13 +172,15 @@ const UltraPolishedReportsPage = () => {
           key = saleDate.toISOString().substring(0, 10);
       }
       
-      groupedData[key] = (groupedData[key] || 0) + sale.total;
+      if (groupedData.hasOwnProperty(key)) {
+        groupedData[key] += sale.total;
+      }
     });
     
     return Object.entries(groupedData)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, revenue]) => ({
-        date: new Date(date).toLocaleDateString(),
+        date: formatDateLabel(date, bucketFormat),
         revenue
       }));
   }, [sales, salesChartResolution]);
