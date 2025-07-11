@@ -29,8 +29,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   
-  const { data: products = [] } = useSupabaseProducts();
-  const { data: customers = [] } = useSupabaseCustomers();
+  const { products = [] } = useSupabaseProducts();
+  const { customers = [] } = useSupabaseCustomers();
 
   // Close dropdown when clicking outside
   useEffect(() => {
