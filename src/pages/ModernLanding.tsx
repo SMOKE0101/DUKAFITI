@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { ArrowRight, Check, Star, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Check, Star, ChevronDown, Eye, EyeOff, Clock, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,12 +15,29 @@ const ModernLanding = () => {
     confirmPassword: ''
   });
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [signUpError, setSignUpError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleSignUp = async () => {
+    setIsGoogleLoading(true);
+    setSignUpError('');
+    
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        setSignUpError(error.message);
+      }
+    } catch (err) {
+      setSignUpError('An unexpected error occurred');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,18 +304,26 @@ const ModernLanding = () => {
                   <Button 
                     type="button" 
                     variant="outline" 
+                    onClick={handleGoogleSignUp}
+                    disabled={isGoogleLoading}
                     className="w-full py-3 text-base font-semibold rounded-xl border-2 hover:bg-muted/50 transition-all hover:scale-[1.02]"
-                    asChild
                   >
-                    <Link to="/signup">
-                      <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                      </svg>
-                      Continue with Google
-                    </Link>
+                    {isGoogleLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                        Connecting...
+                      </div>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                          <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                          <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        Continue with Google
+                      </>
+                    )}
                   </Button>
 
                   {/* Divider */}
@@ -412,12 +436,19 @@ const ModernLanding = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 <div className="absolute inset-0 flex items-center justify-center p-8">
                   <div className="text-center text-white">
-                    <div className="text-6xl mb-6">🏪</div>
+                    <div className="flex items-center justify-center mb-6">
+                      <div className="relative">
+                        <Store className="w-16 h-16" />
+                        <div className="absolute -top-2 -right-2 bg-white text-black rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold">
+                          24
+                        </div>
+                      </div>
+                    </div>
                     <h3 className="text-2xl font-bold mb-4">Your Success Story Starts Here</h3>
                     <div className="space-y-2 text-lg opacity-90">
-                      <p>✓ 10,000+ Happy Shop Owners</p>
-                      <p>✓ 99.9% Uptime Guarantee</p>
-                      <p>✓ 24/7 Customer Support</p>
+                      <p>✓ 10,000+ Successful Duka Owners</p>
+                      <p>✓ 99.9% Reliable Service</p>
+                      <p>✓ 24/7 Duka Support</p>
                     </div>
                   </div>
                 </div>
