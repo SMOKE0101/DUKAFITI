@@ -45,12 +45,14 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +124,22 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     navigate(result.route);
     setSearchTerm('');
     setShowSearchDropdown(false);
+    setShowMobileSearch(false);
+  };
+
+  const handleMobileSearchOpen = () => {
+    setShowMobileSearch(true);
+    // Focus the input after the modal opens
+    setTimeout(() => {
+      const input = mobileSearchRef.current?.querySelector('input');
+      input?.focus();
+    }, 100);
+  };
+
+  const handleMobileSearchClose = () => {
+    setShowMobileSearch(false);
+    setSearchTerm('');
+    setSearchResults([]);
   };
 
   const handleLogout = () => {
@@ -148,6 +166,18 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Handle escape key for mobile search
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showMobileSearch) {
+        handleMobileSearchClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showMobileSearch]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -242,9 +272,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 variant="ghost"
                 size="sm"
                 className="text-white hover:bg-white/10 p-2"
-                onClick={() => {
-                  // You can add search modal logic here if needed
-                }}
+                onClick={handleMobileSearchOpen}
               >
                 <Search className="w-5 h-5" />
               </Button>
@@ -271,7 +299,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 <div className={`
                   absolute top-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border z-50 max-h-80 overflow-y-auto
                   ${isMobile 
-                    ? 'right-0 w-[calc(100vw-2rem)] max-w-sm' 
+                    ? 'right-0 w-[calc(100vw-3rem)] max-w-sm' 
                     : isTablet 
                       ? 'right-0 w-80 max-w-[calc(100vw-2rem)]' 
                       : 'right-0 w-80'
@@ -372,6 +400,77 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
           </div>
         </div>
       </header>
+
+      {/* Mobile Search Modal */}
+      {showMobileSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col z-[60] animate-fade-in">
+          {/* Header */}
+          <div className="bg-white dark:bg-gray-800 p-4 shadow-lg animate-slide-in-from-top">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMobileSearchClose}
+                className="p-2"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+              <div className="flex-1 relative" ref={mobileSearchRef}>
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search products, customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 h-12 text-base rounded-xl"
+                  autoFocus
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Search Results */}
+          <div className="flex-1 bg-white dark:bg-gray-800 overflow-y-auto">
+            {searchResults.length > 0 ? (
+              <div className="p-4 space-y-2">
+                {searchResults.map((result) => (
+                  <button
+                    key={`${result.type}-${result.id}`}
+                    className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-3 border border-gray-200 dark:border-gray-600"
+                    onClick={() => handleSearchSelect(result)}
+                  >
+                    <div className="text-gray-500 dark:text-gray-400">
+                      {getTypeIcon(result.type)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {result.title}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {result.subtitle}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : searchTerm.length >= 2 ? (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No results found for "{searchTerm}"</p>
+              </div>
+            ) : searchTerm.length > 0 ? (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Type at least 2 characters to search</p>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Start typing to search products and customers</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
