@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
@@ -63,20 +62,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
   const { theme } = useTheme();
 
-  // Get the appropriate logo based on theme and open state
-  const getLogoSrc = () => {
-    if (!isOpen) {
-      // Use cube icons for collapsed state
-      return theme === 'dark' 
-        ? '/lovable-uploads/e71b20c6-1457-4277-a594-bb9ce4f09d56.png' // Dark mode cube
-        : '/lovable-uploads/0e966e8b-29a2-4e9c-bae2-eb4b0ff1f714.png'; // Light mode cube
-    } else {
-      // Use full logos for expanded state
-      return theme === 'dark'
-        ? '/lovable-uploads/eb77e4bd-5d96-4815-a1ff-0bc09529c54a.png' // Dark mode full logo
-        : '/lovable-uploads/45d85eef-ee71-473e-95df-bb58337a9f07.png'; // Light mode full logo
-    }
-  };
+  const logoSrc = theme === 'dark' 
+    ? '/lovable-uploads/77d747ef-d8fb-4a5c-b4c7-3e43d709d5f3.png'
+    : '/lovable-uploads/b8e58169-8231-49d4-95c5-39d340fd66dd.png';
 
   return (
     <div className={cn(
@@ -88,7 +76,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
         {isOpen ? (
           <div className="flex items-center justify-between w-full">
             <img 
-              src={getLogoSrc()}
+              src={logoSrc}
               alt="DUKAFITI Logo"
               className="h-10 w-auto max-w-[160px] object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
               style={{
@@ -107,7 +95,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
         ) : (
           <div className="flex flex-col items-center space-y-2">
             <img 
-              src={getLogoSrc()}
+              src={logoSrc}
               alt="DUKAFITI Logo"
               className="w-8 h-8 object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
               style={{

@@ -1,11 +1,10 @@
 
 import React from 'react';
-import { Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 import { SearchBar } from '@/components/search/SearchBar';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { ProfileMenu } from '@/components/profile/ProfileMenu';
+import { AnimatedSidebarToggle } from '@/components/ui/animated-sidebar-toggle';
 
 interface EnhancedTopbarProps {
   onMenuClick?: () => void;
@@ -25,8 +24,8 @@ const EnhancedTopbar = ({
   const { theme } = useTheme();
   
   const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/8d8ce036-eba9-4359-8db6-057c40d653b7.png'
-    : '/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png';
+    ? '/lovable-uploads/77d747ef-d8fb-4a5c-b4c7-3e43d709d5f3.png'
+    : '/lovable-uploads/b8e58169-8231-49d4-95c5-39d340fd66dd.png';
 
   const handleMenuClick = () => {
     if (onMenuClick) {
@@ -38,17 +37,14 @@ const EnhancedTopbar = ({
 
   return (
     <div className="h-16 bg-[#602d86] border-b border-border/40 flex items-center justify-between px-4 lg:px-6 fixed top-0 left-0 right-0 z-50">
-      {/* Left Side - Logo and Menu */}
+      {/* Left Side - Logo and Menu Toggle */}
       <div className="flex items-center gap-4">
         {!hideSidebarToggle && (
-          <Button
-            variant="ghost"
-            size="icon"
+          <AnimatedSidebarToggle
+            isOpen={sidebarOpen}
             onClick={handleMenuClick}
-            className="lg:hidden text-white hover:bg-white/10"
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+            className="text-white hover:bg-white/10 p-2 rounded-md"
+          />
         )}
         
         <div className="flex items-center gap-3">

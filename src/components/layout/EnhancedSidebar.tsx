@@ -55,8 +55,8 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   };
 
   const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/8d8ce036-eba9-4359-8db6-057c40d653b7.png'
-    : '/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png';
+    ? '/lovable-uploads/77d747ef-d8fb-4a5c-b4c7-3e43d709d5f3.png'
+    : '/lovable-uploads/b8e58169-8231-49d4-95c5-39d340fd66dd.png';
 
   return (
     <>
