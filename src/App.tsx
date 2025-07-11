@@ -23,6 +23,7 @@ import ReportsPage from "./components/ReportsPage";
 import Settings from "./pages/Settings";
 import ErrorBoundary from "./components/ErrorBoundary";
 
+// Create QueryClient instance outside of component to prevent recreation
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
