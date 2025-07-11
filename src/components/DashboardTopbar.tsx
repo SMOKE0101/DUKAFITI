@@ -1,9 +1,11 @@
 
-import { Bell, Search, Menu, X } from 'lucide-react';
+import React from 'react';
+import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTheme } from 'next-themes';
+import { SearchBar } from '@/components/search/SearchBar';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { ProfileMenu } from '@/components/profile/ProfileMenu';
 
 interface DashboardTopbarProps {
   onMenuClick: () => void;
@@ -18,7 +20,7 @@ const DashboardTopbar = ({ onMenuClick, sidebarOpen }: DashboardTopbarProps) => 
     : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   return (
-    <div className="h-16 bg-[#602d86] border-b border-border/40 flex items-center justify-between px-4 lg:px-6">
+    <div className="h-16 bg-[#602d86] border-b border-border/40 flex items-center justify-between px-4 lg:px-6 fixed top-0 left-0 right-0 z-50">
       {/* Left Side - Logo and Menu */}
       <div className="flex items-center gap-4">
         <Button
@@ -42,25 +44,13 @@ const DashboardTopbar = ({ onMenuClick, sidebarOpen }: DashboardTopbarProps) => 
 
       {/* Center - Search */}
       <div className="flex-1 max-w-md mx-4 hidden md:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search products, customers..."
-            className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/70 focus:bg-white/20"
-          />
-        </div>
+        <SearchBar placeholder="Search products, customers..." />
       </div>
 
       {/* Right Side - Actions */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-          <Bell className="h-5 w-5" />
-        </Button>
-        
-        <Avatar className="h-8 w-8">
-          <AvatarImage src="/placeholder.svg" />
-          <AvatarFallback className="bg-white/20 text-white text-sm">U</AvatarFallback>
-        </Avatar>
+        <NotificationBell />
+        <ProfileMenu />
       </div>
     </div>
   );
