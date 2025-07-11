@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Product, Customer } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
@@ -196,35 +195,34 @@ const SalesManagement = () => {
     return cart.length > 0 && !isProcessing && (paymentMethod !== 'debt' || selectedCustomer);
   };
 
-  // Enhanced Product Card Component with glassmorphism
+  // Enhanced Product Card Component - Optimized for mobile
   const ProductCard = ({ product }: { product: Product }) => (
     <Card 
-      className="group relative overflow-hidden bg-white/80 backdrop-blur-md border border-white/30 hover:border-purple-300/50 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:-translate-y-2 hover:scale-105"
+      className="group relative overflow-hidden bg-white/80 backdrop-blur-md border border-white/30 hover:border-purple-300/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02] active:scale-95 touch-manipulation"
       onClick={() => addToCart(product)}
     >
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
-      <CardContent className="p-3 sm:p-4 relative z-10">
-        <div className="flex-1 mb-3 sm:mb-4">
-          <div className="flex items-start justify-between mb-2 sm:mb-3">
-            <h3 className="font-bold text-xs sm:text-sm text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors duration-300 leading-tight">
+      <CardContent className="p-3 relative z-10">
+        <div className="flex-1 mb-3">
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="font-bold text-sm text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors duration-300 leading-tight flex-1 mr-2">
               {product.name}
             </h3>
             <Badge 
               variant={product.currentStock > 10 ? "default" : product.currentStock > 0 ? "secondary" : "destructive"}
-              className="ml-2 text-xs font-semibold px-1.5 py-0.5 rounded-full shadow-sm flex-shrink-0"
+              className="text-xs font-semibold px-2 py-1 rounded-full shadow-sm flex-shrink-0 min-w-[40px] text-center"
             >
               {product.currentStock === -1 ? '∞' : product.currentStock}
             </Badge>
           </div>
           
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-lg sm:text-2xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <span className="text-lg font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 {formatCurrency(product.sellingPrice)}
               </span>
-              <div className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-1">
+              <div className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-1 max-w-[80px] text-center truncate">
                 {product.category}
               </div>
             </div>
@@ -232,78 +230,78 @@ const SalesManagement = () => {
         </div>
         
         <Button 
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform transition-all duration-300 group-hover:scale-105"
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transform transition-all duration-300 active:scale-95 touch-manipulation"
           size="sm"
           disabled={product.currentStock === 0}
         >
-          <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="text-xs sm:text-sm">Add to Cart</span>
-          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
+          <Plus className="h-4 w-4 mr-2" />
+          <span className="text-sm">Add to Cart</span>
+          <Sparkles className="h-4 w-4 ml-2" />
         </Button>
       </CardContent>
     </Card>
   );
 
-  // Enhanced Cart Component
+  // Enhanced Cart Content - Mobile optimized
   const CartContent = () => (
     <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-white">
       <ScrollArea className="flex-1 py-4">
         {cart.length === 0 ? (
-          <div className="text-center py-8 sm:py-12">
-            <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
-              <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 text-purple-400" />
+          <div className="text-center py-12">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+              <ShoppingCart className="h-12 w-12 text-purple-400" />
             </div>
-            <p className="text-gray-500 text-lg sm:text-xl font-bold mb-2">Cart is empty</p>
-            <p className="text-xs sm:text-sm text-gray-400">Add products to get started</p>
+            <p className="text-gray-500 text-xl font-bold mb-2">Cart is empty</p>
+            <p className="text-sm text-gray-400">Add products to get started</p>
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4 px-2">
+          <div className="space-y-4 px-4">
             {cart.map(item => (
-              <Card key={item.product.id} className="bg-white/80 backdrop-blur-sm shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <Card key={item.product.id} className="bg-white shadow-lg border border-purple-100 hover:shadow-xl transition-all duration-300">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex-1 min-w-0 mr-3">
-                      <h4 className="font-bold text-xs sm:text-sm text-gray-900 truncate">{item.product.name}</h4>
-                      <p className="text-xs sm:text-sm text-gray-500 font-medium">{formatCurrency(item.product.sellingPrice)} each</p>
+                      <h4 className="font-bold text-sm text-gray-900 truncate">{item.product.name}</h4>
+                      <p className="text-sm text-gray-500 font-medium">{formatCurrency(item.product.sellingPrice)} each</p>
                     </div>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full flex-shrink-0"
                       onClick={() => removeFromCart(item.product.id)}
                     >
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-3">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-6 w-6 sm:h-8 sm:w-8 p-0 rounded-full border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50"
+                        className="h-8 w-8 p-0 rounded-full border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 flex-shrink-0"
                         onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                       >
-                        <Minus className="h-2 w-2 sm:h-3 sm:w-3" />
+                        <Minus className="h-3 w-3" />
                       </Button>
                       <Input
                         type="number"
                         min="1"
                         value={item.quantity}
                         onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 1)}
-                        className="w-12 sm:w-16 h-6 sm:h-8 text-center text-xs sm:text-sm font-bold border-2 border-purple-200 rounded-lg"
+                        className="w-16 h-8 text-center text-sm font-bold border-2 border-purple-200 rounded-lg"
                       />
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-6 w-6 sm:h-8 sm:w-8 p-0 rounded-full border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50"
+                        className="h-8 w-8 p-0 rounded-full border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 flex-shrink-0"
                         onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                       >
-                        <Plus className="h-2 w-2 sm:h-3 sm:w-3" />
+                        <Plus className="h-3 w-3" />
                       </Button>
                     </div>
-                    <div className="text-right">
-                      <p className="font-black text-sm sm:text-lg bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-black text-lg bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                         {formatCurrency(item.product.sellingPrice * item.quantity)}
                       </p>
                     </div>
@@ -316,35 +314,35 @@ const SalesManagement = () => {
       </ScrollArea>
 
       {cart.length > 0 && (
-        <div className="border-t-2 border-gradient-to-r from-purple-200 to-blue-200 pt-4 sm:pt-6 space-y-4 sm:space-y-6 bg-white/90 backdrop-blur-sm">
-          {/* Customer Selection */}
+        <div className="border-t border-gray-200 pt-6 space-y-6 bg-white/90 backdrop-blur-sm p-4">
+          {/* Customer Selection - Mobile optimized */}
           <div>
-            <div className="flex justify-between items-center mb-2 sm:mb-3">
-              <label className="text-xs sm:text-sm font-bold text-gray-700 flex items-center gap-2">
-                <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+            <div className="flex justify-between items-center mb-3">
+              <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <Users className="h-4 w-4" />
                 Customer {paymentMethod === 'debt' && <span className="text-red-500">*</span>}
               </label>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="text-xs sm:text-sm border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 h-8"
+                className="text-sm border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 h-9 px-3"
                 onClick={() => setShowCustomerModal(true)}
               >
-                <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <UserPlus className="h-4 w-4 mr-1" />
                 New
               </Button>
             </div>
             <Select value={selectedCustomer?.id || ""} onValueChange={handleCustomerSelect}>
-              <SelectTrigger className="h-10 sm:h-12 border-2 border-purple-200 rounded-xl">
+              <SelectTrigger className="h-12 border-2 border-purple-200 rounded-xl text-sm">
                 <SelectValue placeholder="Select customer (optional)" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50">
                 {customers.map(customer => (
                   <SelectItem key={customer.id} value={customer.id}>
                     <div className="flex items-center justify-between w-full">
                       <span className="font-medium">{customer.name}</span>
                       {customer.outstandingDebt > 0 && (
-                        <Badge variant="secondary" className="ml-2">
+                        <Badge variant="secondary" className="ml-2 text-xs">
                           {formatCurrency(customer.outstandingDebt)}
                         </Badge>
                       )}
@@ -355,99 +353,99 @@ const SalesManagement = () => {
             </Select>
           </div>
 
-          {/* Enhanced Payment Method Selection */}
+          {/* Payment Method Selection - Mobile optimized */}
           <div>
-            <label className="text-xs sm:text-sm font-bold text-gray-700 mb-3 sm:mb-4 block flex items-center gap-2">
-              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+            <label className="text-sm font-bold text-gray-700 mb-4 block flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
               Payment Method
             </label>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Button
                 variant={paymentMethod === 'cash' ? "default" : "outline"}
-                className={`flex flex-col items-center gap-2 sm:gap-3 h-16 sm:h-24 rounded-xl transition-all duration-300 ${
+                className={`flex flex-col items-center gap-3 h-20 rounded-xl transition-all duration-300 text-xs touch-manipulation ${
                   paymentMethod === 'cash' 
                     ? 'bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg scale-105' 
                     : 'border-2 border-green-200 hover:border-green-400 hover:bg-green-50'
                 }`}
                 onClick={() => setPaymentMethod('cash')}
               >
-                <Banknote className="h-4 w-4 sm:h-6 sm:w-6" />
-                <span className="text-xs font-bold">Cash</span>
+                <Banknote className="h-5 w-5" />
+                <span className="font-bold">Cash</span>
               </Button>
               <Button
                 variant={paymentMethod === 'mpesa' ? "default" : "outline"}
-                className={`flex flex-col items-center gap-2 sm:gap-3 h-16 sm:h-24 rounded-xl transition-all duration-300 ${
+                className={`flex flex-col items-center gap-3 h-20 rounded-xl transition-all duration-300 text-xs touch-manipulation ${
                   paymentMethod === 'mpesa' 
                     ? 'bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg scale-105' 
                     : 'border-2 border-green-200 hover:border-green-400 hover:bg-green-50'
                 }`}
                 onClick={() => setPaymentMethod('mpesa')}
               >
-                <Smartphone className="h-4 w-4 sm:h-6 sm:w-6" />
-                <span className="text-xs font-bold">M-Pesa</span>
+                <Smartphone className="h-5 w-5" />
+                <span className="font-bold">M-Pesa</span>
               </Button>
               <Button
                 variant={paymentMethod === 'debt' ? "default" : "outline"}
-                className={`flex flex-col items-center gap-2 sm:gap-3 h-16 sm:h-24 rounded-xl transition-all duration-300 ${
+                className={`flex flex-col items-center gap-3 h-20 rounded-xl transition-all duration-300 text-xs touch-manipulation ${
                   paymentMethod === 'debt' 
                     ? 'bg-gradient-to-br from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg scale-105' 
                     : 'border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50'
                 }`}
                 onClick={() => setPaymentMethod('debt')}
               >
-                <CreditCard className="h-4 w-4 sm:h-6 sm:w-6" />
-                <span className="text-xs font-bold">Credit</span>
+                <CreditCard className="h-5 w-5" />
+                <span className="font-bold">Credit</span>
               </Button>
             </div>
           </div>
 
-          {/* Enhanced Total and Actions */}
-          <div className="bg-gradient-to-br from-purple-100 via-white to-blue-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4 sm:space-y-6 border-2 border-purple-200/50 shadow-xl">
+          {/* Total and Actions - Mobile optimized */}
+          <div className="bg-gradient-to-br from-purple-100 via-white to-blue-100 rounded-2xl p-6 space-y-6 border-2 border-purple-200/50 shadow-xl">
             <div className="flex items-center justify-between">
-              <span className="text-lg sm:text-2xl font-black text-gray-700 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6" />
+              <span className="text-2xl font-black text-gray-700 flex items-center gap-2">
+                <TrendingUp className="h-6 w-6" />
                 Total:
               </span>
-              <span className="text-2xl sm:text-4xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <span className="text-3xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 {formatCurrency(total)}
               </span>
             </div>
             
             <Button
-              className="w-full h-12 sm:h-16 text-sm sm:text-lg font-black bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-3xl transform transition-all duration-500 hover:scale-105"
+              className="w-full h-16 text-lg font-black bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 rounded-2xl shadow-2xl hover:shadow-3xl transform transition-all duration-500 active:scale-95 touch-manipulation"
               onClick={handleCompleteSale}
               disabled={!canCompleteSale()}
             >
               {isProcessing ? (
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white" />
-                  <span className="text-xs sm:text-base">Processing...</span>
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
+                  <span>Processing...</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6" />
-                  <span className="text-xs sm:text-base">Complete Sale - {formatCurrency(total)}</span>
-                  <Zap className="h-4 w-4 sm:h-6 sm:w-6" />
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-6 w-6" />
+                  <span>Complete Sale - {formatCurrency(total)}</span>
+                  <Zap className="h-6 w-6" />
                 </div>
               )}
             </Button>
             
-            <div className="flex gap-2 sm:gap-3">
+            <div className="flex gap-3">
               <Button
                 variant="outline"
-                className="flex-1 h-10 sm:h-12 border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 rounded-xl"
+                className="flex-1 h-12 border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 rounded-xl touch-manipulation"
                 onClick={clearCart}
               >
-                <Trash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="text-xs sm:text-sm">Clear Cart</span>
+                <Trash className="h-4 w-4 mr-2" />
+                <span className="text-sm">Clear Cart</span>
               </Button>
               {isMobile && (
                 <Button
                   variant="outline"
-                  className="h-10 sm:h-12 px-3 sm:px-4 border-2 border-gray-300 hover:border-gray-400 rounded-xl"
+                  className="h-12 px-4 border-2 border-gray-300 hover:border-gray-400 rounded-xl touch-manipulation"
                   onClick={() => setShowCart(false)}
                 >
-                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <X className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -458,37 +456,37 @@ const SalesManagement = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 w-full overflow-x-hidden">
       {/* Mobile Layout */}
       {isMobile ? (
-        <div className="pb-4 w-full overflow-x-hidden">
-          {/* Enhanced Mobile Header */}
+        <div className="pb-4 w-full">
+          {/* Mobile Header - Enhanced and properly sized */}
           <div className="bg-white/80 backdrop-blur-lg border-b border-purple-200/50 p-4 sticky top-16 z-30 shadow-lg w-full">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
                   <ShoppingCart className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <h1 className="font-black text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <div className="min-w-0 flex-1">
+                  <h1 className="font-black text-lg bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent truncate">
                     Point of Sale
                   </h1>
-                  <p className="text-xs text-gray-500 font-medium">Process transactions</p>
+                  <p className="text-xs text-gray-500 font-medium truncate">Process transactions</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 rounded-xl h-8 w-8 p-0"
+                  className="border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 rounded-xl h-9 w-9 p-0 touch-manipulation"
                   onClick={() => setShowMobileSearch(!showMobileSearch)}
                 >
                   <Search className="h-4 w-4" />
                 </Button>
                 <Sheet open={showCart} onOpenChange={setShowCart}>
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="sm" className="relative border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 rounded-xl h-8 w-8 p-0">
+                    <Button variant="outline" size="sm" className="relative border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 rounded-xl h-9 w-9 p-0 touch-manipulation">
                       <ShoppingCart className="h-4 w-4" />
                       {cart.length > 0 && (
                         <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-gradient-to-r from-purple-600 to-blue-600 animate-pulse">
@@ -497,19 +495,21 @@ const SalesManagement = () => {
                       )}
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-full p-4 bg-gradient-to-br from-white to-purple-50">
-                    <SheetHeader className="mb-4">
+                  <SheetContent side="right" className="w-full p-0 bg-gradient-to-br from-white to-purple-50 max-w-full">
+                    <SheetHeader className="p-4 border-b border-gray-200">
                       <SheetTitle className="text-xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                         Cart ({cart.length})
                       </SheetTitle>
                     </SheetHeader>
-                    <CartContent />
+                    <div className="h-[calc(100vh-80px)]">
+                      <CartContent />
+                    </div>
                   </SheetContent>
                 </Sheet>
               </div>
             </div>
 
-            {/* Enhanced Mobile Search */}
+            {/* Mobile Search */}
             {showMobileSearch && (
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-purple-400" />
@@ -524,7 +524,10 @@ const SalesManagement = () => {
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 rounded-xl hover:bg-purple-100"
-                  onClick={() => setShowMobileSearch(false)}
+                  onClick={() => {
+                    setShowMobileSearch(false);
+                    setSearchTerm('');
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -554,94 +557,107 @@ const SalesManagement = () => {
               <div>
                 <h2 className="text-lg font-black mb-4 flex items-center gap-2 text-gray-800">
                   <Search className="h-5 w-5 text-purple-500" />
-                  Search Results
+                  Search Results ({filteredProducts.length})
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {filteredProducts.map(product => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
+                {filteredProducts.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {filteredProducts.map(product => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No products found matching "{searchTerm}"</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       ) : (
-        /* Desktop & Tablet Layout */
+        /* Desktop & Tablet Layout - Enhanced for better tablet experience */
         <div className="flex h-screen w-full overflow-hidden">
           {/* Left Panel - Products */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-6 lg:p-8">
-              {/* Enhanced Desktop Header */}
-              <div className="mb-6 sm:mb-8">
-                <div className="flex items-center gap-4 sm:gap-6 mb-4 sm:mb-6">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-3xl bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 flex items-center justify-center shadow-xl">
-                    <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            <div className="p-6 lg:p-8">
+              {/* Desktop Header */}
+              <div className="mb-8">
+                <div className="flex items-center gap-6 mb-6">
+                  <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 flex items-center justify-center shadow-xl">
+                    <ShoppingCart className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl sm:text-4xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    <h1 className="text-4xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                       Point of Sale
                     </h1>
-                    <p className="text-gray-500 text-sm sm:text-lg font-medium">Process sales and manage transactions</p>
+                    <p className="text-gray-500 text-lg font-medium">Process sales and manage transactions</p>
                   </div>
                 </div>
 
-                {/* Enhanced Search and View Toggle */}
-                <div className="flex gap-3 sm:gap-6">
+                {/* Search and View Toggle */}
+                <div className="flex gap-6">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-purple-400" />
                     <Input
                       type="text"
                       placeholder="Search products..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 sm:pl-12 h-12 sm:h-14 rounded-2xl border-2 border-purple-200 focus:border-purple-400 bg-white/80 backdrop-blur-sm text-sm sm:text-lg"
+                      className="pl-12 h-14 rounded-2xl border-2 border-purple-200 focus:border-purple-400 bg-white/80 backdrop-blur-sm text-lg"
                     />
                   </div>
-                  <div className="flex gap-1 sm:gap-2 border-2 border-purple-200 rounded-2xl p-1 sm:p-2 bg-white/80 backdrop-blur-sm">
+                  <div className="flex gap-2 border-2 border-purple-200 rounded-2xl p-2 bg-white/80 backdrop-blur-sm">
                     <Button
                       variant={viewMode === 'grid' ? 'default' : 'ghost'}
                       size="sm"
                       onClick={() => setViewMode('grid')}
-                      className={`px-3 sm:px-4 py-2 rounded-xl ${
+                      className={`px-4 py-2 rounded-xl ${
                         viewMode === 'grid' 
                           ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
                           : 'hover:bg-purple-50'
                       }`}
                     >
-                      <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <Grid3X3 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant={viewMode === 'list' ? 'default' : 'ghost'}
                       size="sm"
                       onClick={() => setViewMode('list')}
-                      className={`px-3 sm:px-4 py-2 rounded-xl ${
+                      className={`px-4 py-2 rounded-xl ${
                         viewMode === 'list' 
                           ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
                           : 'hover:bg-purple-50'
                       }`}
                     >
-                      <List className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <List className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </div>
 
-              {/* Enhanced Products Grid */}
+              {/* Products Grid - Enhanced for tablet */}
               <div className={`${
                 viewMode === 'grid' 
-                  ? `grid gap-4 sm:gap-6 ${isTablet ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}` 
+                  ? `grid gap-6 ${isTablet ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}` 
                   : 'space-y-4'
               }`}>
                 {(searchTerm ? filteredProducts : products).map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
+
+              {/* No products message */}
+              {searchTerm && filteredProducts.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 text-xl">No products found matching "{searchTerm}"</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Right Panel - Cart (Desktop only) */}
           {!isTablet && (
-            <div className="w-80 xl:w-96 border-l-2 border-purple-200/50 bg-white/80 backdrop-blur-lg shadow-2xl">
+            <div className="w-96 border-l-2 border-purple-200/50 bg-white/80 backdrop-blur-lg shadow-2xl">
               <div className="p-6 h-full">
                 <h2 className="text-2xl font-black mb-6 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                   <ShoppingCart className="h-6 w-6 text-purple-600" />
@@ -657,24 +673,26 @@ const SalesManagement = () => {
             <Sheet open={showCart} onOpenChange={setShowCart}>
               <SheetTrigger asChild>
                 <Button 
-                  className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-2xl"
+                  className="fixed bottom-6 right-6 z-50 h-16 w-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-2xl touch-manipulation"
                   size="lg"
                 >
-                  <ShoppingCart className="h-6 w-6" />
+                  <ShoppingCart className="h-7 w-7" />
                   {cart.length > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs bg-gradient-to-r from-orange-500 to-red-500 animate-pulse">
+                    <Badge className="absolute -top-2 -right-2 h-7 w-7 rounded-full p-0 flex items-center justify-center text-xs bg-gradient-to-r from-orange-500 to-red-500 animate-pulse">
                       {cart.length}
                     </Badge>
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-full sm:w-96 p-6 bg-gradient-to-br from-white to-purple-50">
-                <SheetHeader className="mb-6">
+              <SheetContent side="right" className="w-full sm:w-96 p-0 bg-gradient-to-br from-white to-purple-50">
+                <SheetHeader className="p-6 border-b border-gray-200">
                   <SheetTitle className="text-2xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                     Cart ({cart.length})
                   </SheetTitle>
                 </SheetHeader>
-                <CartContent />
+                <div className="h-[calc(100vh-100px)]">
+                  <CartContent />
+                </div>
               </SheetContent>
             </Sheet>
           )}
