@@ -23,6 +23,13 @@ import ReportsPage from "./components/ReportsPage";
 import Settings from "./pages/Settings";
 import ErrorBoundary from "./components/ErrorBoundary";
 
+console.log('App.tsx - React object:', React);
+console.log('App.tsx - React hooks available:', {
+  useEffect: React.useEffect,
+  useState: React.useState,
+  useContext: React.useContext
+});
+
 // Create QueryClient instance outside of component to prevent recreation
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,8 +40,11 @@ const queryClient = new QueryClient({
   },
 });
 
+console.log('QueryClient created:', queryClient);
+
 function App() {
   console.log('App component rendering');
+  console.log('React in App component:', React);
   
   return (
     <ErrorBoundary>

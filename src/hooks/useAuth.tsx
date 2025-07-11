@@ -3,6 +3,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+console.log('useAuth.tsx - React object:', React);
+console.log('useAuth.tsx - React hooks:', {
+  useEffect: React.useEffect,
+  useState: React.useState,
+  useContext: React.useContext,
+  createContext: React.createContext
+});
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -23,6 +31,11 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('AuthProvider rendering - React hooks available:', {
+    useState: typeof useState,
+    useEffect: typeof useEffect
+  });
+  
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
