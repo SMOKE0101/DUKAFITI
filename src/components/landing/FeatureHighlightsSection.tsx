@@ -1,5 +1,5 @@
 
-import { Package, Smartphone, Users, BarChart, Wifi, Sync } from 'lucide-react';
+import { Package, Smartphone, Users, BarChart, Wifi, RefreshCw } from 'lucide-react';
 
 const FeatureHighlightsSection = () => {
   const features = [
@@ -34,7 +34,7 @@ const FeatureHighlightsSection = () => {
       color: "bg-teal-100 text-teal-600"
     },
     {
-      icon: Sync,
+      icon: RefreshCw,
       title: "Real-time Sync",
       description: "All your data stays up-to-date across all your devices automatically.",
       color: "bg-indigo-100 text-indigo-600"
