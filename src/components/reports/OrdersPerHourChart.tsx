@@ -18,26 +18,30 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
   const isTablet = useIsTablet();
   const maxOrders = Math.max(...data.map(d => d.orders));
 
-  // Responsive margins
+  // Responsive margins - reduced for mobile to minimize whitespace
   const getMargins = () => {
     if (isMobile) {
-      return { top: 10, right: 15, left: 50, bottom: 40 };
+      return { top: 5, right: 10, left: 40, bottom: 35 };
     } else if (isTablet) {
-      return { top: 15, right: 20, left: 45, bottom: 35 };
+      return { top: 10, right: 15, left: 45, bottom: 30 };
     }
     return { top: 5, right: 30, left: 40, bottom: 5 };
   };
 
   // Responsive font sizes
   const getAxisFontSize = () => {
-    if (isMobile) return 11;
+    if (isMobile) return 12;
     if (isTablet) return 12;
     return 12;
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-4 md:p-6 lg:p-8">
-      <div className={`flex items-center justify-between mb-4 md:mb-6 ${isMobile ? 'flex-col gap-4' : ''}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md ${
+      isMobile ? 'p-2' : isTablet ? 'p-4' : 'p-6 lg:p-8'
+    }`}>
+      <div className={`flex items-center justify-between ${
+        isMobile ? 'mb-3 flex-col gap-3' : 'mb-4 md:mb-6'
+      }`}>
         <div className={isMobile ? 'text-center' : ''}>
           <h3 className={`font-mono font-black uppercase tracking-tight text-gray-900 dark:text-white ${
             isMobile ? 'text-lg' : 'text-xl'
@@ -54,7 +58,7 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
               key={option}
               onClick={() => onViewChange(option)}
               className={`transition-all ${
-                isMobile ? 'px-4 py-3 text-xs' : isTablet ? 'px-3 py-2 text-sm' : 'px-3 py-1 text-sm'
+                isMobile ? 'px-3 py-2 text-xs' : isTablet ? 'px-3 py-2 text-sm' : 'px-3 py-1 text-sm'
               } font-medium rounded ${
                 view === option
                   ? 'bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm font-mono font-bold uppercase'
@@ -68,14 +72,14 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className={`mb-${isMobile ? '2' : '4'}`}>
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <div className="w-3 h-3 rounded-sm" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}></div>
           <span className="font-mono font-bold uppercase tracking-tight">Orders Count</span>
         </div>
       </div>
 
-      <div className={`${isMobile ? 'h-64' : isTablet ? 'h-72' : 'h-80'}`}>
+      <div className={`${isMobile ? 'h-72' : isTablet ? 'h-80' : 'h-80'}`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={getMargins()}>
             <defs>
@@ -100,7 +104,7 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
               interval={isMobile ? 'preserveStartEnd' : 0}
               angle={isMobile ? -45 : 0}
               textAnchor={isMobile ? 'end' : 'middle'}
-              height={isMobile ? 60 : 30}
+              height={isMobile ? 50 : 30}
             />
             <YAxis 
               stroke="#6b7280"
@@ -117,7 +121,7 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
                 borderRadius: '8px',
                 color: '#fff',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                fontSize: isMobile ? '14px' : '14px',
+                fontSize: isMobile ? '12px' : '14px',
                 fontWeight: '700',
                 fontFamily: "'Space Mono', monospace"
               }}

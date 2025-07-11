@@ -342,8 +342,8 @@ const BlockyReportsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className={`
-        space-y-6 max-w-7xl mx-auto
-        ${isMobile ? 'p-3' : isTablet ? 'p-4' : 'p-6'}
+        space-y-${isMobile ? '4' : '6'} max-w-7xl mx-auto
+        ${isMobile ? 'p-2' : isTablet ? 'p-4' : 'p-6'}
       `}>
         {/* Page Header */}
         <div className="flex items-center justify-between">
@@ -452,10 +452,8 @@ const BlockyReportsPage = () => {
           />
         </div>
 
-        {/* Charts Section - Mobile/Tablet Single Column */}
-        <div className={`grid gap-6 ${
-          isMobile || isTablet ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'
-        }`}>
+        {/* Charts Section - Single Column for Mobile/Tablet */}
+        <div className={`grid gap-${isMobile ? '4' : '6'} grid-cols-1`}>
           <SalesTrendChart
             data={salesTrendData}
             resolution={salesChartResolution}

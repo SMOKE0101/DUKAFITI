@@ -294,8 +294,8 @@ const UltraPolishedReportsPage = () => {
         onRemoveFilter={removeFilter}
       />
 
-      <div className={`max-w-7xl mx-auto space-y-6 md:space-y-8 ${
-        isMobile ? 'px-4 py-6' : isTablet ? 'px-6 py-8' : 'px-6 py-8'
+      <div className={`max-w-7xl mx-auto space-y-${isMobile ? '4' : '6 md:space-y-8'} ${
+        isMobile ? 'px-2 py-4' : isTablet ? 'px-4 py-6' : 'px-6 py-8'
       }`}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
@@ -332,9 +332,7 @@ const UltraPolishedReportsPage = () => {
           />
         </div>
 
-        <div className={`grid gap-6 ${
-          isMobile || isTablet ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'
-        }`}>
+        <div className={`grid gap-${isMobile ? '4' : '6'} grid-cols-1`}>
           <SalesTrendChart
             data={salesTrendData}
             resolution={salesChartResolution}

@@ -52,7 +52,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
     }
   };
 
-  // Mobile layout
+  // Mobile layout - redesigned to match desktop information
   if (isMobile) {
     return (
       <>
@@ -68,40 +68,82 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            {/* Category */}
+            <div className="mb-3">
+              <span className="text-xs text-gray-600 dark:text-gray-400">Category: </span>
+              <span className="font-medium text-gray-900 dark:text-white px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">{product.category}</span>
+            </div>
+
+            {/* Pricing Information */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Price</p>
-                <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{formatCurrency(product.sellingPrice)}</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cost Price</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(product.costPrice)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Stock</p>
-                <p className={`text-lg font-bold ${isLowStock && !isUnspecifiedQuantity ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
-                  {isUnspecifiedQuantity ? 'N/A' : product.currentStock}
-                </p>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selling Price</p>
+                <p className="text-sm font-bold text-green-600 dark:text-green-400">{formatCurrency(product.sellingPrice)}</p>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            {/* Stock Information */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Stock</p>
+                <p className={`text-sm font-bold ${isLowStock && !isUnspecifiedQuantity ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                  {isUnspecifiedQuantity ? 'N/A' : `${product.currentStock} units`}
+                </p>
+              </div>
+              {!isUnspecifiedQuantity && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Alert At</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{product.lowStockThreshold} units</p>
+                </div>
+              )}
+            </div>
+
+            {/* Low Stock Warning */}
+            {isLowStock && !isUnspecifiedQuantity && (
+              <div className="mb-4 p-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2">
+                <AlertTriangle className="w-3 h-3 text-amber-600 flex-shrink-0" />
+                <span className="text-xs font-medium text-amber-800 dark:text-amber-200">Stock is running low!</span>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onEdit(product)}
-                className="flex-1 h-9 rounded-lg border-2"
+                className="flex items-center justify-center gap-1 h-9 text-xs"
               >
-                <Edit className="w-3 h-3 mr-1" />
+                <Edit className="w-3 h-3" />
                 Edit
               </Button>
-              {!isUnspecifiedQuantity && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setShowRestockModal(true)}
-                  className="flex-1 h-9 rounded-lg bg-green-600 hover:bg-green-700"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Stock
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRestockModal(true)}
+                disabled={isUnspecifiedQuantity}
+                className={`flex items-center justify-center gap-1 h-9 text-xs ${
+                  isUnspecifiedQuantity 
+                    ? 'cursor-not-allowed opacity-50' 
+                    : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                }`}
+                title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
+              >
+                <Plus className="w-3 h-3" />
+                Stock
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete(product)}
+                className="flex items-center justify-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 h-9 text-xs"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -117,7 +159,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
     );
   }
 
-  // Tablet layout
+  // Tablet layout - enhanced with full desktop information
   if (isTablet) {
     return (
       <>
@@ -211,7 +253,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
     );
   }
 
-  // Desktop layout (keep existing desktop implementation)
+  // Desktop layout - keep existing desktop implementation
   return (
     <>
       <Card className={`bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700 ${isUnspecifiedQuantity ? 'opacity-90' : ''} flex flex-col h-full`}>

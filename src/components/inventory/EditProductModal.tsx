@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Product } from '../../types';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useToast } from '../../hooks/use-toast';
+import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -36,6 +37,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
 
   const { updateProduct } = useSupabaseProducts();
   const { toast } = useToast();
@@ -123,22 +127,32 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg rounded-2xl p-8 bg-white dark:bg-gray-800 shadow-xl">
+      <DialogContent className={`
+        ${isMobile 
+          ? 'max-w-[95vw] w-full mx-2 max-h-[90vh] overflow-y-auto' 
+          : isTablet 
+            ? 'max-w-[90vw] w-full max-h-[85vh] overflow-y-auto'
+            : 'max-w-lg'
+        } 
+        rounded-2xl ${isMobile ? 'p-4' : 'p-8'} bg-white dark:bg-gray-800 shadow-xl
+      `}>
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Edit Product</DialogTitle>
+          <DialogTitle className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold`}>
+            Edit Product
+          </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className={`space-y-${isMobile ? '3' : '4'} ${isMobile ? 'max-h-[70vh] overflow-y-auto' : ''}`}>
           {/* Product Name */}
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-lg font-semibold">
+            <Label htmlFor="name" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
               Product Name *
             </Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className={`focus-visible:ring-2 focus-visible:ring-brand-purple ${
+              className={`${isMobile ? 'h-12 text-base' : ''} focus-visible:ring-2 focus-visible:ring-brand-purple ${
                 errors.name ? 'border-red-500' : ''
               }`}
               placeholder="Enter product name"
@@ -149,13 +163,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Product Code (Read-only) */}
           <div className="space-y-2">
-            <Label htmlFor="code" className="text-lg font-semibold">
+            <Label htmlFor="code" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
               Product Code
             </Label>
             <Input
               id="code"
               value={product.id.slice(0, 8).toUpperCase()}
-              className="bg-gray-100 dark:bg-gray-700 font-mono"
+              className={`${isMobile ? 'h-12 text-base' : ''} bg-gray-100 dark:bg-gray-700 font-mono`}
               disabled
               readOnly
             />
@@ -163,11 +177,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Buying Price */}
           <div className="space-y-2">
-            <Label htmlFor="costPrice" className="text-lg font-semibold">
+            <Label htmlFor="costPrice" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
               Buying Price (KES) *
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+              <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${
+                isMobile ? 'text-base' : ''
+              }`}>
                 KES
               </span>
               <Input
@@ -176,7 +192,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
                 step="0.01"
                 value={formData.costPrice}
                 onChange={(e) => setFormData(prev => ({ ...prev, costPrice: e.target.value }))}
-                className={`pl-12 focus-visible:ring-2 focus-visible:ring-brand-purple ${
+                className={`${isMobile ? 'h-12 text-base pl-14' : 'pl-12'} focus-visible:ring-2 focus-visible:ring-brand-purple ${
                   errors.costPrice ? 'border-red-500' : ''
                 }`}
                 placeholder="0.00"
@@ -188,11 +204,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Selling Price */}
           <div className="space-y-2">
-            <Label htmlFor="sellingPrice" className="text-lg font-semibold">
+            <Label htmlFor="sellingPrice" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
               Selling Price (KES) *
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+              <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${
+                isMobile ? 'text-base' : ''
+              }`}>
                 KES
               </span>
               <Input
@@ -201,7 +219,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
                 step="0.01"
                 value={formData.sellingPrice}
                 onChange={(e) => setFormData(prev => ({ ...prev, sellingPrice: e.target.value }))}
-                className={`pl-12 focus-visible:ring-2 focus-visible:ring-brand-purple ${
+                className={`${isMobile ? 'h-12 text-base pl-14' : 'pl-12'} focus-visible:ring-2 focus-visible:ring-brand-purple ${
                   errors.sellingPrice ? 'border-red-500' : ''
                 }`}
                 placeholder="0.00"
@@ -213,7 +231,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Current Stock */}
           <div className="space-y-2">
-            <Label htmlFor="currentStock" className="text-lg font-semibold">
+            <Label htmlFor="currentStock" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
               Current Stock
             </Label>
             <Input
@@ -221,14 +239,14 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
               type="number"
               value={formData.currentStock}
               onChange={(e) => setFormData(prev => ({ ...prev, currentStock: e.target.value }))}
-              className="focus-visible:ring-2 focus-visible:ring-brand-purple"
+              className={`${isMobile ? 'h-12 text-base' : ''} focus-visible:ring-2 focus-visible:ring-brand-purple`}
               disabled={loading}
             />
           </div>
 
           {/* Low-Stock Threshold */}
           <div className="space-y-2">
-            <Label htmlFor="lowStockThreshold" className="text-lg font-semibold">
+            <Label htmlFor="lowStockThreshold" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
               Low-Stock Threshold *
             </Label>
             <Input
@@ -236,7 +254,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
               type="number"
               value={formData.lowStockThreshold}
               onChange={(e) => setFormData(prev => ({ ...prev, lowStockThreshold: e.target.value }))}
-              className={`focus-visible:ring-2 focus-visible:ring-brand-purple ${
+              className={`${isMobile ? 'h-12 text-base' : ''} focus-visible:ring-2 focus-visible:ring-brand-purple ${
                 errors.lowStockThreshold ? 'border-red-500' : ''
               }`}
               placeholder="10"
@@ -248,7 +266,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category" className="text-lg font-semibold">
+            <Label htmlFor="category" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
               Category *
             </Label>
             <Select 
@@ -256,7 +274,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
               onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
               disabled={loading}
             >
-              <SelectTrigger className={`bg-gray-100 dark:bg-gray-700 rounded-lg p-2 focus-visible:ring-2 focus-visible:ring-brand-purple ${
+              <SelectTrigger className={`${isMobile ? 'h-12 text-base' : ''} bg-gray-100 dark:bg-gray-700 rounded-lg p-2 focus-visible:ring-2 focus-visible:ring-brand-purple ${
                 errors.category ? 'border-red-500' : ''
               }`}>
                 <SelectValue placeholder="Select category" />
@@ -273,23 +291,46 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
           </div>
 
           {/* Actions */}
-          <div className="flex justify-between pt-6">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleClose}
-              className="text-gray-500 hover:text-gray-700"
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!isFormValid || loading}
-              className="bg-green-600 text-white rounded-lg px-6 py-2 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </Button>
+          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-6`}>
+            {isMobile ? (
+              <>
+                <Button
+                  onClick={handleSave}
+                  disabled={!isFormValid || loading}
+                  className="h-12 text-base bg-green-600 text-white rounded-lg hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleClose}
+                  className="h-12 text-base text-gray-500 hover:text-gray-700"
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleClose}
+                  className="text-gray-500 hover:text-gray-700"
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={!isFormValid || loading}
+                  className="bg-green-600 text-white rounded-lg px-6 py-2 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

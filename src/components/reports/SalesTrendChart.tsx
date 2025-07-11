@@ -20,26 +20,30 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
 
-  // Responsive margins
+  // Responsive margins - reduced for mobile to minimize whitespace
   const getMargins = () => {
     if (isMobile) {
-      return { top: 10, right: 15, left: 85, bottom: 30 };
+      return { top: 5, right: 10, left: 75, bottom: 25 };
     } else if (isTablet) {
-      return { top: 15, right: 20, left: 90, bottom: 25 };
+      return { top: 10, right: 15, left: 80, bottom: 30 };
     }
     return { top: 20, right: 30, left: 70, bottom: 20 };
   };
 
   // Responsive font sizes
   const getAxisFontSize = () => {
-    if (isMobile) return 11;
+    if (isMobile) return 12;
     if (isTablet) return 12;
     return 12;
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-4 md:p-6 lg:p-8">
-      <div className={`flex items-center justify-between mb-4 md:mb-6 ${isMobile ? 'flex-col gap-4' : ''}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md ${
+      isMobile ? 'p-2' : isTablet ? 'p-4' : 'p-6 lg:p-8'
+    }`}>
+      <div className={`flex items-center justify-between ${
+        isMobile ? 'mb-3 flex-col gap-3' : 'mb-4 md:mb-6'
+      }`}>
         <div className={isMobile ? 'text-center' : ''}>
           <h3 className={`font-mono font-black uppercase tracking-tight text-gray-900 dark:text-white ${
             isMobile ? 'text-lg' : 'text-xl'
@@ -56,7 +60,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
               key={option}
               onClick={() => onResolutionChange(option)}
               className={`transition-all ${
-                isMobile ? 'px-4 py-3 text-xs' : isTablet ? 'px-3 py-2 text-sm' : 'px-3 py-1 text-sm'
+                isMobile ? 'px-3 py-2 text-xs' : isTablet ? 'px-3 py-2 text-sm' : 'px-3 py-1 text-sm'
               } font-medium rounded ${
                 resolution === option
                   ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm font-mono font-bold uppercase'
@@ -70,14 +74,14 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className={`mb-${isMobile ? '2' : '4'}`}>
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
           <span className="font-mono font-bold uppercase tracking-tight">Revenue</span>
         </div>
       </div>
 
-      <div className={`w-full ${isMobile ? 'h-64' : isTablet ? 'h-72' : 'h-80'}`}>
+      <div className={`w-full ${isMobile ? 'h-72' : isTablet ? 'h-80' : 'h-80'}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
@@ -92,13 +96,13 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
               interval={isMobile ? 'preserveStartEnd' : 0}
               angle={isMobile ? -45 : 0}
               textAnchor={isMobile ? 'end' : 'middle'}
-              height={isMobile ? 60 : 30}
+              height={isMobile ? 50 : 30}
             />
             <YAxis 
               stroke="#64748b"
               fontSize={getAxisFontSize()}
               tickFormatter={(value) => formatCurrency(value)}
-              width={isMobile ? 80 : 60}
+              width={isMobile ? 70 : 60}
             />
             <Tooltip 
               formatter={(value: number) => [formatCurrency(value), 'Revenue']}
@@ -108,7 +112,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                fontSize: isMobile ? '14px' : '12px',
+                fontSize: isMobile ? '12px' : '12px',
               }}
             />
             <Line 
