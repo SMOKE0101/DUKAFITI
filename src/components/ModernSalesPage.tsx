@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
 import { Clock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
@@ -26,6 +27,7 @@ const ModernSalesPage = () => {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
+  const { user } = useAuth();
 
   const { sales, loading: salesLoading } = useSupabaseSales();
   const { products, loading: productsLoading } = useSupabaseProducts();
@@ -67,9 +69,10 @@ const ModernSalesPage = () => {
   }, [products, searchTerm]);
 
   const addToCart = (product: Product) => {
+    // Allow adding products even if stock is low or unspecified, but warn user
     if (product.currentStock <= 0) {
-      alert('This product is out of stock.');
-      return;
+      const shouldAdd = window.confirm('This product appears to be out of stock. Do you want to add it anyway?');
+      if (!shouldAdd) return;
     }
 
     const existingItem = cart.find(item => item.id === product.id);
@@ -111,13 +114,19 @@ const ModernSalesPage = () => {
       return;
     }
 
+    if (!user) {
+      alert('You must be logged in to complete a sale.');
+      return;
+    }
+
     setIsProcessingCheckout(true);
     try {
       const customerId = selectedCustomerId === '' ? null : selectedCustomerId;
       const customer = customers.find(c => c.id === customerId);
 
-      // Prepare sales data for batch insert
+      // Prepare sales data for batch insert with correct field names
       const salesData = cart.map(item => ({
+        user_id: user.id,
         product_id: item.id,
         product_name: item.name,
         quantity: item.quantity,
@@ -128,6 +137,7 @@ const ModernSalesPage = () => {
         customer_id: customerId,
         customer_name: customer ? customer.name : null,
         payment_method: paymentMethod,
+        payment_details: {},
         timestamp: new Date().toISOString(),
       }));
 
@@ -140,16 +150,19 @@ const ModernSalesPage = () => {
         throw new Error('Failed to record sales.');
       }
 
-      // Update stock for each item
+      // Update stock for each item - only if current stock is greater than 0
       for (const item of cart) {
-        const { error: productError } = await supabase
-          .from('products')
-          .update({ current_stock: item.currentStock - item.quantity })
-          .eq('id', item.id);
+        if (item.currentStock > 0) {
+          const newStock = Math.max(0, item.currentStock - item.quantity);
+          const { error: productError } = await supabase
+            .from('products')
+            .update({ current_stock: newStock })
+            .eq('id', item.id);
 
-        if (productError) {
-          console.error('Error updating product stock:', productError);
-          throw new Error('Failed to update product stock.');
+          if (productError) {
+            console.error('Error updating product stock:', productError);
+            // Don't throw error here, just log it - sale should still complete
+          }
         }
       }
 
@@ -237,7 +250,7 @@ const ModernSalesPage = () => {
                     border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-white/50 dark:bg-gray-800/50 
                     cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
                     hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 group p-4
-                    ${product.currentStock <= 0 ? 'opacity-50 cursor-not-allowed border-gray-300' : ''}
+                    ${product.currentStock === 0 ? 'border-orange-300 bg-orange-50/50' : ''}
                   `}
                 >
                   <div className="space-y-3">
@@ -271,10 +284,16 @@ const ModernSalesPage = () => {
                           {formatCurrency(product.sellingPrice)}
                         </p>
                         <p className={`
-                          text-purple-500 dark:text-purple-400 font-mono font-bold uppercase
+                          font-mono font-bold uppercase
                           ${isMobile ? 'text-xs' : 'text-sm'}
+                          ${product.currentStock === 0 
+                            ? 'text-orange-500 dark:text-orange-400' 
+                            : product.currentStock <= (product.lowStockThreshold || 10)
+                            ? 'text-yellow-500 dark:text-yellow-400'
+                            : 'text-purple-500 dark:text-purple-400'
+                          }
                         `}>
-                          Stock: {product.currentStock}
+                          Stock: {product.currentStock === 0 ? 'Out of Stock' : product.currentStock}
                         </p>
                       </div>
                     </div>
