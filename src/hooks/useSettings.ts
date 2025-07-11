@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -64,7 +65,7 @@ const defaultSettings: ShopSettings = {
   receiptNumberFormat: 'RCP-{number}',
   defaultPaymentMethods: ['cash', 'mpesa'],
   mpesaTillNumber: '',
-  defaultDebtLimit: 10000, // Renamed from defaultCreditLimit
+  defaultDebtLimit: 10000,
   interestRate: 0,
   paymentReminderDays: 7,
   enablePenalty: false,
@@ -80,7 +81,7 @@ const defaultSettings: ShopSettings = {
   debtReminderMessage: 'Hello {customerName}, you have an outstanding debt of KSh {amount}. Please settle by {dueDate}. Thank you.',
   paymentConfirmationMessage: 'Thank you {customerName}! Payment of KSh {amount} received. Outstanding balance: KSh {balance}.',
   lowStockMessage: 'Alert: {productName} is running low. Current stock: {currentStock}',
-  theme: 'light',
+  theme: 'light', // Changed default from 'light' to ensure it's explicitly light
   currencyFormat: 'KSh {amount}',
   dateFormat: 'DD/MM/YYYY',
   language: 'en',

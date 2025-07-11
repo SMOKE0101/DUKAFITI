@@ -1,5 +1,5 @@
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -36,6 +36,28 @@ const queryClient = new QueryClient({
   },
 });
 
+// Theme initialization function
+const initializeTheme = () => {
+  const savedTheme = localStorage.getItem('dukafiti_settings_guest') || localStorage.getItem(`dukafiti_settings_${localStorage.getItem('supabase.auth.token')}`);
+  let theme = 'light'; // Default to light
+  
+  if (savedTheme) {
+    try {
+      const settings = JSON.parse(savedTheme);
+      theme = settings.theme || 'light';
+    } catch (error) {
+      console.error('Error parsing saved theme:', error);
+    }
+  }
+  
+  const root = window.document.documentElement;
+  if (theme === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+};
+
 // Loading component
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-64">
@@ -44,6 +66,11 @@ const LoadingSpinner = () => (
 );
 
 function App() {
+  useEffect(() => {
+    // Initialize theme on app load
+    initializeTheme();
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

@@ -29,16 +29,6 @@ const AppearanceSettings = () => {
     }
   }, [settings.theme]);
 
-  // Get current theme from settings or detect system theme
-  const getCurrentTheme = () => {
-    if (settings.theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return settings.theme;
-  };
-
-  const currentTheme = getCurrentTheme();
-
   if (loading) {
     return (
       <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
@@ -76,13 +66,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('light')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              currentTheme === 'light' 
+              settings.theme === 'light'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              currentTheme === 'light' 
+              settings.theme === 'light'
                 ? 'bg-yellow-100 dark:bg-yellow-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>
@@ -98,13 +88,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('dark')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              currentTheme === 'dark' 
+              settings.theme === 'dark'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              currentTheme === 'dark' 
+              settings.theme === 'dark'
                 ? 'bg-blue-100 dark:bg-blue-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>

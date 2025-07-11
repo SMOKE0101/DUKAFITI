@@ -82,12 +82,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
           variant="ghost"
           size="sm"
           onClick={onToggle}
-          className="p-2"
+          className="p-2 hover:bg-sidebar-accent"
         >
           {isOpen ? (
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />
           ) : (
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 text-sidebar-foreground" />
           )}
         </Button>
       </div>

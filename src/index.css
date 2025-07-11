@@ -40,6 +40,15 @@
   --input: 220 13% 91%;
   --ring: 217 91% 60%;
   
+  /* Sidebar Colors - Light Mode */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 220 13% 18%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-muted: 220 14% 96%;
+  --sidebar-muted-foreground: 220 8.9% 46.1%;
+  --sidebar-accent: 217 91% 95%;
+  --sidebar-accent-foreground: 217 91% 60%;
+  
   /* Chart Colors for Reports */
   --chart-1: 217 91% 60%;
   --chart-2: 142 76% 36%;
@@ -70,6 +79,16 @@
   --border: 220 13% 18%;
   --input: 220 13% 18%;
   --ring: 217 91% 60%;
+  
+  /* Sidebar Colors - Dark Mode */
+  --sidebar: 220 13% 12%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-border: 220 13% 18%;
+  --sidebar-muted: 220 13% 18%;
+  --sidebar-muted-foreground: 220 8.9% 64.9%;
+  --sidebar-accent: 220 13% 18%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  
   --chart-1: 217 91% 70%;
   --chart-2: 142 76% 46%;
   --chart-3: 43 96% 66%;
@@ -121,6 +140,15 @@ body {
     text-transform: uppercase;
     color: hsl(var(--primary));
   }
+  
+  /* DukaFiti Brand Component */
+  .dukafiti-brand {
+    font-weight: 800;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--success)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 }
 
 @layer components {
@@ -164,6 +192,18 @@ body {
   
   .status-error {
     @apply inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive border border-destructive/20;
+  }
+  
+  /* Navigation Item Styling */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 
+           hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
+           transition-all duration-200 relative;
+  }
+  
+  .nav-item.active {
+    @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium
+           shadow-sm border border-sidebar-border/50;
   }
 }
 

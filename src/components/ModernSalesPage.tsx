@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
@@ -69,9 +68,9 @@ const ModernSalesPage = () => {
   }, [products, searchTerm]);
 
   const addToCart = (product: Product) => {
-    // Allow adding products even if stock is low or unspecified, but warn user
-    if (product.currentStock <= 0) {
-      const shouldAdd = window.confirm('This product appears to be out of stock. Do you want to add it anyway?');
+    // Only show confirmation for products with exactly 0 stock, not unspecified/negative stock
+    if (product.currentStock === 0) {
+      const shouldAdd = window.confirm('This product is out of stock. Do you want to add it anyway?');
       if (!shouldAdd) return;
     }
 
@@ -177,6 +176,21 @@ const ModernSalesPage = () => {
     }
   };
 
+  // Helper function to get stock display text
+  const getStockDisplayText = (stock: number) => {
+    if (stock < 0) return 'Unspecified';
+    if (stock === 0) return 'Out of Stock';
+    return stock.toString();
+  };
+
+  // Helper function to get stock color class
+  const getStockColorClass = (stock: number, lowStockThreshold: number = 10) => {
+    if (stock < 0) return 'text-gray-500 dark:text-gray-400'; // Unspecified
+    if (stock === 0) return 'text-orange-500 dark:text-orange-400'; // Out of stock
+    if (stock <= lowStockThreshold) return 'text-yellow-500 dark:text-yellow-400'; // Low stock
+    return 'text-purple-500 dark:text-purple-400'; // Normal stock
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
@@ -250,7 +264,8 @@ const ModernSalesPage = () => {
                     border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-white/50 dark:bg-gray-800/50 
                     cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
                     hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 group p-4
-                    ${product.currentStock === 0 ? 'border-orange-300 bg-orange-50/50' : ''}
+                    ${product.currentStock === 0 ? 'border-orange-300 bg-orange-50/50 dark:bg-orange-900/20' : ''}
+                    ${product.currentStock < 0 ? 'border-gray-300 bg-gray-50/50 dark:bg-gray-800/30' : ''}
                   `}
                 >
                   <div className="space-y-3">
@@ -286,14 +301,9 @@ const ModernSalesPage = () => {
                         <p className={`
                           font-mono font-bold uppercase
                           ${isMobile ? 'text-xs' : 'text-sm'}
-                          ${product.currentStock === 0 
-                            ? 'text-orange-500 dark:text-orange-400' 
-                            : product.currentStock <= (product.lowStockThreshold || 10)
-                            ? 'text-yellow-500 dark:text-yellow-400'
-                            : 'text-purple-500 dark:text-purple-400'
-                          }
+                          ${getStockColorClass(product.currentStock, product.lowStockThreshold)}
                         `}>
-                          Stock: {product.currentStock === 0 ? 'Out of Stock' : product.currentStock}
+                          Stock: {getStockDisplayText(product.currentStock)}
                         </p>
                       </div>
                     </div>
