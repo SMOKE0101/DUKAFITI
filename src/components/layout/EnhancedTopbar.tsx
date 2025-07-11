@@ -6,29 +6,48 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTheme } from 'next-themes';
 
 interface EnhancedTopbarProps {
-  onMenuClick: () => void;
-  sidebarOpen: boolean;
+  onMenuClick?: () => void;
+  sidebarOpen?: boolean;
+  onSidebarToggle?: () => void;
+  sidebarCollapsed?: boolean;
+  hideSidebarToggle?: boolean;
 }
 
-const EnhancedTopbar = ({ onMenuClick, sidebarOpen }: EnhancedTopbarProps) => {
+const EnhancedTopbar = ({ 
+  onMenuClick, 
+  sidebarOpen = false, 
+  onSidebarToggle,
+  sidebarCollapsed = false,
+  hideSidebarToggle = false
+}: EnhancedTopbarProps) => {
   const { theme } = useTheme();
   
   const logoSrc = theme === 'dark' 
     ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
     : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
+  const handleMenuClick = () => {
+    if (onMenuClick) {
+      onMenuClick();
+    } else if (onSidebarToggle) {
+      onSidebarToggle();
+    }
+  };
+
   return (
     <div className="h-16 bg-[#602d86] border-b border-border/40 flex items-center justify-between px-4 lg:px-6">
       {/* Left Side - Logo and Menu */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onMenuClick}
-          className="lg:hidden text-white hover:bg-white/10"
-        >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        {!hideSidebarToggle && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleMenuClick}
+            className="lg:hidden text-white hover:bg-white/10"
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        )}
         
         <div className="flex items-center gap-3">
           <img 
