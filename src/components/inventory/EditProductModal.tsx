@@ -129,12 +129,12 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className={`
         ${isMobile 
-          ? 'max-w-[95vw] w-full mx-2 max-h-[90vh] overflow-y-auto' 
+          ? 'max-w-[98vw] w-full mx-1 max-h-[95vh] overflow-y-auto' 
           : isTablet 
-            ? 'max-w-[90vw] w-full max-h-[85vh] overflow-y-auto'
+            ? 'max-w-[95vw] w-full max-h-[90vh] overflow-y-auto'
             : 'max-w-lg'
         } 
-        rounded-2xl ${isMobile ? 'p-4' : 'p-8'} bg-white dark:bg-gray-800 shadow-xl
+        rounded-2xl ${isMobile ? 'p-3' : 'p-8'} bg-white dark:bg-gray-800 shadow-xl
       `}>
         <DialogHeader>
           <DialogTitle className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold`}>
@@ -142,10 +142,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
           </DialogTitle>
         </DialogHeader>
         
-        <div className={`space-y-${isMobile ? '3' : '4'} ${isMobile ? 'max-h-[70vh] overflow-y-auto' : ''}`}>
+        <div className={`space-y-${isMobile ? '4' : '4'} ${isMobile ? 'max-h-[75vh] overflow-y-auto' : ''}`}>
           {/* Product Name */}
           <div className="space-y-2">
-            <Label htmlFor="name" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+            <Label htmlFor="name" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Product Name *
             </Label>
             <Input
@@ -163,7 +163,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Product Code (Read-only) */}
           <div className="space-y-2">
-            <Label htmlFor="code" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+            <Label htmlFor="code" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Product Code
             </Label>
             <Input
@@ -177,7 +177,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Buying Price */}
           <div className="space-y-2">
-            <Label htmlFor="costPrice" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+            <Label htmlFor="costPrice" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Buying Price (KES) *
             </Label>
             <div className="relative">
@@ -204,7 +204,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Selling Price */}
           <div className="space-y-2">
-            <Label htmlFor="sellingPrice" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+            <Label htmlFor="sellingPrice" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Selling Price (KES) *
             </Label>
             <div className="relative">
@@ -231,7 +231,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Current Stock */}
           <div className="space-y-2">
-            <Label htmlFor="currentStock" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+            <Label htmlFor="currentStock" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Current Stock
             </Label>
             <Input
@@ -246,7 +246,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Low-Stock Threshold */}
           <div className="space-y-2">
-            <Label htmlFor="lowStockThreshold" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+            <Label htmlFor="lowStockThreshold" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Low-Stock Threshold *
             </Label>
             <Input
@@ -266,7 +266,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category" className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+            <Label htmlFor="category" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Category *
             </Label>
             <Select 
@@ -291,7 +291,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
           </div>
 
           {/* Actions */}
-          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-6`}>
+          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-4`}>
             {isMobile ? (
               <>
                 <Button

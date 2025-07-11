@@ -52,12 +52,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
     }
   };
 
-  // Mobile layout - redesigned to match desktop information
+  // Mobile layout - redesigned to match desktop information exactly
   if (isMobile) {
     return (
       <>
         <Card className="bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700">
           <CardContent className="p-4">
+            {/* Header with name, ID and badge */}
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1 min-w-0 mr-3">
                 <h3 className="font-semibold text-base text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>
@@ -68,55 +69,55 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               </div>
             </div>
 
-            {/* Category */}
-            <div className="mb-3">
-              <span className="text-xs text-gray-600 dark:text-gray-400">Category: </span>
+            {/* Category - exactly like desktop */}
+            <div className="mb-3 flex justify-between items-center">
+              <span className="text-xs text-gray-600 dark:text-gray-400">Category:</span>
               <span className="font-medium text-gray-900 dark:text-white px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">{product.category}</span>
             </div>
 
-            {/* Pricing Information */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cost Price</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(product.costPrice)}</p>
+            {/* Pricing Information - both prices like desktop */}
+            <div className="space-y-2 mb-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Cost Price:</span>
+                <span className="font-semibold text-gray-900 dark:text-white text-sm">{formatCurrency(product.costPrice)}</span>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selling Price</p>
-                <p className="text-sm font-bold text-green-600 dark:text-green-400">{formatCurrency(product.sellingPrice)}</p>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Selling Price:</span>
+                <span className="font-bold text-green-600 dark:text-green-400 text-sm">{formatCurrency(product.sellingPrice)}</span>
               </div>
             </div>
 
-            {/* Stock Information */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Stock</p>
-                <p className={`text-sm font-bold ${isLowStock && !isUnspecifiedQuantity ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
-                  {isUnspecifiedQuantity ? 'N/A' : `${product.currentStock} units`}
-                </p>
+            {/* Stock Information - exactly like desktop */}
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Stock:</span>
+                <span className={`font-bold text-sm ${isLowStock && !isUnspecifiedQuantity ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                  {isUnspecifiedQuantity ? 'Unspecified' : `${product.currentStock} units`}
+                </span>
               </div>
               {!isUnspecifiedQuantity && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Alert At</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{product.lowStockThreshold} units</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
+                  <span className="font-medium text-gray-900 dark:text-white text-sm">{product.lowStockThreshold} units</span>
                 </div>
               )}
             </div>
 
-            {/* Low Stock Warning */}
+            {/* Low Stock Warning - exactly like desktop */}
             {isLowStock && !isUnspecifiedQuantity && (
-              <div className="mb-4 p-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2">
-                <AlertTriangle className="w-3 h-3 text-amber-600 flex-shrink-0" />
+              <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                 <span className="text-xs font-medium text-amber-800 dark:text-amber-200">Stock is running low!</span>
               </div>
             )}
 
-            {/* Action Buttons */}
+            {/* Action Buttons - all three like desktop */}
             <div className="grid grid-cols-3 gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onEdit(product)}
-                className="flex items-center justify-center gap-1 h-9 text-xs"
+                className="flex items-center justify-center gap-1 h-11 text-xs rounded-xl border-2 hover:shadow-md transition-all duration-200"
               >
                 <Edit className="w-3 h-3" />
                 Edit
@@ -126,21 +127,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                 size="sm"
                 onClick={() => setShowRestockModal(true)}
                 disabled={isUnspecifiedQuantity}
-                className={`flex items-center justify-center gap-1 h-9 text-xs ${
+                className={`flex items-center justify-center gap-1 h-11 text-xs rounded-xl border-2 hover:shadow-md transition-all duration-200 ${
                   isUnspecifiedQuantity 
                     ? 'cursor-not-allowed opacity-50' 
                     : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
                 }`}
                 title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
               >
-                <Plus className="w-3 h-3" />
+                <Package className="w-3 h-3" />
                 Stock
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onDelete(product)}
-                className="flex items-center justify-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 h-9 text-xs"
+                className="flex items-center justify-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 h-11 text-xs rounded-xl border-2 hover:shadow-md transition-all duration-200"
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
