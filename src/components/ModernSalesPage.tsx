@@ -39,6 +39,8 @@ interface CartItem {
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const ModernSalesPage = () => {
+  console.log('🚀 ModernSalesPage component loaded - NEW AESTHETIC VERSION');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [total, setTotal] = useState(0);
