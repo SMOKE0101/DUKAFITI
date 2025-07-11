@@ -40,8 +40,8 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Router>
+        <Router>
+          <AuthProvider>
             <div className="min-h-screen bg-background">
               <Routes>
                 {/* Public routes */}
@@ -125,10 +125,10 @@ function App() {
                 {/* Catch all route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <Toaster />
             </div>
-          </Router>
-          <Toaster />
-        </AuthProvider>
+          </AuthProvider>
+        </Router>
       </QueryClientProvider>
     </ErrorBoundary>
   );
