@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { ArrowRight, Play, Check, Star, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Check, Star, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -173,10 +174,6 @@ const ModernLanding = () => {
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </a>
                 </Button>
-                <Button size="lg" variant="outline">
-                  <Play className="mr-2 w-5 h-5" />
-                  Learn More
-                </Button>
               </div>
             </div>
 
@@ -240,12 +237,6 @@ const ModernLanding = () => {
                 </div>
               </Card>
             ))}
-          </div>
-
-          <div className="mt-12 text-center">
-            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-              Learn More
-            </Button>
           </div>
         </div>
       </section>

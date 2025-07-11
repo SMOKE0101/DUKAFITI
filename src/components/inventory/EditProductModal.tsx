@@ -44,6 +44,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
   const { updateProduct } = useSupabaseProducts();
   const { toast } = useToast();
 
+  // Check if this is an unspecified stock product
+  const isUnspecifiedStock = product?.currentStock === -1;
+
   useEffect(() => {
     if (product && isOpen) {
       setFormData({
@@ -62,15 +65,21 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) newErrors.name = 'Product name is required';
-    if (!formData.costPrice || parseFloat(formData.costPrice) <= 0) {
+    
+    // Only validate cost price for specified stock products
+    if (!isUnspecifiedStock && (!formData.costPrice || parseFloat(formData.costPrice) <= 0)) {
       newErrors.costPrice = 'Valid buying price is required';
     }
+    
     if (!formData.sellingPrice || parseFloat(formData.sellingPrice) <= 0) {
       newErrors.sellingPrice = 'Valid selling price is required';
     }
-    if (!formData.lowStockThreshold || parseInt(formData.lowStockThreshold) < 0) {
+    
+    // Only validate low stock threshold for specified stock products
+    if (!isUnspecifiedStock && (!formData.lowStockThreshold || parseInt(formData.lowStockThreshold) < 0)) {
       newErrors.lowStockThreshold = 'Valid threshold is required';
     }
+    
     if (!formData.category) newErrors.category = 'Category is required';
 
     setErrors(newErrors);
@@ -87,10 +96,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
         ...product,
         name: formData.name.trim(),
         category: formData.category,
-        costPrice: parseFloat(formData.costPrice),
+        costPrice: isUnspecifiedStock ? 0 : parseFloat(formData.costPrice),
         sellingPrice: parseFloat(formData.sellingPrice),
-        currentStock: parseInt(formData.currentStock),
-        lowStockThreshold: parseInt(formData.lowStockThreshold)
+        currentStock: isUnspecifiedStock ? -1 : parseInt(formData.currentStock),
+        lowStockThreshold: isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold)
       };
 
       await updateProduct(product.id, updatedProduct);
@@ -120,8 +129,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     onClose();
   };
 
-  const isFormValid = formData.name && formData.costPrice && 
-                     formData.sellingPrice && formData.lowStockThreshold && formData.category;
+  const isFormValid = formData.name && formData.sellingPrice && formData.category;
 
   if (!product) return null;
 
@@ -180,23 +188,26 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
             <Label htmlFor="costPrice" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Buying Price (KES) *
             </Label>
+            {isUnspecifiedStock && (
+              <p className="text-xs text-muted-foreground">Disabled for unspecified-quantity items</p>
+            )}
             <div className="relative">
-              <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${
-                isMobile ? 'text-base' : ''
-              }`}>
+              <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+                isUnspecifiedStock ? 'text-gray-400' : 'text-muted-foreground'
+              } ${isMobile ? 'text-base' : ''}`}>
                 KES
               </span>
               <Input
                 id="costPrice"
                 type="number"
                 step="0.01"
-                value={formData.costPrice}
+                value={isUnspecifiedStock ? '' : formData.costPrice}
                 onChange={(e) => setFormData(prev => ({ ...prev, costPrice: e.target.value }))}
                 className={`${isMobile ? 'h-12 text-base pl-14' : 'pl-12'} focus-visible:ring-2 focus-visible:ring-brand-purple ${
                   errors.costPrice ? 'border-red-500' : ''
-                }`}
-                placeholder="0.00"
-                disabled={loading}
+                } ${isUnspecifiedStock ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : ''}`}
+                placeholder={isUnspecifiedStock ? "Disabled" : "0.00"}
+                disabled={isUnspecifiedStock || loading}
               />
             </div>
             {errors.costPrice && <p className="text-red-500 text-sm">{errors.costPrice}</p>}
@@ -234,13 +245,19 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
             <Label htmlFor="currentStock" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Current Stock
             </Label>
+            {isUnspecifiedStock && (
+              <p className="text-xs text-muted-foreground">Disabled for unspecified-quantity items</p>
+            )}
             <Input
               id="currentStock"
               type="number"
-              value={formData.currentStock}
+              value={isUnspecifiedStock ? '' : formData.currentStock}
               onChange={(e) => setFormData(prev => ({ ...prev, currentStock: e.target.value }))}
-              className={`${isMobile ? 'h-12 text-base' : ''} focus-visible:ring-2 focus-visible:ring-brand-purple`}
-              disabled={loading}
+              className={`${isMobile ? 'h-12 text-base' : ''} focus-visible:ring-2 focus-visible:ring-brand-purple ${
+                isUnspecifiedStock ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : ''
+              }`}
+              placeholder={isUnspecifiedStock ? "Unspecified quantity" : "0"}
+              disabled={isUnspecifiedStock || loading}
             />
           </div>
 
@@ -249,16 +266,19 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
             <Label htmlFor="lowStockThreshold" className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold`}>
               Low-Stock Threshold *
             </Label>
+            {isUnspecifiedStock && (
+              <p className="text-xs text-muted-foreground">Disabled for unspecified-quantity items</p>
+            )}
             <Input
               id="lowStockThreshold"
               type="number"
-              value={formData.lowStockThreshold}
+              value={isUnspecifiedStock ? '' : formData.lowStockThreshold}
               onChange={(e) => setFormData(prev => ({ ...prev, lowStockThreshold: e.target.value }))}
               className={`${isMobile ? 'h-12 text-base' : ''} focus-visible:ring-2 focus-visible:ring-brand-purple ${
                 errors.lowStockThreshold ? 'border-red-500' : ''
-              }`}
-              placeholder="10"
-              disabled={loading}
+              } ${isUnspecifiedStock ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : ''}`}
+              placeholder={isUnspecifiedStock ? "Disabled" : "10"}
+              disabled={isUnspecifiedStock || loading}
             />
             <p className="text-sm text-muted-foreground">Alert when qty ≤ this value</p>
             {errors.lowStockThreshold && <p className="text-red-500 text-sm">{errors.lowStockThreshold}</p>}
