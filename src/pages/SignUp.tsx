@@ -4,6 +4,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -20,6 +21,11 @@ const SignUp = () => {
 
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
+
+  const logoSrc = theme === 'dark' 
+    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
+    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -92,9 +98,11 @@ const SignUp = () => {
           {/* Header */}
           <div className="text-center">
             <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                <span className="text-white font-bold text-lg">D</span>
-              </div>
+              <img 
+                src={logoSrc}
+                alt="DUKAFITI Logo" 
+                className="h-12 w-auto group-hover:scale-105 transition-transform"
+              />
               <span className="text-2xl font-bold text-gray-900">DUKAFITI</span>
             </Link>
             
@@ -282,9 +290,11 @@ const SignUp = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           <div className="absolute inset-0 flex items-center justify-center p-12">
             <div className="text-center text-white max-w-md">
-              <div className="w-24 h-24 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-8 backdrop-blur-sm">
-                <span className="text-white font-bold text-3xl">D</span>
-              </div>
+              <img 
+                src={logoSrc}
+                alt="DUKAFITI Logo" 
+                className="w-24 h-24 mx-auto mb-8 bg-white/20 rounded-2xl p-4 backdrop-blur-sm"
+              />
               <h2 className="text-3xl font-bold mb-4">Join DUKAFITI Today</h2>
               <p className="text-lg opacity-90 leading-relaxed">
                 Transform your duka with smart POS technology designed for Kenyan businesses.

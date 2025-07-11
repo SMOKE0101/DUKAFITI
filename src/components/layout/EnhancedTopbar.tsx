@@ -53,7 +53,7 @@ const EnhancedTopbar = ({
           <img 
             src={logoSrc}
             alt="DUKAFITI Logo" 
-            className="h-8 w-auto"
+            className="h-10 w-auto"
           />
           <span className="text-xl font-bold text-white hidden sm:block">DUKAFITI</span>
         </div>

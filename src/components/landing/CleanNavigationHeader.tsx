@@ -3,9 +3,15 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const CleanNavigationHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme } = useTheme();
+
+  const logoSrc = theme === 'dark' 
+    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
+    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -18,9 +24,11 @@ const CleanNavigationHeader = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-teal-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">D</span>
-              </div>
+              <img 
+                src={logoSrc}
+                alt="DUKAFITI Logo" 
+                className="h-10 w-auto"
+              />
               <span className="text-xl font-bold text-gray-900">DUKAFITI</span>
             </Link>
           </div>

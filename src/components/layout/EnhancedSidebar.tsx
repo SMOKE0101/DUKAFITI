@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
@@ -53,20 +52,10 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
     }
   };
 
-  // Get the appropriate logo based on theme and collapsed state
-  const getLogoSrc = () => {
-    if (isCollapsed) {
-      // Use cube icons for collapsed state - need to create these or use smaller versions
-      return theme === 'dark' 
-        ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png' // Dark mode logo (will be sized down)
-        : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png'; // Light mode logo (will be sized down)
-    } else {
-      // Use full logos for expanded state
-      return theme === 'dark'
-        ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png' // Dark mode full logo
-        : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png'; // Light mode full logo
-    }
-  };
+  // Get the appropriate logo based on theme
+  const logoSrc = theme === 'dark' 
+    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
+    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
   // Desktop Sidebar only - Enhanced with professional design and proper dark mode
   return (
@@ -91,7 +80,7 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
             "transform-gpu will-change-transform"
           )}>
             <img 
-              src={getLogoSrc()}
+              src={logoSrc}
               alt="DUKAFITI Logo"
               className={cn(
                 "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] object-contain",
