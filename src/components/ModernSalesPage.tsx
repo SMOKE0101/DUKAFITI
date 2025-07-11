@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Customer } from '../types';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
@@ -50,7 +49,7 @@ const ModernSalesPage = () => {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   const { products } = useSupabaseProducts();
-  const { customers, refetch: refetchCustomers } = useSupabaseCustomers();
+  const { customers, refreshCustomers } = useSupabaseCustomers();
   const { createSales } = useSupabaseSales();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -174,7 +173,7 @@ const ModernSalesPage = () => {
   };
 
   const handleCustomerAdded = (newCustomer: Customer) => {
-    refetchCustomers();
+    refreshCustomers();
     setSelectedCustomer(newCustomer);
     toast({
       title: "Customer Added",

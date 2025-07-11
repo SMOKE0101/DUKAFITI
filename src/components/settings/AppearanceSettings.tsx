@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { useSettings } from '../../hooks/useSettings';
 import { Palette, Sun, Moon } from 'lucide-react';
@@ -18,6 +18,26 @@ const AppearanceSettings = () => {
       root.classList.remove('dark');
     }
   };
+
+  // Initialize theme on component mount
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (settings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [settings.theme]);
+
+  // Get current theme from settings or detect system theme
+  const getCurrentTheme = () => {
+    if (settings.theme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return settings.theme;
+  };
+
+  const currentTheme = getCurrentTheme();
 
   if (loading) {
     return (
@@ -56,13 +76,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('light')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              settings.theme === 'light' 
+              currentTheme === 'light' 
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              settings.theme === 'light' 
+              currentTheme === 'light' 
                 ? 'bg-yellow-100 dark:bg-yellow-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>
@@ -78,13 +98,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('dark')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              settings.theme === 'dark' 
+              currentTheme === 'dark' 
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              settings.theme === 'dark' 
+              currentTheme === 'dark' 
                 ? 'bg-blue-100 dark:bg-blue-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>
