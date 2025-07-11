@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import AddCustomerModal from './sales/AddCustomerModal';
 import { 
   Plus, 
   Minus, 
@@ -24,7 +25,8 @@ import {
   TrendingUp, 
   Zap,
   CheckCircle,
-  X
+  X,
+  RotateCcw
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { useToast } from '../hooks/use-toast';
@@ -45,9 +47,10 @@ const ModernSalesPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   const { products } = useSupabaseProducts();
-  const { customers } = useSupabaseCustomers();
+  const { customers, refetch: refetchCustomers } = useSupabaseCustomers();
   const { createSales } = useSupabaseSales();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -168,6 +171,15 @@ const ModernSalesPage = () => {
     setTotal(0);
     setSelectedCustomer(null);
     setPaymentMethod('cash');
+  };
+
+  const handleCustomerAdded = (newCustomer: Customer) => {
+    refetchCustomers();
+    setSelectedCustomer(newCustomer);
+    toast({
+      title: "Customer Added",
+      description: `${newCustomer.name} has been added and selected.`,
+    });
   };
 
   const ProductCard = ({ product }: { product: Product }) => (
@@ -292,21 +304,31 @@ const ModernSalesPage = () => {
             <label className="text-sm font-bold text-gray-700 mb-3 block">
               Customer {paymentMethod === 'debt' && <span className="text-red-500">*</span>}
             </label>
-            <Select value={selectedCustomer?.id || ""} onValueChange={(value) => {
-              const customer = customers.find(c => c.id === value);
-              setSelectedCustomer(customer || null);
-            }}>
-              <SelectTrigger className="h-12 border-2 border-purple-200 rounded-xl">
-                <SelectValue placeholder="Select customer (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map(customer => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={selectedCustomer?.id || ""} onValueChange={(value) => {
+                const customer = customers.find(c => c.id === value);
+                setSelectedCustomer(customer || null);
+              }}>
+                <SelectTrigger className="h-12 border-2 border-purple-200 rounded-xl flex-1">
+                  <SelectValue placeholder="Select customer (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map(customer => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-12 w-12 p-0 border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 rounded-xl flex-shrink-0"
+                onClick={() => setShowAddCustomer(true)}
+              >
+                <UserPlus className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Payment Method Selection */}
@@ -388,9 +410,10 @@ const ModernSalesPage = () => {
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                className="flex-1 h-12 border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 rounded-xl"
+                className="flex-1 h-12 border-2 border-red-300 hover:border-red-400 hover:bg-red-50 rounded-xl text-red-600 hover:text-red-700 font-bold"
                 onClick={clearCart}
               >
+                <RotateCcw className="h-4 w-4 mr-2" />
                 Clear Cart
               </Button>
               {isMobile && (
@@ -466,19 +489,23 @@ const ModernSalesPage = () => {
             </div>
           </div>
 
-          {/* Mobile Content */}
-          <div className="p-4 space-y-6 w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-            
-            {filteredProducts.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No products found</p>
+          {/* Mobile Content - Stacked Layout */}
+          <div className="flex flex-col space-y-6 p-4 w-full overflow-y-auto">
+            {/* Products Grid */}
+            <div>
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Products</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {filteredProducts.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
-            )}
+              
+              {filteredProducts.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 text-lg">No products found</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : (
@@ -540,6 +567,13 @@ const ModernSalesPage = () => {
           </div>
         </div>
       )}
+
+      {/* Add Customer Modal */}
+      <AddCustomerModal
+        open={showAddCustomer}
+        onOpenChange={setShowAddCustomer}
+        onCustomerAdded={handleCustomerAdded}
+      />
     </div>
   );
 };

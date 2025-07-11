@@ -4,16 +4,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Customer } from '../../types';
+import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
+import { useToast } from '../../hooks/use-toast';
+import { UserPlus, Loader2 } from 'lucide-react';
 
 interface AddCustomerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateCustomer: (customer: Omit<Customer, 'id' | 'createdDate'>) => void;
-  loading?: boolean;
+  onCustomerAdded?: (customer: any) => void;
 }
 
-const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: AddCustomerModalProps) => {
+const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -21,34 +22,67 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
     address: '',
     creditLimit: 1000,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { createCustomer } = useSupabaseCustomers();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim() || !formData.phone.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Name and phone are required fields.",
+        variant: "destructive",
+      });
       return;
     }
 
-    onCreateCustomer({
-      name: formData.name.trim(),
-      phone: formData.phone.trim(),
-      email: formData.email.trim(),
-      address: formData.address.trim(),
-      totalPurchases: 0,
-      outstandingDebt: 0,
-      creditLimit: formData.creditLimit,
-      riskRating: 'low',
-      lastPurchaseDate: null,
-    });
+    setIsSubmitting(true);
 
-    // Reset form
-    setFormData({
-      name: '',
-      phone: '',
-      email: '',
-      address: '',
-      creditLimit: 1000,
-    });
+    try {
+      const customerData = {
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim() || '',
+        address: formData.address.trim() || '',
+        totalPurchases: 0,
+        outstandingDebt: 0,
+        creditLimit: formData.creditLimit,
+        riskRating: 'low' as const,
+        lastPurchaseDate: null,
+        createdDate: new Date().toISOString(),
+      };
+
+      const newCustomer = await createCustomer(customerData);
+      
+      toast({
+        title: "Success!",
+        description: `Customer ${formData.name} has been added successfully.`,
+      });
+
+      // Reset form
+      setFormData({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        creditLimit: 1000,
+      });
+
+      onCustomerAdded?.(newCustomer);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add customer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (field: string, value: string | number) => {
@@ -60,15 +94,18 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Add New Customer</DialogTitle>
+          <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-purple-600" />
+            Add New Customer
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <Label htmlFor="name" className="text-sm font-medium">
+              <Label htmlFor="name" className="text-sm font-bold text-gray-700">
                 Name *
               </Label>
               <Input
@@ -77,12 +114,13 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
                 onChange={(e) => handleChange('name', e.target.value)}
                 placeholder="Customer name"
                 required
-                className="mt-1"
+                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                disabled={isSubmitting}
               />
             </div>
             
             <div>
-              <Label htmlFor="phone" className="text-sm font-medium">
+              <Label htmlFor="phone" className="text-sm font-bold text-gray-700">
                 Phone *
               </Label>
               <Input
@@ -91,12 +129,13 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
                 onChange={(e) => handleChange('phone', e.target.value)}
                 placeholder="Phone number"
                 required
-                className="mt-1"
+                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                disabled={isSubmitting}
               />
             </div>
             
             <div>
-              <Label htmlFor="email" className="text-sm font-medium">
+              <Label htmlFor="email" className="text-sm font-bold text-gray-700">
                 Email
               </Label>
               <Input
@@ -105,12 +144,13 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 placeholder="Email address (optional)"
-                className="mt-1"
+                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                disabled={isSubmitting}
               />
             </div>
             
             <div>
-              <Label htmlFor="address" className="text-sm font-medium">
+              <Label htmlFor="address" className="text-sm font-bold text-gray-700">
                 Address
               </Label>
               <Input
@@ -118,12 +158,13 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
                 value={formData.address}
                 onChange={(e) => handleChange('address', e.target.value)}
                 placeholder="Address (optional)"
-                className="mt-1"
+                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                disabled={isSubmitting}
               />
             </div>
             
             <div>
-              <Label htmlFor="creditLimit" className="text-sm font-medium">
+              <Label htmlFor="creditLimit" className="text-sm font-bold text-gray-700">
                 Credit Limit (KES)
               </Label>
               <Input
@@ -133,7 +174,8 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
                 onChange={(e) => handleChange('creditLimit', Number(e.target.value))}
                 placeholder="1000"
                 min="0"
-                className="mt-1"
+                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -143,17 +185,24 @@ const AddCustomerModal = ({ open, onOpenChange, onCreateCustomer, loading }: Add
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1"
-              disabled={loading}
+              className="flex-1 border-2 border-gray-300 hover:border-gray-400 rounded-xl"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="flex-1"
-              disabled={loading || !formData.name.trim() || !formData.phone.trim()}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl"
+              disabled={isSubmitting || !formData.name.trim() || !formData.phone.trim()}
             >
-              {loading ? 'Adding...' : 'Add Customer'}
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Adding...
+                </div>
+              ) : (
+                'Add Customer'
+              )}
             </Button>
           </div>
         </form>
