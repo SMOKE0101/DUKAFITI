@@ -79,7 +79,7 @@ function App() {
             <div className="min-h-screen bg-background">
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<ModernLanding />} />
+                <Route path="/" element={<Landing />} />
                 <Route path="/landing" element={<Landing />} />
                 <Route path="/modern-landing" element={<ModernLanding />} />
                 <Route path="/signin" element={<SignIn />} />

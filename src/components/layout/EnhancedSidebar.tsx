@@ -56,15 +56,15 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   // Get the appropriate logo based on theme and collapsed state
   const getLogoSrc = () => {
     if (isCollapsed) {
-      // Use cube icons for collapsed state
+      // Use cube icons for collapsed state - need to create these or use smaller versions
       return theme === 'dark' 
-        ? '/lovable-uploads/e71b20c6-1457-4277-a594-bb9ce4f09d56.png' // Dark mode cube
-        : '/lovable-uploads/0e966e8b-29a2-4e9c-bae2-eb4b0ff1f714.png'; // Light mode cube
+        ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png' // Dark mode logo (will be sized down)
+        : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png'; // Light mode logo (will be sized down)
     } else {
       // Use full logos for expanded state
       return theme === 'dark'
-        ? '/lovable-uploads/eb77e4bd-5d96-4815-a1ff-0bc09529c54a.png' // Dark mode full logo
-        : '/lovable-uploads/45d85eef-ee71-473e-95df-bb58337a9f07.png'; // Light mode full logo
+        ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png' // Dark mode full logo
+        : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png'; // Light mode full logo
     }
   };
 

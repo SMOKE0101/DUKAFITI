@@ -1,164 +1,113 @@
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const NavigationHeader = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme } = useTheme();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+  const logoSrc = theme === 'dark' 
+    ? '/lovable-uploads/dedf9c88-aa30-41f1-9cb1-97691bcb580f.png'
+    : '/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png';
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  const navigateToApp = () => {
-    window.location.href = '/app';
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-slate-900/95 backdrop-blur-md border-b border-white/10 shadow-lg' : 'bg-slate-900/80 backdrop-blur-sm'
-    }`}>
-      <nav className="container mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* DukaFiti Brand Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg p-1">
+    <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center space-x-3">
               <img 
-                src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                alt="DukaFiti Logo" 
-                className="w-8 h-8"
+                src={logoSrc}
+                alt="DUKAFITI Logo" 
+                className="h-8 w-auto"
               />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-green-400 bg-clip-text text-transparent">
-                DukaFiti
-              </span>
-              <span className="text-xs text-green-400 font-medium -mt-1">
-                Ni DukaBora
-              </span>
-            </div>
+              <span className="text-xl font-bold text-primary">DUKAFITI</span>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <button 
-              onClick={() => scrollToSection('features')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
+            <a href="#features" className="text-gray-700 hover:text-primary transition-colors">
               Features
-            </button>
-            <button 
-              onClick={() => scrollToSection('demo')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Live Demo
-            </button>
-            <button 
-              onClick={() => scrollToSection('pricing')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
+            </a>
+            <a href="#pricing" className="text-gray-700 hover:text-primary transition-colors">
               Pricing
-            </button>
-            <button 
-              onClick={() => scrollToSection('testimonials')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Success Stories
-            </button>
-          </div>
-
-          {/* Desktop CTA Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              className="text-slate-200 hover:text-white hover:bg-white/10 font-medium transition-all duration-200"
-              onClick={navigateToApp}
-            >
+            </a>
+            <a href="#testimonials" className="text-gray-700 hover:text-primary transition-colors">
+              Testimonials
+            </a>
+            <Link to="/signin" className="text-gray-700 hover:text-primary transition-colors">
               Sign In
-            </Button>
-            <Button 
-              className="bg-gradient-to-r from-purple-600 to-green-500 hover:from-purple-700 hover:to-green-600 text-white font-medium border-0 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-              onClick={navigateToApp}
-            >
-              Start 14-Day Free Trial
-            </Button>
+            </Link>
+            <Link to="/signup">
+              <Button className="bg-primary hover:bg-primary/90">
+                Get Started Free
+              </Button>
+            </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              onClick={toggleMenu}
+              className="text-gray-700"
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 py-4 border-t border-white/10 bg-slate-900/95 backdrop-blur-md rounded-lg">
-            <div className="flex flex-col space-y-4 px-4">
-              <button 
-                onClick={() => scrollToSection('features')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
+              <a
+                href="#features"
+                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary"
+                onClick={toggleMenu}
               >
                 Features
-              </button>
-              <button 
-                onClick={() => scrollToSection('demo')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
-                Live Demo
-              </button>
-              <button 
-                onClick={() => scrollToSection('pricing')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
+              </a>
+              <a
+                href="#pricing"
+                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary"
+                onClick={toggleMenu}
               >
                 Pricing
-              </button>
-              <button 
-                onClick={() => scrollToSection('testimonials')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
+              </a>
+              <a
+                href="#testimonials"
+                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary"
+                onClick={toggleMenu}
               >
-                Success Stories
-              </button>
-              <div className="pt-4 space-y-3 border-t border-white/10">
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-slate-200 hover:text-white justify-start font-medium"
-                  onClick={navigateToApp}
-                >
-                  Sign In
+                Testimonials
+              </a>
+              <Link
+                to="/signin"
+                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary"
+                onClick={toggleMenu}
+              >
+                Sign In
+              </Link>
+              <Link to="/signup" onClick={toggleMenu}>
+                <Button className="w-full mt-2 bg-primary hover:bg-primary/90">
+                  Get Started Free
                 </Button>
-                <Button 
-                  className="w-full bg-gradient-to-r from-purple-600 to-green-500 hover:from-purple-700 hover:to-green-600 text-white font-medium border-0"
-                  onClick={navigateToApp}
-                >
-                  Start 14-Day Free Trial
-                </Button>
-              </div>
+              </Link>
             </div>
           </div>
         )}
-      </nav>
-    </header>
+      </div>
+    </nav>
   );
 };
 

@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { Eye, EyeOff, ArrowLeft, Mail, Lock, Smartphone, Shield, TrendingUp } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -245,45 +246,21 @@ const SignIn = () => {
         </div>
       </div>
 
-      {/* Right Panel - Illustration */}
+      {/* Right Panel - Image */}
       <div className="hidden lg:block lg:flex-1">
         <div className="h-full bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           <div className="absolute inset-0 flex items-center justify-center p-12">
             <div className="text-center text-white max-w-md">
-              <h2 className="text-4xl font-bold mb-6">Welcome Back!</h2>
-              <p className="text-xl opacity-90 leading-relaxed mb-8">
-                Continue managing your duka with powerful POS features
+              <img 
+                src="/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png"
+                alt="DUKAFITI POS System"
+                className="w-64 h-auto mx-auto mb-8 opacity-90"
+              />
+              <h2 className="text-3xl font-bold mb-4">Welcome Back to DUKAFITI</h2>
+              <p className="text-lg opacity-90 leading-relaxed">
+                Continue managing your duka with powerful POS features designed for Kenyan businesses.
               </p>
-              <div className="grid grid-cols-1 gap-3 text-sm">
-                <div className="bg-white/10 rounded-lg p-3 text-left flex items-center gap-3">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Smart Inventory</div>
-                    <div className="opacity-80">Track stock levels automatically</div>
-                  </div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3 text-left flex items-center gap-3">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Smartphone className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">M-Pesa Integration</div>
-                    <div className="opacity-80">Accept payments seamlessly</div>
-                  </div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3 text-left flex items-center gap-3">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Business Analytics</div>
-                    <div className="opacity-80">Make data-driven decisions</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

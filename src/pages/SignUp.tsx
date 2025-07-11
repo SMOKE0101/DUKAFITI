@@ -285,26 +285,21 @@ const SignUp = () => {
         </div>
       </div>
 
-      {/* Right Panel - Illustration */}
+      {/* Right Panel - Image */}
       <div className="hidden lg:block lg:flex-1">
         <div className="h-full bg-gradient-to-br from-emerald-400 via-purple-500 to-pink-500 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           <div className="absolute inset-0 flex items-center justify-center p-12">
             <div className="text-center text-white max-w-md">
-              <h2 className="text-4xl font-bold mb-6">Join Thousands of Shop Owners</h2>
-              <p className="text-xl opacity-90 leading-relaxed">
-                Transform your duka with smart POS technology designed for Kenyan businesses
+              <img 
+                src="/lovable-uploads/89b3e0a6-730e-4441-8bec-2776d3c222d6.png"
+                alt="DUKAFITI POS System"
+                className="w-64 h-auto mx-auto mb-8 opacity-90"
+              />
+              <h2 className="text-3xl font-bold mb-4">Join DUKAFITI Today</h2>
+              <p className="text-lg opacity-90 leading-relaxed">
+                Transform your duka with smart POS technology designed for Kenyan businesses.
               </p>
-              <div className="mt-8 grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-white/10 rounded-lg p-3">
-                  <div className="font-semibold">10,000+</div>
-                  <div className="opacity-80">Active Shops</div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <div className="font-semibold">99.9%</div>
-                  <div className="opacity-80">Uptime</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
