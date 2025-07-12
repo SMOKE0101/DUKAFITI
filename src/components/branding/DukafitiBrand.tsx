@@ -7,13 +7,15 @@ interface DukafitiBrandProps {
   layout?: 'horizontal' | 'vertical' | 'logo-only';
   className?: string;
   textColor?: string;
+  onClick?: () => void;
 }
 
 const DukafitiBrand: React.FC<DukafitiBrandProps> = ({
   size = 'md',
   layout = 'horizontal',
   className = '',
-  textColor = 'text-gray-900 dark:text-white'
+  textColor = 'text-gray-900 dark:text-white',
+  onClick
 }) => {
   const textSizes = {
     sm: 'text-lg',
@@ -29,9 +31,12 @@ const DukafitiBrand: React.FC<DukafitiBrandProps> = ({
     xl: 'text-lg'
   };
 
+  const handleClick = onClick ? { onClick } : {};
+  const cursorClass = onClick ? 'cursor-pointer' : '';
+
   if (layout === 'logo-only') {
     return (
-      <div className={className}>
+      <div className={`${className} ${cursorClass}`} {...handleClick}>
         <CubeLogo size={size} />
       </div>
     );
@@ -39,7 +44,7 @@ const DukafitiBrand: React.FC<DukafitiBrandProps> = ({
 
   if (layout === 'vertical') {
     return (
-      <div className={`flex flex-col items-center gap-2 ${className}`}>
+      <div className={`flex flex-col items-center gap-2 ${className} ${cursorClass}`} {...handleClick}>
         <CubeLogo size={size} />
         <div className="text-center">
           <h1 className={`font-caesar font-bold ${textSizes[size]} ${textColor} tracking-wide`}>
@@ -54,7 +59,7 @@ const DukafitiBrand: React.FC<DukafitiBrandProps> = ({
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-3 ${className} ${cursorClass}`} {...handleClick}>
       <CubeLogo size={size} />
       <div className="flex flex-col">
         <h1 className={`font-caesar font-bold ${textSizes[size]} ${textColor} tracking-wide leading-tight`}>
