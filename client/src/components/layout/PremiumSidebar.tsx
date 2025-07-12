@@ -81,16 +81,19 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
     }
   };
 
-  // Get the appropriate logo based on theme and open state
+  // Get the appropriate logo based on theme and sidebar state
   const getLogoSrc = () => {
-    return theme === 'dark' 
-      ? '/assets/banner-with-purple-items-and-black-background.png'
-      : '/assets/banner-with-purple-items-and-white-background.png';
-  };
-
-  // Get just the DUKAFITI icon for collapsed state
-  const getIconSrc = () => {
-    return '/assets/dukafiti-icon.svg';
+    if (isOpen) {
+      // Expanded state: use full logo with name
+      return theme === 'dark' 
+        ? '/assets/logo-dark-expanded.png'    // Image 3: purple name and logo with black background
+        : '/assets/logo-light-expanded.png';  // Image 4: purple name and logo with white background
+    } else {
+      // Collapsed state: use icon only
+      return theme === 'dark' 
+        ? '/assets/logo-dark-collapsed.png'   // Image 1: purple logo with black background
+        : '/assets/logo-light-collapsed.png'; // Image 2: purple logo with white background
+    }
   };
 
   if (isMobile) {
@@ -141,11 +144,11 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
             {/* Logo Container with Professional Styling and smooth transitions */}
             <div className={cn(
               "relative flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
-              isOpen ? "h-16" : "h-12"
+              isOpen ? "h-16 mb-1" : "h-12"
             )}>
               <div className={cn(
                 "relative transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
-                isOpen ? "scale-100 opacity-100" : "scale-90 opacity-100"
+                isOpen ? "scale-100 opacity-100" : "scale-100 opacity-100"
               )}>
                 <img 
                   src={getLogoSrc()}
@@ -153,25 +156,21 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                   className={cn(
                     "object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
                     isOpen 
-                      ? "h-14 w-auto max-w-[240px]" 
-                      : "h-10 w-auto max-w-[40px] object-left"
+                      ? "h-12 w-auto max-w-[220px]" // Expanded: show full logo with name
+                      : "h-8 w-8 rounded-full"      // Collapsed: perfect square icon
                   )}
                   style={{
                     filter: isOpen 
-                      ? 'drop-shadow(0 4px 20px rgba(139, 69, 197, 0.15)) brightness(1.02)' 
-                      : 'drop-shadow(0 2px 12px rgba(139, 69, 197, 0.12)) brightness(1.05)',
-                    clipPath: isOpen 
-                      ? 'none' 
-                      : 'inset(0 75% 0 0)', // Show only the left 25% (icon part) when collapsed
+                      ? 'drop-shadow(0 4px 16px rgba(139, 69, 197, 0.12)) brightness(1.02)' 
+                      : 'drop-shadow(0 2px 8px rgba(139, 69, 197, 0.15)) brightness(1.05)',
                   }}
                 />
               </div>
               
-              {/* Subtle glow effect for branding */}
-              <div className={cn(
-                "absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent rounded-xl transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
-                isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"
-              )} />
+              {/* Professional glow effect for expanded state */}
+              {isOpen && (
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/8 via-primary/4 to-transparent rounded-xl opacity-60 blur-sm transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]" />
+              )}
             </div>
             
             {/* Profile Card - Enhanced Professional Design with smooth collapse */}
