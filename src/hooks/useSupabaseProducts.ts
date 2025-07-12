@@ -155,6 +155,37 @@ export const useSupabaseProducts = () => {
     }
   };
 
+  // Add stock function (missing from previous implementation)
+  const addStock = async (productId: string, quantity: number, buyingPrice: number, supplier?: string) => {
+    if (!user) return;
+
+    try {
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        throw new Error('Product not found');
+      }
+
+      // Update the product stock
+      await updateProduct(productId, {
+        currentStock: product.currentStock + quantity,
+        costPrice: buyingPrice, // Update cost price with latest buying price
+      });
+
+      toast({
+        title: "Stock Added Successfully",
+        description: `Added ${quantity} units of ${product.name}`,
+      });
+    } catch (error) {
+      console.error('Error adding stock:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add stock. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   // Set up real-time subscription
   useEffect(() => {
     if (!user || !isOnline) return;
@@ -187,6 +218,7 @@ export const useSupabaseProducts = () => {
     createProduct,
     updateProduct,
     deleteProduct,
+    addStock,
     refreshProducts,
   };
 };

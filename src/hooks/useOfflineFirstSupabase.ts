@@ -1,145 +1,96 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRobustOfflineManager } from './useRobustOfflineManager';
-import { useAuth } from './useAuth';
-import { useToast } from './use-toast';
 
-interface OfflineFirstConfig {
+interface OfflineFirstOptions<T> {
   cacheKey: string;
   tableName: string;
-  loadFromSupabase: () => Promise<any[]>;
-  transformToLocal?: (data: any) => any;
-  transformFromLocal?: (data: any) => any;
+  loadFromSupabase: () => Promise<T[]>;
+  transformToLocal: (item: any) => T;
+  transformFromLocal: (item: T) => any;
 }
 
-export const useOfflineFirstSupabase = <T>(config: OfflineFirstConfig) => {
+export function useOfflineFirstSupabase<T>({
+  cacheKey,
+  tableName,
+  loadFromSupabase,
+  transformToLocal,
+  transformFromLocal
+}: OfflineFirstOptions<T>) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { 
-    isOnline, 
-    getOfflineData, 
-    robustOfflineDB,
-    isInitialized 
-  } = useRobustOfflineManager();
-  const loadAttempted = useRef(false);
+  const [error, setError] = useState<string>('');
+  
+  const { isOnline, getCachedData, setCachedData, addToSyncQueue } = useRobustOfflineManager();
 
-  // Load data with offline-first approach
   const loadData = useCallback(async () => {
-    if (!user || !isInitialized) return;
-    
-    console.log(`[OfflineFirst] Loading ${config.cacheKey}...`);
-    setLoading(true);
-    setError(null);
-
     try {
-      // First, try to load from local cache
-      const cachedData = await getOfflineData(config.tableName);
-      if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
-        console.log(`[OfflineFirst] Found ${cachedData.length} cached ${config.cacheKey}`);
-        const transformedData = config.transformFromLocal 
-          ? cachedData.map(config.transformFromLocal)
-          : cachedData;
-        setData(transformedData);
-        setLoading(false);
-        
-        // Show cache loaded notification only when offline
-        if (!isOnline) {
-          toast({
-            title: "Offline Mode",
-            description: `Loaded ${cachedData.length} ${config.cacheKey} from cache`,
-            duration: 2000,
-          });
-        }
+      setLoading(true);
+      setError('');
+
+      // Try to load cached data first
+      const cachedData = await getCachedData(cacheKey);
+      if (cachedData && cachedData.length > 0) {
+        console.log(`Loading cached ${cacheKey}:`, cachedData.length, 'items');
+        setData(cachedData.map(transformToLocal));
       }
 
-      // If online, try to fetch fresh data from Supabase
+      // If online, try to fetch from Supabase
       if (isOnline) {
         try {
-          console.log(`[OfflineFirst] Fetching fresh ${config.cacheKey} from Supabase...`);
-          const freshData = await config.loadFromSupabase();
+          const freshData = await loadFromSupabase();
+          console.log(`Loaded fresh ${cacheKey} from Supabase:`, freshData.length, 'items');
           
-          if (freshData && Array.isArray(freshData)) {
-            console.log(`[OfflineFirst] Loaded ${freshData.length} fresh ${config.cacheKey}`);
-            setData(freshData);
-            
-            // Cache the fresh data
-            if (robustOfflineDB && freshData.length > 0) {
-              try {
-                // Clear old cache and store fresh data
-                await robustOfflineDB.clearStore(config.tableName);
-                for (const item of freshData) {
-                  const transformedItem = config.transformToLocal ? config.transformToLocal(item) : item;
-                  await robustOfflineDB.storeData(config.tableName, transformedItem);
-                }
-                console.log(`[OfflineFirst] Cached ${freshData.length} ${config.cacheKey} successfully`);
-              } catch (cacheError) {
-                console.warn(`[OfflineFirst] Failed to cache ${config.cacheKey}:`, cacheError);
-              }
-            }
-          }
-        } catch (networkError) {
-          console.warn(`[OfflineFirst] Network error loading ${config.cacheKey}:`, networkError);
+          // Update cache with fresh data
+          await setCachedData(cacheKey, freshData.map(transformFromLocal));
+          setData(freshData);
+        } catch (supabaseError) {
+          console.error(`Supabase error for ${cacheKey}:`, supabaseError);
           
-          // If we have cached data, continue using it
-          if (data.length === 0) {
-            // Only show error if we have no cached data
-            setError(`Failed to load ${config.cacheKey}. ${!isOnline ? 'You are offline.' : 'Please check your connection.'}`);
-            toast({
-              title: "Loading Error",
-              description: `Failed to load ${config.cacheKey}. ${cachedData?.length ? 'Using cached data.' : 'No cached data available.'}`,
-              variant: "destructive",
-              duration: 3000,
-            });
+          // If we have cached data, use it; otherwise show error
+          if (cachedData && cachedData.length > 0) {
+            console.log(`Using cached ${cacheKey} due to Supabase error`);
+            setData(cachedData.map(transformToLocal));
+          } else {
+            setError(`Failed to load ${cacheKey}. Please check your connection.`);
           }
         }
-      } else if (!cachedData || cachedData.length === 0) {
-        // Offline and no cached data
-        setError(`No ${config.cacheKey} available offline. Please connect to the internet to sync data.`);
-        toast({
-          title: "Offline Mode",
-          description: `No cached ${config.cacheKey} found. Connect to internet to sync data.`,
-          variant: "default",
-          duration: 3000,
-        });
+      } else {
+        // Offline mode
+        if (!cachedData || cachedData.length === 0) {
+          console.log(`No cached ${cacheKey} available offline`);
+          setError(`No ${cacheKey} available offline. Please connect to the internet to load data.`);
+        }
       }
-
-    } catch (error) {
-      console.error(`[OfflineFirst] Critical error loading ${config.cacheKey}:`, error);
-      setError(`Critical error loading ${config.cacheKey}`);
-      toast({
-        title: "Error",
-        description: `Critical error loading ${config.cacheKey}`,
-        variant: "destructive",
-        duration: 5000,
-      });
+    } catch (cacheError) {
+      console.error(`Cache error for ${cacheKey}:`, cacheError);
+      setError(`Failed to load ${cacheKey}. Please try again.`);
     } finally {
       setLoading(false);
-      loadAttempted.current = true;
     }
-  }, [user, isOnline, isInitialized, config, getOfflineData, robustOfflineDB, toast, data.length]);
+  }, [cacheKey, isOnline, loadFromSupabase, transformToLocal, transformFromLocal, getCachedData, setCachedData]);
 
-  // Load data on mount and when network status changes
-  useEffect(() => {
-    if (!loadAttempted.current || (isOnline && data.length === 0)) {
-      loadData();
-    }
-  }, [loadData, isOnline, data.length]);
-
-  // Refresh function for manual reloading
   const refresh = useCallback(async () => {
-    loadAttempted.current = false;
     await loadData();
   }, [loadData]);
+
+  // Initial load
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Reload when coming back online
+  useEffect(() => {
+    if (isOnline) {
+      loadData();
+    }
+  }, [isOnline, loadData]);
 
   return {
     data,
     loading,
     error,
     refresh,
-    isOnline,
-    hasCachedData: data.length > 0
+    isOnline
   };
-};
+}
