@@ -1,69 +1,22 @@
 
-import React, { useState } from 'react';
-import { Bell, Package, Users, AlertCircle, CheckCircle, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, Package, CheckCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useProductQueries } from '@/hooks/products/useProductQueries';
+import { Product } from '@/types';
 
-interface Notification {
+interface LowStockNotification {
   id: string;
-  type: 'sale' | 'inventory' | 'customer' | 'system';
+  type: 'inventory';
   title: string;
   message: string;
   timestamp: Date;
   read: boolean;
+  productId: string;
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'sale',
-    title: 'New Sale',
-    message: 'Coca Cola sold to John Doe - KES 50',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'inventory',
-    title: 'Low Stock Alert',
-    message: 'Bread has only 5 units remaining',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'customer',
-    title: 'Payment Received',
-    message: 'Jane Smith paid KES 200 outstanding debt',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'System Update',
-    message: 'New features available - Click to learn more',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    read: true,
-  },
-];
-
-const getNotificationIcon = (type: Notification['type']) => {
-  switch (type) {
-    case 'sale':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case 'inventory':
-      return <Package className="h-4 w-4 text-orange-500" />;
-    case 'customer':
-      return <Users className="h-4 w-4 text-blue-500" />;
-    case 'system':
-      return <AlertCircle className="h-4 w-4 text-purple-500" />;
-    default:
-      return <Bell className="h-4 w-4 text-gray-500" />;
-  }
-};
 
 const formatTimeAgo = (date: Date) => {
   const now = new Date();
@@ -84,8 +37,31 @@ interface NotificationBellProps {
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const { products, loading } = useProductQueries();
+  const [notifications, setNotifications] = useState<LowStockNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Generate low stock notifications from products
+  useEffect(() => {
+    if (!loading && products.length > 0) {
+      const lowStockProducts = products.filter((product: Product) => 
+        product.low_stock_threshold != null && 
+        product.current_stock <= product.low_stock_threshold
+      );
+
+      const lowStockNotifications: LowStockNotification[] = lowStockProducts.map(product => ({
+        id: product.id,
+        type: 'inventory' as const,
+        title: 'Low Stock Alert',
+        message: `${product.name} has only ${product.current_stock} units remaining (threshold: ${product.low_stock_threshold})`,
+        timestamp: new Date(product.updatedAt),
+        read: false,
+        productId: product.id,
+      }));
+
+      setNotifications(lowStockNotifications);
+    }
+  }, [products, loading]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -140,7 +116,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
           <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Notifications</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Low Stock Alerts</h3>
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
@@ -166,7 +142,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                       )}
                       onClick={() => markAsRead(notification.id)}
                     >
-                      {getNotificationIcon(notification.type)}
+                      <Package className="h-4 w-4 text-orange-500 mt-1 flex-shrink-0" />
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -201,8 +177,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                 </div>
               ) : (
                 <div className="py-8 text-center text-gray-500 dark:text-gray-400">
-                  <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No notifications</p>
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No low stock alerts</p>
                 </div>
               )}
             </ScrollArea>

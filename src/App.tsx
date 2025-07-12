@@ -8,7 +8,7 @@ import CleanLanding from '@/pages/CleanLanding';
 import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import Index from '@/pages/Index';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import Dashboard from '@/components/Dashboard';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
