@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { Input } from '@/components/ui/input';

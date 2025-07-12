@@ -5,17 +5,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
 import { Toaster } from '@/components/ui/toaster';
 import ErrorBoundary from './components/ErrorBoundary';
+import AppLayout from './components/layout/AppLayout';
 
 // Page imports
 import Index from './pages/Index';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';
 import SalesManagement from './components/SalesManagement';
-import CustomerManagement from './components/CustomerManagement';
+import CustomersPage from './components/CustomersPage';
 import ProductManagement from './components/ProductManagement';
 import ReportsPage from './components/ReportsPage';
 import DebtRecording from './components/DebtRecording';
 import ProtectedRoute from './components/ProtectedRoute';
+import ModernSalesPage from './components/ModernSalesPage';
 
 // 404 component
 const NotFound = () => (
@@ -58,46 +60,68 @@ function App() {
                   {/* Auth routes */}
                   <Route path="/auth" element={<AuthForm />} />
                   
-                  {/* Protected routes */}
+                  {/* Protected routes wrapped with AppLayout */}
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
-                      <Dashboard />
+                      <AppLayout>
+                        <Dashboard />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/sales" element={
                     <ProtectedRoute>
-                      <SalesManagement />
+                      <AppLayout>
+                        <ModernSalesPage />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/customers" element={
                     <ProtectedRoute>
-                      <CustomerManagement />
+                      <AppLayout>
+                        <CustomersPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/customer-management" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <CustomersPage />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/products" element={
                     <ProtectedRoute>
-                      <ProductManagement />
+                      <AppLayout>
+                        <ProductManagement />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/inventory" element={
                     <ProtectedRoute>
-                      <ProductManagement />
+                      <AppLayout>
+                        <ProductManagement />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/reports" element={
                     <ProtectedRoute>
-                      <ReportsPage />
+                      <AppLayout>
+                        <ReportsPage />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/debt" element={
                     <ProtectedRoute>
-                      <DebtRecording />
+                      <AppLayout>
+                        <DebtRecording />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
@@ -105,37 +129,44 @@ function App() {
                   <Route path="/auth-form" element={<AuthForm />} />
                   <Route path="/enhanced-dashboard" element={
                     <ProtectedRoute>
-                      <Dashboard />
+                      <AppLayout>
+                        <Dashboard />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   <Route path="/sales-management" element={
                     <ProtectedRoute>
-                      <SalesManagement />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/customer-management" element={
-                    <ProtectedRoute>
-                      <CustomerManagement />
+                      <AppLayout>
+                        <SalesManagement />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   <Route path="/product-management" element={
                     <ProtectedRoute>
-                      <ProductManagement />
+                      <AppLayout>
+                        <ProductManagement />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   <Route path="/inventory-page" element={
                     <ProtectedRoute>
-                      <ProductManagement />
+                      <AppLayout>
+                        <ProductManagement />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   <Route path="/reports-page" element={
                     <ProtectedRoute>
-                      <ReportsPage />
+                      <AppLayout>
+                        <ReportsPage />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   <Route path="/debt-recording" element={
                     <ProtectedRoute>
-                      <DebtRecording />
+                      <AppLayout>
+                        <DebtRecording />
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
