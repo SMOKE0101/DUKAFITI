@@ -1,4 +1,3 @@
-
 import { Mail, Phone, MapPin, Heart, ExternalLink } from 'lucide-react';
 
 const Footer = () => {
@@ -65,8 +64,8 @@ const Footer = () => {
                 <span className="text-white font-bold text-xl">DF</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-green-400 bg-clip-text text-transparent">
-                  DukaFiti
+                <span className="font-caesar text-2xl font-normal bg-gradient-to-r from-purple-400 to-green-400 bg-clip-text text-transparent">
+                  DUKAFITI
                 </span>
                 <span className="text-sm text-green-400 font-medium -mt-1">
                   Jua Duka Yako

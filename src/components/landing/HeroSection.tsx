@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -92,3 +93,5 @@ export const HeroSection = () => {
     </section>
   );
 };
+
+export default HeroSection;

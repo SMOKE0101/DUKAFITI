@@ -1,4 +1,3 @@
-
 import { Star, Quote } from 'lucide-react';
 
 interface Testimonial {

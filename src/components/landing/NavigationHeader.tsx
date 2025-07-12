@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import CubeLogo from '@/components/branding/CubeLogo';
 
-export const NavigationHeader = () => {
+const NavigationHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -91,3 +92,5 @@ export const NavigationHeader = () => {
     </header>
   );
 };
+
+export default NavigationHeader;

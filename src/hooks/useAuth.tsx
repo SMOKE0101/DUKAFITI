@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, SignUpWithPasswordCredentials } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
 
 interface AuthContextType {
@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (credentials: SignUpWithPasswordCredentials) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -56,17 +56,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
-    console.log('Attempting sign up for:', email);
-    const redirectUrl = `${window.location.origin}/`;
+  const signUp = async (credentials: SignUpWithPasswordCredentials) => {
+    console.log('Attempting sign up for:', credentials.email);
     
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
-      }
-    });
+    const { error } = await supabase.auth.signUp(credentials);
     
     if (error) {
       console.error('Sign up error:', error);
