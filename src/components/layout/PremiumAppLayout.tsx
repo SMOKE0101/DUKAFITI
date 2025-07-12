@@ -22,39 +22,41 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <PremiumSidebar 
-          isCollapsed={sidebarCollapsed} 
-          onToggle={handleSidebarToggle} 
-        />
-        <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
-          !isMobile && !isTablet && !sidebarCollapsed 
-            ? 'ml-64' 
-            : !isMobile && !isTablet && sidebarCollapsed 
-              ? 'ml-16' 
-              : 'ml-0'
-        }`}>
-          <EnhancedTopbar 
-            sidebarCollapsed={sidebarCollapsed} 
-            onSidebarToggle={handleSidebarToggle}
+    <div className="min-h-screen w-full bg-background text-foreground">
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background">
+          <PremiumSidebar 
+            isCollapsed={sidebarCollapsed} 
+            onToggle={handleSidebarToggle} 
           />
-          <div className={`flex-1 overflow-auto ${isMobile || isTablet ? 'pb-20' : ''}`}>
-            <div className="container mx-auto p-4 space-y-4">
-              <OfflineStatus />
-              {children || <Outlet />}
+          <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 bg-background min-h-screen ${
+            !isMobile && !isTablet && !sidebarCollapsed 
+              ? 'ml-64' 
+              : !isMobile && !isTablet && sidebarCollapsed 
+                ? 'ml-16' 
+                : 'ml-0'
+          }`}>
+            <EnhancedTopbar 
+              sidebarCollapsed={sidebarCollapsed} 
+              onSidebarToggle={handleSidebarToggle}
+            />
+            <div className={`flex-1 overflow-auto bg-background w-full ${isMobile || isTablet ? 'pb-20' : ''}`}>
+              <div className="w-full p-4 space-y-4 bg-background min-h-full">
+                <OfflineStatus />
+                {children || <Outlet />}
+              </div>
             </div>
-          </div>
-        </main>
-        
-        {/* Bottom Navigation for Mobile/Tablet */}
-        {(isMobile || isTablet) && (
-          <div className="fixed bottom-0 left-0 right-0 z-50">
-            <BottomNavigation />
-          </div>
-        )}
-      </div>
-    </SidebarProvider>
+          </main>
+          
+          {/* Bottom Navigation for Mobile/Tablet */}
+          {(isMobile || isTablet) && (
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t">
+              <BottomNavigation />
+            </div>
+          )}
+        </div>
+      </SidebarProvider>
+    </div>
   );
 };
 

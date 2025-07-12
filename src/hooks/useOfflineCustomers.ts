@@ -2,9 +2,11 @@
 import { useState, useCallback } from 'react';
 import { useOfflineManager } from './useOfflineManager';
 import { Customer } from '../types';
+import { useToast } from './use-toast';
 
 export const useOfflineCustomers = () => {
   const { addOfflineOperation, getOfflineData, isOnline } = useOfflineManager();
+  const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -24,15 +26,29 @@ export const useOfflineCustomers = () => {
       await addOfflineOperation('customer', 'create', customer, 'low');
       
       console.log('[OfflineCustomers] Customer created offline:', customer.id);
+      
+      if (!isOnline) {
+        toast({
+          title: "Customer Created Offline",
+          description: "Customer will sync when connection is restored.",
+          duration: 3000,
+        });
+      }
+      
       return customer;
       
     } catch (error) {
       console.error('[OfflineCustomers] Failed to create offline customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create customer. Please try again.",
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setIsCreating(false);
     }
-  }, [addOfflineOperation]);
+  }, [addOfflineOperation, isOnline, toast]);
 
   const updateOfflineCustomer = useCallback(async (customerId: string, updates: Partial<Customer>) => {
     setIsUpdating(true);
@@ -49,22 +65,42 @@ export const useOfflineCustomers = () => {
       await addOfflineOperation('customer', 'update', updateData, 'low');
       
       console.log('[OfflineCustomers] Customer updated offline:', customerId);
+      
+      if (!isOnline) {
+        toast({
+          title: "Customer Updated Offline",
+          description: "Changes will sync when connection is restored.",
+          duration: 3000,
+        });
+      }
+      
       return true;
       
     } catch (error) {
       console.error('[OfflineCustomers] Failed to update offline customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update customer. Please try again.",
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setIsUpdating(false);
     }
-  }, [addOfflineOperation]);
+  }, [addOfflineOperation, isOnline, toast]);
 
   const getOfflineCustomers = useCallback(async (): Promise<Customer[]> => {
     try {
+      console.log('[OfflineCustomers] Loading customers from offline storage...');
       const customers = await getOfflineData('customers');
-      return Array.isArray(customers) ? customers : [];
+      const result = Array.isArray(customers) ? customers : [];
+      console.log('[OfflineCustomers] Loaded customers:', result.length);
+      return result;
     } catch (error) {
       console.error('[OfflineCustomers] Failed to get offline customers:', error);
+      
+      // Don't show error toast for data loading - this might be expected
+      // Only log the error for debugging
       return [];
     }
   }, [getOfflineData]);

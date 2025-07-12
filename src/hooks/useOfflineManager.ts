@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { offlineDB } from '../utils/indexedDB';
 import { supabase } from '../integrations/supabase/client';
@@ -45,6 +44,7 @@ export const useOfflineManager = () => {
     initializeOfflineSystem();
     
     const handleOnline = () => {
+      console.log('[OfflineManager] Online detected');
       setOfflineState(prev => ({ ...prev, isOnline: true }));
       if (user) {
         setTimeout(() => syncPendingOperations(), 1000);
@@ -52,6 +52,7 @@ export const useOfflineManager = () => {
     };
 
     const handleOffline = () => {
+      console.log('[OfflineManager] Offline detected');
       setOfflineState(prev => ({ ...prev, isOnline: false }));
     };
 
@@ -68,11 +69,14 @@ export const useOfflineManager = () => {
     try {
       console.log('[OfflineManager] Initializing offline system...');
       
-      // Register service worker
+      // Register service worker with better error handling
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/offline-sw.js');
-          console.log('[OfflineManager] Service Worker registered:', registration.scope);
+          // Only register offline-sw.js to avoid conflicts
+          const registration = await navigator.serviceWorker.register('/offline-sw.js', {
+            scope: '/'
+          });
+          console.log('[OfflineManager] Service Worker registered successfully:', registration.scope);
           
           // Handle service worker updates
           registration.addEventListener('updatefound', () => {
@@ -90,8 +94,14 @@ export const useOfflineManager = () => {
             }
           });
           
+          // Test service worker functionality
+          if (navigator.serviceWorker.controller) {
+            console.log('[OfflineManager] Service Worker is active and controlling');
+          }
+          
         } catch (error) {
           console.error('[OfflineManager] Service Worker registration failed:', error);
+          // Don't throw - continue with degraded functionality
         }
       }
 
@@ -108,6 +118,7 @@ export const useOfflineManager = () => {
       console.error('[OfflineManager] Failed to initialize offline system:', error);
       setOfflineState(prev => ({ 
         ...prev, 
+        isInitialized: true, // Still mark as initialized to prevent infinite loops
         errors: [...prev.errors, `Initialization failed: ${error.message}`]
       }));
     }
@@ -312,7 +323,6 @@ export const useOfflineManager = () => {
     }
   }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
 
-  // Sync single operation
   const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
     try {
       switch (operation.type) {
@@ -470,15 +480,21 @@ export const useOfflineManager = () => {
   const forceSyncNow = useCallback(async () => {
     if (offlineState.isOnline && !offlineState.isSyncing) {
       await syncPendingOperations();
+    } else if (!offlineState.isOnline) {
+      toast({
+        title: "Offline Mode",
+        description: "Cannot sync while offline. Data will sync when connection is restored.",
+        variant: "default",
+      });
     }
-  }, [offlineState.isOnline, offlineState.isSyncing, syncPendingOperations]);
+  }, [offlineState.isOnline, offlineState.isSyncing, syncPendingOperations, toast]);
 
   // Clear sync errors
   const clearSyncErrors = useCallback(() => {
     setOfflineState(prev => ({ ...prev, errors: [] }));
   }, []);
 
-  // Get offline data
+  // Get offline data with better error handling
   const getOfflineData = useCallback(async (type: string, id?: string) => {
     try {
       return await offlineDB.getOfflineData(type, id);

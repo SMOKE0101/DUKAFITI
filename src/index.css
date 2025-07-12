@@ -67,8 +67,43 @@
   * {
     @apply border-border;
   }
+  
+  html {
+    @apply h-full;
+  }
+  
   body {
+    @apply bg-background text-foreground h-full;
+  }
+  
+  #root {
+    @apply h-full w-full bg-background;
+  }
+  
+  /* Ensure dark mode applies to all elements */
+  .dark {
+    color-scheme: dark;
+  }
+  
+  .dark * {
     @apply bg-background text-foreground;
+  }
+  
+  /* Override for specific components that need different backgrounds */
+  .dark .bg-card {
+    @apply bg-card;
+  }
+  
+  .dark .bg-popover {
+    @apply bg-popover;
+  }
+  
+  .dark .bg-primary {
+    @apply bg-primary;
+  }
+  
+  .dark .bg-secondary {
+    @apply bg-secondary;
   }
 }
 

@@ -18,7 +18,7 @@ const AppearanceSettings = () => {
 
   if (loading) {
     return (
-      <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
+      <div className="w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8">
         <div className="flex justify-center">
           <div className="animate-pulse space-y-4 w-full max-w-md">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
@@ -39,7 +39,7 @@ const AppearanceSettings = () => {
   console.log('Rendering AppearanceSettings - Settings theme:', settings.theme, 'Current theme:', currentTheme, 'Active theme:', activeTheme);
 
   return (
-    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
+    <div className="w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8">
       {/* Theme Selection */}
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="text-center">
@@ -51,20 +51,16 @@ const AppearanceSettings = () => {
               Choose how you want the application to look
             </Label>
           </div>
-          {/* Debug info - remove in production */}
-          <div className="text-xs text-gray-500 mt-2">
-            Active: {activeTheme} | Settings: {settings.theme} | Theme Provider: {currentTheme}
-          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <button
             type="button"
             onClick={() => handleThemeChange('light')}
-            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
+            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
               activeTheme === 'light'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
@@ -83,10 +79,10 @@ const AppearanceSettings = () => {
           <button
             type="button"
             onClick={() => handleThemeChange('dark')}
-            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
+            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
               activeTheme === 'dark'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${

@@ -1,46 +1,32 @@
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from 'next-themes';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from './hooks/useAuth';
-import { Toaster } from '@/components/ui/toaster';
-import ErrorBoundary from './components/ErrorBoundary';
-import AppLayout from './components/layout/AppLayout';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./hooks/useAuth";
+import { ThemeProvider } from "next-themes";
+import Index from "./pages/Index";
+import Landing from "./pages/Landing";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
+import Offline from "./pages/Offline";
+import ProtectedRoute from "./components/ProtectedRoute";
+import PremiumAppLayout from "./components/layout/PremiumAppLayout";
+import Dashboard from "./components/Dashboard";
+import ModernSalesPage from "./components/ModernSalesPage";
+import InventoryPage from "./components/InventoryPage";
+import CustomersPage from "./components/CustomersPage";
+import ReportsPage from "./components/ReportsPage";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-// Page imports
-import Index from './pages/Index';
-import AuthForm from './components/AuthForm';
-import Dashboard from './components/Dashboard';
-import SalesManagement from './components/SalesManagement';
-import CustomersPage from './components/CustomersPage';
-import ProductManagement from './components/ProductManagement';
-import InventoryPage from './components/InventoryPage';
-import ReportsPage from './components/ReportsPage';
-import DebtRecording from './components/DebtRecording';
-import Settings from './pages/Settings';
-import ModernLanding from './pages/ModernLanding';
-import SignIn from './pages/SignIn';
-import SignUp from './pages/SignUp';
-import ProtectedRoute from './components/ProtectedRoute';
-import ModernSalesPage from './components/ModernSalesPage';
-
-// 404 component
-const NotFound = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center">
-      <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-      <p className="text-gray-600 mb-4">Page not found</p>
-      <a href="/" className="text-blue-600 hover:text-blue-800">Go home</a>
-    </div>
-  </div>
-);
-
-// Create a stable query client instance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 3,
     },
   },
 });
@@ -48,155 +34,48 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="light"
-        enableSystem={false}
-        disableTransitionOnChange
-      >
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <Router>
-              <div className="min-h-screen bg-background">
-                <Routes>
-                  {/* Main route - redirect based on auth status */}
-                  <Route path="/" element={<Index />} />
-                  
-                  {/* Landing page for unauthenticated users */}
-                  <Route path="/modern-landing" element={<ModernLanding />} />
-                  
-                  {/* Auth routes */}
-                  <Route path="/auth" element={<AuthForm />} />
-                  <Route path="/signin" element={<SignIn />} />
-                  <Route path="/signup" element={<SignUp />} />
-                  
-                  {/* Protected routes wrapped with AppLayout */}
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <Dashboard />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/sales" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <ModernSalesPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/customers" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <CustomersPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/customer-management" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <CustomersPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/products" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <InventoryPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/inventory" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <InventoryPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/reports" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <ReportsPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/debt" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <DebtRecording />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/settings" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <Settings />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Legacy routes for compatibility */}
-                  <Route path="/auth-form" element={<AuthForm />} />
-                  <Route path="/enhanced-dashboard" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <Dashboard />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/sales-management" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <SalesManagement />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/product-management" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <ProductManagement />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/inventory-page" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <InventoryPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/reports-page" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <ReportsPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/debt-recording" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <DebtRecording />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Catch all route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </div>
-              <Toaster />
-            </Router>
-          </AuthProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <TooltipProvider>
+            <BrowserRouter>
+              <AuthProvider>
+                <div className="min-h-screen w-full bg-background text-foreground">
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/signin" element={<SignIn />} />
+                    <Route path="/signup" element={<SignUp />} />
+                    <Route path="/offline" element={<Offline />} />
+                    
+                    {/* Protected routes with layout */}
+                    <Route path="/app" element={
+                      <ProtectedRoute>
+                        <PremiumAppLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<Navigate to="/app/dashboard" replace />} />
+                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route path="sales" element={<ModernSalesPage />} />
+                      <Route path="inventory" element={<InventoryPage />} />
+                      <Route path="customers" element={<CustomersPage />} />
+                      <Route path="reports" element={<ReportsPage />} />
+                      <Route path="settings" element={<Settings />} />
+                    </Route>
+                    
+                    {/* Legacy route redirect */}
+                    <Route path="/index" element={<Index />} />
+                    
+                    {/* 404 */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
+                <Toaster />
+                <Sonner />
+              </AuthProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
