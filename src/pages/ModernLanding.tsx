@@ -138,9 +138,9 @@ const ModernLanding = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-background border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
@@ -174,11 +174,11 @@ const ModernLanding = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-32">
+      <section className="py-20 lg:py-32 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              <h1 className="text-5xl lg:text-6xl font-bold text-primary leading-tight">
+              <h1 className="text-5xl lg:text-6xl font-bold text-foreground leading-tight">
                 You have the shop, you have the code
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
@@ -195,14 +195,14 @@ const ModernLanding = () => {
             </div>
 
             <div className="relative">
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl p-8 relative overflow-hidden">
+              <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-3xl p-8 relative overflow-hidden">
                 <div className="grid grid-cols-2 gap-4">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="w-12 h-12 bg-yellow-400 rounded-lg transform rotate-45" />
+                    <div key={i} className="w-12 h-12 bg-yellow-400 dark:bg-yellow-500 rounded-lg transform rotate-45" />
                   ))}
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+                  <div className="w-24 h-24 bg-background rounded-2xl flex items-center justify-center shadow-lg border border-border">
                     <div className="text-4xl">⌘</div>
                   </div>
                 </div>
@@ -213,13 +213,13 @@ const ModernLanding = () => {
       </section>
 
       {/* Easy Steps Section */}
-      <section id="how-it-works" className="py-20 bg-gray-50">
+      <section id="how-it-works" className="py-20 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-primary mb-16">Easy steps</h2>
+          <h2 className="text-4xl font-bold text-foreground mb-16">Easy steps</h2>
           
           <div className="space-y-8">
             {steps.map((step, index) => (
-              <Card key={index} className="p-6 border-l-4 border-l-primary">
+              <Card key={index} className="p-6 border-l-4 border-l-primary bg-background">
                 <div className="flex items-start space-x-4">
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <span className="text-primary font-semibold">{index + 1}</span>
@@ -240,7 +240,7 @@ const ModernLanding = () => {
                       </p>
                     )}
                     {index === 1 && expandedStep === index && (
-                      <div className="mt-6 flex items-center space-x-4 p-4 bg-primary/5 rounded-lg">
+                      <div className="mt-6 flex items-center space-x-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
                         <img src="/lovable-uploads/8d8ce036-eba9-4359-8db6-057c40d653b7.png" alt="Feature highlight" className="w-16 h-12 object-cover rounded" />
                         <div>
                           <h4 className="font-semibold text-primary font-caesar">Smart POS Design</h4>
@@ -259,7 +259,7 @@ const ModernLanding = () => {
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="py-20 bg-primary text-white">
+      <section id="features" className="py-20 bg-primary text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4 font-caesar">Spend Less Time Managing</h2>
@@ -267,7 +267,7 @@ const ModernLanding = () => {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-primary-foreground/10 border-primary-foreground/20 text-white p-6">
+              <Card key={index} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground p-6">
                 <div className="text-4xl mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-semibold mb-2 font-caesar">{feature.title}</h3>
                 <p className="text-primary-foreground/80">{feature.description}</p>
@@ -283,7 +283,7 @@ const ModernLanding = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div>
-                <h2 className="text-4xl font-bold text-primary mb-4 font-caesar">
+                <h2 className="text-4xl font-bold text-foreground mb-4 font-caesar">
                   Ready to Transform Your Business?
                 </h2>
                 <p className="text-xl text-muted-foreground leading-relaxed">
@@ -291,7 +291,7 @@ const ModernLanding = () => {
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl p-8 shadow-lg border border-border/50">
+              <div className="bg-background rounded-2xl p-8 shadow-lg border border-border">
                 <div className="space-y-6">
                   <div className="text-center">
                     <h3 className="text-2xl font-semibold text-foreground mb-2 font-caesar">Get Started Today</h3>
@@ -311,7 +311,7 @@ const ModernLanding = () => {
                   >
                     {isGoogleLoading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                        <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
                         Connecting...
                       </div>
                     ) : (
@@ -333,7 +333,7 @@ const ModernLanding = () => {
                       <div className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-3 bg-white text-muted-foreground">Or</span>
+                      <span className="px-3 bg-background text-muted-foreground">Or</span>
                     </div>
                   </div>
 
@@ -351,7 +351,7 @@ const ModernLanding = () => {
                         value={signUpData.name}
                         onChange={handleInputChange}
                         placeholder="Full Name"
-                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all bg-background text-foreground"
                         required
                       />
                     </div>
@@ -363,7 +363,7 @@ const ModernLanding = () => {
                         value={signUpData.email}
                         onChange={handleInputChange}
                         placeholder="Email Address"
-                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all bg-background text-foreground"
                         required
                       />
                     </div>
@@ -375,7 +375,7 @@ const ModernLanding = () => {
                         value={signUpData.password}
                         onChange={handleInputChange}
                         placeholder="Password (min. 6 characters)"
-                        className="w-full px-4 py-3 pr-12 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        className="w-full px-4 py-3 pr-12 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all bg-background text-foreground"
                         required
                       />
                       <button
@@ -394,7 +394,7 @@ const ModernLanding = () => {
                         value={signUpData.confirmPassword}
                         onChange={handleInputChange}
                         placeholder="Confirm Password"
-                        className="w-full px-4 py-3 pr-12 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        className="w-full px-4 py-3 pr-12 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all bg-background text-foreground"
                         required
                       />
                       <button
@@ -460,15 +460,15 @@ const ModernLanding = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-primary mb-4 font-caesar">What Our Customers Say</h2>
+            <h2 className="text-4xl font-bold text-foreground mb-4 font-caesar">What Our Customers Say</h2>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-6">
+              <Card key={index} className="p-6 bg-background border border-border">
                 <div className="flex items-center mb-4">
                   {Array.from({ length: testimonial.rating }).map((_, i) => (
                     <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />

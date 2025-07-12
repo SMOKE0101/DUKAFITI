@@ -49,11 +49,12 @@ const DashboardTopbar = () => {
   const { customers } = useSupabaseCustomers();
   const { sales } = useSupabaseSales();
 
-  // Enhanced low stock alerts - exclude products with unspecified stock (-1)
-  const lowStockAlerts = products.filter(p => 
-    p.currentStock !== -1 && 
-    p.currentStock <= p.lowStockThreshold
-  );
+  // Enhanced low stock alerts - handle both field name formats and exclude unspecified stock
+  const lowStockAlerts = products.filter(p => {
+    const currentStock = p.current_stock ?? p.currentStock ?? 0;
+    const threshold = p.low_stock_threshold ?? p.lowStockThreshold ?? 10;
+    return currentStock !== -1 && currentStock <= threshold;
+  });
   const unreadNotifications = lowStockAlerts.length;
 
   // Global search with debounce
@@ -79,12 +80,13 @@ const DashboardTopbar = () => {
       .filter(p => p.name.toLowerCase().includes(term))
       .slice(0, 3)
       .forEach(product => {
+        const currentStock = product.current_stock ?? product.currentStock ?? 0;
         results.push({
           id: product.id,
           type: 'product',
           title: product.name,
-          subtitle: `${formatCurrency(product.sellingPrice)} • Stock: ${product.currentStock === -1 ? 'Unspecified' : product.currentStock}`,
-          route: '/inventory'
+          subtitle: `${formatCurrency(product.selling_price)} • Stock: ${currentStock === -1 ? 'Unspecified' : currentStock}`,
+          route: '/app/inventory'
         });
       });
 
@@ -97,8 +99,8 @@ const DashboardTopbar = () => {
           id: customer.id,
           type: 'customer',
           title: customer.name,
-          subtitle: `${customer.phone} • Debt: ${formatCurrency(customer.outstandingDebt)}`,
-          route: '/customers'
+          subtitle: `${customer.phone} • Debt: ${formatCurrency(customer.outstanding_debt || customer.outstandingDebt || 0)}`,
+          route: '/app/customers'
         });
       });
 
@@ -240,26 +242,31 @@ const DashboardTopbar = () => {
                   </div>
                   {lowStockAlerts.length > 0 ? (
                     <div className="p-2">
-                      {lowStockAlerts.map((product) => (
-                        <div key={product.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900 dark:text-white">
-                                {product.name}
+                      {lowStockAlerts.map((product) => {
+                        const currentStock = product.current_stock ?? product.currentStock ?? 0;
+                        const threshold = product.low_stock_threshold ?? product.lowStockThreshold ?? 10;
+                        
+                        return (
+                          <div key={product.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {product.name}
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  Stock: {currentStock}, Threshold: {threshold}
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                Stock: {product.currentStock}, Threshold: {product.lowStockThreshold}
-                              </div>
+                              <Badge 
+                                variant={currentStock <= 0 ? "destructive" : "secondary"}
+                                className="text-xs"
+                              >
+                                {currentStock <= 0 ? 'Out of Stock' : 'Low Stock'}
+                              </Badge>
                             </div>
-                            <Badge 
-                              variant={product.currentStock <= 0 ? "destructive" : "secondary"}
-                              className="text-xs"
-                            >
-                              {product.currentStock <= 0 ? 'Out of Stock' : 'Low Stock'}
-                            </Badge>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="p-8 text-center text-gray-500 dark:text-gray-400">
@@ -288,7 +295,7 @@ const DashboardTopbar = () => {
                     <button
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md flex items-center gap-2 text-gray-700 dark:text-gray-300"
                       onClick={() => {
-                        navigate('/settings');
+                        navigate('/app/settings');
                         setShowProfileMenu(false);
                       }}
                     >
@@ -298,7 +305,7 @@ const DashboardTopbar = () => {
                     <button
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md flex items-center gap-2 text-gray-700 dark:text-gray-300"
                       onClick={() => {
-                        navigate('/reports');
+                        navigate('/app/reports');
                         setShowProfileMenu(false);
                       }}
                     >
