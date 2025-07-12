@@ -61,15 +61,7 @@ const ModernLanding = () => {
     setIsSigningUp(true);
     
     try {
-      const { error } = await signUp({
-        email: signUpData.email,
-        password: signUpData.password,
-        options: {
-          data: {
-            name: signUpData.name
-          }
-        }
-      });
+      const { error } = await signUp(signUpData.email, signUpData.password);
       
       if (error) {
         setSignUpError(error.message);
@@ -110,12 +102,12 @@ const ModernLanding = () => {
 
   const steps = [
     {
-      title: "How DUKAFITI works?",
-      description: "DUKAFITI is a modern POS system designed specifically for Kenyan dukashops. It helps you manage inventory, process sales, track customers, and grow your business with powerful analytics and reporting tools."
+      title: "How Dukasmart works?",
+      description: "Dukasmart is a modern POS system designed specifically for Kenyan dukashops. It helps you manage inventory, process sales, track customers, and grow your business with powerful analytics and reporting tools."
     },
     {
       title: "Complete business management",
-      description: "The most important part of DUKAFITI is its comprehensive approach. You get inventory management, sales tracking, customer management, M-Pesa integration, and detailed reports all in one simple platform."
+      description: "The most important part of Dukasmart is its comprehensive approach. You get inventory management, sales tracking, customer management, M-Pesa integration, and detailed reports all in one simple platform."
     },
     {
       title: "Variety of payment options",
@@ -127,7 +119,7 @@ const ModernLanding = () => {
     {
       name: "Grace Mutua",
       role: "Shop Owner, Machakos",
-      content: "DUKAFITI transformed my business completely. Sales tracking is so easy now!",
+      content: "Dukasmart transformed my business completely. Sales tracking is so easy now!",
       rating: 5
     },
     {
@@ -154,11 +146,11 @@ const ModernLanding = () => {
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <img 
                   src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="DUKAFITI Logo" 
+                  alt="Dukasmart Logo" 
                   className="w-8 h-8"
                 />
               </div>
-              <span className="text-2xl font-bold text-primary font-caesar">DUKAFITI</span>
+              <span className="text-2xl font-bold text-primary">Dukasmart</span>
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
@@ -252,7 +244,7 @@ const ModernLanding = () => {
                         <div>
                           <h4 className="font-semibold text-primary">Smart POS Design</h4>
                           <p className="text-sm text-muted-foreground">
-                            DUKAFITI contains components which can easily be integrated into almost any shop workflow.
+                            Dukasmart contains components which can easily be integrated into almost any shop workflow.
                           </p>
                         </div>
                       </div>
@@ -294,7 +286,7 @@ const ModernLanding = () => {
                   Ready to Transform Your Business?
                 </h2>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Join thousands of Kenyan shop owners who trust DUKAFITI to manage their business efficiently.
+                  Join thousands of Kenyan shop owners who trust Dukasmart to manage their business efficiently.
                 </p>
               </div>
 
@@ -500,14 +492,14 @@ const ModernLanding = () => {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <img 
                   src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="DUKAFITI Logo" 
+                  alt="Dukasmart Logo" 
                   className="w-6 h-6"
                 />
               </div>
-              <span className="text-xl font-bold font-caesar">DUKAFITI</span>
+              <span className="text-xl font-bold">Dukasmart</span>
             </div>
             <p className="text-muted">Smart POS for Kenyan Dukashops</p>
-            <p className="text-sm text-muted mt-4">&copy; 2024 DUKAFITI. Built for Kenyan entrepreneurs.</p>
+            <p className="text-sm text-muted mt-4">&copy; 2024 Dukasmart. Built for Kenyan entrepreneurs.</p>
           </div>
         </div>
       </footer>

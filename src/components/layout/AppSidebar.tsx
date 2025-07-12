@@ -8,11 +8,12 @@ import {
   Users, 
   FileText, 
   Settings,
-  Menu
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import CubeLogo from '@/components/branding/CubeLogo';
+import { useTheme } from 'next-themes';
 
 interface AppSidebarProps {
   isOpen: boolean;
@@ -60,49 +61,66 @@ const navigationItems = [
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
+  const { theme } = useTheme();
+
+  // Get the appropriate logo based on theme and open state
+  const getLogoSrc = () => {
+    if (!isOpen) {
+      // Use cube icons for collapsed state
+      return theme === 'dark' 
+        ? '/lovable-uploads/e71b20c6-1457-4277-a594-bb9ce4f09d56.png' // Dark mode cube
+        : '/lovable-uploads/0e966e8b-29a2-4e9c-bae2-eb4b0ff1f714.png'; // Light mode cube
+    } else {
+      // Use full logos for expanded state
+      return theme === 'dark'
+        ? '/lovable-uploads/eb77e4bd-5d96-4815-a1ff-0bc09529c54a.png' // Dark mode full logo
+        : '/lovable-uploads/45d85eef-ee71-473e-95df-bb58337a9f07.png'; // Light mode full logo
+    }
+  };
 
   return (
     <div className={cn(
-      "fixed left-0 top-0 h-full bg-white dark:bg-gray-900 border-r border-gray-200/80 dark:border-gray-700/80 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-30 shadow-xl shadow-gray-900/5 dark:shadow-gray-900/20",
+      "fixed left-0 top-0 h-full bg-white border-r border-gray-200/80 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-30 shadow-xl shadow-gray-900/5",
       isOpen ? "w-60" : "w-18"
     )}>
       {/* Header with Professional Branding */}
-      <div className="flex items-center justify-center p-4 border-b border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 min-h-[72px]">
+      <div className="flex items-center justify-center p-4 border-b border-gray-200/60 bg-white min-h-[72px]">
         {isOpen ? (
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center justify-center flex-1 overflow-hidden">
-              <div className={cn(
-                "font-caesar text-2xl font-normal text-gray-900 dark:text-white tracking-wide transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
-                "opacity-100 scale-100"
-              )}>
-                DUKAFITI
-              </div>
-            </div>
+            <img 
+              src={getLogoSrc()}
+              alt="DUKAFITI Logo"
+              className="h-10 w-auto max-w-[160px] object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+              style={{
+                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
+              }}
+            />
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggle}
-              className="p-2 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-300 ml-2 group"
+              className="p-2 hover:bg-gray-50/80 transition-all duration-300"
             >
-              <Menu className={cn(
-                "w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
-                "group-hover:rotate-90"
-              )} />
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-2">
-            <CubeLogo size="md" />
+            <img 
+              src={getLogoSrc()}
+              alt="DUKAFITI Logo"
+              className="w-8 h-8 object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+              style={{
+                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
+              }}
+            />
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggle}
-              className="p-1 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-300 group"
+              className="p-1 hover:bg-gray-50/80 transition-all duration-300"
             >
-              <Menu className={cn(
-                "w-3 h-3 text-gray-600 dark:text-gray-400 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
-                "group-hover:rotate-90"
-              )} />
+              <ChevronRight className="w-3 h-3 text-gray-600" />
             </Button>
           </div>
         )}
@@ -123,8 +141,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
                 "flex items-center rounded-xl p-3 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group relative",
                 "transform-gpu will-change-[transform,background-color]",
                 isActive 
-                  ? "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold shadow-sm border border-gray-200/50 dark:border-gray-700/50" 
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white hover:scale-[1.02] hover:shadow-sm",
+                  ? "bg-gray-50 text-gray-900 font-semibold shadow-sm border border-gray-200/50" 
+                  : "text-gray-600 hover:bg-gray-50/80 hover:text-gray-900 hover:scale-[1.02] hover:shadow-sm",
                 !isOpen && "justify-center"
               )}
               style={{
@@ -133,20 +151,17 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
             >
               <Icon className={cn(
                 "w-5 h-5 flex-shrink-0 transition-all duration-300",
-                isActive ? "text-gray-900 dark:text-white scale-110" : "text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white group-hover:scale-110"
+                isActive ? "text-gray-900 scale-110" : "text-gray-600 group-hover:text-gray-900 group-hover:scale-110"
               )} />
               {isOpen && (
-                <span className={cn(
-                  "font-medium ml-3 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
-                  "opacity-100 translate-x-0"
-                )}>
+                <span className="font-medium ml-3 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]">
                   {item.label}
                 </span>
               )}
               {!isOpen && (
-                <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 dark:bg-gray-100/95 text-white dark:text-gray-900 text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
+                <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
                   {item.label}
-                  <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 dark:bg-gray-100/95 rotate-45"></div>
+                  <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
                 </div>
               )}
             </NavLink>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,17 +51,7 @@ const AuthForm = () => {
     try {
       let result;
       if (isSignUp) {
-        result = await signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              name: formData.name,
-              store_name: formData.storeName,
-              phone: formData.phone
-            }
-          }
-        });
+        result = await signUp(formData.email, formData.password);
       } else {
         result = await signIn(formData.email, formData.password);
       }
@@ -90,15 +79,15 @@ const AuthForm = () => {
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
                 <img 
                   src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="DUKAFITI Logo" 
+                  alt="Dukasmart Logo" 
                   className="w-8 h-8"
                 />
               </div>
-              <span className="text-2xl font-bold text-primary font-caesar">DUKAFITI</span>
+              <span className="text-2xl font-bold text-primary">Dukasmart</span>
             </div>
             
             <h1 className="text-4xl font-bold text-primary mb-2">
-              {isSignUp ? 'Create Your DUKAFITI Account' : 'Welcome Back to DUKAFITI'}
+              {isSignUp ? 'Create Your Dukasmart Account' : 'Welcome Back to Dukasmart'}
             </h1>
             <p className="text-lg text-muted-foreground">
               {isSignUp 

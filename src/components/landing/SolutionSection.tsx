@@ -1,3 +1,4 @@
+
 import { Package, ShoppingCart, BarChart3, Users } from 'lucide-react';
 
 const SolutionSection = () => {

@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
-import CubeLogo from '@/components/branding/CubeLogo';
+import { useTheme } from 'next-themes';
 
 interface PremiumSidebarProps {
   isOpen: boolean;
@@ -67,6 +67,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
   const location = useLocation();
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const shopName = user?.user_metadata?.shop_name || 'DukaSmart';
@@ -77,6 +78,21 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
       await signOut();
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  // Get the appropriate logo based on theme and open state
+  const getLogoSrc = () => {
+    if (!isOpen) {
+      // Use cube icons for collapsed state
+      return theme === 'dark' 
+        ? '/lovable-uploads/e71b20c6-1457-4277-a594-bb9ce4f09d56.png' // Dark mode cube
+        : '/lovable-uploads/0e966e8b-29a2-4e9c-bae2-eb4b0ff1f714.png'; // Light mode cube
+    } else {
+      // Use full logos for expanded state
+      return theme === 'dark'
+        ? '/lovable-uploads/eb77e4bd-5d96-4815-a1ff-0bc09529c54a.png' // Dark mode full logo
+        : '/lovable-uploads/45d85eef-ee71-473e-95df-bb58337a9f07.png'; // Light mode full logo
     }
   };
 
@@ -122,7 +138,14 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
             <div className="space-y-4">
               {/* Logo with Professional Styling and theme support */}
               <div className="flex items-center justify-center">
-                <CubeLogo size="lg" className="max-w-[200px]" />
+                <img 
+                  src={getLogoSrc()}
+                  alt="DUKAFITI Logo"
+                  className="h-12 w-auto max-w-[200px] object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+                  style={{
+                    filter: 'drop-shadow(0 2px 12px rgba(0, 0, 0, 0.1))'
+                  }}
+                />
               </div>
               
               {/* Profile Card - Enhanced Professional Design with theme support */}
@@ -147,7 +170,14 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
             </div>
           ) : (
             <div className="flex justify-center">
-              <CubeLogo size="md" />
+              <img 
+                src={getLogoSrc()}
+                alt="DUKAFITI Logo"
+                className="w-10 h-10 object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+                style={{
+                  filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
+                }}
+              />
             </div>
           )}
         </div>
