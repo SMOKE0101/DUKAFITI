@@ -80,15 +80,15 @@ const SignIn = () => {
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
           <div className="text-center">
-            <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="Dukasmart Logo" 
-                  className="w-8 h-8"
-                />
-              </div>
-              <span className="text-2xl font-bold text-primary">Dukasmart</span>
+            <Link to="/" className="inline-flex items-center justify-center mb-8 group">
+              <img 
+                src={theme === 'dark' 
+                  ? "/assets/banner-with-purple-items-and-black-background.png" 
+                  : "/assets/banner-with-purple-items-and-white-background.png"
+                }
+                alt="DUKAFITI - Duka Bora Ni Duka Fiti" 
+                className="h-16 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+              />
             </Link>
             
             <h1 className="text-4xl font-bold text-primary mb-2">
