@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,7 @@ const DashboardTopbar = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navigate = useNavigate();
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
   const searchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -146,6 +145,10 @@ const DashboardTopbar = () => {
     }
   };
 
+  // Dynamic text color based on theme
+  const currentTheme = resolvedTheme || theme;
+  const brandTextColor = 'text-white'; // Keep white for the purple background
+
   return (
     <>
       <header className="sticky top-0 z-50 h-16 border-b shadow-sm" style={{ backgroundColor: '#602d86' }}>
@@ -153,10 +156,12 @@ const DashboardTopbar = () => {
           {/* Left - Brand */}
           <div className="flex items-center gap-3">
             <CubeLogo 
-              size="md" 
-              isDark={theme === 'dark'} 
+              size="md"
+              className="transition-all duration-300"
             />
-            <div className="font-bold text-xl text-white tracking-wide">DUKAFITI</div>
+            <div className={`font-brand font-normal ${brandTextColor} text-2xl tracking-wide transition-colors duration-300 drop-shadow-sm`}>
+              DUKAFITI
+            </div>
           </div>
 
           {/* Center - Global Search */}

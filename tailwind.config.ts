@@ -92,6 +92,7 @@ export default {
 			fontFamily: {
 				'display': ['Inter', 'ui-sans-serif', 'system-ui'],
 				'body': ['Inter', 'ui-sans-serif', 'system-ui'],
+				'brand': ['Caesar Dressing', 'cursive'],
 			},
 			spacing: {
 				'18': '4.5rem',

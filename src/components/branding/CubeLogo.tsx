@@ -1,59 +1,43 @@
 
 import React from 'react';
+import { useTheme } from 'next-themes';
 
 interface CubeLogoProps {
   size?: 'sm' | 'md' | 'lg';
-  isDark?: boolean;
+  className?: string;
 }
 
-const CubeLogo: React.FC<CubeLogoProps> = ({ size = 'md', isDark = false }) => {
+const CubeLogo: React.FC<CubeLogoProps> = ({ size = 'md', className = '' }) => {
+  const { theme, resolvedTheme } = useTheme();
+  
   const dimensions = {
-    sm: { size: 24, viewBox: '0 0 24 24' },
-    md: { size: 32, viewBox: '0 0 32 32' },
-    lg: { size: 40, viewBox: '0 0 40 40' }
+    sm: 24,
+    md: 32,
+    lg: 40
   };
 
-  const { size: svgSize, viewBox } = dimensions[size];
+  const logoSize = dimensions[size];
   
-  // Colors for light and dark modes
-  const cubeColor = isDark ? '#000000' : '#ffffff';
-  const strokeColor = isDark ? '#ffffff' : '#e5e7eb';
-  const accentColor = isDark ? '#6b7280' : '#9ca3af';
+  // Use dark logo for light mode and light logo for dark mode
+  // This ensures good contrast against the purple background
+  const currentTheme = resolvedTheme || theme;
+  const logoSrc = currentTheme === 'dark' 
+    ? '/lovable-uploads/e01ade1b-8af8-46ff-b6dc-67625887a831.png' // Light logo for dark mode
+    : '/lovable-uploads/c903a006-f883-4a49-807a-f8b0b5a35858.png'; // Dark logo for light mode
 
   return (
-    <svg 
-      width={svgSize} 
-      height={svgSize} 
-      viewBox={viewBox} 
-      className="flex-shrink-0"
-    >
-      {/* Main cube faces */}
-      <g transform="translate(4, 4)">
-        {/* Top face */}
-        <path
-          d="M8 2 L16 6 L12 8 L4 4 Z"
-          fill={cubeColor}
-          stroke={strokeColor}
-          strokeWidth="0.5"
-        />
-        
-        {/* Left face */}
-        <path
-          d="M4 4 L12 8 L12 16 L4 12 Z"
-          fill={accentColor}
-          stroke={strokeColor}
-          strokeWidth="0.5"
-        />
-        
-        {/* Right face */}
-        <path
-          d="M12 8 L16 6 L16 14 L12 16 Z"
-          fill={isDark ? '#374151' : '#f3f4f6'}
-          stroke={strokeColor}
-          strokeWidth="0.5"
-        />
-      </g>
-    </svg>
+    <img 
+      src={logoSrc}
+      alt="DukaFiti Logo"
+      width={logoSize} 
+      height={logoSize}
+      className={`flex-shrink-0 transition-all duration-300 ${className}`}
+      style={{ 
+        width: logoSize, 
+        height: logoSize,
+        objectFit: 'contain'
+      }}
+    />
   );
 };
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -53,7 +52,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navigate = useNavigate();
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -191,6 +190,10 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     }
   };
 
+  // Dynamic text color based on theme - white for light mode, black for dark mode
+  const currentTheme = resolvedTheme || theme;
+  const brandTextColor = currentTheme === 'dark' ? 'text-white' : 'text-white'; // Keep white for the purple background
+
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b shadow-sm" style={{ backgroundColor: '#602d86' }}>
@@ -210,12 +213,12 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
             )}
             
             {/* Brand Section */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <CubeLogo 
-                size={isMobile ? 'sm' : 'md'} 
-                isDark={theme === 'dark'} 
+                size={isMobile ? 'sm' : 'md'}
+                className="transition-all duration-300"
               />
-              <div className={`font-bold text-white ${isMobile ? 'text-lg' : 'text-xl'} tracking-wide`}>
+              <div className={`font-brand font-normal ${brandTextColor} ${isMobile ? 'text-xl' : 'text-2xl'} tracking-wide transition-colors duration-300 drop-shadow-sm`}>
                 DUKAFITI
               </div>
             </div>
