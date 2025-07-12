@@ -25,16 +25,16 @@ const CubeLogo: React.FC<CubeLogoProps> = ({
 
   const logoSize = dimensions[size];
   
-  // Use the official DUKAFITI logo uploaded by the user
-  const officialLogo = '/lovable-uploads/86a021d6-343a-46cb-bfbf-1c2edbc4ddf2.png';
+  // Use the new cube logo uploaded by the user
+  const newCubeLogo = '/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png';
   
   const handleImageError = () => {
-    console.error('DUKAFITI Logo: Failed to load official logo');
+    console.error('DUKAFITI Logo: Failed to load new cube logo');
     setImageError(true);
   };
 
   const handleImageLoad = () => {
-    console.log('DUKAFITI Logo: Official logo loaded successfully');
+    console.log('DUKAFITI Logo: New cube logo loaded successfully');
     setImageError(false);
   };
 
@@ -68,8 +68,8 @@ const CubeLogo: React.FC<CubeLogoProps> = ({
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <img 
-        src={officialLogo}
-        alt="DUKAFITI - Official Logo"
+        src={newCubeLogo}
+        alt="DUKAFITI - New Cube Logo"
         width={logoSize} 
         height={logoSize}
         className="flex-shrink-0 transition-all duration-300 drop-shadow-sm"

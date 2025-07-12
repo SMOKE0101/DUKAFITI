@@ -145,7 +145,7 @@ const ModernLanding = () => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                  src="/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png" 
                   alt="Dukasmart Logo" 
                   className="w-8 h-8"
                 />
@@ -491,7 +491,7 @@ const ModernLanding = () => {
             <div className="flex items-center justify-center space-x-3 mb-4">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                  src="/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png" 
                   alt="Dukasmart Logo" 
                   className="w-6 h-6"
                 />
