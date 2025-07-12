@@ -19,7 +19,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     phone: '',
     email: '',
     address: '',
-    creditLimit: ''
+    creditLimit: '',
+    initialDebt: ''
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,6 +51,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
           delete newErrors.creditLimit;
         }
         break;
+      case 'initialDebt':
+        if (value && parseFloat(value) < 0) {
+          newErrors.initialDebt = 'Initial debt must be positive';
+        } else {
+          delete newErrors.initialDebt;
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -64,13 +72,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     e.preventDefault();
 
     // Validate required fields
-    const fieldsToValidate = ['name', 'phone'];
+    const fieldsToValidate = ['name', 'phone', 'creditLimit', 'initialDebt'];
     fieldsToValidate.forEach(field => {
       validateField(field, formData[field as keyof typeof formData]);
     });
 
     const hasErrors = !formData.name.trim() || !formData.phone.trim() || 
-                     (formData.creditLimit && parseFloat(formData.creditLimit) < 0);
+                     (formData.creditLimit && parseFloat(formData.creditLimit) < 0) ||
+                     (formData.initialDebt && parseFloat(formData.initialDebt) < 0);
 
     if (hasErrors) {
       toast({
@@ -90,7 +99,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
         email: formData.email.trim() || undefined,
         address: formData.address.trim() || undefined,
         creditLimit: formData.creditLimit ? parseFloat(formData.creditLimit) : 1000,
-        outstandingDebt: 0,
+        outstandingDebt: formData.initialDebt ? parseFloat(formData.initialDebt) : 0,
         totalPurchases: 0,
         lastPurchaseDate: null,
         riskRating: 'low' as const,
@@ -125,7 +134,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       phone: '',
       email: '',
       address: '',
-      creditLimit: ''
+      creditLimit: '',
+      initialDebt: ''
     });
     setErrors({});
     onClose();
@@ -135,6 +145,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     return formData.name.trim() && 
            formData.phone.trim() && 
            (!formData.creditLimit || parseFloat(formData.creditLimit) >= 0) &&
+           (!formData.initialDebt || parseFloat(formData.initialDebt) >= 0) &&
            Object.keys(errors).length === 0;
   };
 
@@ -172,24 +183,46 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
             {errors.phone && <p className="text-red-500 text-xs">{errors.phone}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="creditLimit">Credit Limit (optional)</Label>
-            <div className="relative">
-              <Input
-                id="creditLimit"
-                type="number"
-                step="0.01"
-                value={formData.creditLimit}
-                onChange={(e) => handleInputChange('creditLimit', e.target.value)}
-                className={`pl-12 ${errors.creditLimit ? 'border-red-500' : ''}`}
-                placeholder="Unlimited"
-                disabled={loading}
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                KES
-              </span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="creditLimit">Credit Limit (optional)</Label>
+              <div className="relative">
+                <Input
+                  id="creditLimit"
+                  type="number"
+                  step="0.01"
+                  value={formData.creditLimit}
+                  onChange={(e) => handleInputChange('creditLimit', e.target.value)}
+                  className={`pl-12 ${errors.creditLimit ? 'border-red-500' : ''}`}
+                  placeholder="1000"
+                  disabled={loading}
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  KES
+                </span>
+              </div>
+              {errors.creditLimit && <p className="text-red-500 text-xs">{errors.creditLimit}</p>}
             </div>
-            {errors.creditLimit && <p className="text-red-500 text-xs">{errors.creditLimit}</p>}
+
+            <div className="space-y-2">
+              <Label htmlFor="initialDebt">Initial Debt (optional)</Label>
+              <div className="relative">
+                <Input
+                  id="initialDebt"
+                  type="number"
+                  step="0.01"
+                  value={formData.initialDebt}
+                  onChange={(e) => handleInputChange('initialDebt', e.target.value)}
+                  className={`pl-12 ${errors.initialDebt ? 'border-red-500' : ''}`}
+                  placeholder="0"
+                  disabled={loading}
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  KES
+                </span>
+              </div>
+              {errors.initialDebt && <p className="text-red-500 text-xs">{errors.initialDebt}</p>}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -214,6 +247,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
               disabled={loading}
             />
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            * Enter any existing debt amount if the customer already owes money
+          </p>
 
           <div className="flex flex-col gap-2 pt-4">
             <Button

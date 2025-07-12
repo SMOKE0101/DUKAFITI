@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
@@ -12,6 +13,7 @@ import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
 import { Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
@@ -27,10 +29,11 @@ const ModernSalesPage = () => {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const { sales, loading: salesLoading } = useSupabaseSales();
   const { products, loading: productsLoading } = useSupabaseProducts();
-  const { customers, loading: customersLoading } = useSupabaseCustomers();
+  const { customers, loading: customersLoading, updateCustomer } = useSupabaseCustomers();
 
   const isLoading = salesLoading || productsLoading || customersLoading;
 
@@ -109,12 +112,30 @@ const ModernSalesPage = () => {
 
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      alert('Your cart is empty.');
+      toast({
+        title: "Error",
+        description: "Your cart is empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if payment method is debt/credit and customer is required
+    if (paymentMethod === 'debt' && !selectedCustomerId) {
+      toast({
+        title: "Customer Required",
+        description: "Please select a customer for credit sales.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!user) {
-      alert('You must be logged in to complete a sale.');
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to complete a sale.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -149,6 +170,27 @@ const ModernSalesPage = () => {
         throw new Error('Failed to record sales.');
       }
 
+      // Update customer debt if this is a credit sale
+      if (paymentMethod === 'debt' && customer) {
+        const debtAmount = total;
+        const updatedDebt = customer.outstandingDebt + debtAmount;
+        const updatedPurchases = customer.totalPurchases + total;
+        
+        await updateCustomer(customer.id, {
+          outstandingDebt: updatedDebt,
+          totalPurchases: updatedPurchases,
+          lastPurchaseDate: new Date().toISOString(),
+        });
+      } else if (customer && paymentMethod !== 'debt') {
+        // Update total purchases for non-debt sales
+        const updatedPurchases = customer.totalPurchases + total;
+        
+        await updateCustomer(customer.id, {
+          totalPurchases: updatedPurchases,
+          lastPurchaseDate: new Date().toISOString(),
+        });
+      }
+
       // Update stock for each item - only if current stock is greater than 0
       for (const item of cart) {
         if (item.currentStock > 0) {
@@ -165,12 +207,21 @@ const ModernSalesPage = () => {
         }
       }
 
-      alert('Sale completed successfully!');
+      toast({
+        title: "Success!",
+        description: `Sale completed successfully! Total: ${formatCurrency(total)}`,
+      });
+      
       clearCart();
+      setSelectedCustomerId(null);
       navigate('/dashboard');
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Failed to complete sale. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to complete sale. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessingCheckout(false);
     }
@@ -435,10 +486,19 @@ const ModernSalesPage = () => {
                           }
                         `}
                       >
-                        {method === 'mpesa' ? 'M-PESA' : method.toUpperCase()}
+                        {method === 'mpesa' ? 'M-PESA' : method === 'debt' ? 'CREDIT' : method.toUpperCase()}
                       </button>
                     ))}
                   </div>
+                  
+                  {/* Warning for credit sales without customer */}
+                  {paymentMethod === 'debt' && !selectedCustomerId && (
+                    <div className="p-3 bg-orange-100 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-600 rounded-xl">
+                      <p className="text-orange-700 dark:text-orange-400 font-mono font-bold text-xs uppercase">
+                        ⚠️ Customer required for credit sales
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Total and Checkout */}
@@ -454,7 +514,7 @@ const ModernSalesPage = () => {
                   
                   <button
                     onClick={handleCheckout}
-                    disabled={isProcessingCheckout}
+                    disabled={isProcessingCheckout || (paymentMethod === 'debt' && !selectedCustomerId)}
                     className={`
                       w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-mono font-black 
                       uppercase tracking-wider rounded-xl transition-all duration-300 hover:from-purple-700 

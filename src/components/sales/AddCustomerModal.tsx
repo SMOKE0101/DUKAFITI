@@ -21,6 +21,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
     email: '',
     address: '',
     creditLimit: 1000,
+    initialDebt: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,6 +40,24 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
       return;
     }
 
+    if (formData.creditLimit < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Credit limit cannot be negative.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.initialDebt < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Initial debt cannot be negative.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -48,7 +67,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         email: formData.email.trim() || '',
         address: formData.address.trim() || '',
         totalPurchases: 0,
-        outstandingDebt: 0,
+        outstandingDebt: formData.initialDebt,
         creditLimit: formData.creditLimit,
         riskRating: 'low' as const,
         lastPurchaseDate: null,
@@ -69,6 +88,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         email: '',
         address: '',
         creditLimit: 1000,
+        initialDebt: 0,
       });
 
       onCustomerAdded?.(newCustomer);
@@ -163,21 +183,44 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
               />
             </div>
             
-            <div>
-              <Label htmlFor="creditLimit" className="text-sm font-bold text-gray-700">
-                Credit Limit (KES)
-              </Label>
-              <Input
-                id="creditLimit"
-                type="number"
-                value={formData.creditLimit}
-                onChange={(e) => handleChange('creditLimit', Number(e.target.value))}
-                placeholder="1000"
-                min="0"
-                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
-                disabled={isSubmitting}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="creditLimit" className="text-sm font-bold text-gray-700">
+                  Credit Limit (KES)
+                </Label>
+                <Input
+                  id="creditLimit"
+                  type="number"
+                  value={formData.creditLimit}
+                  onChange={(e) => handleChange('creditLimit', Number(e.target.value))}
+                  placeholder="1000"
+                  min="0"
+                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="initialDebt" className="text-sm font-bold text-gray-700">
+                  Initial Debt (KES)
+                </Label>
+                <Input
+                  id="initialDebt"
+                  type="number"
+                  value={formData.initialDebt}
+                  onChange={(e) => handleChange('initialDebt', Number(e.target.value))}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
+            
+            <p className="text-xs text-gray-500">
+              * Enter any existing debt amount if the customer already owes money
+            </p>
           </div>
           
           <div className="flex gap-3 pt-4">

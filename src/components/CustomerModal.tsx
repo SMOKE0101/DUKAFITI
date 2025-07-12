@@ -22,6 +22,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
     phone: '',
     email: '',
     address: '',
+    creditLimit: '1000',
+    initialDebt: '0',
   });
 
   // Update form when customer changes
@@ -32,6 +34,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
         phone: customer.phone || '',
         email: customer.email || '',
         address: customer.address || '',
+        creditLimit: customer.creditLimit?.toString() || '1000',
+        initialDebt: customer.outstandingDebt?.toString() || '0',
       });
     } else {
       setFormData({
@@ -39,6 +43,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
         phone: '',
         email: '',
         address: '',
+        creditLimit: '1000',
+        initialDebt: '0',
       });
     }
   }, [customer, isOpen]);
@@ -54,6 +60,27 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
       });
       return;
     }
+
+    const creditLimit = parseFloat(formData.creditLimit) || 1000;
+    const initialDebt = parseFloat(formData.initialDebt) || 0;
+
+    if (creditLimit < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Credit limit cannot be negative",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (initialDebt < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Initial debt cannot be negative",
+        variant: "destructive",
+      });
+      return;
+    }
     
     onSave({
       name: formData.name.trim(),
@@ -62,8 +89,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
       address: formData.address.trim(),
       createdDate: customer?.createdDate || new Date().toISOString(),
       totalPurchases: customer?.totalPurchases || 0,
-      outstandingDebt: customer?.outstandingDebt || 0,
-      creditLimit: customer?.creditLimit || 1000,
+      outstandingDebt: initialDebt,
+      creditLimit: creditLimit,
       riskRating: customer?.riskRating || 'low',
       lastPurchaseDate: customer?.lastPurchaseDate,
     });
@@ -138,6 +165,43 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                   className="min-h-[80px] text-base focus-visible:ring-2 focus-visible:ring-primary resize-none"
                   rows={3}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="creditLimit" className="text-sm font-medium text-foreground">
+                    Credit Limit (KES)
+                  </Label>
+                  <Input
+                    id="creditLimit"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.creditLimit}
+                    onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
+                    placeholder="1000"
+                    className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="initialDebt" className="text-sm font-medium text-foreground">
+                    Initial Debt (KES)
+                  </Label>
+                  <Input
+                    id="initialDebt"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.initialDebt}
+                    onChange={(e) => setFormData({ ...formData, initialDebt: e.target.value })}
+                    placeholder="0"
+                    className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter existing debt amount if customer already owes money
+                  </p>
+                </div>
               </div>
             </div>
             

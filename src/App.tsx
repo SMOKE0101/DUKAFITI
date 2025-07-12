@@ -1,147 +1,150 @@
 
-import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { Toaster } from '@/components/ui/toaster';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
-import AppLayout from './components/layout/AppLayout';
-import ProtectedRoute from './components/ProtectedRoute';
+import { Toaster } from '@/components/ui/toaster';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// Pages
-import Index from "./pages/Index";
-import Landing from "./pages/Landing";
-import ModernLanding from "./pages/ModernLanding";
-import AuthHandler from "./pages/AuthHandler";
-import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
-import NotFound from "./pages/NotFound";
-import Offline from "./pages/Offline";
-import BrandDemo from "./pages/BrandDemo";
+// Page imports
+import Index from './pages/Index';
+import AuthForm from './components/AuthForm';
+import Dashboard from './components/Dashboard';
+import SalesManagement from './components/SalesManagement';
+import CustomerManagement from './components/CustomerManagement';
+import ProductManagement from './components/ProductManagement';
+import ReportsPage from './components/ReportsPage';
+import DebtRecording from './components/DebtRecording';
+import ProtectedRoute from './components/ProtectedRoute';
 
-// Dashboard Components
-import EnhancedDashboard from "./components/EnhancedDashboard";
-import SalesManagement from "./components/SalesManagement";
-import InventoryPage from "./components/InventoryPage";
-import CustomersPage from "./components/CustomersPage";
-import ReportsPage from "./components/ReportsPage";
-import Settings from "./pages/Settings";
+// 404 component
+const NotFound = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+      <p className="text-gray-600 mb-4">Page not found</p>
+      <a href="/" className="text-blue-600 hover:text-blue-800">Go home</a>
+    </div>
+  </div>
+);
 
-// Create QueryClient instance
+// Create a stable query client instance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 1,
+      refetchOnWindowFocus: false,
     },
   },
 });
 
-// Loading component
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center h-64">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-  </div>
-);
-
 function App() {
-  console.log('App: Component rendering')
-  
   return (
     <ErrorBoundary>
       <ThemeProvider
         attribute="class"
         defaultTheme="light"
         enableSystem={false}
-        storageKey="dukafiti-theme"
+        disableTransitionOnChange
       >
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <div className="min-h-screen bg-background">
-              <Router>
+            <Router>
+              <div className="min-h-screen bg-background">
                 <Routes>
                   {/* Main route - redirect based on auth status */}
                   <Route path="/" element={<Index />} />
                   
-                  {/* Public routes */}
-                  <Route path="/landing" element={<Landing />} />
-                  <Route path="/modern-landing" element={<ModernLanding />} />
-                  <Route path="/signin" element={<SignIn />} />
-                  <Route path="/signup" element={<SignUp />} />
-                  <Route path="/demo" element={<BrandDemo />} />
-                  <Route path="/offline" element={<Offline />} />
-                  <Route path="/app" element={<AuthHandler />} />
+                  {/* Auth routes */}
+                  <Route path="/auth" element={<AuthForm />} />
                   
-                  {/* Protected routes with layout */}
+                  {/* Protected routes */}
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
-                      <AppLayout>
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <EnhancedDashboard />
-                        </Suspense>
-                      </AppLayout>
+                      <Dashboard />
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/sales" element={
                     <ProtectedRoute>
-                      <AppLayout>
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <SalesManagement />
-                        </Suspense>
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/inventory" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <InventoryPage />
-                        </Suspense>
-                      </AppLayout>
+                      <SalesManagement />
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/customers" element={
                     <ProtectedRoute>
-                      <AppLayout>
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <CustomersPage />
-                        </Suspense>
-                      </AppLayout>
+                      <CustomerManagement />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/products" element={
+                    <ProtectedRoute>
+                      <ProductManagement />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/inventory" element={
+                    <ProtectedRoute>
+                      <ProductManagement />
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/reports" element={
                     <ProtectedRoute>
-                      <AppLayout>
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <ReportsPage />
-                        </Suspense>
-                      </AppLayout>
+                      <ReportsPage />
                     </ProtectedRoute>
                   } />
                   
-                  <Route path="/settings" element={
+                  <Route path="/debt" element={
                     <ProtectedRoute>
-                      <AppLayout>
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <Settings />
-                        </Suspense>
-                      </AppLayout>
+                      <DebtRecording />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Legacy routes for compatibility */}
+                  <Route path="/auth-form" element={<AuthForm />} />
+                  <Route path="/enhanced-dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/sales-management" element={
+                    <ProtectedRoute>
+                      <SalesManagement />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/customer-management" element={
+                    <ProtectedRoute>
+                      <CustomerManagement />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/product-management" element={
+                    <ProtectedRoute>
+                      <ProductManagement />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/inventory-page" element={
+                    <ProtectedRoute>
+                      <ProductManagement />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/reports-page" element={
+                    <ProtectedRoute>
+                      <ReportsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/debt-recording" element={
+                    <ProtectedRoute>
+                      <DebtRecording />
                     </ProtectedRoute>
                   } />
                   
                   {/* Catch all route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </Router>
-              
-              {/* Toaster positioned outside Router but inside all providers */}
+              </div>
               <Toaster />
-            </div>
+            </Router>
           </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
