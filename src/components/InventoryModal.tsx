@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '../hooks/use-toast';
 import { Product } from '../types';
+import { Package } from 'lucide-react';
 
 interface InventoryModalProps {
   isOpen: boolean;
@@ -26,7 +27,6 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
 
   const selectedProduct = products.find(p => p.id === formData.productId);
 
-  // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setFormData({
@@ -75,7 +75,6 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
       formData.supplier || undefined
     );
     
-    // Close modal after successful submission
     onClose();
   };
 
@@ -83,47 +82,56 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg border-0 p-0">
-        <DialogHeader className="flex-shrink-0 text-center space-y-3 p-4 sm:p-6 border-b">
-          <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
-            Add Inventory
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Record new stock arrival and update inventory levels.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden">
         
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            <div className="space-y-4 sm:space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="product" className="text-sm font-medium text-foreground">
-                  Product *
-                </Label>
-                <Select 
-                  value={formData.productId} 
-                  onValueChange={(value) => setFormData({ ...formData, productId: value })}
-                >
-                  <SelectTrigger className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary">
-                    <SelectValue placeholder="Search and select product..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map(product => (
-                      <SelectItem key={product.id} value={product.id}>
-                        <div className="flex justify-between items-center w-full">
-                          <span>{product.name}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            Stock: {product.currentStock}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="quantity" className="text-sm font-medium text-foreground">
+        {/* Modern Header */}
+        <div className="border-b-4 border-purple-600 bg-white dark:bg-gray-900 p-6 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+            <Package className="w-8 h-8 text-purple-600" />
+          </div>
+          <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+            ADD INVENTORY
+          </DialogTitle>
+          <DialogDescription className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2 uppercase tracking-wider">
+            Record new stock arrival
+          </DialogDescription>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* Product Selection */}
+            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+              <Label htmlFor="product" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                Product *
+              </Label>
+              <Select 
+                value={formData.productId} 
+                onValueChange={(value) => setFormData({ ...formData, productId: value })}
+              >
+                <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500">
+                  <SelectValue placeholder="Search and select product..." />
+                </SelectTrigger>
+                <SelectContent className="border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
+                  {products.map(product => (
+                    <SelectItem key={product.id} value={product.id} className="font-mono">
+                      <div className="flex justify-between items-center w-full">
+                        <span>{product.name}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                          Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Quantity and Price Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Quantity */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="quantity" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
                   Quantity Received *
                 </Label>
                 <Input
@@ -133,17 +141,18 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
                   value={formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
                   placeholder="1"
-                  className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
                   required
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="buyingPrice" className="text-sm font-medium text-foreground">
+              {/* Buying Price */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="buyingPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
                   Buying Price (KES) *
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
                     KES
                   </span>
                   <Input
@@ -154,67 +163,77 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
                     value={formData.buyingPrice}
                     onChange={(e) => setFormData({ ...formData, buyingPrice: parseFloat(e.target.value) || 0 })}
                     placeholder="0.00"
-                    className="h-12 text-base pl-14 focus-visible:ring-2 focus-visible:ring-primary"
+                    className="h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
                     required
                   />
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="supplier" className="text-sm font-medium text-foreground">
-                  Supplier (Optional)
-                </Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier}
-                  onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                  placeholder="Enter supplier name"
-                  className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
-                />
-              </div>
-
-              {selectedProduct && (
-                <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                  <h3 className="font-medium text-foreground mb-2">Summary</h3>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Product:</span>
-                      <span className="font-medium">{selectedProduct.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Current Stock:</span>
-                      <span>{selectedProduct.currentStock} units</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">New Stock:</span>
-                      <span className="font-medium">{selectedProduct.currentStock + formData.quantity} units</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Cost:</span>
-                      <span className="font-medium text-primary">
-                        KES {(formData.buyingPrice * formData.quantity).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
             
-            <div className="flex flex-col gap-3 pt-6 border-t border-border">
+            {/* Supplier */}
+            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+              <Label htmlFor="supplier" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                Supplier (Optional)
+              </Label>
+              <Input
+                id="supplier"
+                value={formData.supplier}
+                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                placeholder="Enter supplier name"
+                className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
+              />
+            </div>
+
+            {selectedProduct && (
+              <div className="border-2 border-blue-300 dark:border-blue-600 rounded-xl p-4 bg-blue-50/50 dark:bg-blue-900/20">
+                <h3 className="font-mono font-bold uppercase tracking-wider text-blue-900 dark:text-blue-100 mb-3">
+                  Summary
+                </h3>
+                <div className="space-y-2 font-mono text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Product:</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{selectedProduct.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Current Stock:</span>
+                    <span className="text-gray-900 dark:text-white">
+                      {selectedProduct.currentStock === -1 ? 'Unspecified' : `${selectedProduct.currentStock} units`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">New Stock:</span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {selectedProduct.currentStock === -1 
+                        ? 'Unspecified' 
+                        : `${selectedProduct.currentStock + formData.quantity} units`
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Cost:</span>
+                    <span className="font-bold text-purple-600">
+                      KES {(formData.buyingPrice * formData.quantity).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3 pt-6">
               <Button 
                 type="submit" 
-                className="w-full h-12 text-base font-medium bg-green-600 hover:bg-green-700 focus-visible:ring-green-500"
+                className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all duration-200"
                 disabled={!isFormValid}
               >
-                Save Stock Addition
+                SAVE STOCK ADDITION
               </Button>
               <Button 
                 type="button" 
-                variant="outline" 
                 onClick={onClose} 
-                className="w-full h-12 text-base font-medium"
+                className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200"
               >
-                Cancel
+                CANCEL
               </Button>
             </div>
           </form>

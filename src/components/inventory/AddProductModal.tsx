@@ -35,7 +35,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   });
   const [unspecifiedStock, setUnspecifiedStock] = useState(false);
 
-  // Pre-fill form when editing a product
   useEffect(() => {
     if (editingProduct) {
       setFormData({
@@ -49,7 +48,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       });
       setUnspecifiedStock(editingProduct.currentStock === -1);
     } else {
-      // Reset form for new product
       setFormData({
         name: '',
         sku: '',
@@ -121,7 +119,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       }
     }
     
-    // Use -1 to indicate unspecified stock, and set defaults for disabled fields
     const finalFormData = {
       ...formData,
       currentStock: unspecifiedStock ? -1 : formData.currentStock,
@@ -157,226 +154,234 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   return (
     <TooltipProvider>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg border-0 p-0">
-          <DialogHeader className="flex-shrink-0 text-center space-y-3 p-4 sm:p-6 border-b">
-            <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden">          
+          {/* Modern Header */}
+          <div className="border-b-4 border-green-600 bg-white dark:bg-gray-900 p-6 text-center">
+            <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              {editingProduct ? 'EDIT PRODUCT' : 'ADD PRODUCT'}
             </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {editingProduct ? 'Update product information' : 'Enter product details to add to your inventory'}
+            <DialogDescription className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2 uppercase tracking-wider">
+              {editingProduct ? 'Update product details' : 'Create new inventory item'}
             </DialogDescription>
-          </DialogHeader>
+          </div>
           
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                    Product Name *
-                  </Label>
+          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Product Name */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product Name *
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter product name"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                  required
+                />
+              </div>
+
+              {/* Product SKU */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="sku" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product SKU
+                </Label>
+                <div className="flex gap-3">
                   <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="Enter product name"
-                    className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
-                    required
+                    id="sku"
+                    value={formData.sku}
+                    onChange={(e) => handleInputChange('sku', e.target.value)}
+                    placeholder="Enter or generate SKU"
+                    className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 flex-1"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sku" className="text-sm font-medium text-foreground">
-                    Product SKU
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="sku"
-                      value={formData.sku}
-                      onChange={(e) => handleInputChange('sku', e.target.value)}
-                      placeholder="Enter or generate SKU"
-                      className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={generateSKU}
-                      className="h-12 px-3 flex-shrink-0"
-                    >
-                      <Shuffle className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="category" className="text-sm font-medium text-foreground">
-                    Category *
-                  </Label>
-                  <Select 
-                    value={formData.category} 
-                    onValueChange={(value) => handleInputChange('category', value)}
+                  <Button
+                    type="button"
+                    onClick={generateSKU}
+                    className="h-12 px-4 border-2 border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200"
                   >
-                    <SelectTrigger className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Shuffle className="w-4 h-4" />
+                  </Button>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="costPrice" className="text-sm font-medium text-foreground">
-                      Cost Price (KES) *
-                    </Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
-                            KES
-                          </span>
-                          <Input
-                            id="costPrice"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={unspecifiedStock ? '' : formData.costPrice}
-                            onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
-                            placeholder="0.00"
-                            className={`h-12 text-base pl-14 focus-visible:ring-2 focus-visible:ring-primary ${
-                              unspecifiedStock ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : ''
-                            }`}
-                            disabled={unspecifiedStock}
-                            required={!unspecifiedStock}
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      {unspecifiedStock && (
-                        <TooltipContent>
-                          <p>Disabled for unspecified-quantity items</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="sellingPrice" className="text-sm font-medium text-foreground">
-                      Selling Price (KES) *
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
-                        KES
-                      </span>
-                      <Input
-                        id="sellingPrice"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.sellingPrice}
-                        onChange={(e) => handleInputChange('sellingPrice', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                        className="h-12 text-base pl-14 focus-visible:ring-2 focus-visible:ring-primary"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentStock" className="text-sm font-medium text-foreground">
-                      Current Stock *
-                    </Label>
-                    <Input
-                      id="currentStock"
-                      type="number"
-                      min="0"
-                      value={unspecifiedStock ? '' : formData.currentStock}
-                      onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
-                      placeholder={unspecifiedStock ? "Unspecified quantity" : "0"}
-                      className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
-                      disabled={unspecifiedStock}
-                      required={!unspecifiedStock}
-                    />
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="unspecifiedStock"
-                        checked={unspecifiedStock}
-                        onCheckedChange={(checked) => setUnspecifiedStock(checked as boolean)}
-                      />
-                      <Label htmlFor="unspecifiedStock" className="text-sm text-muted-foreground">
-                        Unspecified quantity (sacks, cups, tins, gorogoro, etc.)
-                      </Label>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="lowStockThreshold" className="text-sm font-medium text-foreground">
-                      Low Stock Alert
-                    </Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Input
-                          id="lowStockThreshold"
-                          type="number"
-                          min="0"
-                          value={unspecifiedStock ? '' : formData.lowStockThreshold}
-                          onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 10)}
-                          placeholder="10"
-                          className={`h-12 text-base focus-visible:ring-2 focus-visible:ring-primary ${
-                            unspecifiedStock ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : ''
-                          }`}
-                          disabled={unspecifiedStock}
-                        />
-                      </TooltipTrigger>
-                      {unspecifiedStock && (
-                        <TooltipContent>
-                          <p>Disabled for unspecified-quantity items</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </div>
-                </div>
-
-                {showProfitCalculation && (
-                  <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                    <h3 className="font-medium text-foreground mb-2">Profit Summary</h3>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Profit per unit:</span>
-                        <span className="font-medium text-green-600">
-                          KES {(formData.sellingPrice - formData.costPrice).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Profit margin:</span>
-                        <span className="font-medium text-green-600">
-                          {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
               
-              <div className="flex flex-col gap-3 pt-6 border-t border-border">
+              {/* Category */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="category" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Category *
+                </Label>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={(value) => handleInputChange('category', value)}
+                >
+                  <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category} className="font-mono">
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Pricing Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Cost Price (KES) *
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
+                          KES
+                        </span>
+                        <Input
+                          id="costPrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={unspecifiedStock ? '' : formData.costPrice}
+                          onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
+                          placeholder="0.00"
+                          className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                            unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          disabled={unspecifiedStock}
+                          required={!unspecifiedStock}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    {unspecifiedStock && (
+                      <TooltipContent>
+                        <p>Disabled for unspecified-quantity items</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+                
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="sellingPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Selling Price (KES) *
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
+                      KES
+                    </span>
+                    <Input
+                      id="sellingPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.sellingPrice}
+                      onChange={(e) => handleInputChange('sellingPrice', parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                      className="h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Stock Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="currentStock" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Current Stock *
+                  </Label>
+                  <Input
+                    id="currentStock"
+                    type="number"
+                    min="0"
+                    value={unspecifiedStock ? '' : formData.currentStock}
+                    onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
+                    placeholder={unspecifiedStock ? "Unspecified quantity" : "0"}
+                    className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                      unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={unspecifiedStock}
+                    required={!unspecifiedStock}
+                  />
+                  <div className="flex items-center space-x-2 mt-3">
+                    <Checkbox 
+                      id="unspecifiedStock"
+                      checked={unspecifiedStock}
+                      onCheckedChange={(checked) => setUnspecifiedStock(checked as boolean)}
+                      className="border-2 border-gray-300 dark:border-gray-600"
+                    />
+                    <Label htmlFor="unspecifiedStock" className="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                      Unspecified quantity (sacks, cups, etc.)
+                    </Label>
+                  </div>
+                </div>
+                
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="lowStockThreshold" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Low Stock Alert
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Input
+                        id="lowStockThreshold"
+                        type="number"
+                        min="0"
+                        value={unspecifiedStock ? '' : formData.lowStockThreshold}
+                        onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 10)}
+                        placeholder="10"
+                        className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                          unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={unspecifiedStock}
+                      />
+                    </TooltipTrigger>
+                    {unspecifiedStock && (
+                      <TooltipContent>
+                        <p>Disabled for unspecified-quantity items</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              </div>
+
+              {showProfitCalculation && (
+                <div className="border-2 border-blue-300 dark:border-blue-600 rounded-xl p-4 bg-blue-50/50 dark:bg-blue-900/20">
+                  <h3 className="font-mono font-bold uppercase tracking-wider text-blue-900 dark:text-blue-100 mb-3">
+                    Profit Summary
+                  </h3>
+                  <div className="space-y-2 font-mono text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit per unit:</span>
+                      <span className="font-bold text-green-600">
+                        KES {(formData.sellingPrice - formData.costPrice).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit margin:</span>
+                      <span className="font-bold text-green-600">
+                        {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 pt-6">
                 <Button 
                   type="submit" 
-                  className="w-full h-12 text-base font-medium bg-green-600 hover:bg-green-700 focus-visible:ring-green-500"
+                  className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200"
                 >
-                  {editingProduct ? 'Update Product' : 'Add Product'}
+                  {editingProduct ? 'UPDATE PRODUCT' : 'ADD PRODUCT'}
                 </Button>
                 <Button 
                   type="button" 
-                  variant="outline" 
                   onClick={onClose} 
-                  className="w-full h-12 text-base font-medium"
+                  className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200"
                 >
-                  Cancel
+                  CANCEL
                 </Button>
               </div>
             </form>

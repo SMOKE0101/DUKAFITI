@@ -14,8 +14,10 @@ import Dashboard from './components/Dashboard';
 import SalesManagement from './components/SalesManagement';
 import CustomersPage from './components/CustomersPage';
 import ProductManagement from './components/ProductManagement';
+import InventoryPage from './components/InventoryPage';
 import ReportsPage from './components/ReportsPage';
 import DebtRecording from './components/DebtRecording';
+import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import ModernSalesPage from './components/ModernSalesPage';
 
@@ -96,7 +98,7 @@ function App() {
                   <Route path="/products" element={
                     <ProtectedRoute>
                       <AppLayout>
-                        <ProductManagement />
+                        <InventoryPage />
                       </AppLayout>
                     </ProtectedRoute>
                   } />
@@ -104,7 +106,7 @@ function App() {
                   <Route path="/inventory" element={
                     <ProtectedRoute>
                       <AppLayout>
-                        <ProductManagement />
+                        <InventoryPage />
                       </AppLayout>
                     </ProtectedRoute>
                   } />
@@ -121,6 +123,14 @@ function App() {
                     <ProtectedRoute>
                       <AppLayout>
                         <DebtRecording />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Settings />
                       </AppLayout>
                     </ProtectedRoute>
                   } />
@@ -151,7 +161,7 @@ function App() {
                   <Route path="/inventory-page" element={
                     <ProtectedRoute>
                       <AppLayout>
-                        <ProductManagement />
+                        <InventoryPage />
                       </AppLayout>
                     </ProtectedRoute>
                   } />
