@@ -46,6 +46,8 @@ const LoadingSpinner = () => (
 );
 
 function App() {
+  console.log('App: Component rendering')
+  
   return (
     <ErrorBoundary>
       <ThemeProvider
@@ -56,8 +58,8 @@ function App() {
       >
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <Router>
-              <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background">
+              <Router>
                 <Routes>
                   {/* Main route - redirect based on auth status */}
                   <Route path="/" element={<Index />} />
@@ -135,11 +137,11 @@ function App() {
                   {/* Catch all route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                
-                {/* Toaster positioned after Router to ensure proper React context */}
-                <Toaster />
-              </div>
-            </Router>
+              </Router>
+              
+              {/* Toaster positioned outside Router but inside all providers */}
+              <Toaster />
+            </div>
           </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>

@@ -168,16 +168,24 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  const [state, setState] = useState<State>(() => memoryState)
+  // Initialize state with a function to ensure it's only called once
+  const [state, setState] = useState<State>(() => {
+    console.log('useToast: Initializing with memoryState:', memoryState)
+    return memoryState
+  })
 
   useEffect(() => {
+    console.log('useToast: Setting up listener')
+    
     const listener = (newState: State) => {
+      console.log('useToast: Listener called with state:', newState)
       setState(newState)
     }
     
     listeners.push(listener)
     
     return () => {
+      console.log('useToast: Cleaning up listener')
       const index = listeners.indexOf(listener)
       if (index > -1) {
         listeners.splice(index, 1)
@@ -186,6 +194,7 @@ function useToast() {
   }, [])
 
   const dismissToast = useCallback((toastId?: string) => {
+    console.log('useToast: Dismissing toast:', toastId)
     dispatch({ type: "DISMISS_TOAST", toastId })
   }, [])
 
