@@ -94,15 +94,6 @@ const safeTheme = (theme: string | undefined): 'light' | 'dark' | 'system' => {
   return 'light';
 };
 
-// Debounce function for theme changes
-const debounce = <T extends (...args: any[]) => void>(func: T, delay: number): T => {
-  let timeoutId: NodeJS.Timeout;
-  return ((...args: any[]) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
-  }) as T;
-};
-
 export const useSettings = () => {
   const [settings, setSettings] = useState<ShopSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
@@ -110,21 +101,20 @@ export const useSettings = () => {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const isInitialized = useRef(false);
-  const themeChangeTimeoutRef = useRef<NodeJS.Timeout>();
+  const isLoadingSettings = useRef(false);
 
   const settingsKey = user ? `dukafiti_settings_${user.id}` : 'dukafiti_settings_guest';
 
-  // Debounced theme setter to prevent rapid changes
-  const debouncedSetTheme = debounce((newTheme: 'light' | 'dark' | 'system') => {
-    console.log('Setting theme via debounced function:', newTheme);
-    setTheme(newTheme);
-  }, 100);
-
   useEffect(() => {
-    loadSettings();
+    if (!isLoadingSettings.current) {
+      loadSettings();
+    }
   }, [user]);
 
   const loadSettings = async () => {
+    if (isLoadingSettings.current) return;
+    isLoadingSettings.current = true;
+    
     try {
       console.log('Loading settings for user:', user?.id);
       
@@ -156,21 +146,22 @@ export const useSettings = () => {
           
           setSettings(settingsWithDefaults);
           
-          // Only sync theme on true initialization (first load)
-          if (!isInitialized.current) {
+          // CRITICAL: Only sync theme if we're on the settings page AND user explicitly requests it
+          // This prevents auto-switching that was causing the issue
+          if (!isInitialized.current && window.location.pathname === '/settings') {
             const savedTheme = safeTheme(savedSettings.theme);
-            console.log('Initializing theme from settings:', savedTheme, 'Current theme:', theme);
+            console.log('Settings page - checking theme sync:', savedTheme, 'Current theme:', theme);
             
-            // Only set theme if it's different and we have a valid saved theme
-            if (savedTheme && theme !== savedTheme) {
-              console.log('Setting theme on initialization:', savedTheme);
-              debouncedSetTheme(savedTheme);
+            // Only sync if there's a significant difference and it's intentional
+            if (savedTheme && theme !== savedTheme && savedSettings.theme) {
+              console.log('Syncing theme on settings page:', savedTheme);
+              setTheme(savedTheme);
             }
-            isInitialized.current = true;
           }
+          
+          isInitialized.current = true;
         } else {
           console.log('No settings found in Supabase, checking localStorage');
-          // Fallback to localStorage
           await loadFromLocalStorage();
         }
       } else {
@@ -186,16 +177,12 @@ export const useSettings = () => {
         variant: "destructive",
       });
       
-      // Only sync theme on initialization
       if (!isInitialized.current) {
-        if (theme !== 'light') {
-          console.log('Setting default theme on error');
-          debouncedSetTheme('light');
-        }
         isInitialized.current = true;
       }
     } finally {
       setLoading(false);
+      isLoadingSettings.current = false;
     }
   };
 
@@ -210,15 +197,15 @@ export const useSettings = () => {
       };
       setSettings(settingsWithDefaults);
       
-      // Only sync theme on initialization
-      if (!isInitialized.current) {
+      // Only sync theme on settings page initialization
+      if (!isInitialized.current && window.location.pathname === '/settings') {
         const currentTheme = safeTheme(parsedSettings.theme);
-        console.log('Loading theme from localStorage:', currentTheme);
-        if (theme !== currentTheme) {
-          debouncedSetTheme(currentTheme);
+        console.log('Loading theme from localStorage on settings page:', currentTheme);
+        if (theme !== currentTheme && parsedSettings.theme) {
+          setTheme(currentTheme);
         }
-        isInitialized.current = true;
       }
+      isInitialized.current = true;
     } else if (user?.user_metadata?.shop_name) {
       // Initialize with shop name from user metadata
       const initialSettings = {
@@ -227,21 +214,10 @@ export const useSettings = () => {
         theme: 'light' as const
       };
       setSettings(initialSettings);
-      
-      if (!isInitialized.current) {
-        if (theme !== 'light') {
-          debouncedSetTheme('light');
-        }
-        isInitialized.current = true;
-      }
+      isInitialized.current = true;
     } else {
       // Pure defaults
-      if (!isInitialized.current) {
-        if (theme !== 'light') {
-          debouncedSetTheme('light');
-        }
-        isInitialized.current = true;
-      }
+      isInitialized.current = true;
     }
   };
 
@@ -252,7 +228,6 @@ export const useSettings = () => {
       const updatedSettings = { 
         ...settings, 
         ...newSettings,
-        // Ensure theme is properly typed
         theme: newSettings.theme ? safeTheme(newSettings.theme) : settings.theme
       };
       
@@ -262,17 +237,8 @@ export const useSettings = () => {
       // If theme is being updated, sync with ThemeProvider immediately
       if (newSettings.theme) {
         const safeNewTheme = safeTheme(newSettings.theme);
-        console.log('Theme change requested:', safeNewTheme);
-        
-        // Clear any pending theme changes
-        if (themeChangeTimeoutRef.current) {
-          clearTimeout(themeChangeTimeoutRef.current);
-        }
-        
-        // Set theme immediately for user changes (not during initialization)
-        if (isInitialized.current) {
-          setTheme(safeNewTheme);
-        }
+        console.log('Theme change requested by user:', safeNewTheme);
+        setTheme(safeNewTheme);
       }
       
       // Save to localStorage (always)
@@ -329,8 +295,7 @@ export const useSettings = () => {
     setSettings(defaultSettings);
     localStorage.removeItem(settingsKey);
     
-    // Set theme to default
-    debouncedSetTheme('light');
+    setTheme('light');
     
     if (user) {
       await supabase

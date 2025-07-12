@@ -12,7 +12,7 @@ import AddProductModal from './inventory/AddProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Package, RefreshCw, AlertCircle } from 'lucide-react';
+import { Package, RefreshCw, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const InventoryPage = () => {
@@ -24,7 +24,8 @@ const InventoryPage = () => {
     updateProduct, 
     deleteProduct, 
     addStock,
-    refreshProducts
+    refreshProducts,
+    isOnline
   } = useSupabaseProducts();
   
   const { toast } = useToast();
@@ -41,6 +42,7 @@ const InventoryPage = () => {
     productsCount: products.length, 
     loading, 
     error,
+    isOnline,
     editingProduct: editingProduct?.id,
     deletingProduct: deletingProduct?.id
   });
@@ -167,7 +169,7 @@ const InventoryPage = () => {
   };
 
   // Show error state
-  if (error) {
+  if (error && products.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-6">
@@ -178,6 +180,16 @@ const InventoryPage = () => {
             <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
               INVENTORY
             </h1>
+            <div className="flex items-center gap-2 ml-4">
+              {isOnline ? (
+                <Wifi className="w-4 h-4 text-green-500" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-500" />
+              )}
+              <span className="text-sm text-muted-foreground">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -187,8 +199,14 @@ const InventoryPage = () => {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Failed to Load Inventory
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            <p className="text-gray-500 dark:text-gray-400 mb-2 max-w-md mx-auto">
               {error}
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-6 max-w-md mx-auto">
+              {isOnline 
+                ? "Check your internet connection and try again." 
+                : "You're offline. Connect to the internet to sync your data."
+              }
             </p>
             <Button
               onClick={handleRetry}
@@ -215,6 +233,16 @@ const InventoryPage = () => {
             <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
               INVENTORY
             </h1>
+            <div className="flex items-center gap-2 ml-4">
+              {isOnline ? (
+                <Wifi className="w-4 h-4 text-green-500" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-500" />
+              )}
+              <span className="text-sm text-muted-foreground">
+                {isOnline ? 'Syncing...' : 'Loading cached data...'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -255,6 +283,22 @@ const InventoryPage = () => {
             <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
               INVENTORY
             </h1>
+            <div className="flex items-center gap-2 ml-4">
+              {isOnline ? (
+                <Wifi className="w-4 h-4 text-green-500" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-500" />
+              )}
+              <span className="text-sm text-muted-foreground">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
+            </div>
+            {error && products.length > 0 && (
+              <div className="flex items-center gap-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 rounded text-yellow-800 dark:text-yellow-200 text-xs">
+                <AlertCircle className="w-3 h-3" />
+                Using cached data
+              </div>
+            )}
           </div>
           <button
             onClick={() => setShowAddModal(true)}

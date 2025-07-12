@@ -1,6 +1,4 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useOfflineFirstSupabase } from './useOfflineFirstSupabase';
@@ -11,17 +9,34 @@ export const useSupabaseProducts = () => {
   const { toast } = useToast();
 
   // Transform functions for field mapping
-  const transformToLocal = (product: any): Product => ({
-    id: product.id,
-    name: product.name,
-    category: product.category,
-    costPrice: Number(product.cost_price || product.costPrice || 0),
-    sellingPrice: Number(product.selling_price || product.sellingPrice || 0),
-    currentStock: Number(product.current_stock || product.currentStock || 0),
-    lowStockThreshold: Number(product.low_stock_threshold || product.lowStockThreshold || 10),
-    createdAt: product.created_at || product.createdAt,
-    updatedAt: product.updated_at || product.updatedAt,
-  });
+  const transformToLocal = (product: any): Product => {
+    if (!product) {
+      console.warn('Received null/undefined product in transformToLocal');
+      return {
+        id: '',
+        name: '',
+        category: '',
+        costPrice: 0,
+        sellingPrice: 0,
+        currentStock: 0,
+        lowStockThreshold: 10,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    return {
+      id: product.id || '',
+      name: product.name || '',
+      category: product.category || '',
+      costPrice: Number(product.cost_price || product.costPrice || 0),
+      sellingPrice: Number(product.selling_price || product.sellingPrice || 0),
+      currentStock: Number(product.current_stock || product.currentStock || 0),
+      lowStockThreshold: Number(product.low_stock_threshold || product.lowStockThreshold || 10),
+      createdAt: product.created_at || product.createdAt || new Date().toISOString(),
+      updatedAt: product.updated_at || product.updatedAt || new Date().toISOString(),
+    };
+  };
 
   const transformFromLocal = (product: Product): any => ({
     id: product.id,
@@ -36,21 +51,38 @@ export const useSupabaseProducts = () => {
   });
 
   const loadFromSupabase = async () => {
-    if (!user) throw new Error('No user authenticated');
+    if (!user) {
+      console.log('[useSupabaseProducts] No user authenticated');
+      return [];
+    }
     
     console.log('[useSupabaseProducts] Loading products from Supabase...');
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
+    
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('[useSupabaseProducts] Supabase error:', error);
+      if (error) {
+        console.error('[useSupabaseProducts] Supabase error:', error);
+        throw new Error(`Failed to load products: ${error.message}`);
+      }
+
+      if (!data) {
+        console.log('[useSupabaseProducts] No data returned from Supabase');
+        return [];
+      }
+
+      console.log('[useSupabaseProducts] Loaded products from Supabase:', data.length);
+      return data.map(transformToLocal).filter(product => product.id); // Filter out invalid products
+    } catch (error) {
+      console.error('[useSupabaseProducts] Load error:', error);
       throw error;
     }
-
-    console.log('[useSupabaseProducts] Loaded products from Supabase:', data?.length || 0);
-    return data ? data.map(transformToLocal) : [];
   };
 
   const {
@@ -87,6 +119,8 @@ export const useSupabaseProducts = () => {
         throw new Error('Cannot create product while offline');
       }
 
+      const { supabase } = await import('@/integrations/supabase/client');
+
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -103,7 +137,7 @@ export const useSupabaseProducts = () => {
 
       if (error) {
         console.error('[useSupabaseProducts] Create error:', error);
-        throw error;
+        throw new Error(`Failed to create product: ${error.message}`);
       }
 
       console.log('[useSupabaseProducts] Product created successfully:', data);
@@ -120,9 +154,10 @@ export const useSupabaseProducts = () => {
       return newProduct;
     } catch (error) {
       console.error('[useSupabaseProducts] Create product error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: `Failed to create product: ${error.message}`,
+        description: `Failed to create product: ${errorMessage}`,
         variant: "destructive",
       });
       throw error;
@@ -147,6 +182,8 @@ export const useSupabaseProducts = () => {
         throw new Error('Cannot update product while offline');
       }
 
+      const { supabase } = await import('@/integrations/supabase/client');
+
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -159,12 +196,13 @@ export const useSupabaseProducts = () => {
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single();
 
       if (error) {
         console.error('[useSupabaseProducts] Update error:', error);
-        throw error;
+        throw new Error(`Failed to update product: ${error.message}`);
       }
 
       console.log('[useSupabaseProducts] Product updated successfully:', data);
@@ -181,9 +219,10 @@ export const useSupabaseProducts = () => {
       return updatedProduct;
     } catch (error) {
       console.error('[useSupabaseProducts] Update product error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: `Failed to update product: ${error.message}`,
+        description: `Failed to update product: ${errorMessage}`,
         variant: "destructive",
       });
       throw error;
@@ -208,14 +247,17 @@ export const useSupabaseProducts = () => {
         throw new Error('Cannot delete product while offline');
       }
 
+      const { supabase } = await import('@/integrations/supabase/client');
+
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('[useSupabaseProducts] Delete error:', error);
-        throw error;
+        throw new Error(`Failed to delete product: ${error.message}`);
       }
 
       console.log('[useSupabaseProducts] Product deleted successfully');
@@ -229,9 +271,10 @@ export const useSupabaseProducts = () => {
       });
     } catch (error) {
       console.error('[useSupabaseProducts] Delete product error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: `Failed to delete product: ${error.message}`,
+        description: `Failed to delete product: ${errorMessage}`,
         variant: "destructive",
       });
       throw error;
@@ -273,42 +316,15 @@ export const useSupabaseProducts = () => {
       });
     } catch (error) {
       console.error('[useSupabaseProducts] Add stock error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: `Failed to add stock: ${error.message}`,
+        description: `Failed to add stock: ${errorMessage}`,
         variant: "destructive",
       });
       throw error;
     }
   };
-
-  // Set up real-time subscription
-  useEffect(() => {
-    if (!user || !isOnline) return;
-
-    console.log('[useSupabaseProducts] Setting up real-time subscription');
-    const channel = supabase
-      .channel('products-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'products',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('[useSupabaseProducts] Real-time change detected:', payload);
-          refreshProducts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('[useSupabaseProducts] Cleaning up real-time subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [user, isOnline, refreshProducts]);
 
   return {
     products,

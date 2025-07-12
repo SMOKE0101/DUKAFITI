@@ -1,7 +1,91 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from './useAuth';
+import { useToast } from './use-toast';
 
-interface OfflineFirstOptions<T> {
+// IndexedDB wrapper for offline-first data storage
+class OfflineFirstDB {
+  private dbName = 'dukafiti_offline';
+  private version = 1;
+  private db: IDBDatabase | null = null;
+
+  async init(): Promise<void> {
+    if (this.db) return;
+
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, this.version);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+      
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        
+        // Create stores for each data type
+        const stores = ['products', 'customers', 'sales', 'settings'];
+        stores.forEach(storeName => {
+          if (!db.objectStoreNames.contains(storeName)) {
+            db.createObjectStore(storeName, { keyPath: 'id' });
+          }
+        });
+      };
+    });
+  }
+
+  async set<T>(storeName: string, data: T[]): Promise<void> {
+    await this.init();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      // Clear existing data
+      store.clear();
+      
+      // Add new data
+      data.forEach(item => store.put(item));
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  async get<T>(storeName: string): Promise<T[]> {
+    await this.init();
+    if (!this.db) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readonly');
+      const store = transaction.objectStore(storeName);
+      const request = store.getAll();
+      
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async clear(storeName: string): Promise<void> {
+    await this.init();
+    if (!this.db) return;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      const request = store.clear();
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+}
+
+const offlineDB = new OfflineFirstDB();
+
+interface UseOfflineFirstSupabaseOptions<T> {
   cacheKey: string;
   tableName: string;
   loadFromSupabase: () => Promise<T[]>;
@@ -9,136 +93,36 @@ interface OfflineFirstOptions<T> {
   transformFromLocal: (item: T) => any;
 }
 
-// Enhanced IndexedDB manager for offline-first functionality
-class OfflineFirstDB {
-  private db: IDBDatabase | null = null;
-  private dbName = 'DukaFitiOfflineFirst';
-  private version = 1;
-
-  async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Create stores for each data type
-        if (!db.objectStoreNames.contains('cache')) {
-          const cacheStore = db.createObjectStore('cache', { keyPath: 'key' });
-          cacheStore.createIndex('timestamp', 'timestamp', { unique: false });
-        }
-      };
-    });
-  }
-
-  async getCachedData(key: string): Promise<any[]> {
-    if (!this.db) {
-      await this.init();
-    }
-    
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['cache'], 'readonly');
-      const store = transaction.objectStore('cache');
-      const request = store.get(key);
-
-      request.onsuccess = () => {
-        const result = request.result;
-        if (result && result.data) {
-          console.log(`[OfflineFirst] Retrieved cached data for ${key}:`, result.data.length, 'items');
-          resolve(result.data);
-        } else {
-          console.log(`[OfflineFirst] No cached data found for ${key}`);
-          resolve([]);
-        }
-      };
-      request.onerror = () => {
-        console.error(`[OfflineFirst] Error retrieving cache for ${key}:`, request.error);
-        resolve([]);
-      };
-    });
-  }
-
-  async setCachedData(key: string, data: any[]): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['cache'], 'readwrite');
-      const store = transaction.objectStore('cache');
-      const cacheEntry = {
-        key,
-        data,
-        timestamp: Date.now()
-      };
-
-      const request = store.put(cacheEntry);
-      
-      request.onsuccess = () => {
-        console.log(`[OfflineFirst] Cached data for ${key}:`, data.length, 'items');
-        resolve();
-      };
-      request.onerror = () => {
-        console.error(`[OfflineFirst] Error caching data for ${key}:`, request.error);
-        reject(request.error);
-      };
-    });
-  }
-
-  async clearCache(key?: string): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['cache'], 'readwrite');
-      const store = transaction.objectStore('cache');
-      
-      if (key) {
-        const request = store.delete(key);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      } else {
-        const request = store.clear();
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      }
-    });
-  }
-}
-
-const offlineFirstDB = new OfflineFirstDB();
-
-export function useOfflineFirstSupabase<T>({
+export const useOfflineFirstSupabase = <T extends { id: string }>({
   cacheKey,
   tableName,
   loadFromSupabase,
   transformToLocal,
   transformFromLocal
-}: OfflineFirstOptions<T>) {
+}: UseOfflineFirstSupabaseOptions<T>) => {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(
-    localStorage.getItem(`lastSync_${cacheKey}`)
-  );
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const initializationRef = useRef(false);
+  const loadingRef = useRef(false);
 
-  // Network status monitoring
+  // Monitor online status
   useEffect(() => {
     const handleOnline = () => {
-      console.log(`[OfflineFirst-${cacheKey}] Network online detected`);
+      console.log(`[${cacheKey}] Connection restored`);
       setIsOnline(true);
+      if (user && !loadingRef.current) {
+        refresh();
+      }
     };
-
+    
     const handleOffline = () => {
-      console.log(`[OfflineFirst-${cacheKey}] Network offline detected`);
+      console.log(`[${cacheKey}] Connection lost - switching to offline mode`);
       setIsOnline(false);
     };
 
@@ -149,141 +133,130 @@ export function useOfflineFirstSupabase<T>({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [cacheKey]);
+  }, [user, cacheKey]);
 
-  // Load data with offline-first strategy
-  const loadData = useCallback(async (forceRefresh = false) => {
+  // Load data function
+  const loadData = useCallback(async (forceRefresh: boolean = false) => {
+    if (loadingRef.current) {
+      console.log(`[${cacheKey}] Load already in progress, skipping`);
+      return;
+    }
+
+    if (!user) {
+      console.log(`[${cacheKey}] No user, clearing data`);
+      setData([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    loadingRef.current = true;
+    
     try {
-      setLoading(true);
-      setError('');
-
-      console.log(`[OfflineFirst-${cacheKey}] Loading data... Online: ${isOnline}, Force refresh: ${forceRefresh}`);
-
-      // Always try to load cached data first for immediate display
-      let cachedData: any[] = [];
-      try {
-        cachedData = await offlineFirstDB.getCachedData(cacheKey);
-        if (cachedData && cachedData.length > 0) {
-          const transformedData = cachedData.map(transformToLocal);
-          setData(transformedData);
-          console.log(`[OfflineFirst-${cacheKey}] Loaded cached data:`, transformedData.length, 'items');
-        }
-      } catch (cacheError) {
-        console.warn(`[OfflineFirst-${cacheKey}] Cache read error:`, cacheError);
-      }
-
-      // If online, try to fetch fresh data from Supabase
-      if (isOnline && !forceRefresh || forceRefresh) {
+      console.log(`[${cacheKey}] Loading data - Online: ${isOnline}, Force refresh: ${forceRefresh}`);
+      
+      if (isOnline && (forceRefresh || !initializationRef.current)) {
+        // Try to load from Supabase first
         try {
-          console.log(`[OfflineFirst-${cacheKey}] Fetching fresh data from Supabase...`);
-          const freshData = await loadFromSupabase();
+          console.log(`[${cacheKey}] Loading from Supabase...`);
+          const supabaseData = await loadFromSupabase();
+          console.log(`[${cacheKey}] Loaded ${supabaseData.length} items from Supabase`);
           
-          if (freshData && freshData.length >= 0) {
-            console.log(`[OfflineFirst-${cacheKey}] Received fresh data:`, freshData.length, 'items');
-            
-            // Update local state with fresh data
-            setData(freshData);
-            
-            // Cache the fresh data for offline use
-            try {
-              const dataToCache = freshData.map(transformFromLocal);
-              await offlineFirstDB.setCachedData(cacheKey, dataToCache);
-              
-              // Update last sync time
-              const syncTime = new Date().toISOString();
-              setLastSyncTime(syncTime);
-              localStorage.setItem(`lastSync_${cacheKey}`, syncTime);
-              
-              console.log(`[OfflineFirst-${cacheKey}] Successfully synced and cached fresh data`);
-            } catch (cacheError) {
-              console.warn(`[OfflineFirst-${cacheKey}] Failed to cache fresh data:`, cacheError);
-            }
+          // Cache the data
+          await offlineDB.set(cacheKey, supabaseData);
+          console.log(`[${cacheKey}] Data cached successfully`);
+          
+          setData(supabaseData);
+          setError(null);
+          setLastSyncTime(new Date());
+          
+          if (!initializationRef.current) {
+            toast({
+              title: "Data Loaded",
+              description: `${supabaseData.length} ${tableName} loaded successfully`,
+            });
           }
         } catch (supabaseError) {
-          console.error(`[OfflineFirst-${cacheKey}] Supabase fetch error:`, supabaseError);
+          console.error(`[${cacheKey}] Supabase load failed:`, supabaseError);
           
-          // If we have cached data, use it and show a warning
-          if (cachedData && cachedData.length > 0) {
-            setError(`Using offline data. Sync failed: ${supabaseError.message}`);
-            console.log(`[OfflineFirst-${cacheKey}] Using cached data due to Supabase error`);
-          } else {
-            // No cached data available, show error
-            setError(`Failed to load ${tableName}. Please check your connection.`);
-            setData([]);
+          // Fall back to cached data
+          const cachedData = await offlineDB.get<T>(cacheKey);
+          console.log(`[${cacheKey}] Falling back to ${cachedData.length} cached items`);
+          
+          setData(cachedData);
+          setError(`Failed to sync with server. Using cached data.`);
+          
+          if (!initializationRef.current) {
+            toast({
+              title: "Offline Mode",
+              description: `Using cached ${tableName} data`,
+              variant: "default",
+            });
           }
         }
-      } else if (!isOnline) {
-        // Offline mode
-        if (cachedData && cachedData.length > 0) {
-          console.log(`[OfflineFirst-${cacheKey}] Operating in offline mode with cached data`);
-          setError(''); // Clear any previous errors when we have cached data
-        } else {
-          console.log(`[OfflineFirst-${cacheKey}] No cached data available for offline mode`);
-          setError(`No ${tableName} available offline. Please connect to sync data.`);
-          setData([]);
+      } else {
+        // Load from cache only
+        console.log(`[${cacheKey}] Loading from cache (offline mode)`);
+        const cachedData = await offlineDB.get<T>(cacheKey);
+        console.log(`[${cacheKey}] Loaded ${cachedData.length} items from cache`);
+        
+        setData(cachedData);
+        setError(isOnline ? null : "Offline - using cached data");
+        
+        if (!initializationRef.current && cachedData.length === 0) {
+          toast({
+            title: "No Data Available",
+            description: `No ${tableName} found. Connect to internet to sync.`,
+            variant: "default",
+          });
         }
       }
-    } catch (generalError) {
-      console.error(`[OfflineFirst-${cacheKey}] General loading error:`, generalError);
-      setError(`Failed to load ${tableName}: ${generalError.message}`);
+      
+      initializationRef.current = true;
+    } catch (error) {
+      console.error(`[${cacheKey}] Load data error:`, error);
+      setError(error instanceof Error ? error.message : 'Failed to load data');
+      
+      // Try to load from cache as last resort
+      try {
+        const cachedData = await offlineDB.get<T>(cacheKey);
+        setData(cachedData);
+        console.log(`[${cacheKey}] Emergency fallback to cache: ${cachedData.length} items`);
+      } catch (cacheError) {
+        console.error(`[${cacheKey}] Cache fallback failed:`, cacheError);
+        setData([]);
+      }
+      
+      toast({
+        title: "Error",
+        description: `Failed to load ${tableName}. Please try again.`,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
-  }, [cacheKey, tableName, isOnline, loadFromSupabase, transformToLocal, transformFromLocal]);
+  }, [user, cacheKey, tableName, isOnline, loadFromSupabase, toast]);
+
+  // Initial load
+  useEffect(() => {
+    if (!initializationRef.current) {
+      console.log(`[${cacheKey}] Initializing data load`);
+      loadData(false);
+    }
+  }, [loadData]);
 
   // Refresh function
   const refresh = useCallback(async () => {
-    console.log(`[OfflineFirst-${cacheKey}] Manual refresh triggered`);
+    console.log(`[${cacheKey}] Manual refresh requested`);
     await loadData(true);
-  }, [loadData, cacheKey]);
-
-  // Test offline functionality
-  const testOffline = useCallback(async () => {
-    console.log(`[OfflineFirst-${cacheKey}] Testing offline functionality...`);
-    
-    try {
-      // Test cache operations
-      const testData = [{ id: 'test-1', name: 'Test Item', test: true }];
-      await offlineFirstDB.setCachedData(`test_${cacheKey}`, testData);
-      const retrievedData = await offlineFirstDB.getCachedData(`test_${cacheKey}`);
-      
-      const success = retrievedData.length === 1 && retrievedData[0].id === 'test-1';
-      
-      // Clean up test data
-      await offlineFirstDB.clearCache(`test_${cacheKey}`);
-      
-      console.log(`[OfflineFirst-${cacheKey}] Offline test result:`, success ? 'PASSED' : 'FAILED');
-      
-      return {
-        success,
-        message: success ? 'Offline functionality working correctly' : 'Offline test failed',
-        cacheKey,
-        dataCount: data.length,
-        lastSyncTime
-      };
-    } catch (error) {
-      console.error(`[OfflineFirst-${cacheKey}] Offline test error:`, error);
-      return {
-        success: false,
-        message: `Offline test failed: ${error.message}`,
-        cacheKey,
-        error: error.message
-      };
-    }
-  }, [cacheKey, data.length, lastSyncTime]);
-
-  // Initialize data loading
-  useEffect(() => {
-    loadData();
   }, [loadData]);
 
-  // Reload when coming back online
-  useEffect(() => {
-    if (isOnline) {
-      console.log(`[OfflineFirst-${cacheKey}] Network restored, reloading data...`);
-      loadData();
-    }
-  }, [isOnline, loadData, cacheKey]);
+  // Test offline function
+  const testOffline = useCallback(() => {
+    setIsOnline(false);
+    setTimeout(() => setIsOnline(navigator.onLine), 5000);
+  }, []);
 
   return {
     data,
@@ -294,4 +267,4 @@ export function useOfflineFirstSupabase<T>({
     lastSyncTime,
     testOffline
   };
-}
+};
