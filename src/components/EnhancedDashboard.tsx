@@ -1,9 +1,9 @@
 
 import React from 'react';
-import PremiumDashboard from './PremiumDashboard';
+import RoughBlockyDashboard from './RoughBlockyDashboard';
 
 const EnhancedDashboard = () => {
-  return <PremiumDashboard />;
+  return <RoughBlockyDashboard />;
 };
 
 export default EnhancedDashboard;

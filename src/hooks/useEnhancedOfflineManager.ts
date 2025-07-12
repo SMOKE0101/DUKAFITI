@@ -25,11 +25,11 @@ interface OfflineOperation {
   synced: boolean;
 }
 
-// Enhanced IndexedDB Manager
+// Enhanced IndexedDB Manager with proper field mapping
 class EnhancedOfflineDB {
   private db: IDBDatabase | null = null;
   private dbName = 'DukaFitiEnhanced';
-  private version = 1;
+  private version = 2;
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -54,51 +54,77 @@ class EnhancedOfflineDB {
   }
 
   private createStores(db: IDBDatabase): void {
+    // Clear existing stores to prevent conflicts
+    const existingStores = Array.from(db.objectStoreNames);
+    existingStores.forEach(storeName => {
+      if (db.objectStoreNames.contains(storeName)) {
+        db.deleteObjectStore(storeName);
+      }
+    });
+
     // Sales store with proper field mapping
-    if (!db.objectStoreNames.contains('sales')) {
-      const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
-      salesStore.createIndex('user_id', 'user_id', { unique: false });
-      salesStore.createIndex('productId', 'productId', { unique: false });
-      salesStore.createIndex('timestamp', 'timestamp', { unique: false });
-      salesStore.createIndex('synced', 'synced', { unique: false });
-    }
+    const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
+    salesStore.createIndex('userId', 'userId', { unique: false });
+    salesStore.createIndex('productId', 'productId', { unique: false });
+    salesStore.createIndex('timestamp', 'timestamp', { unique: false });
+    salesStore.createIndex('synced', 'synced', { unique: false });
 
     // Products store with camelCase fields
-    if (!db.objectStoreNames.contains('products')) {
-      const productsStore = db.createObjectStore('products', { keyPath: 'id' });
-      productsStore.createIndex('user_id', 'user_id', { unique: false });
-      productsStore.createIndex('category', 'category', { unique: false });
-      productsStore.createIndex('name', 'name', { unique: false });
-    }
+    const productsStore = db.createObjectStore('products', { keyPath: 'id' });
+    productsStore.createIndex('userId', 'userId', { unique: false });
+    productsStore.createIndex('category', 'category', { unique: false });
+    productsStore.createIndex('name', 'name', { unique: false });
 
     // Customers store with camelCase fields
-    if (!db.objectStoreNames.contains('customers')) {
-      const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
-      customersStore.createIndex('user_id', 'user_id', { unique: false });
-      customersStore.createIndex('name', 'name', { unique: false });
-      customersStore.createIndex('phone', 'phone', { unique: false });
-    }
+    const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
+    customersStore.createIndex('userId', 'userId', { unique: false });
+    customersStore.createIndex('name', 'name', { unique: false });
+    customersStore.createIndex('phone', 'phone', { unique: false });
 
     // Enhanced sync queue
-    if (!db.objectStoreNames.contains('syncQueue')) {
-      const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-      syncStore.createIndex('type', 'type', { unique: false });
-      syncStore.createIndex('priority', 'priority', { unique: false });
-      syncStore.createIndex('timestamp', 'timestamp', { unique: false });
-      syncStore.createIndex('synced', 'synced', { unique: false });
-    }
+    const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+    syncStore.createIndex('type', 'type', { unique: false });
+    syncStore.createIndex('priority', 'priority', { unique: false });
+    syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+    syncStore.createIndex('synced', 'synced', { unique: false });
 
     console.log('Enhanced IndexedDB stores created successfully');
+  }
+
+  // Field name transformation utility
+  transformFieldNames(obj: any, format: 'camelCase' | 'snake_case'): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    const transformed: any = {};
+    
+    for (const [key, value] of Object.entries(obj)) {
+      let newKey = key;
+      
+      if (format === 'camelCase') {
+        // Convert snake_case to camelCase
+        newKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      } else {
+        // Convert camelCase to snake_case
+        newKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      }
+      
+      transformed[newKey] = value;
+    }
+    
+    return transformed;
   }
 
   async storeData(storeName: string, data: any): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
+    // Transform to camelCase for local storage
+    const transformedData = this.transformFieldNames(data, 'camelCase');
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([storeName], 'readwrite');
       const store = transaction.objectStore(storeName);
       
-      const request = store.put(data);
+      const request = store.put(transformedData);
       
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -114,7 +140,15 @@ class EnhancedOfflineDB {
       
       const request = id ? store.get(id) : store.getAll();
       
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const result = request.result;
+        // Transform back to camelCase for consistency
+        if (Array.isArray(result)) {
+          resolve(result.map(item => this.transformFieldNames(item, 'camelCase')));
+        } else {
+          resolve(this.transformFieldNames(result, 'camelCase'));
+        }
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -124,7 +158,8 @@ class EnhancedOfflineDB {
   }
 
   async getSyncQueue(): Promise<OfflineOperation[]> {
-    return this.getData('syncQueue');
+    const operations = await this.getData('syncQueue');
+    return Array.isArray(operations) ? operations : [];
   }
 
   async removeFromSyncQueue(id: string): Promise<void> {
@@ -208,6 +243,10 @@ export const useEnhancedOfflineManager = () => {
       // Register single enhanced service worker
       if ('serviceWorker' in navigator) {
         try {
+          // Unregister all existing service workers first
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+          
           const registration = await navigator.serviceWorker.register('/enhanced-sw.js', {
             scope: '/'
           });
@@ -275,7 +314,7 @@ export const useEnhancedOfflineManager = () => {
       id: operationId,
       type,
       operation,
-      data: { ...data, user_id: user?.id },
+      data: { ...data, userId: user?.id },
       timestamp: new Date().toISOString(),
       priority,
       attempts: 0,
@@ -309,18 +348,15 @@ export const useEnhancedOfflineManager = () => {
   // Enhanced local storage with proper field mapping
   const updateLocalStorage = async (type: string, operation: string, data: any) => {
     try {
-      // Transform snake_case to camelCase for local storage
-      const transformedData = transformFieldNames(data, 'camelCase');
-      
       switch (type) {
         case 'sale':
           if (operation === 'create') {
-            await enhancedOfflineDB.storeData('sales', transformedData);
+            await enhancedOfflineDB.storeData('sales', data);
             // Update product stock locally
-            if (transformedData.productId && transformedData.quantity) {
-              const product = await enhancedOfflineDB.getData('products', transformedData.productId);
+            if (data.productId && data.quantity) {
+              const product = await enhancedOfflineDB.getData('products', data.productId);
               if (product) {
-                product.currentStock = Math.max(0, product.currentStock - transformedData.quantity);
+                product.currentStock = Math.max(0, product.currentStock - data.quantity);
                 await enhancedOfflineDB.storeData('products', product);
               }
             }
@@ -328,39 +364,16 @@ export const useEnhancedOfflineManager = () => {
           break;
           
         case 'product':
-          await enhancedOfflineDB.storeData('products', transformedData);
+          await enhancedOfflineDB.storeData('products', data);
           break;
           
         case 'customer':
-          await enhancedOfflineDB.storeData('customers', transformedData);
+          await enhancedOfflineDB.storeData('customers', data);
           break;
       }
     } catch (error) {
       console.error('[EnhancedOfflineManager] Failed to update enhanced local storage:', error);
     }
-  };
-
-  // Field name transformation utility
-  const transformFieldNames = (obj: any, format: 'camelCase' | 'snake_case') => {
-    if (!obj || typeof obj !== 'object') return obj;
-    
-    const transformed: any = {};
-    
-    for (const [key, value] of Object.entries(obj)) {
-      let newKey = key;
-      
-      if (format === 'camelCase') {
-        // Convert snake_case to camelCase
-        newKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-      } else {
-        // Convert camelCase to snake_case
-        newKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      }
-      
-      transformed[newKey] = value;
-    }
-    
-    return transformed;
   };
 
   // Enhanced sync operations
@@ -474,7 +487,7 @@ export const useEnhancedOfflineManager = () => {
   const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
     try {
       // Transform data to snake_case for database
-      const dbData = transformFieldNames(operation.data, 'snake_case');
+      const dbData = enhancedOfflineDB.transformFieldNames(operation.data, 'snake_case');
       
       switch (operation.type) {
         case 'sale':
@@ -612,11 +625,7 @@ export const useEnhancedOfflineManager = () => {
   // Get offline data with proper field transformation
   const getOfflineData = useCallback(async (type: string, id?: string) => {
     try {
-      const data = await enhancedOfflineDB.getData(type, id);
-      // Transform back to camelCase for UI
-      return Array.isArray(data) 
-        ? data.map(item => transformFieldNames(item, 'camelCase'))
-        : transformFieldNames(data, 'camelCase');
+      return await enhancedOfflineDB.getData(type, id);
     } catch (error) {
       console.error(`[EnhancedOfflineManager] Failed to get enhanced offline data for ${type}:`, error);
       return null;
@@ -637,7 +646,7 @@ export const useEnhancedOfflineManager = () => {
         sellingPrice: 100,
         costPrice: 50,
         profit: 50,
-        total: 200,
+        totalAmount: 200,
         paymentMethod: 'cash',
         timestamp: new Date().toISOString(),
         synced: false

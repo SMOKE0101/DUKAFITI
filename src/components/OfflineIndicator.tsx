@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Wifi, 
   WifiOff, 
-  Sync, 
+  RefreshCw, 
   CheckCircle, 
   AlertCircle, 
   Clock,
@@ -153,7 +153,7 @@ const OfflineIndicator: React.FC = () => {
                 disabled={isSyncing}
                 className="text-xs h-7 px-3"
               >
-                <Sync className="h-3 w-3 mr-1" />
+                <RefreshCw className="h-3 w-3 mr-1" />
                 Sync Now
               </Button>
             )}

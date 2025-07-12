@@ -28,32 +28,36 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
       <DialogContent 
         className={cn(
           isMobile 
-            ? "modal-mobile p-0" 
-            : "modal-content p-0",
+            ? "max-h-[90vh] w-[95vw] max-w-none m-2 p-0 flex flex-col" 
+            : "max-h-[85vh] p-0 flex flex-col",
           className
         )}
       >
         {/* Mobile drag bar */}
-        {isMobile && <div className="modal-drag-bar" />}
+        {isMobile && (
+          <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-2 flex-shrink-0" />
+        )}
         
-        <DialogHeader className="flex-shrink-0 p-6 border-b border-border/50">
+        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b border-border/50">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-display font-semibold">
+            <DialogTitle className="text-lg sm:text-xl font-display font-semibold pr-2">
               {title}
             </DialogTitle>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="p-2 hover:bg-accent/10"
+              className="p-2 hover:bg-accent/10 flex-shrink-0"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto p-6">
-          {children}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
+          <div className="space-y-4">
+            {children}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
