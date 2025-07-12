@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
@@ -13,7 +14,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { useTheme } from 'next-themes';
+import CubeLogo from '../branding/CubeLogo';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -39,7 +40,6 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
   const { signOut } = useAuth();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
-  const { theme } = useTheme();
 
   // Completely hide sidebar on mobile and tablet - return null immediately
   if (isMobile || isTablet) {
@@ -61,21 +61,6 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
     }
   };
 
-  // Get the appropriate logo based on theme and collapsed state
-  const getLogoSrc = () => {
-    if (isCollapsed) {
-      // Use cube icons for collapsed state
-      return theme === 'dark' 
-        ? '/lovable-uploads/e71b20c6-1457-4277-a594-bb9ce4f09d56.png' // Dark mode cube
-        : '/lovable-uploads/0e966e8b-29a2-4e9c-bae2-eb4b0ff1f714.png'; // Light mode cube
-    } else {
-      // Use full logos for expanded state
-      return theme === 'dark'
-        ? '/lovable-uploads/eb77e4bd-5d96-4815-a1ff-0bc09529c54a.png' // Dark mode full logo
-        : '/lovable-uploads/45d85eef-ee71-473e-95df-bb58337a9f07.png'; // Light mode full logo
-    }
-  };
-
   // Desktop Sidebar only - Enhanced with professional white design and dark mode support
   return (
     <div className={`hidden lg:block ${className}`}>
@@ -88,7 +73,7 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
           isCollapsed ? 'w-20' : 'w-72'
         )}
       >
-        {/* Brand Section - Professional design with theme support */}
+        {/* Brand Section - Clean text-based branding */}
         <div className={cn(
           "p-6 border-b border-gray-200/60 dark:border-gray-700/60 flex-shrink-0 min-h-[88px] flex items-center justify-center overflow-hidden",
           "bg-white dark:bg-gray-900 transition-colors duration-300"
@@ -97,20 +82,16 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
             "flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
             "transform-gpu will-change-transform"
           )}>
-            <img 
-              src={getLogoSrc()}
-              alt="DUKAFITI Logo"
-              className={cn(
-                "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] object-contain",
-                "transform-gpu will-change-[width,height,opacity]",
-                isCollapsed 
-                  ? 'w-10 h-10' 
-                  : 'h-12 w-auto max-w-[200px]'
-              )}
-              style={{
-                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
-              }}
-            />
+            {isCollapsed ? (
+              <CubeLogo size="md" />
+            ) : (
+              <div className="flex items-center gap-3">
+                <CubeLogo size="md" />
+                <span className="font-caesar font-bold text-2xl text-gray-900 dark:text-white tracking-wide">
+                  DUKAFITI
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
