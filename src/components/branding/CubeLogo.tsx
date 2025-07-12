@@ -20,11 +20,12 @@ const CubeLogo: React.FC<CubeLogoProps> = ({ size = 'md', className = '' }) => {
 
   const logoSize = dimensions[size];
   
-  // Define logo sources with fallbacks
+  // Define logo sources with the new uploaded images
   const logoSources = {
-    // Primary logos (user uploaded)
-    light: '/lovable-uploads/e01ade1b-8af8-46ff-b6dc-67625887a831.png', // Light logo for dark mode
-    dark: '/lovable-uploads/c903a006-f883-4a49-807a-f8b0b5a35858.png',  // Dark logo for light mode
+    // Use image 2 for dark mode (dark background with purple logo)
+    dark: '/lovable-uploads/5c134a0a-9c11-4d06-84f0-2260ac6a501c.png',
+    // Use image 3 for light mode (white/transparent background with purple logo)
+    light: '/lovable-uploads/7a509f59-2133-4353-8956-6a97f4238cbd.png',
     // Fallback logo
     fallback: '/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png'
   };
@@ -34,8 +35,8 @@ const CubeLogo: React.FC<CubeLogoProps> = ({ size = 'md', className = '' }) => {
     const currentTheme = resolvedTheme || theme || 'light';
     console.log('CubeLogo: Current theme detected:', currentTheme);
     
-    // Use dark logo for light mode and light logo for dark mode for contrast
-    const selectedSrc = currentTheme === 'dark' ? logoSources.light : logoSources.dark;
+    // Use appropriate logo for the current theme
+    const selectedSrc = currentTheme === 'dark' ? logoSources.dark : logoSources.light;
     console.log('CubeLogo: Selected logo source:', selectedSrc);
     
     setCurrentSrc(selectedSrc);
