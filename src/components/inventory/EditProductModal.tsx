@@ -6,14 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Product } from '../../types';
-import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useToast } from '../../hooks/use-toast';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 interface EditProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (id: string, productData: Partial<Product>) => Promise<void>;
   product: Product | null;
 }
 
@@ -41,7 +40,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
 
-  const { updateProduct } = useSupabaseProducts();
   const { toast } = useToast();
 
   const isUnspecifiedStock = product?.currentStock === -1;
@@ -90,7 +88,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
     try {
       const updatedProduct = {
-        ...product,
         name: formData.name.trim(),
         category: formData.category,
         costPrice: isUnspecifiedStock ? 0 : parseFloat(formData.costPrice),
@@ -99,14 +96,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
         lowStockThreshold: isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold)
       };
 
-      await updateProduct(product.id, updatedProduct);
+      await onSave(product.id, updatedProduct);
       
       toast({
         title: "Success",
         description: "Product updated successfully",
       });
 
-      onSave();
       onClose();
     } catch (error) {
       console.error('Failed to update product:', error);

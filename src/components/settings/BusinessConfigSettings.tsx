@@ -9,7 +9,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { Save } from 'lucide-react';
 
 const BusinessConfigSettings = () => {
-  const { settings, updateSettings } = useSettings();
+  const { settings, saveSettings } = useSettings();
   const [formData, setFormData] = useState({
     currency: settings.currency,
     lowStockThreshold: settings.lowStockThreshold,
@@ -19,7 +19,7 @@ const BusinessConfigSettings = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(formData);
+    saveSettings(formData);
   };
 
   return (

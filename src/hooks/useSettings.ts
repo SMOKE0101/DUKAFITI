@@ -12,6 +12,30 @@ interface ShopSettings {
   smsNotifications: boolean;
   emailNotifications: boolean;
   theme: 'light' | 'dark' | 'system';
+  currency: string;
+  lowStockThreshold: number;
+  businessHours: {
+    open: string;
+    close: string;
+  };
+  receiptNumberFormat: string;
+  defaultDebtLimit: number;
+  paymentReminderDays: number;
+  enablePenalty: boolean;
+  penaltyRate: number;
+  penaltyGraceDays: number;
+  interestRate: number;
+  mpesaTillNumber: string;
+  lowStockAlerts: boolean;
+  dailySummary: boolean;
+  debtReminders: boolean;
+  paymentNotifications: boolean;
+  smsPhoneNumber: string;
+  debtReminderMessage: string;
+  paymentConfirmationMessage: string;
+  lowStockMessage: string;
+  contactPhone: string;
+  shopAddress: string;
 }
 
 const defaultSettings: ShopSettings = {
@@ -21,6 +45,30 @@ const defaultSettings: ShopSettings = {
   smsNotifications: false,
   emailNotifications: false,
   theme: 'system',
+  currency: 'KES',
+  lowStockThreshold: 10,
+  businessHours: {
+    open: '08:00',
+    close: '18:00',
+  },
+  receiptNumberFormat: 'RCP-{number}',
+  defaultDebtLimit: 10000,
+  paymentReminderDays: 7,
+  enablePenalty: false,
+  penaltyRate: 5,
+  penaltyGraceDays: 7,
+  interestRate: 0,
+  mpesaTillNumber: '',
+  lowStockAlerts: true,
+  dailySummary: false,
+  debtReminders: true,
+  paymentNotifications: true,
+  smsPhoneNumber: '',
+  debtReminderMessage: 'Dear {name}, you have an outstanding debt of KSh {amount}. Please settle by {date}.',
+  paymentConfirmationMessage: 'Payment of KSh {amount} received. Thank you!',
+  lowStockMessage: 'Low stock alert: {product} has only {quantity} items left.',
+  contactPhone: '',
+  shopAddress: '',
 };
 
 export const useSettings = () => {
@@ -63,15 +111,20 @@ export const useSettings = () => {
         console.error('Error loading theme:', themeError);
       }
 
-      const currentTheme = themeData?.settings_value?.theme || 'system';
+      // Safely extract theme from settings_value
+      let currentTheme = 'system';
+      if (themeData?.settings_value && typeof themeData.settings_value === 'object') {
+        const settingsObj = themeData.settings_value as { theme?: string };
+        currentTheme = settingsObj.theme || 'system';
+      }
 
       const loadedSettings: ShopSettings = {
+        ...defaultSettings,
         shopName: profile?.shop_name || '',
         location: profile?.location || '',
         businessType: profile?.business_type || '',
         smsNotifications: profile?.sms_notifications_enabled || false,
-        emailNotifications: false,
-        theme: currentTheme,
+        theme: currentTheme as 'light' | 'dark' | 'system',
       };
 
       setSettings(loadedSettings);
@@ -157,10 +210,62 @@ export const useSettings = () => {
     loadSettings();
   }, [user]);
 
+  // Legacy methods for backward compatibility
+  const updateSettings = saveSettings;
+  
+  const exportSettings = () => {
+    const dataStr = JSON.stringify(settings, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `settings-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Settings Exported",
+      description: "Your settings have been exported successfully.",
+    });
+  };
+
+  const importSettings = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedSettings = JSON.parse(e.target?.result as string);
+        saveSettings(importedSettings);
+        toast({
+          title: "Settings Imported",
+          description: "Your settings have been imported successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Import Failed",
+          description: "Failed to import settings. Please check the file format.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const resetSettings = () => {
+    saveSettings(defaultSettings);
+    toast({
+      title: "Settings Reset",
+      description: "All settings have been reset to default values.",
+    });
+  };
+
   return {
     settings,
     loading,
     saveSettings,
+    updateSettings,
     refreshSettings: loadSettings,
+    exportSettings,
+    importSettings,
+    resetSettings,
   };
 };

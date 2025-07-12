@@ -6,14 +6,14 @@ import { useTheme } from 'next-themes';
 import { Palette, Sun, Moon } from 'lucide-react';
 
 const AppearanceSettings = () => {
-  const { settings, updateSettings, loading } = useSettings();
+  const { settings, saveSettings, loading } = useSettings();
   const { theme: currentTheme } = useTheme();
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     console.log('Theme change initiated:', newTheme, 'Current theme:', currentTheme);
     
     // Update settings - this will handle both local state and theme provider sync
-    updateSettings({ theme: newTheme });
+    saveSettings({ theme: newTheme });
   };
 
   if (loading) {

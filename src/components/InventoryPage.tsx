@@ -7,11 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { AddProductModal } from './inventory/AddProductModal';
-import { EditProductModal } from './inventory/EditProductModal';
-import { DeleteProductModal } from './inventory/DeleteProductModal';
-import { RestockModal } from './inventory/RestockModal';
-import { ProductCard } from './inventory/ProductCard';
+import AddProductModal from './inventory/AddProductModal';
+import EditProductModal from './inventory/EditProductModal';
+import DeleteProductModal from './inventory/DeleteProductModal';
+import RestockModal from './inventory/RestockModal';
+import ProductCard from './inventory/ProductCard';
 import { Product } from '../types';
 
 const InventoryPage: React.FC = () => {
@@ -88,6 +88,45 @@ const InventoryPage: React.FC = () => {
       await refreshProducts();
     } catch (error) {
       console.error('Failed to refresh products:', error);
+    }
+  };
+
+  const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await createProduct(productData);
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Failed to add product:', error);
+    }
+  };
+
+  const handleUpdateProduct = async (id: string, productData: Partial<Product>) => {
+    try {
+      await updateProduct(id, productData);
+      setShowEditModal(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Failed to update product:', error);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      await deleteProduct(id);
+      setShowDeleteModal(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+    }
+  };
+
+  const handleAddStock = async (id: string, quantity: number) => {
+    try {
+      await addStock(id, quantity);
+      setShowRestockModal(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Failed to add stock:', error);
     }
   };
 
@@ -291,7 +330,7 @@ const InventoryPage: React.FC = () => {
       <AddProductModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={createProduct}
+        onSave={handleAddProduct}
       />
 
       {selectedProduct && (
@@ -303,7 +342,7 @@ const InventoryPage: React.FC = () => {
               setSelectedProduct(null);
             }}
             product={selectedProduct}
-            onUpdate={updateProduct}
+            onSave={handleUpdateProduct}
           />
 
           <DeleteProductModal
@@ -313,7 +352,7 @@ const InventoryPage: React.FC = () => {
               setSelectedProduct(null);
             }}
             product={selectedProduct}
-            onDelete={deleteProduct}
+            onDelete={handleDeleteProduct}
           />
 
           <RestockModal
@@ -323,7 +362,7 @@ const InventoryPage: React.FC = () => {
               setSelectedProduct(null);
             }}
             product={selectedProduct}
-            onAddStock={addStock}
+            onAddStock={handleAddStock}
           />
         </>
       )}
