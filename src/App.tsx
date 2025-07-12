@@ -11,7 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 // Pages
 import Landing from "./pages/Landing";
 import ModernLanding from "./pages/ModernLanding";
-import Index from "./pages/Index";
+import AuthHandler from "./pages/AuthHandler";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
@@ -36,36 +36,26 @@ const queryClient = new QueryClient({
   },
 });
 
-// Enhanced theme initialization function
+// Theme initialization function
 const initializeTheme = () => {
-  // Try to get saved theme from localStorage
-  const guestSettings = localStorage.getItem('dukafiti_settings_guest');
-  const authToken = localStorage.getItem('supabase.auth.token');
-  const userSettings = authToken ? localStorage.getItem(`dukafiti_settings_${authToken}`) : null;
+  const savedTheme = localStorage.getItem('dukafiti_settings_guest') || localStorage.getItem(`dukafiti_settings_${localStorage.getItem('supabase.auth.token')}`);
+  let theme = 'light'; // Default to light
   
-  let theme = 'light'; // Default to light theme
-  
-  // Check user settings first, then guest settings
-  const settingsToCheck = userSettings || guestSettings;
-  
-  if (settingsToCheck) {
+  if (savedTheme) {
     try {
-      const settings = JSON.parse(settingsToCheck);
+      const settings = JSON.parse(savedTheme);
       theme = settings.theme || 'light';
     } catch (error) {
       console.error('Error parsing saved theme:', error);
     }
   }
   
-  // Apply theme to document root
   const root = window.document.documentElement;
   if (theme === 'dark') {
     root.classList.add('dark');
   } else {
     root.classList.remove('dark');
   }
-  
-  console.log('Theme initialized:', theme);
 };
 
 // Loading component
@@ -79,46 +69,26 @@ function App() {
   useEffect(() => {
     // Initialize theme on app load
     initializeTheme();
-    
-    // Listen for theme changes in localStorage
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key && e.key.includes('dukafiti_settings')) {
-        initializeTheme();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
   }, []);
 
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Router>
-            <div className="min-h-screen bg-background transition-colors duration-300">
+        <Router>
+          <AuthProvider>
+            <div className="min-h-screen bg-background">
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<ModernLanding />} />
                 <Route path="/landing" element={<Landing />} />
                 <Route path="/modern-landing" element={<ModernLanding />} />
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/demo" element={<BrandDemo />} />
                 <Route path="/offline" element={<Offline />} />
+                <Route path="/app" element={<AuthHandler />} />
                 
                 {/* Protected routes with layout */}
-                <Route path="/app" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Navigate to="/dashboard" replace />
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <PremiumAppLayout>
@@ -184,8 +154,8 @@ function App() {
               </Routes>
               <Toaster />
             </div>
-          </Router>
-        </AuthProvider>
+          </AuthProvider>
+        </Router>
       </QueryClientProvider>
     </ErrorBoundary>
   );

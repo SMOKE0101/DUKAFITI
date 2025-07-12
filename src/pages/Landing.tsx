@@ -24,7 +24,7 @@ const Landing = () => {
             </div>
           </div>
           <Button asChild className="dukafiti-button-primary">
-            <Link to="/auth">
+            <Link to="/signin">
               <Star className="w-4 h-4" />
               Anza Sasa
             </Link>
@@ -48,13 +48,13 @@ const Landing = () => {
           </p>
           <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
             <Button size="lg" asChild className="dukafiti-button-primary w-full sm:w-auto text-base px-8 py-4">
-              <Link to="/auth">
+              <Link to="/signup">
                 <TrendingUp className="w-5 h-5" />
                 Jaribio la Bure la Siku 14
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-base px-8 py-4 border-primary/20 hover:bg-primary/5">
-              <Link to="/auth">
+              <Link to="/signin">
                 <Shield className="w-5 h-5" />
                 Ingia Akaunti
               </Link>
@@ -175,7 +175,7 @@ const Landing = () => {
           </p>
           <p className="brand-tagline mb-6">DUKAFITI NI DUKABORA</p>
           <Button size="lg" asChild className="dukafiti-button-primary text-lg px-12 py-4">
-            <Link to="/auth">
+            <Link to="/signup">
               <Star className="w-6 h-6" />
               Anza Jaribio Lako la Bure
             </Link>

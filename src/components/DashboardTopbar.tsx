@@ -20,6 +20,8 @@ import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { formatCurrency } from '../utils/currency';
+import { useTheme } from 'next-themes';
+import CubeLogo from './branding/CubeLogo';
 
 interface SearchResult {
   id: string;
@@ -38,6 +40,7 @@ const DashboardTopbar = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const searchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -145,11 +148,15 @@ const DashboardTopbar = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 h-16 bg-purple-600 dark:bg-purple-800 border-b shadow-sm">
+      <header className="sticky top-0 z-50 h-16 border-b shadow-sm" style={{ backgroundColor: '#602d86' }}>
         <div className="flex items-center justify-between px-6 h-full">
           {/* Left - Brand */}
-          <div className="flex items-center gap-4">
-            <div className="font-bold text-xl text-white">DukaSmart</div>
+          <div className="flex items-center gap-3">
+            <CubeLogo 
+              size="md" 
+              isDark={theme === 'dark'} 
+            />
+            <div className="font-bold text-xl text-white tracking-wide">DUKAFITI</div>
           </div>
 
           {/* Center - Global Search */}

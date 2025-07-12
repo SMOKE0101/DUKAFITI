@@ -1,9 +1,11 @@
+
 import React, { useState, useMemo } from 'react';
 import { DollarSign, ShoppingCart, Users, Package, CreditCard, Banknote, HandCoins, Activity, Clock } from 'lucide-react';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
 import { formatCurrency } from '../../utils/currency';
+import { addDays, addMonths, addHours, startOfDay, startOfMonth, startOfHour, formatDateForBucket, safeNumber } from '../../utils/dateUtils';
 import ReportsFiltersPanel from './ReportsFiltersPanel';
 import BlockyMetricCard from './BlockyMetricCard';
 import SalesTrendChart from './SalesTrendChart';
@@ -38,7 +40,7 @@ const BlockyReportsPage = () => {
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date }>();
   const [activeFilters, setActiveFilters] = useState<Filter[]>([]);
   const [salesChartResolution, setSalesChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
-  const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
+  const [ordersChartView, setOrdersChartView] = useState<'daily' | '2weeks'>('daily');
 
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -49,23 +51,19 @@ const BlockyReportsPage = () => {
 
   const getGlobalDateRange = () => {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const today = startOfDay(now);
     
     switch (globalDateRange) {
       case 'today':
-        return { from: today, to: new Date() };
+        return { from: today, to: now };
       case 'week':
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return { from: weekAgo, to: new Date() };
+        return { from: addDays(today, -7), to: now };
       case 'month':
-        const monthAgo = new Date(today);
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        return { from: monthAgo, to: new Date() };
+        return { from: addDays(today, -30), to: now };
       case 'custom':
-        return customDateRange || { from: today, to: new Date() };
+        return customDateRange || { from: today, to: now };
       default:
-        return { from: today, to: new Date() };
+        return { from: today, to: now };
     }
   };
 
@@ -97,24 +95,36 @@ const BlockyReportsPage = () => {
   }, [sales, globalFromDate, globalToDate, activeFilters, products]);
 
   const summaryMetrics = useMemo(() => {
-    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + safeNumber(sale.total), 0);
     const totalOrders = summaryCardsSales.length;
-    const activeCustomers = new Set(summaryCardsSales.map(sale => sale.customerId).filter(Boolean)).size;
-    const lowStockProducts = products.filter(product => 
-      product.currentStock <= (product.lowStockThreshold || 10)
-    ).length;
+    
+    // Ultra-accurate active customers calculation
+    const uniqueCustomerIds = new Set(
+      summaryCardsSales
+        .map(sale => sale.customerId)
+        .filter(id => id && id.trim() !== '')
+    );
+    const activeCustomers = uniqueCustomerIds.size;
+    
+    // Ultra-accurate low stock calculation - exclude unspecified stock (-1) and null values
+    const lowStockProducts = products.filter(product => {
+      const currentStock = safeNumber(product.currentStock, 0);
+      const threshold = safeNumber(product.lowStockThreshold, 10);
+      return currentStock >= 0 && currentStock <= threshold;
+    }).length;
 
+    // Ultra-accurate payment method breakdown
     const revenueByCash = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'cash')
-      .reduce((sum, sale) => sum + (sale.total || 0), 0);
+      .reduce((sum, sale) => sum + safeNumber(sale.total), 0);
     
     const revenueByMpesa = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'mpesa')
-      .reduce((sum, sale) => sum + (sale.total || 0), 0);
+      .reduce((sum, sale) => sum + safeNumber(sale.total), 0);
     
     const revenueByDebt = summaryCardsSales
       .filter(sale => sale.paymentMethod === 'debt')
-      .reduce((sum, sale) => sum + (sale.total || 0), 0);
+      .reduce((sum, sale) => sum + safeNumber(sale.total), 0);
 
     return { 
       totalRevenue, 
@@ -130,40 +140,41 @@ const BlockyReportsPage = () => {
   const salesTrendData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
-    let bucketFormat: string;
-    let timePoints: string[] = [];
+    let bucketFormat: 'hour' | 'day' | 'month';
+    let timePoints: Date[] = [];
     
     switch (salesChartResolution) {
       case 'hourly':
-        chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        chartFromDate = addHours(now, -23);
+        chartFromDate = startOfHour(chartFromDate);
         bucketFormat = 'hour';
         for (let i = 0; i < 24; i++) {
-          const hour = new Date(chartFromDate);
-          hour.setHours(i, 0, 0, 0);
-          timePoints.push(hour.toISOString().substring(0, 13) + ':00');
+          timePoints.push(addHours(chartFromDate, i));
         }
         break;
       case 'daily':
-        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        chartFromDate = addDays(now, -29);
+        chartFromDate = startOfDay(chartFromDate);
         bucketFormat = 'day';
         for (let i = 0; i < 30; i++) {
-          const day = new Date(chartFromDate);
-          day.setDate(day.getDate() + i);
-          timePoints.push(day.toISOString().substring(0, 10));
+          timePoints.push(addDays(chartFromDate, i));
         }
         break;
       case 'monthly':
-        chartFromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        chartFromDate = addMonths(now, -11);
+        chartFromDate = startOfMonth(chartFromDate);
         bucketFormat = 'month';
         for (let i = 0; i < 12; i++) {
-          const month = new Date(chartFromDate);
-          month.setMonth(month.getMonth() + i);
-          timePoints.push(month.toISOString().substring(0, 7));
+          timePoints.push(addMonths(chartFromDate, i));
         }
         break;
       default:
-        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        chartFromDate = addDays(now, -29);
+        chartFromDate = startOfDay(chartFromDate);
         bucketFormat = 'day';
+        for (let i = 0; i < 30; i++) {
+          timePoints.push(addDays(chartFromDate, i));
+        }
     }
 
     const chartSales = sales.filter(sale => {
@@ -173,29 +184,31 @@ const BlockyReportsPage = () => {
 
     const groupedData: Record<string, number> = {};
     timePoints.forEach(point => {
-      groupedData[point] = 0;
+      const key = formatDateForBucket(point, bucketFormat);
+      groupedData[key] = 0;
     });
     
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
-      let key: string;
+      let bucketDate: Date;
       
       switch (bucketFormat) {
         case 'hour':
-          key = saleDate.toISOString().substring(0, 13) + ':00';
+          bucketDate = startOfHour(saleDate);
           break;
         case 'day':
-          key = saleDate.toISOString().substring(0, 10);
+          bucketDate = startOfDay(saleDate);
           break;
         case 'month':
-          key = saleDate.toISOString().substring(0, 7);
+          bucketDate = startOfMonth(saleDate);
           break;
         default:
-          key = saleDate.toISOString().substring(0, 10);
+          bucketDate = startOfDay(saleDate);
       }
       
+      const key = formatDateForBucket(bucketDate, bucketFormat);
       if (groupedData.hasOwnProperty(key)) {
-        groupedData[key] += (sale.total || 0);
+        groupedData[key] += safeNumber(sale.total);
       }
     });
     
@@ -217,13 +230,13 @@ const BlockyReportsPage = () => {
     
     switch (ordersChartView) {
       case 'daily':
-        chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        chartFromDate = startOfDay(now);
         break;
-      case 'weekly':
-        chartFromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case '2weeks':
+        chartFromDate = addDays(startOfDay(now), -13);
         break;
       default:
-        chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        chartFromDate = startOfDay(now);
     }
 
     const chartSales = sales.filter(sale => {
@@ -231,45 +244,81 @@ const BlockyReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    const hourlyData: Record<number, number> = {};
-    for (let i = 0; i < 24; i++) {
-      hourlyData[i] = 0;
+    if (ordersChartView === 'daily') {
+      const hourlyData: Record<number, number> = {};
+      for (let i = 0; i < 24; i++) {
+        hourlyData[i] = 0;
+      }
+      
+      chartSales.forEach(sale => {
+        const hour = new Date(sale.timestamp).getHours();
+        hourlyData[hour]++;
+      });
+      
+      return Object.entries(hourlyData).map(([hour, orders]) => ({
+        hour: `${hour.padStart(2, '0')}:00`,
+        orders
+      }));
+    } else {
+      const dailyData: Record<string, number> = {};
+      
+      for (let i = 0; i < 14; i++) {
+        const date = addDays(chartFromDate, i);
+        const dateKey = formatDateForBucket(date, 'day');
+        dailyData[dateKey] = 0;
+      }
+      
+      chartSales.forEach(sale => {
+        const saleDate = new Date(sale.timestamp);
+        const dateKey = formatDateForBucket(startOfDay(saleDate), 'day');
+        if (dailyData.hasOwnProperty(dateKey)) {
+          dailyData[dateKey]++;
+        }
+      });
+      
+      return Object.entries(dailyData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, orders]) => ({
+          hour: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          orders
+        }));
     }
-    
-    chartSales.forEach(sale => {
-      const hour = new Date(sale.timestamp).getHours();
-      hourlyData[hour]++;
-    });
-    
-    return Object.entries(hourlyData).map(([hour, orders]) => ({
-      hour: `${hour.padStart(2, '0')}:00`,
-      orders
-    }));
   }, [sales, ordersChartView]);
 
   const salesTableData = useMemo(() => 
     summaryCardsSales.map(sale => ({
-      productName: sale.productName,
-      quantity: sale.quantity,
-      revenue: formatCurrency(sale.total),
+      productName: sale.productName || 'Unknown Product',
+      quantity: safeNumber(sale.quantity, 0),
+      revenue: formatCurrency(safeNumber(sale.total)),
       customer: sale.customerName || 'Walk-in Customer',
-      date: new Date(sale.timestamp).toLocaleDateString()
+      date: new Date(sale.timestamp).toLocaleDateString(),
+      paymentMethod: sale.paymentMethod || 'unknown'
     })), [summaryCardsSales]
   );
 
   const paymentsTableData = useMemo(() => 
     summaryCardsSales
-      .filter(sale => sale.customerName)
+      .filter(sale => sale.customerName && sale.customerName.trim() !== '')
       .map(sale => ({
-        customer: sale.customerName,
-        amount: formatCurrency(sale.total),
-        method: sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1),
+        customer: sale.customerName || 'Unknown Customer',
+        amount: formatCurrency(safeNumber(sale.total)),
+        method: sale.paymentMethod ? sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1) : 'Unknown',
         date: new Date(sale.timestamp).toLocaleDateString()
       })), [summaryCardsSales]
   );
 
-  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
-  const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
+  // Ultra-accurate low stock and overdue calculations
+  const lowStockProducts = useMemo(() => {
+    return products.filter(p => {
+      const currentStock = safeNumber(p.currentStock, 0);
+      const threshold = safeNumber(p.lowStockThreshold, 10);
+      return currentStock >= 0 && currentStock <= threshold;
+    });
+  }, [products]);
+
+  const overdueCustomers = useMemo(() => {
+    return customers.filter(c => safeNumber(c.outstandingDebt, 0) > 0);
+  }, [customers]);
 
   const removeFilter = (filterToRemove: Filter) => {
     setActiveFilters(prev => prev.filter(f => 
@@ -279,16 +328,24 @@ const BlockyReportsPage = () => {
 
   const handleDownloadSalesCSV = () => {
     const csvContent = [
-      ['Product Name', 'Quantity', 'Revenue', 'Customer', 'Date'],
-      ...salesTableData.map(row => [row.productName, row.quantity, row.revenue, row.customer, row.date])
+      ['Product Name', 'Quantity', 'Revenue', 'Customer', 'Date', 'Payment Method'],
+      ...salesTableData.map(row => [
+        row.productName, 
+        row.quantity.toString(), 
+        row.revenue, 
+        row.customer, 
+        row.date,
+        row.paymentMethod
+      ])
     ].map(row => row.join(',')).join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'sales-report.csv';
+    a.download = `sales-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleDownloadPaymentsCSV = () => {
@@ -301,8 +358,9 @@ const BlockyReportsPage = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'payments-report.csv';
+    a.download = `payments-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (salesLoading || productsLoading || customersLoading) {
@@ -315,11 +373,11 @@ const BlockyReportsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Page Header - Matching Dashboard */}
       <div className={`
-        space-y-6 max-w-7xl mx-auto
-        ${isMobile ? 'p-3' : isTablet ? 'p-4' : 'p-6'}
+        space-y-${isMobile ? '2' : '6'} max-w-7xl mx-auto
+        ${isMobile ? 'p-1' : isTablet ? 'p-4' : 'p-6'}
       `}>
+        {/* Page Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
@@ -342,7 +400,6 @@ const BlockyReportsPage = () => {
           </div>
         </div>
 
-        {/* Global Filters Panel */}
         <ReportsFiltersPanel
           dateRange={globalDateRange}
           onDateRangeChange={setGlobalDateRange}
@@ -352,7 +409,7 @@ const BlockyReportsPage = () => {
           onRemoveFilter={removeFilter}
         />
 
-        {/* Summary Metrics Cards - Blocky Style */}
+        {/* Summary Metrics Cards */}
         <div className={`
           grid gap-4
           ${isMobile 
@@ -428,7 +485,7 @@ const BlockyReportsPage = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`grid gap-${isMobile ? '2' : '6'} grid-cols-1`}>
           <SalesTrendChart
             data={salesTrendData}
             resolution={salesChartResolution}
@@ -471,7 +528,6 @@ const BlockyReportsPage = () => {
           />
         </div>
 
-        {/* Alerts Panel */}
         <AlertsPanel
           lowStockProducts={lowStockProducts}
           overdueCustomers={overdueCustomers}

@@ -119,9 +119,6 @@ export const useSettings = () => {
             theme: savedSettings.theme || 'light'
           };
           setSettings(settingsWithDefaults);
-          
-          // Apply theme immediately after loading
-          applyTheme(settingsWithDefaults.theme);
         } else {
           // Fallback to localStorage
           const stored = localStorage.getItem(settingsKey);
@@ -133,16 +130,13 @@ export const useSettings = () => {
               theme: parsedSettings.theme || 'light'
             };
             setSettings(settingsWithDefaults);
-            applyTheme(settingsWithDefaults.theme);
           } else if (user?.user_metadata?.shop_name) {
             // Initialize with shop name from user metadata
-            const initialSettings = {
+            setSettings({
               ...defaultSettings,
               shopName: user.user_metadata.shop_name,
-              theme: 'light' as const
-            };
-            setSettings(initialSettings);
-            applyTheme('light');
+              theme: 'light'
+            });
           }
         }
       } else {
@@ -156,11 +150,6 @@ export const useSettings = () => {
             theme: parsedSettings.theme || 'light'
           };
           setSettings(settingsWithDefaults);
-          applyTheme(settingsWithDefaults.theme);
-        } else {
-          // No stored settings, use defaults
-          setSettings(defaultSettings);
-          applyTheme('light');
         }
       }
     } catch (error) {
@@ -170,20 +159,8 @@ export const useSettings = () => {
         description: "Failed to load settings. Using defaults.",
         variant: "destructive",
       });
-      // Still apply default theme
-      applyTheme('light');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Helper function to apply theme to document
-  const applyTheme = (theme: 'light' | 'dark') => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
     }
   };
 
@@ -191,11 +168,6 @@ export const useSettings = () => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
       setSettings(updatedSettings);
-      
-      // Apply theme immediately if theme was changed
-      if (newSettings.theme) {
-        applyTheme(newSettings.theme);
-      }
       
       // Save to localStorage (always)
       localStorage.setItem(settingsKey, JSON.stringify(updatedSettings));
