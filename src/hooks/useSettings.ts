@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ShopSettings {
@@ -92,6 +94,7 @@ export const useSettings = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setTheme } = useTheme();
 
   const settingsKey = user ? `dukafiti_settings_${user.id}` : 'dukafiti_settings_guest';
 
@@ -119,6 +122,8 @@ export const useSettings = () => {
             theme: savedSettings.theme || 'light'
           };
           setSettings(settingsWithDefaults);
+          // Sync with ThemeProvider
+          setTheme(settingsWithDefaults.theme);
         } else {
           // Fallback to localStorage
           const stored = localStorage.getItem(settingsKey);
@@ -130,13 +135,16 @@ export const useSettings = () => {
               theme: parsedSettings.theme || 'light'
             };
             setSettings(settingsWithDefaults);
+            setTheme(settingsWithDefaults.theme);
           } else if (user?.user_metadata?.shop_name) {
             // Initialize with shop name from user metadata
-            setSettings({
+            const initialSettings = {
               ...defaultSettings,
               shopName: user.user_metadata.shop_name,
               theme: 'light'
-            });
+            };
+            setSettings(initialSettings);
+            setTheme('light');
           }
         }
       } else {
@@ -150,6 +158,9 @@ export const useSettings = () => {
             theme: parsedSettings.theme || 'light'
           };
           setSettings(settingsWithDefaults);
+          setTheme(settingsWithDefaults.theme);
+        } else {
+          setTheme('light');
         }
       }
     } catch (error) {
@@ -159,6 +170,7 @@ export const useSettings = () => {
         description: "Failed to load settings. Using defaults.",
         variant: "destructive",
       });
+      setTheme('light');
     } finally {
       setLoading(false);
     }
@@ -168,6 +180,11 @@ export const useSettings = () => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
       setSettings(updatedSettings);
+      
+      // If theme is being updated, sync with ThemeProvider
+      if (newSettings.theme) {
+        setTheme(newSettings.theme);
+      }
       
       // Save to localStorage (always)
       localStorage.setItem(settingsKey, JSON.stringify(updatedSettings));

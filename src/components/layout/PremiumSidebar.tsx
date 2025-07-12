@@ -98,7 +98,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
 
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200/80">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200/80 dark:border-gray-700/80 transition-colors duration-300">
         <div className="flex justify-around items-center py-2">
           {navigationItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -112,8 +112,8 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                 className={cn(
                   "flex flex-col items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-lg transition-colors",
                   isActive 
-                    ? "text-gray-900 bg-gray-50" 
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800" 
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 )}
               >
                 <Icon className="w-5 h-5 mb-1" />
@@ -129,14 +129,14 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
   return (
     <>
       <div className={cn(
-        "fixed left-0 top-0 h-full bg-white border-r border-gray-200/80 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-40 flex flex-col shadow-xl shadow-gray-900/5",
+        "fixed left-0 top-0 h-full bg-white dark:bg-gray-900 border-r border-gray-200/80 dark:border-gray-700/80 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-40 flex flex-col shadow-xl shadow-gray-900/5 dark:shadow-gray-900/20",
         isOpen ? "w-[280px]" : "w-20"
       )}>
-        {/* Branding & Profile Section - Professional White Design */}
-        <div className="p-6 border-b border-gray-200/60 bg-white">
+        {/* Branding & Profile Section - Professional Design with theme support */}
+        <div className="p-6 border-b border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 transition-colors duration-300">
           {isOpen ? (
             <div className="space-y-4">
-              {/* Logo with Professional Styling */}
+              {/* Logo with Professional Styling and theme support */}
               <div className="flex items-center justify-center">
                 <img 
                   src={getLogoSrc()}
@@ -148,20 +148,20 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                 />
               </div>
               
-              {/* Profile Card - Enhanced Professional Design */}
+              {/* Profile Card - Enhanced Professional Design with theme support */}
               <button
                 onClick={() => setShowProfileModal(true)}
-                className="w-full p-4 bg-gray-50/80 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 text-left group border border-gray-200/50 hover:border-gray-300/50"
+                className="w-full p-4 bg-gray-50/80 dark:bg-gray-800/80 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 text-left group border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300/50 dark:hover:border-gray-600/50"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center shadow-sm">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-700 dark:from-gray-500 dark:to-gray-600 rounded-full flex items-center justify-center shadow-sm">
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                       {shopName}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Owner
                     </p>
                   </div>
@@ -182,7 +182,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
           )}
         </div>
 
-        {/* Navigation - Professional Styling */}
+        {/* Navigation - Professional Styling with theme support */}
         <nav className="flex-1 px-4 py-6 space-y-2">
           {navigationItems.map((item, index) => {
             const Icon = item.icon;
@@ -198,8 +198,8 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                   "transform-gpu will-change-[transform,background-color]",
                   isOpen ? "gap-3" : "justify-center",
                   isActive 
-                    ? "bg-gray-50 text-gray-900 font-semibold shadow-sm border border-gray-200/50" 
-                    : "text-gray-600 hover:bg-gray-50/80 hover:text-gray-900 hover:scale-[1.02] hover:shadow-sm"
+                    ? "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold shadow-sm border border-gray-200/50 dark:border-gray-700/50" 
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white hover:scale-[1.02] hover:shadow-sm"
                 )}
                 style={{
                   transitionDelay: `${index * 30}ms`,
@@ -207,7 +207,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
               >
                 <Icon className={cn(
                   "w-5 h-5 flex-shrink-0 transition-all duration-300",
-                  isActive ? "text-gray-900 scale-110" : "text-gray-600 group-hover:text-gray-900 group-hover:scale-110"
+                  isActive ? "text-gray-900 dark:text-white scale-110" : "text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white group-hover:scale-110"
                 )} />
                 
                 {isOpen && (
@@ -217,9 +217,9 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                 )}
                 
                 {!isOpen && (
-                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
+                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 dark:bg-gray-100/95 text-white dark:text-gray-900 text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
                     {item.label}
-                    <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
+                    <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 dark:bg-gray-100/95 rotate-45"></div>
                   </div>
                 )}
               </NavLink>
@@ -227,83 +227,83 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
           })}
         </nav>
 
-        {/* Utility Buttons - Professional Design */}
-        <div className="p-4 border-t border-gray-200/60 space-y-2 flex-shrink-0 bg-white">
+        {/* Utility Buttons - Professional Design with theme support */}
+        <div className="p-4 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2 flex-shrink-0 bg-white dark:bg-gray-900 transition-colors duration-300">
           <button
             onClick={handleLogout}
             className={cn(
-              "flex items-center w-full p-3 rounded-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] text-red-600 hover:bg-red-50/80 hover:scale-[1.02] hover:shadow-sm group",
+              "flex items-center w-full p-3 rounded-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] text-red-600 dark:text-red-400 hover:bg-red-50/80 dark:hover:bg-red-900/20 hover:scale-[1.02] hover:shadow-sm group",
               !isOpen ? "justify-center" : "gap-3"
             )}
           >
             <LogOut className={cn(
               "w-5 h-5 flex-shrink-0 transition-all duration-300",
-              "text-red-600 group-hover:scale-110"
+              "text-red-600 dark:text-red-400 group-hover:scale-110"
             )} />
             {isOpen && <span className="font-medium">Logout</span>}
             {!isOpen && (
-              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
+              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 dark:bg-gray-100/95 text-white dark:text-gray-900 text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
                 Logout
-                <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
+                <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 dark:bg-gray-100/95 rotate-45"></div>
               </div>
             )}
           </button>
         </div>
 
-        {/* Toggle Button - Professional Styling */}
-        <div className="p-4 border-t border-gray-200/60 bg-white">
+        {/* Toggle Button - Professional Styling with theme support */}
+        <div className="p-4 border-t border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 transition-colors duration-300">
           <Button
             variant="ghost"
             size="sm"
             onClick={onToggle}
             className={cn(
-              "w-full p-3 hover:bg-gray-50/80 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu will-change-transform hover:scale-[1.02]",
+              "w-full p-3 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu will-change-transform hover:scale-[1.02]",
               !isOpen && "justify-center"
             )}
           >
             {isOpen ? (
               <>
-                <ChevronLeft className="w-4 h-4 mr-2 text-gray-600" />
-                <span className="text-gray-600 font-medium">Collapse</span>
+                <ChevronLeft className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                <span className="text-gray-600 dark:text-gray-400 font-medium">Collapse</span>
               </>
             ) : (
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             )}
           </Button>
         </div>
       </div>
 
-      {/* Profile Modal - Enhanced Design */}
+      {/* Profile Modal - Enhanced Design with theme support */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50 dark:border-gray-700/50 transition-colors duration-300">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 Profile Information
               </h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowProfileModal(false)}
-                className="p-2 hover:bg-gray-50"
+                className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 ×
               </Button>
             </div>
             
             <div className="text-center space-y-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <div className="w-20 h-20 bg-gradient-to-br from-gray-600 to-gray-700 dark:from-gray-500 dark:to-gray-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
                 <User className="w-10 h-10 text-white" />
               </div>
               
               <div>
-                <p className="text-lg font-semibold text-gray-900">
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {shopName}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {userEmail}
                 </p>
-                <p className="text-sm text-gray-700 font-medium">
+                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">
                   Owner
                 </p>
               </div>

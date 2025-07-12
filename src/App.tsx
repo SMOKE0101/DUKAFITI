@@ -1,7 +1,8 @@
 
-import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './hooks/useAuth';
 import PremiumAppLayout from './components/layout/PremiumAppLayout';
@@ -36,28 +37,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Theme initialization function
-const initializeTheme = () => {
-  const savedTheme = localStorage.getItem('dukafiti_settings_guest') || localStorage.getItem(`dukafiti_settings_${localStorage.getItem('supabase.auth.token')}`);
-  let theme = 'light'; // Default to light
-  
-  if (savedTheme) {
-    try {
-      const settings = JSON.parse(savedTheme);
-      theme = settings.theme || 'light';
-    } catch (error) {
-      console.error('Error parsing saved theme:', error);
-    }
-  }
-  
-  const root = window.document.documentElement;
-  if (theme === 'dark') {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
-};
-
 // Loading component
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-64">
@@ -66,97 +45,99 @@ const LoadingSpinner = () => (
 );
 
 function App() {
-  useEffect(() => {
-    // Initialize theme on app load
-    initializeTheme();
-  }, []);
-
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <AuthProvider>
-            <div className="min-h-screen bg-background">
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<ModernLanding />} />
-                <Route path="/landing" element={<Landing />} />
-                <Route path="/modern-landing" element={<ModernLanding />} />
-                <Route path="/signin" element={<SignIn />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/demo" element={<BrandDemo />} />
-                <Route path="/offline" element={<Offline />} />
-                <Route path="/app" element={<AuthHandler />} />
-                
-                {/* Protected routes with layout */}
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <EnhancedDashboard />
-                      </Suspense>
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/sales" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <SalesManagement />
-                      </Suspense>
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/inventory" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <InventoryPage />
-                      </Suspense>
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/customers" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <CustomersPage />
-                      </Suspense>
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <ReportsPage />
-                      </Suspense>
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <PremiumAppLayout>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <Settings />
-                      </Suspense>
-                    </PremiumAppLayout>
-                  </ProtectedRoute>
-                } />
-                
-                {/* Catch all route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Toaster />
-            </div>
-          </AuthProvider>
-        </Router>
-      </QueryClientProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="light"
+        enableSystem={false}
+        storageKey="dukafiti-theme"
+      >
+        <QueryClientProvider client={queryClient}>
+          <Router>
+            <AuthProvider>
+              <div className="min-h-screen bg-background">
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<ModernLanding />} />
+                  <Route path="/landing" element={<Landing />} />
+                  <Route path="/modern-landing" element={<ModernLanding />} />
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route path="/demo" element={<BrandDemo />} />
+                  <Route path="/offline" element={<Offline />} />
+                  <Route path="/app" element={<AuthHandler />} />
+                  
+                  {/* Protected routes with layout */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <PremiumAppLayout>
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <EnhancedDashboard />
+                        </Suspense>
+                      </PremiumAppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/sales" element={
+                    <ProtectedRoute>
+                      <PremiumAppLayout>
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <SalesManagement />
+                        </Suspense>
+                      </PremiumAppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/inventory" element={
+                    <ProtectedRoute>
+                      <PremiumAppLayout>
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <InventoryPage />
+                        </Suspense>
+                      </PremiumAppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/customers" element={
+                    <ProtectedRoute>
+                      <PremiumAppLayout>
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <CustomersPage />
+                        </Suspense>
+                      </PremiumAppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/reports" element={
+                    <ProtectedRoute>
+                      <PremiumAppLayout>
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <ReportsPage />
+                        </Suspense>
+                      </PremiumAppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <PremiumAppLayout>
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <Settings />
+                        </Suspense>
+                      </PremiumAppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Catch all route */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Toaster />
+              </div>
+            </AuthProvider>
+          </Router>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
