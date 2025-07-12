@@ -36,26 +36,36 @@ const queryClient = new QueryClient({
   },
 });
 
-// Theme initialization function
+// Enhanced theme initialization function
 const initializeTheme = () => {
-  const savedTheme = localStorage.getItem('dukafiti_settings_guest') || localStorage.getItem(`dukafiti_settings_${localStorage.getItem('supabase.auth.token')}`);
-  let theme = 'light'; // Default to light
+  // Try to get saved theme from localStorage
+  const guestSettings = localStorage.getItem('dukafiti_settings_guest');
+  const authToken = localStorage.getItem('supabase.auth.token');
+  const userSettings = authToken ? localStorage.getItem(`dukafiti_settings_${authToken}`) : null;
   
-  if (savedTheme) {
+  let theme = 'light'; // Default to light theme
+  
+  // Check user settings first, then guest settings
+  const settingsToCheck = userSettings || guestSettings;
+  
+  if (settingsToCheck) {
     try {
-      const settings = JSON.parse(savedTheme);
+      const settings = JSON.parse(settingsToCheck);
       theme = settings.theme || 'light';
     } catch (error) {
       console.error('Error parsing saved theme:', error);
     }
   }
   
+  // Apply theme to document root
   const root = window.document.documentElement;
   if (theme === 'dark') {
     root.classList.add('dark');
   } else {
     root.classList.remove('dark');
   }
+  
+  console.log('Theme initialized:', theme);
 };
 
 // Loading component
@@ -69,14 +79,27 @@ function App() {
   useEffect(() => {
     // Initialize theme on app load
     initializeTheme();
+    
+    // Listen for theme changes in localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key && e.key.includes('dukafiti_settings')) {
+        initializeTheme();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Router>
-          <AuthProvider>
-            <div className="min-h-screen bg-background">
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-background transition-colors duration-300">
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
@@ -161,8 +184,8 @@ function App() {
               </Routes>
               <Toaster />
             </div>
-          </AuthProvider>
-        </Router>
+          </Router>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

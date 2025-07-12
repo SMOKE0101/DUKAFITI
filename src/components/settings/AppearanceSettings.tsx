@@ -10,7 +10,7 @@ const AppearanceSettings = () => {
   const handleThemeChange = (theme: 'light' | 'dark') => {
     updateSettings({ theme });
     
-    // Apply theme immediately
+    // Apply theme immediately to document
     const root = window.document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
@@ -19,11 +19,12 @@ const AppearanceSettings = () => {
     }
   };
 
-  // Initialize theme on component mount - ensure light is default
+  // Initialize theme on component mount - ensure proper theme application
   useEffect(() => {
     const root = window.document.documentElement;
     const currentTheme = settings.theme || 'light';
     
+    // Force apply the current theme
     if (currentTheme === 'dark') {
       root.classList.add('dark');
     } else {
@@ -33,7 +34,7 @@ const AppearanceSettings = () => {
 
   if (loading) {
     return (
-      <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
+      <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-white dark:bg-gray-900">
         <div className="flex justify-center">
           <div className="animate-pulse space-y-4 w-full max-w-md">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
@@ -52,7 +53,7 @@ const AppearanceSettings = () => {
   const currentTheme = settings.theme || 'light';
 
   return (
-    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
+    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-white dark:bg-gray-900">
       {/* Theme Selection */}
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="text-center">
@@ -67,6 +68,7 @@ const AppearanceSettings = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Light Mode Button - Default/Highlighted */}
           <button
             type="button"
             onClick={() => handleThemeChange('light')}
@@ -89,6 +91,7 @@ const AppearanceSettings = () => {
             </div>
           </button>
           
+          {/* Dark Mode Button */}
           <button
             type="button"
             onClick={() => handleThemeChange('dark')}

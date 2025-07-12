@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   BarChart3, 
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSettings } from '../../hooks/useSettings';
 
 interface PremiumSidebarProps {
   isOpen: boolean;
@@ -67,9 +68,22 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const { settings } = useSettings();
 
   const shopName = user?.user_metadata?.shop_name || 'DukaSmart';
   const userEmail = user?.email || '';
+
+  // Listen for theme changes and apply them
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const currentTheme = settings.theme || 'light';
+    
+    if (currentTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [settings.theme]);
 
   const handleLogout = async () => {
     try {
@@ -81,7 +95,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
 
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 transition-colors duration-300">
         <div className="flex justify-around items-center py-2">
           {navigationItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -93,7 +107,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                 key={item.id}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-lg transition-colors",
+                  "flex flex-col items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-lg transition-colors duration-200",
                   isActive 
                     ? "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20" 
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
@@ -116,7 +130,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
         isOpen ? "w-[280px]" : "w-20"
       )}>
         {/* Branding & Profile Section */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
           {isOpen ? (
             <div className="space-y-4">
               {/* Logo with Custom Icon */}
@@ -126,23 +140,23 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                   alt="DukaFiti Logo" 
                   className="w-8 h-8 rounded-lg"
                 />
-                <span className="text-xl font-bold text-gray-900 dark:text-white">DukaFiti</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">DukaFiti</span>
               </div>
               
               {/* Profile Card */}
               <button
                 onClick={() => setShowProfileModal(true)}
-                className="w-full p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-left group"
+                className="w-full p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-left group border border-gray-200 dark:border-gray-700"
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate transition-colors duration-300">
                       {shopName}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                       Owner
                     </p>
                   </div>
@@ -202,7 +216,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
         </nav>
 
         {/* Utility Buttons */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2 transition-colors duration-300">
           <button
             onClick={handleLogout}
             className={cn(
@@ -221,13 +235,13 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
         </div>
 
         {/* Toggle Button */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 transition-colors duration-300">
           <Button
             variant="ghost"
             size="sm"
             onClick={onToggle}
             className={cn(
-              "w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800",
+              "w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200",
               !isOpen && "justify-center"
             )}
           >
@@ -246,16 +260,16 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
       {/* Profile Modal */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-700 transition-colors duration-300">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white transition-colors duration-300">
                 Profile Information
               </h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowProfileModal(false)}
-                className="p-2"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
               >
                 ×
               </Button>
@@ -267,10 +281,10 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
               </div>
               
               <div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-300">
                   {shopName}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                   {userEmail}
                 </p>
                 <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
