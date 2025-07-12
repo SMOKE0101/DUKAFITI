@@ -151,12 +151,13 @@ const DashboardTopbar = () => {
       <header className="sticky top-0 z-50 h-16 border-b shadow-sm" style={{ backgroundColor: '#602d86' }}>
         <div className="flex items-center justify-between px-6 h-full">
           {/* Left - Brand */}
-          <div className="flex items-center gap-3">
-            <CubeLogo 
-              size="md" 
-              isDark={theme === 'dark'} 
+          <div className="flex items-center">
+            <img 
+              src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+              alt="DukaFiti Logo" 
+              className="h-10 w-auto transition-all duration-300 ease-in-out"
+              style={{ filter: 'brightness(1)' }}
             />
-            <div className="font-bold text-xl text-white tracking-wide">DUKAFITI</div>
           </div>
 
           {/* Center - Global Search */}

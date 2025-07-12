@@ -210,14 +210,13 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
             )}
             
             {/* Brand Section */}
-            <div className="flex items-center gap-2">
-              <CubeLogo 
-                size={isMobile ? 'sm' : 'md'} 
-                isDark={theme === 'dark'} 
+            <div className="flex items-center">
+              <img 
+                src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+                alt="DukaFiti Logo" 
+                className={`transition-all duration-300 ease-in-out ${isMobile ? 'h-8' : 'h-10'} w-auto`}
+                style={{ filter: 'brightness(1)' }}
               />
-              <div className={`font-bold text-white ${isMobile ? 'text-lg' : 'text-xl'} tracking-wide`}>
-                DUKAFITI
-              </div>
             </div>
           </div>
 
