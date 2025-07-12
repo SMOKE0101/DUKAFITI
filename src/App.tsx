@@ -19,6 +19,8 @@ import ReportsPage from './components/ReportsPage';
 import DebtRecording from './components/DebtRecording';
 import Settings from './pages/Settings';
 import ModernLanding from './pages/ModernLanding';
+import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
 import ProtectedRoute from './components/ProtectedRoute';
 import ModernSalesPage from './components/ModernSalesPage';
 
@@ -65,7 +67,8 @@ function App() {
                   
                   {/* Auth routes */}
                   <Route path="/auth" element={<AuthForm />} />
-                  <Route path="/signin" element={<AuthForm />} />
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignUp />} />
                   
                   {/* Protected routes wrapped with AppLayout */}
                   <Route path="/dashboard" element={

@@ -37,7 +37,7 @@ const SignIn = () => {
       if (error) {
         setError(error.message);
       } else {
-        navigate('/app');
+        navigate('/dashboard');
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -68,7 +68,7 @@ const SignIn = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative">
         {/* Back Button */}
         <Link 
-          to="/" 
+          to="/modern-landing" 
           className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -78,18 +78,18 @@ const SignIn = () => {
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
           <div className="text-center">
-            <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
+            <Link to="/modern-landing" className="inline-flex items-center justify-center space-x-3 mb-8 group">
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="Dukasmart Logo" 
+                  src="/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png" 
+                  alt="DukaFiti Logo" 
                   className="w-8 h-8"
                 />
               </div>
-              <span className="text-2xl font-bold text-primary">Dukasmart</span>
+              <span className="text-2xl font-bold text-primary font-caesar">DukaFiti</span>
             </Link>
             
-            <h1 className="text-4xl font-bold text-primary mb-2">
+            <h1 className="text-4xl font-bold text-primary mb-2 font-caesar">
               Welcome Back
             </h1>
             <p className="text-lg text-muted-foreground">
@@ -246,7 +246,7 @@ const SignIn = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           <div className="absolute inset-0 flex items-center justify-center p-12">
             <div className="text-center text-white max-w-md">
-              <h2 className="text-4xl font-bold mb-6">Welcome Back!</h2>
+              <h2 className="text-4xl font-bold mb-6 font-caesar">Welcome Back!</h2>
               <p className="text-xl opacity-90 leading-relaxed mb-8">
                 Continue managing your dukashop with powerful POS features
               </p>

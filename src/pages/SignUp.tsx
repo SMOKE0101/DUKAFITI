@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ const SignUp = () => {
       if (error) {
         setError(error.message);
       } else {
-        navigate('/app');
+        navigate('/dashboard');
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -80,7 +81,7 @@ const SignUp = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative">
         {/* Back Button */}
         <Link 
-          to="/" 
+          to="/modern-landing" 
           className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -90,22 +91,22 @@ const SignUp = () => {
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
           <div className="text-center">
-            <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
+            <Link to="/modern-landing" className="inline-flex items-center justify-center space-x-3 mb-8 group">
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="Dukasmart Logo" 
+                  src="/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png" 
+                  alt="DukaFiti Logo" 
                   className="w-8 h-8"
                 />
               </div>
-              <span className="text-2xl font-bold text-primary">Dukasmart</span>
+              <span className="text-2xl font-bold text-primary font-caesar">DukaFiti</span>
             </Link>
             
-            <h1 className="text-4xl font-bold text-primary mb-2">
+            <h1 className="text-4xl font-bold text-primary mb-2 font-caesar">
               Create Your Account
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join thousands of shop owners using Dukasmart
+              Join thousands of shop owners using DukaFiti
             </p>
             <div className="mt-4 px-4 py-2 bg-success/10 rounded-lg border border-success/20">
               <p className="text-sm text-success font-medium">✨ 14-day free trial, no credit card required</p>
@@ -285,7 +286,7 @@ const SignUp = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           <div className="absolute inset-0 flex items-center justify-center p-12">
             <div className="text-center text-white max-w-md">
-              <h2 className="text-4xl font-bold mb-6">Join Thousands of Shop Owners</h2>
+              <h2 className="text-4xl font-bold mb-6 font-caesar">Join Thousands of Shop Owners</h2>
               <p className="text-xl opacity-90 leading-relaxed">
                 Transform your dukashop with smart POS technology designed for Kenyan businesses
               </p>

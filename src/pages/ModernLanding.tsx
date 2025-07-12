@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ArrowRight, Check, Star, ChevronDown, Eye, EyeOff, Clock, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -66,7 +67,7 @@ const ModernLanding = () => {
       if (error) {
         setSignUpError(error.message);
       } else {
-        navigate('/app');
+        navigate('/dashboard');
       }
     } catch (err) {
       setSignUpError('An unexpected error occurred');
@@ -102,12 +103,12 @@ const ModernLanding = () => {
 
   const steps = [
     {
-      title: "How Dukasmart works?",
-      description: "Dukasmart is a modern POS system designed specifically for Kenyan dukashops. It helps you manage inventory, process sales, track customers, and grow your business with powerful analytics and reporting tools."
+      title: "How DukaFiti works?",
+      description: "DukaFiti is a modern POS system designed specifically for Kenyan dukashops. It helps you manage inventory, process sales, track customers, and grow your business with powerful analytics and reporting tools."
     },
     {
       title: "Complete business management",
-      description: "The most important part of Dukasmart is its comprehensive approach. You get inventory management, sales tracking, customer management, M-Pesa integration, and detailed reports all in one simple platform."
+      description: "The most important part of DukaFiti is its comprehensive approach. You get inventory management, sales tracking, customer management, M-Pesa integration, and detailed reports all in one simple platform."
     },
     {
       title: "Variety of payment options",
@@ -119,7 +120,7 @@ const ModernLanding = () => {
     {
       name: "Grace Mutua",
       role: "Shop Owner, Machakos",
-      content: "Dukasmart transformed my business completely. Sales tracking is so easy now!",
+      content: "DukaFiti transformed my business completely. Sales tracking is so easy now!",
       rating: 5
     },
     {
@@ -146,11 +147,11 @@ const ModernLanding = () => {
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <img 
                   src="/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png" 
-                  alt="Dukasmart Logo" 
+                  alt="DukaFiti Logo" 
                   className="w-8 h-8"
                 />
               </div>
-              <span className="text-2xl font-bold text-primary">Dukasmart</span>
+              <span className="text-2xl font-bold text-primary font-caesar">DukaFiti</span>
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
@@ -228,7 +229,7 @@ const ModernLanding = () => {
                       onClick={() => setExpandedStep(expandedStep === index ? null : index)}
                       className="flex items-center justify-between w-full text-left"
                     >
-                      <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
+                      <h3 className="text-xl font-semibold text-foreground font-caesar">{step.title}</h3>
                       <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${
                         expandedStep === index ? 'rotate-180' : ''
                       }`} />
@@ -242,9 +243,9 @@ const ModernLanding = () => {
                       <div className="mt-6 flex items-center space-x-4 p-4 bg-primary/5 rounded-lg">
                         <img src="/lovable-uploads/8d8ce036-eba9-4359-8db6-057c40d653b7.png" alt="Feature highlight" className="w-16 h-12 object-cover rounded" />
                         <div>
-                          <h4 className="font-semibold text-primary">Smart POS Design</h4>
+                          <h4 className="font-semibold text-primary font-caesar">Smart POS Design</h4>
                           <p className="text-sm text-muted-foreground">
-                            Dukasmart contains components which can easily be integrated into almost any shop workflow.
+                            DukaFiti contains components which can easily be integrated into almost any shop workflow.
                           </p>
                         </div>
                       </div>
@@ -261,14 +262,14 @@ const ModernLanding = () => {
       <section id="features" className="py-20 bg-primary text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Spend Less Time Managing</h2>
+            <h2 className="text-4xl font-bold mb-4 font-caesar">Spend Less Time Managing</h2>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="bg-primary-foreground/10 border-primary-foreground/20 text-white p-6">
                 <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <h3 className="text-xl font-semibold mb-2 font-caesar">{feature.title}</h3>
                 <p className="text-primary-foreground/80">{feature.description}</p>
               </Card>
             ))}
@@ -282,18 +283,18 @@ const ModernLanding = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div>
-                <h2 className="text-4xl font-bold text-primary mb-4">
+                <h2 className="text-4xl font-bold text-primary mb-4 font-caesar">
                   Ready to Transform Your Business?
                 </h2>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Join thousands of Kenyan shop owners who trust Dukasmart to manage their business efficiently.
+                  Join thousands of Kenyan shop owners who trust DukaFiti to manage their business efficiently.
                 </p>
               </div>
 
               <div className="bg-white rounded-2xl p-8 shadow-lg border border-border/50">
                 <div className="space-y-6">
                   <div className="text-center">
-                    <h3 className="text-2xl font-semibold text-foreground mb-2">Get Started Today</h3>
+                    <h3 className="text-2xl font-semibold text-foreground mb-2 font-caesar">Get Started Today</h3>
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-success/10 rounded-lg border border-success/20">
                       <span className="text-2xl">✨</span>
                       <span className="text-sm font-medium text-success">14-day free trial • No credit card required</span>
@@ -444,7 +445,7 @@ const ModernLanding = () => {
                         </div>
                       </div>
                     </div>
-                    <h3 className="text-2xl font-bold mb-4">Your Success Story Starts Here</h3>
+                    <h3 className="text-2xl font-bold mb-4 font-caesar">Your Success Story Starts Here</h3>
                     <div className="space-y-2 text-lg opacity-90">
                       <p>✓ 10,000+ Successful Duka Owners</p>
                       <p>✓ 99.9% Reliable Service</p>
@@ -462,7 +463,7 @@ const ModernLanding = () => {
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-primary mb-4">What Our Customers Say</h2>
+            <h2 className="text-4xl font-bold text-primary mb-4 font-caesar">What Our Customers Say</h2>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -492,14 +493,14 @@ const ModernLanding = () => {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <img 
                   src="/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png" 
-                  alt="Dukasmart Logo" 
+                  alt="DukaFiti Logo" 
                   className="w-6 h-6"
                 />
               </div>
-              <span className="text-xl font-bold">Dukasmart</span>
+              <span className="text-xl font-bold font-caesar">DukaFiti</span>
             </div>
             <p className="text-muted">Smart POS for Kenyan Dukashops</p>
-            <p className="text-sm text-muted mt-4">&copy; 2024 Dukasmart. Built for Kenyan entrepreneurs.</p>
+            <p className="text-sm text-muted mt-4">&copy; 2024 DukaFiti. Built for Kenyan entrepreneurs.</p>
           </div>
         </div>
       </footer>
