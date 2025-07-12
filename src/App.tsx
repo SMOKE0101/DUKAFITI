@@ -8,6 +8,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
+import ModernLanding from "./pages/ModernLanding";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
@@ -42,10 +43,16 @@ function App() {
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
-                    <Route path="/" element={<Landing />} />
+                    <Route path="/" element={<ModernLanding />} />
+                    <Route path="/modern-landing" element={<ModernLanding />} />
+                    <Route path="/landing" element={<Landing />} />
                     <Route path="/signin" element={<SignIn />} />
                     <Route path="/signup" element={<SignUp />} />
+                    <Route path="/auth" element={<Navigate to="/signin" replace />} />
                     <Route path="/offline" element={<Offline />} />
+                    
+                    {/* Dashboard compatibility route */}
+                    <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                     
                     {/* Protected routes with layout */}
                     <Route path="/app" element={

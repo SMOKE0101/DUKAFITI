@@ -3,10 +3,12 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     console.error(
@@ -16,9 +18,15 @@ const NotFound = () => {
   }, [location.pathname]);
 
   const handleGoHome = () => {
-    // Force navigation to the dashboard or signin based on auth state
-    // This ensures we don't get stuck in redirect loops
-    navigate('/dashboard', { replace: true });
+    if (!loading) {
+      if (user) {
+        // Authenticated user - go to dashboard
+        navigate('/app/dashboard', { replace: true });
+      } else {
+        // Unauthenticated user - go to landing page
+        navigate('/', { replace: true });
+      }
+    }
   };
 
   const handleGoBack = () => {
@@ -26,10 +34,21 @@ const NotFound = () => {
     if (window.history.length > 1) {
       window.history.back();
     } else {
-      // If no history, go to home
+      // If no history, go to appropriate home
       handleGoHome();
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -45,7 +64,7 @@ const NotFound = () => {
         <div className="space-y-3">
           <Button onClick={handleGoHome} className="w-full">
             <Home className="w-4 h-4 mr-2" />
-            Go to Dashboard
+            {user ? 'Go to Dashboard' : 'Go to Home'}
           </Button>
           
           <Button variant="outline" onClick={handleGoBack} className="w-full">

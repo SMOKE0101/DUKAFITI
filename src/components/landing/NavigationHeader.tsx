@@ -56,13 +56,13 @@ const NavigationHeader = () => {
           <div className="hidden md:flex items-center space-x-4">
             <Button 
               variant="ghost" 
-              onClick={() => window.location.href = '/auth'}
+              onClick={() => window.location.href = '/signin'}
               className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
             >
               Sign In
             </Button>
             <Button 
-              onClick={() => window.location.href = '/app'}
+              onClick={() => window.location.href = '/app/dashboard'}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
             >
               Get Started Free
@@ -102,13 +102,13 @@ const NavigationHeader = () => {
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                 <Button 
                   variant="ghost" 
-                  onClick={() => window.location.href = '/auth'}
+                  onClick={() => window.location.href = '/signin'}
                   className="w-full justify-start text-gray-700 dark:text-gray-300"
                 >
                   Sign In
                 </Button>
                 <Button 
-                  onClick={() => window.location.href = '/app'}
+                  onClick={() => window.location.href = '/app/dashboard'}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
                 >
                   Get Started Free

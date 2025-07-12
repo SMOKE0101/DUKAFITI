@@ -14,10 +14,10 @@ const Index = () => {
       const timer = setTimeout(() => {
         if (user) {
           console.log('[Index] Authenticated user detected, redirecting to dashboard');
-          navigate('/dashboard', { replace: true });
+          navigate('/app/dashboard', { replace: true });
         } else {
           console.log('[Index] No user found, redirecting to modern landing');
-          navigate('/modern-landing', { replace: true });
+          navigate('/', { replace: true });
         }
       }, 100);
 

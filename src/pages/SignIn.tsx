@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Eye, EyeOff, ArrowLeft, Mail, Lock, Smartphone, Shield, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,7 +36,7 @@ const SignIn = () => {
       if (error) {
         setError(error.message);
       } else {
-        navigate('/dashboard');
+        navigate('/app/dashboard');
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -68,7 +67,7 @@ const SignIn = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative">
         {/* Back Button */}
         <Link 
-          to="/modern-landing" 
+          to="/" 
           className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -78,7 +77,7 @@ const SignIn = () => {
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
           <div className="text-center">
-            <Link to="/modern-landing" className="inline-flex items-center justify-center space-x-3 mb-8 group">
+            <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
                   src="/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png" 
