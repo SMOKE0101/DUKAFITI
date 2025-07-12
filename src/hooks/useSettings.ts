@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -82,11 +81,17 @@ const defaultSettings: ShopSettings = {
   debtReminderMessage: 'Hello {customerName}, you have an outstanding debt of KSh {amount}. Please settle by {dueDate}. Thank you.',
   paymentConfirmationMessage: 'Thank you {customerName}! Payment of KSh {amount} received. Outstanding balance: KSh {balance}.',
   lowStockMessage: 'Alert: {productName} is running low. Current stock: {currentStock}',
-  theme: 'light', // Explicitly set to light as default
+  theme: 'light',
   currencyFormat: 'KSh {amount}',
   dateFormat: 'DD/MM/YYYY',
   language: 'en',
   dashboardLayout: 'compact',
+};
+
+// Type-safe theme casting function
+const safeTheme = (theme: string | undefined): 'light' | 'dark' | 'system' => {
+  if (theme === 'dark' || theme === 'light' || theme === 'system') return theme;
+  return 'light';
 };
 
 export const useSettings = () => {
@@ -94,7 +99,7 @@ export const useSettings = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   const settingsKey = user ? `dukafiti_settings_${user.id}` : 'dukafiti_settings_guest';
 
@@ -115,15 +120,17 @@ export const useSettings = () => {
 
         if (data && data.settings_value) {
           const savedSettings = data.settings_value as Partial<ShopSettings>;
-          // Ensure theme defaults to light if not specified
           const settingsWithDefaults = { 
             ...defaultSettings, 
             ...savedSettings,
-            theme: savedSettings.theme || 'light'
+            theme: safeTheme(savedSettings.theme)
           };
           setSettings(settingsWithDefaults);
-          // Sync with ThemeProvider
-          setTheme(settingsWithDefaults.theme);
+          // Only sync theme if it's different from current
+          const currentTheme = safeTheme(savedSettings.theme);
+          if (theme !== currentTheme) {
+            setTheme(currentTheme);
+          }
         } else {
           // Fallback to localStorage
           const stored = localStorage.getItem(settingsKey);
@@ -132,19 +139,24 @@ export const useSettings = () => {
             const settingsWithDefaults = { 
               ...defaultSettings, 
               ...parsedSettings,
-              theme: parsedSettings.theme || 'light'
+              theme: safeTheme(parsedSettings.theme)
             };
             setSettings(settingsWithDefaults);
-            setTheme(settingsWithDefaults.theme);
+            const currentTheme = safeTheme(parsedSettings.theme);
+            if (theme !== currentTheme) {
+              setTheme(currentTheme);
+            }
           } else if (user?.user_metadata?.shop_name) {
             // Initialize with shop name from user metadata
             const initialSettings = {
               ...defaultSettings,
               shopName: user.user_metadata.shop_name,
-              theme: 'light'
+              theme: 'light' as const
             };
             setSettings(initialSettings);
-            setTheme('light');
+            if (theme !== 'light') {
+              setTheme('light');
+            }
           }
         }
       } else {
@@ -155,12 +167,17 @@ export const useSettings = () => {
           const settingsWithDefaults = { 
             ...defaultSettings, 
             ...parsedSettings,
-            theme: parsedSettings.theme || 'light'
+            theme: safeTheme(parsedSettings.theme)
           };
           setSettings(settingsWithDefaults);
-          setTheme(settingsWithDefaults.theme);
+          const currentTheme = safeTheme(parsedSettings.theme);
+          if (theme !== currentTheme) {
+            setTheme(currentTheme);
+          }
         } else {
-          setTheme('light');
+          if (theme !== 'light') {
+            setTheme('light');
+          }
         }
       }
     } catch (error) {
@@ -170,7 +187,9 @@ export const useSettings = () => {
         description: "Failed to load settings. Using defaults.",
         variant: "destructive",
       });
-      setTheme('light');
+      if (theme !== 'light') {
+        setTheme('light');
+      }
     } finally {
       setLoading(false);
     }
@@ -178,12 +197,18 @@ export const useSettings = () => {
 
   const updateSettings = async (newSettings: Partial<ShopSettings>) => {
     try {
-      const updatedSettings = { ...settings, ...newSettings };
+      const updatedSettings = { 
+        ...settings, 
+        ...newSettings,
+        // Ensure theme is properly typed
+        theme: newSettings.theme ? safeTheme(newSettings.theme) : settings.theme
+      };
       setSettings(updatedSettings);
       
       // If theme is being updated, sync with ThemeProvider
       if (newSettings.theme) {
-        setTheme(newSettings.theme);
+        const safeNewTheme = safeTheme(newSettings.theme);
+        setTheme(safeNewTheme);
       }
       
       // Save to localStorage (always)

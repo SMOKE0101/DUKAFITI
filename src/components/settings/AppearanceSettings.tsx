@@ -10,9 +10,8 @@ const AppearanceSettings = () => {
   const { theme, setTheme } = useTheme();
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    // Update the theme provider
+    // Only update when user explicitly clicks
     setTheme(newTheme);
-    // Update our settings
     updateSettings({ theme: newTheme });
   };
 
@@ -33,7 +32,7 @@ const AppearanceSettings = () => {
     );
   }
 
-  // Use theme from provider, fallback to settings, then default to light
+  // Use theme from provider first, fallback to settings
   const currentTheme = theme || settings.theme || 'light';
 
   return (
