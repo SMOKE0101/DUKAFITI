@@ -490,7 +490,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               Confirm Logout
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to exit DukaSmart?
+              Are you sure you want to exit DUKAFITI?
             </p>
             
             <div className="flex gap-3">

@@ -110,6 +110,15 @@ Preferred communication style: Simple, everyday language.
 - **PostgreSQL**: Database (Neon serverless recommended)
 - **Static Files**: Frontend assets served from `dist/public`
 
+### Recent Changes (July 2025)
+- **Complete Branding Update**: Implemented dynamic theme-aware logo switching across all components
+  - Landing pages with proper light/dark mode logo variants
+  - Sidebar components with expanded/collapsed logo states
+  - Top bars with professional branding integration
+  - Sign-in/Sign-up pages with custom banner assets
+- **Fixed Sidebar Issues**: Resolved multiple sidebar component conflicts and logo path errors
+- **Enhanced Authentication Pages**: Updated with new DUKAFITI banner assets for better brand consistency
+
 ### Features in Development
 - **Blocky UI Theme**: Custom design system implementation
 - **Enhanced Offline Sync**: Advanced conflict resolution

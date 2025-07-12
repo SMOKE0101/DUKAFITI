@@ -4,6 +4,7 @@ import { Eye, EyeOff, ArrowLeft, Mail, Lock, Smartphone, Shield, TrendingUp } fr
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const SignIn = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const SignIn = () => {
 
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -240,47 +242,14 @@ const SignIn = () => {
         </div>
       </div>
 
-      {/* Right Panel - Illustration */}
+      {/* Right Panel - Brand Banner */}
       <div className="hidden lg:block lg:flex-1">
-        <div className="h-full bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          <div className="absolute inset-0 flex items-center justify-center p-12">
-            <div className="text-center text-white max-w-md">
-              <h2 className="text-4xl font-bold mb-6">Welcome Back!</h2>
-              <p className="text-xl opacity-90 leading-relaxed mb-8">
-                Continue managing your dukashop with powerful POS features
-              </p>
-              <div className="grid grid-cols-1 gap-3 text-sm">
-                <div className="bg-white/10 rounded-lg p-3 text-left flex items-center gap-3">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Smart Inventory</div>
-                    <div className="opacity-80">Track stock levels automatically</div>
-                  </div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3 text-left flex items-center gap-3">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Smartphone className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">M-Pesa Integration</div>
-                    <div className="opacity-80">Accept payments seamlessly</div>
-                  </div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3 text-left flex items-center gap-3">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Business Analytics</div>
-                    <div className="opacity-80">Make data-driven decisions</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="h-full relative overflow-hidden flex items-center justify-center">
+          <img 
+            src={theme === 'dark' ? '/signin-banner-dark.png' : '/signin-banner-light.png'}
+            alt="DUKAFITI - Duka Bora Ni Duka Fiti"
+            className="w-full h-full object-contain transition-all duration-300 ease-in-out"
+          />
         </div>
       </div>
     </div>

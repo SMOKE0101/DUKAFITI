@@ -70,7 +70,7 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
   const { theme } = useTheme();
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const shopName = user?.user_metadata?.shop_name || 'DukaSmart';
+  const shopName = user?.user_metadata?.shop_name || 'DUKAFITI';
   const userEmail = user?.email || '';
 
   const handleLogout = async () => {

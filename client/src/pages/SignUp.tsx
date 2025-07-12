@@ -3,6 +3,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ const SignUp = () => {
 
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -279,28 +281,14 @@ const SignUp = () => {
         </div>
       </div>
 
-      {/* Right Panel - Illustration */}
+      {/* Right Panel - Brand Banner */}
       <div className="hidden lg:block lg:flex-1">
-        <div className="h-full bg-gradient-to-br from-emerald-400 via-purple-500 to-pink-500 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          <div className="absolute inset-0 flex items-center justify-center p-12">
-            <div className="text-center text-white max-w-md">
-              <h2 className="text-4xl font-bold mb-6">Join Thousands of Shop Owners</h2>
-              <p className="text-xl opacity-90 leading-relaxed">
-                Transform your dukashop with smart POS technology designed for Kenyan businesses
-              </p>
-              <div className="mt-8 grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-white/10 rounded-lg p-3">
-                  <div className="font-semibold">10,000+</div>
-                  <div className="opacity-80">Active Shops</div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <div className="font-semibold">99.9%</div>
-                  <div className="opacity-80">Uptime</div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="h-full relative overflow-hidden flex items-center justify-center">
+          <img 
+            src={theme === 'dark' ? '/signin-banner-dark.png' : '/signin-banner-light.png'}
+            alt="DUKAFITI - Duka Bora Ni Duka Fiti"
+            className="w-full h-full object-contain transition-all duration-300 ease-in-out"
+          />
         </div>
       </div>
     </div>
