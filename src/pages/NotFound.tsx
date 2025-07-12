@@ -1,11 +1,12 @@
 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.error(
@@ -13,6 +14,22 @@ const NotFound = () => {
       location.pathname
     );
   }, [location.pathname]);
+
+  const handleGoHome = () => {
+    // Force navigation to the dashboard or signin based on auth state
+    // This ensures we don't get stuck in redirect loops
+    navigate('/dashboard', { replace: true });
+  };
+
+  const handleGoBack = () => {
+    // Check if there's history to go back to
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // If no history, go to home
+      handleGoHome();
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -26,14 +43,12 @@ const NotFound = () => {
         </div>
         
         <div className="space-y-3">
-          <Button asChild className="w-full">
-            <Link to="/">
-              <Home className="w-4 h-4 mr-2" />
-              Go to Homepage
-            </Link>
+          <Button onClick={handleGoHome} className="w-full">
+            <Home className="w-4 h-4 mr-2" />
+            Go to Dashboard
           </Button>
           
-          <Button variant="outline" onClick={() => window.history.back()} className="w-full">
+          <Button variant="outline" onClick={handleGoBack} className="w-full">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
