@@ -1,3 +1,4 @@
+
 interface OfflineSale {
   id: string;
   user_id: string;
@@ -69,7 +70,7 @@ interface SyncQueueItem {
 class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private dbName = 'DukaFitiOffline';
-  private version = 3; // Increased version for new schema
+  private version = 4; // Increased version for schema fixes
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -237,7 +238,7 @@ class OfflineDatabase {
     });
   }
 
-  // Get unsynced operations
+  // Get unsynced operations - Fixed the boolean issue
   async getUnsyncedOperations(): Promise<any[]> {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -246,7 +247,8 @@ class OfflineDatabase {
       const store = transaction.objectStore('syncQueue');
       const index = store.index('synced');
       
-      const request = index.getAll(false);
+      // Use IDBKeyRange for boolean values
+      const request = index.getAll(IDBKeyRange.only(false));
       
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
@@ -270,6 +272,95 @@ class OfflineDatabase {
     
     return stats;
   }
+
+  // Test offline functionality
+  async testOfflineCapabilities(): Promise<{ success: boolean; details: any }> {
+    console.log('[IndexedDB] Testing offline capabilities...');
+    
+    try {
+      // Test data creation
+      const testData = {
+        id: 'test_' + Date.now(),
+        name: 'Test Product',
+        category: 'Test',
+        price: 100,
+        timestamp: new Date().toISOString()
+      };
+
+      // Test storing data
+      await this.storeOfflineData('products', testData);
+      console.log('[IndexedDB] ✅ Store test passed');
+
+      // Test retrieving data
+      const retrieved = await this.getOfflineData('products', testData.id);
+      if (!retrieved || retrieved.id !== testData.id) {
+        throw new Error('Data retrieval failed');
+      }
+      console.log('[IndexedDB] ✅ Retrieve test passed');
+
+      // Test sync queue
+      const syncItem = {
+        id: 'sync_test_' + Date.now(),
+        type: 'product',
+        operation: 'create',
+        data: testData,
+        timestamp: new Date().toISOString(),
+        priority: 'medium',
+        attempts: 0,
+        synced: false
+      };
+
+      await this.addToSyncQueue(syncItem);
+      const syncQueue = await this.getSyncQueue();
+      const foundSyncItem = syncQueue.find(item => item.id === syncItem.id);
+      
+      if (!foundSyncItem) {
+        throw new Error('Sync queue test failed');
+      }
+      console.log('[IndexedDB] ✅ Sync queue test passed');
+
+      // Clean up test data
+      await this.deleteOfflineData('products', testData.id);
+      await this.removeFromSyncQueue(syncItem.id);
+      console.log('[IndexedDB] ✅ Cleanup completed');
+
+      const stats = await this.getDataStats();
+      
+      return {
+        success: true,
+        details: {
+          message: 'All offline capabilities working correctly',
+          stats,
+          testsPassed: ['store', 'retrieve', 'syncQueue', 'cleanup']
+        }
+      };
+
+    } catch (error) {
+      console.error('[IndexedDB] ❌ Offline test failed:', error);
+      return {
+        success: false,
+        details: {
+          error: error.message,
+          message: 'Offline capabilities test failed'
+        }
+      };
+    }
+  }
 }
 
 export const offlineDB = new OfflineDatabase();
+
+// Auto-run tests when database is initialized
+offlineDB.init().then(() => {
+  // Run comprehensive tests
+  setTimeout(async () => {
+    const testResult = await offlineDB.testOfflineCapabilities();
+    if (testResult.success) {
+      console.log('[IndexedDB] 🎉 All offline tests passed successfully!');
+    } else {
+      console.error('[IndexedDB] 💥 Offline tests failed:', testResult.details);
+    }
+  }, 1000);
+}).catch(error => {
+  console.error('[IndexedDB] Failed to initialize:', error);
+});

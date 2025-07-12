@@ -7,16 +7,15 @@ export const useOfflineSales = () => {
   const { addOfflineOperation, getOfflineData, isOnline } = useOfflineManager();
   const [isCreating, setIsCreating] = useState(false);
 
-  const createOfflineSale = useCallback(async (saleData: Omit<Sale, 'id' | 'created_at' | 'synced'>) => {
+  const createOfflineSale = useCallback(async (saleData: Omit<Sale, 'id' | 'synced'>) => {
     setIsCreating(true);
     
     try {
       const sale: Sale = {
         ...saleData,
         id: `offline_sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        created_at: new Date().toISOString(),
         synced: false,
-        timestamp: new Date().toISOString()
+        timestamp: saleData.timestamp || new Date().toISOString()
       };
 
       // Add to offline queue with high priority
