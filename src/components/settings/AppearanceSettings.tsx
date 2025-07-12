@@ -7,11 +7,10 @@ import { Palette, Sun, Moon } from 'lucide-react';
 
 const AppearanceSettings = () => {
   const { settings, updateSettings, loading } = useSettings();
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    // Only update when user explicitly clicks
-    setTheme(newTheme);
+    // Update settings immediately - this will also update the theme provider
     updateSettings({ theme: newTheme });
   };
 
@@ -32,8 +31,8 @@ const AppearanceSettings = () => {
     );
   }
 
-  // Use theme from provider first, fallback to settings
-  const currentTheme = theme || settings.theme || 'light';
+  // Use settings theme as the source of truth
+  const currentTheme = settings.theme || 'light';
 
   return (
     <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useTheme } from 'next-themes';
@@ -100,6 +101,7 @@ export const useSettings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const isInitialized = useRef(false);
 
   const settingsKey = user ? `dukafiti_settings_${user.id}` : 'dukafiti_settings_guest';
 
@@ -126,10 +128,14 @@ export const useSettings = () => {
             theme: safeTheme(savedSettings.theme)
           };
           setSettings(settingsWithDefaults);
-          // Only sync theme if it's different from current
-          const currentTheme = safeTheme(savedSettings.theme);
-          if (theme !== currentTheme) {
-            setTheme(currentTheme);
+          
+          // Only sync theme on initial load
+          if (!isInitialized.current) {
+            const currentTheme = safeTheme(savedSettings.theme);
+            if (theme !== currentTheme) {
+              setTheme(currentTheme);
+            }
+            isInitialized.current = true;
           }
         } else {
           // Fallback to localStorage
@@ -142,9 +148,14 @@ export const useSettings = () => {
               theme: safeTheme(parsedSettings.theme)
             };
             setSettings(settingsWithDefaults);
-            const currentTheme = safeTheme(parsedSettings.theme);
-            if (theme !== currentTheme) {
-              setTheme(currentTheme);
+            
+            // Only sync theme on initial load
+            if (!isInitialized.current) {
+              const currentTheme = safeTheme(parsedSettings.theme);
+              if (theme !== currentTheme) {
+                setTheme(currentTheme);
+              }
+              isInitialized.current = true;
             }
           } else if (user?.user_metadata?.shop_name) {
             // Initialize with shop name from user metadata
@@ -154,8 +165,13 @@ export const useSettings = () => {
               theme: 'light' as const
             };
             setSettings(initialSettings);
-            if (theme !== 'light') {
-              setTheme('light');
+            
+            // Only sync theme on initial load
+            if (!isInitialized.current) {
+              if (theme !== 'light') {
+                setTheme('light');
+              }
+              isInitialized.current = true;
             }
           }
         }
@@ -170,13 +186,22 @@ export const useSettings = () => {
             theme: safeTheme(parsedSettings.theme)
           };
           setSettings(settingsWithDefaults);
-          const currentTheme = safeTheme(parsedSettings.theme);
-          if (theme !== currentTheme) {
-            setTheme(currentTheme);
+          
+          // Only sync theme on initial load
+          if (!isInitialized.current) {
+            const currentTheme = safeTheme(parsedSettings.theme);
+            if (theme !== currentTheme) {
+              setTheme(currentTheme);
+            }
+            isInitialized.current = true;
           }
         } else {
-          if (theme !== 'light') {
-            setTheme('light');
+          // Only sync theme on initial load
+          if (!isInitialized.current) {
+            if (theme !== 'light') {
+              setTheme('light');
+            }
+            isInitialized.current = true;
           }
         }
       }
@@ -187,8 +212,13 @@ export const useSettings = () => {
         description: "Failed to load settings. Using defaults.",
         variant: "destructive",
       });
-      if (theme !== 'light') {
-        setTheme('light');
+      
+      // Only sync theme on initial load
+      if (!isInitialized.current) {
+        if (theme !== 'light') {
+          setTheme('light');
+        }
+        isInitialized.current = true;
       }
     } finally {
       setLoading(false);
@@ -205,7 +235,7 @@ export const useSettings = () => {
       };
       setSettings(updatedSettings);
       
-      // If theme is being updated, sync with ThemeProvider
+      // If theme is being updated, sync with ThemeProvider immediately
       if (newSettings.theme) {
         const safeNewTheme = safeTheme(newSettings.theme);
         setTheme(safeNewTheme);
