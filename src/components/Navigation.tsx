@@ -7,12 +7,11 @@ import {
   Users, 
   CreditCard, 
   History, 
-  Settings,
-  Wifi,
-  WifiOff 
+  Settings
 } from 'lucide-react';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import UserMenu from './UserMenu';
+import EnhancedOfflineIndicator from './EnhancedOfflineIndicator';
 import { cn } from '@/lib/utils';
 
 const Navigation = () => {
@@ -61,20 +60,7 @@ const Navigation = () => {
         })}
         
         <div className="flex items-center ml-auto space-x-3">
-          <div className={cn(
-            "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-            isOnline 
-              ? "text-brand-green bg-green-50 border border-green-200 shadow-sm" 
-              : "text-orange-700 bg-orange-50 border border-orange-200 shadow-sm"
-          )}>
-            {isOnline ? (
-              <Wifi className="w-4 h-4" />
-            ) : (
-              <WifiOff className="w-4 h-4" />
-            )}
-            <span className="font-medium">{isOnline ? 'Online' : 'Offline'}</span>
-          </div>
-          
+          <EnhancedOfflineIndicator />
           <UserMenu />
         </div>
       </div>

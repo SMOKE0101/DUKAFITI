@@ -151,7 +151,12 @@ const OfflineValidator: React.FC = () => {
                   {Object.entries(lastValidation.stats).map(([key, value]) => (
                     <div key={key} className="bg-muted p-2 rounded flex justify-between">
                       <span className="capitalize">{key}:</span>
-                      <span className="font-mono">{value}</span>
+                      <span className="font-mono">
+                        {typeof value === 'string' || typeof value === 'number' 
+                          ? String(value) 
+                          : JSON.stringify(value)
+                        }
+                      </span>
                     </div>
                   ))}
                 </div>

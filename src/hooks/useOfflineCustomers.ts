@@ -8,17 +8,17 @@ export const useOfflineCustomers = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const createOfflineCustomer = useCallback(async (customerData: Omit<Customer, 'id' | 'created_date'>) => {
+  const createOfflineCustomer = useCallback(async (customerData: Omit<Customer, 'id' | 'createdDate'>) => {
     setIsCreating(true);
     
     try {
       const customer: Customer = {
         ...customerData,
         id: `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        created_date: new Date().toISOString(),
-        total_purchases: 0,
-        outstanding_debt: 0,
-        credit_limit: customerData.credit_limit || 1000
+        createdDate: new Date().toISOString(),
+        totalPurchases: 0,
+        outstandingDebt: 0,
+        creditLimit: customerData.creditLimit || 1000
       };
 
       await addOfflineOperation('customer', 'create', customer, 'low');
@@ -42,7 +42,7 @@ export const useOfflineCustomers = () => {
         id: customerId,
         updates: {
           ...updates,
-          updated_at: new Date().toISOString()
+          updatedAt: new Date().toISOString()
         }
       };
 

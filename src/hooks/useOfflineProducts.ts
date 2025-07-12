@@ -8,15 +8,15 @@ export const useOfflineProducts = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const createOfflineProduct = useCallback(async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
+  const createOfflineProduct = useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     setIsCreating(true);
     
     try {
       const product: Product = {
         ...productData,
         id: `offline_product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       await addOfflineOperation('product', 'create', product, 'medium');
@@ -40,7 +40,7 @@ export const useOfflineProducts = () => {
         id: productId,
         updates: {
           ...updates,
-          updated_at: new Date().toISOString()
+          updatedAt: new Date().toISOString()
         }
       };
 
@@ -55,7 +55,7 @@ export const useOfflineProducts = () => {
     } finally {
       setIsUpdating(false);
     }
-  }, [addOfflineOperation]);
+  }, [getOfflineData]);
 
   const getOfflineProducts = useCallback(async (): Promise<Product[]> => {
     try {

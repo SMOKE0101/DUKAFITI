@@ -8,16 +8,15 @@ const Index = () => {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    console.log('Index: Auth state -', { user: !!user, loading });
+    console.log('[Index] Auth state check:', { user: !!user, loading });
     
     if (!loading) {
-      // Add a small delay to prevent rapid redirects
       const timer = setTimeout(() => {
         if (user) {
-          console.log('Index: Redirecting authenticated user to dashboard');
+          console.log('[Index] Authenticated user detected, redirecting to dashboard');
           navigate('/dashboard', { replace: true });
         } else {
-          console.log('Index: Redirecting unauthenticated user to modern landing');
+          console.log('[Index] No user found, redirecting to modern landing');
           navigate('/modern-landing', { replace: true });
         }
       }, 100);
