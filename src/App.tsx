@@ -55,8 +55,8 @@ function App() {
         storageKey="dukafiti-theme"
       >
         <QueryClientProvider client={queryClient}>
-          <Router>
-            <AuthProvider>
+          <AuthProvider>
+            <Router>
               <div className="min-h-screen bg-background">
                 <Routes>
                   {/* Main route - redirect based on auth status */}
@@ -136,11 +136,11 @@ function App() {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 
-                {/* Toaster moved inside the AuthProvider context */}
+                {/* Toaster positioned after Router to ensure proper React context */}
                 <Toaster />
               </div>
-            </AuthProvider>
-          </Router>
+            </Router>
+          </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
