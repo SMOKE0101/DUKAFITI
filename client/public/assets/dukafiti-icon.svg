@@ -1,0 +1,9 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="40" height="40" rx="8" fill="#8B45C5"/>
+  <g transform="translate(8, 8)">
+    <!-- Cube icon similar to DUKAFITI branding -->
+    <path d="M12 2L20 6L12 10L4 6L12 2Z" fill="white" stroke="white" stroke-width="1"/>
+    <path d="M4 6V14L12 18V10L4 6Z" fill="white" fill-opacity="0.8" stroke="white" stroke-width="1"/>
+    <path d="M12 10V18L20 14V6L12 10Z" fill="white" fill-opacity="0.6" stroke="white" stroke-width="1"/>
+  </g>
+</svg>

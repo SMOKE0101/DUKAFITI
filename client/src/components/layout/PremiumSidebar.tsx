@@ -83,17 +83,14 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
 
   // Get the appropriate logo based on theme and open state
   const getLogoSrc = () => {
-    if (!isOpen) {
-      // Use collapsed logos for sidebar collapsed state
-      return theme === 'dark' 
-        ? '/sidebar-logo-dark-collapsed.png' // Dark mode collapsed
-        : '/sidebar-logo-light-collapsed.png'; // Light mode collapsed
-    } else {
-      // Use full logos for expanded state
-      return theme === 'dark'
-        ? '/sidebar-logo-dark.png' // Dark mode full logo
-        : '/sidebar-logo-light.png'; // Light mode full logo
-    }
+    return theme === 'dark' 
+      ? '/assets/banner-with-purple-items-and-black-background.png'
+      : '/assets/banner-with-purple-items-and-white-background.png';
+  };
+
+  // Get just the DUKAFITI icon for collapsed state
+  const getIconSrc = () => {
+    return '/assets/dukafiti-icon.svg';
   };
 
   if (isMobile) {
@@ -133,53 +130,76 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
         isOpen ? "w-[280px]" : "w-20"
       )}>
         {/* Branding & Profile Section - Professional Design with theme support */}
-        <div className="p-6 border-b border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 transition-colors duration-300">
-          {isOpen ? (
-            <div className="space-y-4">
-              {/* Logo with Professional Styling and theme support */}
-              <div className="flex items-center justify-center">
+        <div className={cn(
+          "border-b border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          isOpen ? "p-6" : "p-4"
+        )}>
+          <div className={cn(
+            "relative overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            isOpen ? "space-y-5" : "space-y-0"
+          )}>
+            {/* Logo Container with Professional Styling and smooth transitions */}
+            <div className={cn(
+              "relative flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+              isOpen ? "h-16" : "h-12"
+            )}>
+              <div className={cn(
+                "relative transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
+                isOpen ? "scale-100 opacity-100" : "scale-90 opacity-100"
+              )}>
                 <img 
                   src={getLogoSrc()}
-                  alt="DUKAFITI Logo"
-                  className="h-12 w-auto max-w-[200px] object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+                  alt="DUKAFITI - Duka Bora Ni Duka Fiti"
+                  className={cn(
+                    "object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
+                    isOpen 
+                      ? "h-14 w-auto max-w-[240px]" 
+                      : "h-10 w-auto max-w-[40px] object-left"
+                  )}
                   style={{
-                    filter: 'drop-shadow(0 2px 12px rgba(0, 0, 0, 0.1))'
+                    filter: isOpen 
+                      ? 'drop-shadow(0 4px 20px rgba(139, 69, 197, 0.15)) brightness(1.02)' 
+                      : 'drop-shadow(0 2px 12px rgba(139, 69, 197, 0.12)) brightness(1.05)',
+                    clipPath: isOpen 
+                      ? 'none' 
+                      : 'inset(0 75% 0 0)', // Show only the left 25% (icon part) when collapsed
                   }}
                 />
               </div>
               
-              {/* Profile Card - Enhanced Professional Design with theme support */}
+              {/* Subtle glow effect for branding */}
+              <div className={cn(
+                "absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent rounded-xl transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"
+              )} />
+            </div>
+            
+            {/* Profile Card - Enhanced Professional Design with smooth collapse */}
+            <div className={cn(
+              "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden",
+              isOpen ? "max-h-20 opacity-100 transform translate-y-0" : "max-h-0 opacity-0 transform -translate-y-4"
+            )}>
               <button
                 onClick={() => setShowProfileModal(true)}
-                className="w-full p-4 bg-gray-50/80 dark:bg-gray-800/80 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 text-left group border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300/50 dark:hover:border-gray-600/50"
+                className="w-full p-4 bg-gradient-to-r from-gray-50/90 to-gray-100/50 dark:from-gray-800/90 dark:to-gray-700/50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 text-left group border border-gray-200/60 dark:border-gray-700/60 hover:border-primary/30 dark:hover:border-primary/40 backdrop-blur-sm"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-700 dark:from-gray-500 dark:to-gray-600 rounded-full flex items-center justify-center shadow-sm">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary/80 to-primary/60 rounded-full flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-105">
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-primary dark:group-hover:text-primary/90 transition-colors duration-300">
                       {shopName}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-300">
                       Owner
                     </p>
                   </div>
+                  <div className="w-2 h-2 bg-primary/60 rounded-full group-hover:bg-primary group-hover:scale-125 transition-all duration-300" />
                 </div>
               </button>
             </div>
-          ) : (
-            <div className="flex justify-center">
-              <img 
-                src={getLogoSrc()}
-                alt="DUKAFITI Logo"
-                className="w-10 h-10 object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
-                style={{
-                  filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
-                }}
-              />
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Navigation - Professional Styling with theme support */}
