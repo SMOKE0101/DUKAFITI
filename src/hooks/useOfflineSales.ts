@@ -7,11 +7,13 @@ export const useOfflineSales = () => {
   const { addOfflineOperation, getOfflineData, isOnline } = useOfflineManager();
   const [isCreating, setIsCreating] = useState(false);
 
-  const createOfflineSale = useCallback(async (saleData: Omit<Sale, 'id' | 'synced'>) => {
+  const createOfflineSale = useCallback(async (saleData: any) => {
     setIsCreating(true);
     
     try {
-      const sale: Sale = {
+      console.log('[OfflineSales] Creating offline sale:', saleData);
+
+      const sale = {
         ...saleData,
         id: `offline_sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         synced: false,
@@ -19,14 +21,14 @@ export const useOfflineSales = () => {
       };
 
       // Add to offline queue with high priority
-      await addOfflineOperation('sale', 'create', sale, 'high');
+      const operationId = await addOfflineOperation('sale', 'create', sale, 'high');
       
-      console.log('[OfflineSales] Sale created offline:', sale.id);
+      console.log('[OfflineSales] Sale created offline with operation ID:', operationId);
       return sale;
       
     } catch (error) {
       console.error('[OfflineSales] Failed to create offline sale:', error);
-      throw error;
+      throw new Error(`Failed to create offline sale: ${error.message}`);
     } finally {
       setIsCreating(false);
     }

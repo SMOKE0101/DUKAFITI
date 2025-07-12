@@ -1,13 +1,14 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { useOfflineSales } from '../hooks/useOfflineSales';
+import { useOfflineManager } from '../hooks/useOfflineManager';
 import { formatCurrency } from '../utils/currency';
 import { Product, Customer } from '../types';
 import { CartItem } from '../types/cart';
-import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
@@ -18,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const ModernSalesPage = () => {
-  console.log('🚀 ModernSalesPage component loaded - BLOCKY AESTHETIC VERSION v3.0');
+  console.log('🚀 ModernSalesPage component loaded - ENHANCED WITH OFFLINE SUPPORT v4.0');
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +35,8 @@ const ModernSalesPage = () => {
   const { sales, loading: salesLoading } = useSupabaseSales();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { customers, loading: customersLoading, updateCustomer } = useSupabaseCustomers();
+  const { createOfflineSale, isCreating: isCreatingOfflineSale } = useOfflineSales();
+  const { isOnline, pendingOperations } = useOfflineManager();
 
   const isLoading = salesLoading || productsLoading || customersLoading;
 
@@ -140,12 +143,137 @@ const ModernSalesPage = () => {
     }
 
     setIsProcessingCheckout(true);
+    
     try {
       const customerId = selectedCustomerId === '' ? null : selectedCustomerId;
       const customer = customers.find(c => c.id === customerId);
 
-      // Prepare sales data for batch insert with correct field names
-      const salesData = cart.map(item => ({
+      console.log('🛒 Starting checkout process:', {
+        cartItems: cart.length,
+        total,
+        paymentMethod,
+        customerId,
+        isOnline
+      });
+
+      if (isOnline) {
+        // Online sales - direct to Supabase
+        console.log('🌐 Processing ONLINE sale');
+        await processOnlineSale(customerId, customer);
+      } else {
+        // Offline sales - store locally and queue for sync
+        console.log('📱 Processing OFFLINE sale');
+        await processOfflineSale(customerId, customer);
+      }
+
+      // Success - clear cart and navigate
+      toast({
+        title: "Success!",
+        description: `Sale completed ${isOnline ? 'online' : 'offline'}! Total: ${formatCurrency(total)}`,
+      });
+      
+      clearCart();
+      setSelectedCustomerId(null);
+      navigate('/dashboard');
+
+    } catch (error) {
+      console.error('❌ Checkout error:', error);
+      toast({
+        title: "Error",
+        description: `Failed to complete sale: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingCheckout(false);
+    }
+  };
+
+  const processOnlineSale = async (customerId: string | null, customer: Customer | null) => {
+    console.log('🌐 Processing online sale...');
+    
+    // Prepare sales data for batch insert
+    const salesData = cart.map(item => ({
+      user_id: user.id,
+      product_id: item.id,
+      product_name: item.name,
+      quantity: item.quantity,
+      selling_price: item.sellingPrice,
+      cost_price: item.costPrice,
+      profit: (item.sellingPrice - item.costPrice) * item.quantity,
+      total_amount: item.sellingPrice * item.quantity,
+      customer_id: customerId,
+      customer_name: customer ? customer.name : null,
+      payment_method: paymentMethod,
+      payment_details: {
+        cashAmount: paymentMethod === 'cash' ? total : 0,
+        mpesaAmount: paymentMethod === 'mpesa' ? total : 0,
+        debtAmount: paymentMethod === 'debt' ? total : 0,
+      },
+      timestamp: new Date().toISOString(),
+    }));
+
+    // Insert sales records
+    const { error: saleError } = await supabase
+      .from('sales')
+      .insert(salesData);
+
+    if (saleError) {
+      console.error('❌ Error adding sales:', saleError);
+      throw new Error('Failed to record sales.');
+    }
+
+    console.log('✅ Online sales recorded successfully');
+
+    // Update customer debt if this is a credit sale
+    if (paymentMethod === 'debt' && customer) {
+      const debtAmount = total;
+      const updatedDebt = customer.outstandingDebt + debtAmount;
+      const updatedPurchases = customer.totalPurchases + total;
+      
+      await updateCustomer(customer.id, {
+        outstandingDebt: updatedDebt,
+        totalPurchases: updatedPurchases,
+        lastPurchaseDate: new Date().toISOString(),
+      });
+      
+      console.log('✅ Customer debt updated');
+    } else if (customer && paymentMethod !== 'debt') {
+      // Update total purchases for non-debt sales
+      const updatedPurchases = customer.totalPurchases + total;
+      
+      await updateCustomer(customer.id, {
+        totalPurchases: updatedPurchases,
+        lastPurchaseDate: new Date().toISOString(),
+      });
+      
+      console.log('✅ Customer purchases updated');
+    }
+
+    // Update stock for each item
+    for (const item of cart) {
+      if (item.currentStock > 0) {
+        const newStock = Math.max(0, item.currentStock - item.quantity);
+        const { error: productError } = await supabase
+          .from('products')
+          .update({ current_stock: newStock })
+          .eq('id', item.id);
+
+        if (productError) {
+          console.error('⚠️ Error updating product stock:', productError);
+          // Don't throw error here, just log it - sale should still complete
+        }
+      }
+    }
+    
+    console.log('✅ Stock updated');
+  };
+
+  const processOfflineSale = async (customerId: string | null, customer: Customer | null) => {
+    console.log('📱 Processing offline sale...');
+    
+    // Create offline sales for each cart item
+    for (const item of cart) {
+      const saleData = {
         user_id: user.id,
         product_id: item.id,
         product_name: item.name,
@@ -157,84 +285,27 @@ const ModernSalesPage = () => {
         customer_id: customerId,
         customer_name: customer ? customer.name : null,
         payment_method: paymentMethod,
-        payment_details: {},
+        payment_details: {
+          cashAmount: paymentMethod === 'cash' ? item.sellingPrice * item.quantity : 0,
+          mpesaAmount: paymentMethod === 'mpesa' ? item.sellingPrice * item.quantity : 0,
+          debtAmount: paymentMethod === 'debt' ? item.sellingPrice * item.quantity : 0,
+        },
         timestamp: new Date().toISOString(),
-      }));
+      };
 
-      const { error: saleError } = await supabase
-        .from('sales')
-        .insert(salesData);
-
-      if (saleError) {
-        console.error('Error adding sales:', saleError);
-        throw new Error('Failed to record sales.');
-      }
-
-      // Update customer debt if this is a credit sale
-      if (paymentMethod === 'debt' && customer) {
-        const debtAmount = total;
-        const updatedDebt = customer.outstandingDebt + debtAmount;
-        const updatedPurchases = customer.totalPurchases + total;
-        
-        await updateCustomer(customer.id, {
-          outstandingDebt: updatedDebt,
-          totalPurchases: updatedPurchases,
-          lastPurchaseDate: new Date().toISOString(),
-        });
-      } else if (customer && paymentMethod !== 'debt') {
-        // Update total purchases for non-debt sales
-        const updatedPurchases = customer.totalPurchases + total;
-        
-        await updateCustomer(customer.id, {
-          totalPurchases: updatedPurchases,
-          lastPurchaseDate: new Date().toISOString(),
-        });
-      }
-
-      // Update stock for each item - only if current stock is greater than 0
-      for (const item of cart) {
-        if (item.currentStock > 0) {
-          const newStock = Math.max(0, item.currentStock - item.quantity);
-          const { error: productError } = await supabase
-            .from('products')
-            .update({ current_stock: newStock })
-            .eq('id', item.id);
-
-          if (productError) {
-            console.error('Error updating product stock:', productError);
-            // Don't throw error here, just log it - sale should still complete
-          }
-        }
-      }
-
-      toast({
-        title: "Success!",
-        description: `Sale completed successfully! Total: ${formatCurrency(total)}`,
-      });
-      
-      clearCart();
-      setSelectedCustomerId(null);
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to complete sale. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingCheckout(false);
+      await createOfflineSale(saleData);
+      console.log(`✅ Offline sale created for ${item.name}`);
     }
+
+    console.log('✅ All offline sales created and queued for sync');
   };
 
-  // Helper function to get stock display text
   const getStockDisplayText = (stock: number) => {
     if (stock < 0) return 'Unspecified';
     if (stock === 0) return 'Out of Stock';
     return stock.toString();
   };
 
-  // Helper function to get stock color class
   const getStockColorClass = (stock: number, lowStockThreshold: number = 10) => {
     if (stock < 0) return 'text-gray-500 dark:text-gray-400'; // Unspecified
     if (stock === 0) return 'text-orange-500 dark:text-orange-400'; // Out of stock
@@ -252,7 +323,7 @@ const ModernSalesPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Header - Modern Blocky Style */}
+      {/* Header with Connection Status */}
       <div className={`
         space-y-6 max-w-7xl mx-auto
         ${isMobile ? 'p-3' : isTablet ? 'p-4' : 'p-6'}
@@ -268,6 +339,34 @@ const ModernSalesPage = () => {
             `}>
               SALES POINT
             </h1>
+            {/* Connection Status */}
+            <div className={`
+              flex items-center gap-2 px-3 py-1 rounded-full border-2
+              ${isOnline 
+                ? 'border-green-400 bg-green-50 dark:bg-green-900/20' 
+                : 'border-orange-400 bg-orange-50 dark:bg-orange-900/20'
+              }
+            `}>
+              {isOnline ? (
+                <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+              )}
+              <span className={`
+                font-mono font-bold uppercase text-xs
+                ${isOnline 
+                  ? 'text-green-700 dark:text-green-300' 
+                  : 'text-orange-700 dark:text-orange-300'
+                }
+              `}>
+                {isOnline ? 'ONLINE' : 'OFFLINE'}
+              </span>
+              {!isOnline && pendingOperations > 0 && (
+                <span className="bg-orange-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                  {pendingOperations}
+                </span>
+              )}
+            </div>
           </div>
           <div className={`
             flex items-center gap-2 text-gray-500 dark:text-gray-400 font-mono
@@ -514,17 +613,37 @@ const ModernSalesPage = () => {
                   
                   <button
                     onClick={handleCheckout}
-                    disabled={isProcessingCheckout || (paymentMethod === 'debt' && !selectedCustomerId)}
+                    disabled={isProcessingCheckout || isCreatingOfflineSale || (paymentMethod === 'debt' && !selectedCustomerId)}
                     className={`
                       w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-mono font-black 
                       uppercase tracking-wider rounded-xl transition-all duration-300 hover:from-purple-700 
                       hover:to-blue-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 
-                      disabled:cursor-not-allowed disabled:transform-none
+                      disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2
                       ${isMobile ? 'py-4 text-sm' : 'py-4 text-base'}
                     `}
                   >
-                    {isProcessingCheckout ? 'PROCESSING...' : 'COMPLETE SALE'}
+                    {isProcessingCheckout || isCreatingOfflineSale ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        PROCESSING...
+                      </>
+                    ) : (
+                      <>
+                        {isOnline ? (
+                          <Wifi className="w-4 h-4" />
+                        ) : (
+                          <WifiOff className="w-4 h-4" />
+                        )}
+                        COMPLETE SALE {!isOnline && '(OFFLINE)'}
+                      </>
+                    )}
                   </button>
+                  
+                  {!isOnline && (
+                    <p className="text-center text-xs text-orange-600 dark:text-orange-400 font-mono">
+                      ⚠️ OFFLINE MODE - Sale will sync when connection is restored
+                    </p>
+                  )}
                 </div>
               </div>
             )}
