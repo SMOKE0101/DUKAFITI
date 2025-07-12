@@ -5,11 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './hooks/useAuth';
-import PremiumAppLayout from './components/layout/PremiumAppLayout';
+import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
+import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import ModernLanding from "./pages/ModernLanding";
 import AuthHandler from "./pages/AuthHandler";
@@ -58,8 +59,10 @@ function App() {
             <AuthProvider>
               <div className="min-h-screen bg-background">
                 <Routes>
+                  {/* Main route - redirect based on auth status */}
+                  <Route path="/" element={<Index />} />
+                  
                   {/* Public routes */}
-                  <Route path="/" element={<ModernLanding />} />
                   <Route path="/landing" element={<Landing />} />
                   <Route path="/modern-landing" element={<ModernLanding />} />
                   <Route path="/signin" element={<SignIn />} />
@@ -71,61 +74,61 @@ function App() {
                   {/* Protected routes with layout */}
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
-                      <PremiumAppLayout>
+                      <AppLayout>
                         <Suspense fallback={<LoadingSpinner />}>
                           <EnhancedDashboard />
                         </Suspense>
-                      </PremiumAppLayout>
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/sales" element={
                     <ProtectedRoute>
-                      <PremiumAppLayout>
+                      <AppLayout>
                         <Suspense fallback={<LoadingSpinner />}>
                           <SalesManagement />
                         </Suspense>
-                      </PremiumAppLayout>
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/inventory" element={
                     <ProtectedRoute>
-                      <PremiumAppLayout>
+                      <AppLayout>
                         <Suspense fallback={<LoadingSpinner />}>
                           <InventoryPage />
                         </Suspense>
-                      </PremiumAppLayout>
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/customers" element={
                     <ProtectedRoute>
-                      <PremiumAppLayout>
+                      <AppLayout>
                         <Suspense fallback={<LoadingSpinner />}>
                           <CustomersPage />
                         </Suspense>
-                      </PremiumAppLayout>
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/reports" element={
                     <ProtectedRoute>
-                      <PremiumAppLayout>
+                      <AppLayout>
                         <Suspense fallback={<LoadingSpinner />}>
                           <ReportsPage />
                         </Suspense>
-                      </PremiumAppLayout>
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/settings" element={
                     <ProtectedRoute>
-                      <PremiumAppLayout>
+                      <AppLayout>
                         <Suspense fallback={<LoadingSpinner />}>
                           <Settings />
                         </Suspense>
-                      </PremiumAppLayout>
+                      </AppLayout>
                     </ProtectedRoute>
                   } />
                   
