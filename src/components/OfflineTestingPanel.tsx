@@ -63,36 +63,36 @@ const OfflineTestingPanel: React.FC = () => {
 
       // Test 2: Customers Offline Test
       setTestProgress(25);
-      const customersTest = await testCustomers();
+      const customersTestResult = await testCustomers();
       tests[1] = {
         name: 'Customers Offline Test',
-        status: customersTest.success ? 'passed' : 'failed',
-        message: customersTest.message,
-        details: customersTest,
+        status: customersTestResult.success ? 'passed' : 'failed',
+        message: customersTestResult.message,
+        details: customersTestResult,
         timestamp: new Date().toISOString()
       };
       setTestResults([...tests]);
 
       // Test 3: Products Offline Test
       setTestProgress(37.5);
-      const productsTest = await testProducts();
+      const productsTestResult = await testProducts();
       tests[2] = {
         name: 'Products Offline Test',
-        status: productsTest.success ? 'passed' : 'failed',
-        message: productsTest.message,
-        details: productsTest,
+        status: productsTestResult.success ? 'passed' : 'failed',
+        message: productsTestResult.message,
+        details: productsTestResult,
         timestamp: new Date().toISOString()
       };
       setTestResults([...tests]);
 
       // Test 4: Sales Offline Test
       setTestProgress(50);
-      const salesTest = await testSales();
+      const salesTestResult = await testSales();
       tests[3] = {
         name: 'Sales Offline Test',
-        status: salesTest.success ? 'passed' : 'failed',
-        message: salesTest.message,
-        details: salesTest,
+        status: salesTestResult.success ? 'passed' : 'failed',
+        message: salesTestResult.message,
+        details: salesTestResult,
         timestamp: new Date().toISOString()
       };
       setTestResults([...tests]);
@@ -135,7 +135,7 @@ const OfflineTestingPanel: React.FC = () => {
       console.error('[OfflineTestingPanel] Test execution error:', error);
       toast({
         title: "Testing Error",
-        description: `Test execution failed: ${error.message}`,
+        description: `Test execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -186,7 +186,7 @@ const OfflineTestingPanel: React.FC = () => {
       return {
         name: 'Cache Persistence Test',
         status: 'failed',
-        message: `Cache test failed: ${error.message}`,
+        message: `Cache test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date().toISOString()
       };
     }
@@ -238,7 +238,7 @@ const OfflineTestingPanel: React.FC = () => {
       return {
         name: 'Service Worker Status',
         status: 'failed',
-        message: `Service Worker check failed: ${error.message}`,
+        message: `Service Worker check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date().toISOString()
       };
     }
@@ -282,7 +282,7 @@ const OfflineTestingPanel: React.FC = () => {
       return {
         name: 'IndexedDB Functionality',
         status: 'failed',
-        message: `IndexedDB test failed: ${error.message}`,
+        message: `IndexedDB test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date().toISOString()
       };
     }

@@ -85,6 +85,12 @@ class OfflineFirstDB {
 
 const offlineDB = new OfflineFirstDB();
 
+interface TestResult {
+  success: boolean;
+  message: string;
+  details?: any;
+}
+
 interface UseOfflineFirstSupabaseOptions<T> {
   cacheKey: string;
   tableName: string;
@@ -151,6 +157,7 @@ export const useOfflineFirstSupabase = <T extends { id: string }>({
     }
 
     loadingRef.current = true;
+    setLoading(true);
     
     try {
       console.log(`[${cacheKey}] Loading data - Online: ${isOnline}, Force refresh: ${forceRefresh}`);
@@ -252,11 +259,46 @@ export const useOfflineFirstSupabase = <T extends { id: string }>({
     await loadData(true);
   }, [loadData]);
 
-  // Test offline function
-  const testOffline = useCallback(() => {
-    setIsOnline(false);
-    setTimeout(() => setIsOnline(navigator.onLine), 5000);
-  }, []);
+  // Test offline function - now returns TestResult
+  const testOffline = useCallback(async (): Promise<TestResult> => {
+    try {
+      console.log(`[${cacheKey}] Testing offline functionality...`);
+      
+      // Test 1: Check cache availability
+      const cachedData = await offlineDB.get<T>(cacheKey);
+      
+      // Test 2: Simulate offline mode temporarily
+      const originalOnline = isOnline;
+      setIsOnline(false);
+      
+      // Test 3: Try to load data in offline mode
+      await loadData(false);
+      
+      // Restore online status
+      setIsOnline(originalOnline);
+      
+      return {
+        success: true,
+        message: `Offline test passed. ${cachedData.length} items available in cache.`,
+        details: {
+          cacheSize: cachedData.length,
+          tableName,
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      console.error(`[${cacheKey}] Offline test failed:`, error);
+      return {
+        success: false,
+        message: `Offline test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        details: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          tableName,
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
+  }, [cacheKey, isOnline, loadData]);
 
   return {
     data,

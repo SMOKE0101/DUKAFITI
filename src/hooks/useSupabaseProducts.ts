@@ -3,6 +3,7 @@ import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useOfflineFirstSupabase } from './useOfflineFirstSupabase';
 import { Product } from '../types';
+import { useState, useEffect } from 'react';
 
 export const useSupabaseProducts = () => {
   const { user } = useAuth();
