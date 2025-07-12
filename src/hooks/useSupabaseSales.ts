@@ -3,11 +3,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { useOfflineFirstSupabase } from './useOfflineFirstSupabase';
 import { Sale } from '../types';
 
 export const useSupabaseSales = () => {
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -29,47 +28,66 @@ export const useSupabaseSales = () => {
     };
   };
 
-  // Load sales from database
-  const loadSales = async () => {
-    if (!user) return;
+  // Transform functions for field mapping
+  const transformToLocal = (sale: any): Sale => ({
+    id: sale.id,
+    productId: sale.product_id,
+    productName: sale.product_name,
+    quantity: sale.quantity,
+    sellingPrice: Number(sale.selling_price),
+    costPrice: Number(sale.cost_price),
+    profit: Number(sale.profit),
+    timestamp: sale.timestamp || sale.created_at,
+    synced: sale.synced || true,
+    customerId: sale.customer_id,
+    customerName: sale.customer_name,
+    paymentMethod: sale.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial',
+    paymentDetails: convertPaymentDetails(sale.payment_details),
+    total: Number(sale.total_amount),
+  });
+
+  const transformFromLocal = (sale: any): Sale => ({
+    id: sale.id,
+    productId: sale.productId,
+    productName: sale.productName,
+    quantity: sale.quantity,
+    sellingPrice: Number(sale.sellingPrice),
+    costPrice: Number(sale.costPrice),
+    profit: Number(sale.profit),
+    timestamp: sale.timestamp,
+    synced: sale.synced || true,
+    customerId: sale.customerId,
+    customerName: sale.customerName,
+    paymentMethod: sale.paymentMethod,
+    paymentDetails: sale.paymentDetails || { cashAmount: 0, mpesaAmount: 0, debtAmount: 0 },
+    total: Number(sale.total),
+  });
+
+  const loadFromSupabase = async () => {
+    if (!user) throw new Error('No user authenticated');
     
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .order('timestamp', { ascending: false });
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*')
+      .order('timestamp', { ascending: false });
 
-      if (error) throw error;
-
-      const mappedSales: Sale[] = data.map(sale => ({
-        id: sale.id,
-        productId: sale.product_id,
-        productName: sale.product_name,
-        quantity: sale.quantity,
-        sellingPrice: Number(sale.selling_price),
-        costPrice: Number(sale.cost_price),
-        profit: Number(sale.profit),
-        timestamp: sale.timestamp || sale.created_at,
-        synced: sale.synced || true,
-        customerId: sale.customer_id,
-        customerName: sale.customer_name,
-        paymentMethod: sale.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial',
-        paymentDetails: convertPaymentDetails(sale.payment_details),
-        total: Number(sale.total_amount),
-      }));
-
-      setSales(mappedSales);
-    } catch (error) {
-      console.error('Error loading sales:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load sales",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    if (error) throw error;
+    return data.map(transformToLocal);
   };
+
+  const {
+    data: sales,
+    loading,
+    error,
+    refresh: refreshSales,
+    isOnline
+  } = useOfflineFirstSupabase<Sale>({
+    cacheKey: 'sales',
+    tableName: 'sales',
+    loadFromSupabase,
+    transformToLocal,
+    transformFromLocal
+  });
 
   // Create sales (batch)
   const createSales = async (salesData: Omit<Sale, 'id'>[]) => {
@@ -100,24 +118,8 @@ export const useSupabaseSales = () => {
 
       if (error) throw error;
 
-      const newSales: Sale[] = data.map(sale => ({
-        id: sale.id,
-        productId: sale.product_id,
-        productName: sale.product_name,
-        quantity: sale.quantity,
-        sellingPrice: Number(sale.selling_price),
-        costPrice: Number(sale.cost_price),
-        profit: Number(sale.profit),
-        timestamp: sale.timestamp || sale.created_at,
-        synced: sale.synced || true,
-        customerId: sale.customer_id,
-        customerName: sale.customer_name,
-        paymentMethod: sale.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial',
-        paymentDetails: convertPaymentDetails(sale.payment_details),
-        total: Number(sale.total_amount),
-      }));
-
-      setSales(prev => [...newSales, ...prev]);
+      const newSales = data.map(transformToLocal);
+      await refreshSales();
       return newSales;
     } catch (error) {
       console.error('Error creating sales:', error);
@@ -130,54 +132,9 @@ export const useSupabaseSales = () => {
     }
   };
 
-  // Migrate localStorage data to database
-  const migrateLocalStorageData = async () => {
-    if (!user) return;
-
-    try {
-      const localData = localStorage.getItem('dts_sales');
-      if (!localData) return;
-
-      const localSales = JSON.parse(localData);
-      if (!Array.isArray(localSales) || localSales.length === 0) return;
-
-      console.log('Migrating sales from localStorage:', localSales.length);
-
-      const salesInserts = localSales.map(sale => ({
-        user_id: user.id,
-        product_id: sale.productId,
-        product_name: sale.productName,
-        quantity: sale.quantity,
-        selling_price: sale.sellingPrice,
-        cost_price: sale.costPrice,
-        profit: sale.profit,
-        customer_id: sale.customerId,
-        customer_name: sale.customerName,
-        payment_method: sale.paymentMethod,
-        payment_details: sale.paymentDetails || {},
-        total_amount: sale.total || (sale.sellingPrice * sale.quantity),
-        synced: sale.synced || true,
-        timestamp: sale.timestamp || new Date().toISOString(),
-      }));
-
-      await supabase
-        .from('sales')
-        .insert(salesInserts);
-
-      // Clear localStorage after successful migration
-      localStorage.removeItem('dts_sales');
-      console.log('Sales migrated successfully');
-
-      // Reload sales from database
-      await loadSales();
-    } catch (error) {
-      console.error('Error migrating sales:', error);
-    }
-  };
-
   // Set up real-time subscription
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isOnline) return;
 
     const channel = supabase
       .channel('sales-changes')
@@ -190,7 +147,7 @@ export const useSupabaseSales = () => {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          loadSales();
+          refreshSales();
         }
       )
       .subscribe();
@@ -198,21 +155,12 @@ export const useSupabaseSales = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
-
-  // Load sales and migrate data on mount
-  useEffect(() => {
-    if (user) {
-      loadSales().then(() => {
-        migrateLocalStorageData();
-      });
-    }
-  }, [user]);
+  }, [user, isOnline, refreshSales]);
 
   return {
     sales,
     loading,
     createSales,
-    refreshSales: loadSales,
+    refreshSales,
   };
 };

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -24,11 +25,11 @@ interface OfflineOperation {
   synced: boolean;
 }
 
-// Enhanced IndexedDB with proper field mapping
+// Enhanced IndexedDB with proper field mapping and error recovery
 class RobustOfflineDB {
   private db: IDBDatabase | null = null;
-  private dbName = 'DukaFitiRobust';
-  private version = 3;
+  private dbName = 'DukaFitiRobustV2';
+  private version = 4;
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -53,11 +54,15 @@ class RobustOfflineDB {
   }
 
   private createStores(db: IDBDatabase): void {
-    // Clear existing stores
+    // Clear existing stores to prevent conflicts
     const existingStores = Array.from(db.objectStoreNames);
     existingStores.forEach(storeName => {
       if (db.objectStoreNames.contains(storeName)) {
-        db.deleteObjectStore(storeName);
+        try {
+          db.deleteObjectStore(storeName);
+        } catch (error) {
+          console.warn('Failed to delete store:', storeName, error);
+        }
       }
     });
 
@@ -90,7 +95,7 @@ class RobustOfflineDB {
   transformFields(obj: any, toFormat: 'camelCase' | 'snake_case'): any {
     if (!obj || typeof obj !== 'object') return obj;
     
-    const result: any = {};
+    const result: any = Array.isArray(obj) ? [] : {};
     
     for (const [key, value] of Object.entries(obj)) {
       let newKey = key;
@@ -103,7 +108,11 @@ class RobustOfflineDB {
         newKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
       }
       
-      result[newKey] = value;
+      if (Array.isArray(result)) {
+        result.push(value);
+      } else {
+        result[newKey] = value;
+      }
     }
     
     return result;
@@ -112,17 +121,18 @@ class RobustOfflineDB {
   async storeData(storeName: string, data: any): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    // Ensure data has proper camelCase format for local storage
-    const transformedData = this.transformFields(data, 'camelCase');
-
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      
-      const request = store.put(transformedData);
-      
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        const request = store.put(data);
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -130,21 +140,19 @@ class RobustOfflineDB {
     if (!this.db) throw new Error('Database not initialized');
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      
-      const request = id ? store.get(id) : store.getAll();
-      
-      request.onsuccess = () => {
-        const result = request.result;
-        // Keep camelCase format for frontend
-        if (Array.isArray(result)) {
-          resolve(result.map(item => this.transformFields(item, 'camelCase')));
-        } else {
-          resolve(this.transformFields(result, 'camelCase'));
-        }
-      };
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction([storeName], 'readonly');
+        const store = transaction.objectStore(storeName);
+        
+        const request = id ? store.get(id) : store.getAll();
+        
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -161,13 +169,17 @@ class RobustOfflineDB {
     if (!this.db) throw new Error('Database not initialized');
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
-      const store = transaction.objectStore('syncQueue');
-      
-      const request = store.delete(id);
-      
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
+        const store = transaction.objectStore('syncQueue');
+        
+        const request = store.delete(id);
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -175,13 +187,17 @@ class RobustOfflineDB {
     if (!this.db) throw new Error('Database not initialized');
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      
-      const request = store.clear();
-      
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        const request = store.clear();
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 }
@@ -245,10 +261,25 @@ export const useRobustOfflineManager = () => {
       // Register single robust service worker
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/robust-sw.js', {
+          const registration = await navigator.serviceWorker.register('/enhanced-robust-sw.js', {
             scope: '/'
           });
-          console.log('[RobustOfflineManager] Robust Service Worker registered:', registration.scope);
+          console.log('[RobustOfflineManager] Enhanced Robust Service Worker registered:', registration.scope);
+          
+          // Handle service worker messages
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            const { data } = event;
+            if (data.type === 'NETWORK_ONLINE') {
+              handleOnline();
+            } else if (data.type === 'NETWORK_OFFLINE') {
+              handleOffline();
+            } else if (data.type === 'SYNC_START') {
+              setOfflineState(prev => ({ ...prev, isSyncing: true }));
+            } else if (data.type === 'SYNC_COMPLETE') {
+              setOfflineState(prev => ({ ...prev, isSyncing: false }));
+            }
+          });
+          
         } catch (error) {
           console.error('[RobustOfflineManager] Service Worker registration failed:', error);
         }
@@ -280,6 +311,17 @@ export const useRobustOfflineManager = () => {
     } catch (error) {
       console.error('[RobustOfflineManager] Failed to load pending operations:', error);
     }
+  };
+
+  const handleOnline = () => {
+    setOfflineState(prev => ({ ...prev, isOnline: true }));
+    if (user) {
+      setTimeout(() => syncPendingOperations(), 1000);
+    }
+  };
+
+  const handleOffline = () => {
+    setOfflineState(prev => ({ ...prev, isOnline: false }));
   };
 
   // Add robust offline operation
@@ -333,14 +375,6 @@ export const useRobustOfflineManager = () => {
         case 'sale':
           if (operation === 'create') {
             await robustOfflineDB.storeData('sales', data);
-            // Update product stock locally
-            if (data.productId && data.quantity) {
-              const product = await robustOfflineDB.getData('products', data.productId);
-              if (product) {
-                product.currentStock = Math.max(0, product.currentStock - data.quantity);
-                await robustOfflineDB.storeData('products', product);
-              }
-            }
           }
           break;
           
@@ -404,7 +438,6 @@ export const useRobustOfflineManager = () => {
             await robustOfflineDB.removeFromSyncQueue(operation.id);
             completed++;
           } else {
-            // Increment attempts
             operation.attempts++;
             if (operation.attempts >= 3) {
               await robustOfflineDB.removeFromSyncQueue(operation.id);

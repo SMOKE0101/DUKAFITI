@@ -1,68 +1,88 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 
 interface MobileOptimizedModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   title: string;
+  description?: string;
   children: React.ReactNode;
   className?: string;
+  maxHeight?: string;
 }
 
-const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  className 
+const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  className = '',
+  maxHeight = 'calc(100vh - 2rem)'
 }) => {
-  const isMobile = useIsMobile();
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={cn(
-          isMobile 
-            ? "fixed inset-x-2 inset-y-4 h-[calc(100vh-2rem)] w-[calc(100vw-1rem)] max-w-none max-h-none m-0 p-0 flex flex-col rounded-lg overflow-hidden" 
-            : "max-h-[90vh] w-full max-w-2xl p-0 flex flex-col overflow-hidden",
-          className
-        )}
+        className={`
+          w-[95vw] max-w-md mx-auto my-4 p-0 
+          max-h-[calc(100vh-2rem)] flex flex-col
+          dark:bg-slate-800 dark:border-slate-700
+          ${className}
+        `}
+        style={{ 
+          maxHeight,
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)'
+        }}
       >
-        {/* Mobile drag indicator */}
-        {isMobile && (
-          <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 flex-shrink-0" />
-        )}
-        
-        {/* Header - Fixed */}
-        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 bg-white">
+        {/* Fixed Header */}
+        <DialogHeader className="flex-shrink-0 p-4 pb-2 border-b dark:border-slate-700">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900 pr-2 line-clamp-1">
-              {title}
-            </DialogTitle>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg font-semibold text-foreground dark:text-white truncate">
+                {title}
+              </DialogTitle>
+              {description && (
+                <DialogDescription className="text-sm text-muted-foreground dark:text-slate-400 mt-1">
+                  {description}
+                </DialogDescription>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 flex-shrink-0 rounded-full"
+              onClick={() => onOpenChange(false)}
+              className="flex-shrink-0 ml-2 h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-700"
             >
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </DialogHeader>
-        
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto overscroll-contain bg-white">
-          <div className="p-4 sm:p-6">
-            <div className="space-y-4">
-              {children}
-            </div>
+
+        {/* Scrollable Content */}
+        <ScrollArea className="flex-1 overflow-hidden">
+          <div 
+            className="p-4 pt-2"
+            style={{
+              minHeight: 'fit-content',
+              paddingBottom: 'env(safe-area-inset-bottom, 1rem)'
+            }}
+          >
+            {children}
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
