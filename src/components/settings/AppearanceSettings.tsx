@@ -7,10 +7,12 @@ import { Palette, Sun, Moon } from 'lucide-react';
 
 const AppearanceSettings = () => {
   const { settings, updateSettings, loading } = useSettings();
-  const { theme } = useTheme();
+  const { theme: currentTheme } = useTheme();
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    // Update settings immediately - this will also update the theme provider
+    console.log('Theme change initiated:', newTheme, 'Current theme:', currentTheme);
+    
+    // Update settings - this will handle both local state and theme provider sync
     updateSettings({ theme: newTheme });
   };
 
@@ -31,8 +33,10 @@ const AppearanceSettings = () => {
     );
   }
 
-  // Use settings theme as the source of truth
-  const currentTheme = settings.theme || 'light';
+  // Use settings theme as the source of truth, with fallback to current theme
+  const activeTheme = settings.theme || currentTheme || 'light';
+  
+  console.log('Rendering AppearanceSettings - Settings theme:', settings.theme, 'Current theme:', currentTheme, 'Active theme:', activeTheme);
 
   return (
     <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">
@@ -47,6 +51,10 @@ const AppearanceSettings = () => {
               Choose how you want the application to look
             </Label>
           </div>
+          {/* Debug info - remove in production */}
+          <div className="text-xs text-gray-500 mt-2">
+            Active: {activeTheme} | Settings: {settings.theme} | Theme Provider: {currentTheme}
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -54,13 +62,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('light')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              currentTheme === 'light'
+              activeTheme === 'light'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              currentTheme === 'light'
+              activeTheme === 'light'
                 ? 'bg-yellow-100 dark:bg-yellow-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>
@@ -76,13 +84,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('dark')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 ${
-              currentTheme === 'dark'
+              activeTheme === 'dark'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              currentTheme === 'dark'
+              activeTheme === 'dark'
                 ? 'bg-blue-100 dark:bg-blue-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>
