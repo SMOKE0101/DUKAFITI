@@ -3,12 +3,9 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopProfileSettings from '@/components/settings/ShopProfileSettings';
-import BusinessConfigSettings from '@/components/settings/BusinessConfigSettings';
-import NotificationSettings from '@/components/settings/NotificationSettings';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
-import SecuritySettings from '@/components/settings/SecuritySettings';
-import DataManagementSettings from '@/components/settings/DataManagementSettings';
-import { Settings as SettingsIcon, Database } from 'lucide-react';
+import MpesaC2BSettings from '@/components/settings/MpesaC2BSettings';
+import { Settings as SettingsIcon, Store, Palette, Smartphone } from 'lucide-react';
 
 const Settings = () => {
   return (
@@ -26,39 +23,72 @@ const Settings = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6 w-full">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:grid-cols-6">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="business">Business</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="data">Data</TabsTrigger>
+        <Tabs defaultValue="store" className="space-y-6 w-full">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
+            <TabsTrigger value="store" className="flex items-center gap-2">
+              <Store className="w-4 h-4" />
+              Store Info
+            </TabsTrigger>
+            <TabsTrigger value="display" className="flex items-center gap-2">
+              <Palette className="w-4 h-4" />
+              Display Settings
+            </TabsTrigger>
+            <TabsTrigger value="mpesa" className="flex items-center gap-2">
+              <Smartphone className="w-4 h-4" />
+              M-Pesa Integration
+            </TabsTrigger>
           </TabsList>
 
           <div className="w-full bg-background">
-            <TabsContent value="profile" className="w-full">
-              <ShopProfileSettings />
+            <TabsContent value="store" className="w-full">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Store className="w-5 h-5" />
+                    Store Information
+                  </CardTitle>
+                  <CardDescription>
+                    Update your store details and contact information
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ShopProfileSettings />
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            <TabsContent value="business" className="w-full">
-              <BusinessConfigSettings />
+            <TabsContent value="display" className="w-full">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="w-5 h-5" />
+                    Display Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Customize the appearance and theme of your application
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AppearanceSettings />
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            <TabsContent value="notifications" className="w-full">
-              <NotificationSettings />
-            </TabsContent>
-
-            <TabsContent value="appearance" className="w-full">
-              <AppearanceSettings />
-            </TabsContent>
-
-            <TabsContent value="security" className="w-full">
-              <SecuritySettings />
-            </TabsContent>
-
-            <TabsContent value="data" className="w-full">
-              <DataManagementSettings />
+            <TabsContent value="mpesa" className="w-full">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="w-5 h-5" />
+                    M-Pesa Integration
+                  </CardTitle>
+                  <CardDescription>
+                    Configure M-Pesa payment integration for your store
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MpesaC2BSettings />
+                </CardContent>
+              </Card>
             </TabsContent>
           </div>
         </Tabs>

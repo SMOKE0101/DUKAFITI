@@ -41,7 +41,7 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
               onSidebarToggle={handleSidebarToggle}
             />
             <div className={`flex-1 overflow-auto bg-background w-full ${isMobile || isTablet ? 'pb-20' : ''}`}>
-              <div className="w-full p-4 space-y-4 bg-background min-h-full">
+              <div className="w-full p-4 pt-20 space-y-4 bg-background min-h-full">
                 <OfflineStatus />
                 {children || <Outlet />}
               </div>

@@ -15,37 +15,37 @@ const navigationItems = [
   { 
     id: 'dashboard', 
     icon: BarChart3, 
-    path: '/dashboard',
+    path: '/app/dashboard',
     label: 'Dashboard',
-    matchPaths: ['/dashboard', '/app']
+    matchPaths: ['/app/dashboard', '/app']
   },
   { 
     id: 'inventory', 
     icon: Package, 
-    path: '/inventory',
+    path: '/app/inventory',
     label: 'Inventory',
-    matchPaths: ['/inventory', '/products']
+    matchPaths: ['/app/inventory']
   },
   { 
     id: 'sales', 
     icon: ShoppingCart, 
-    path: '/sales',
+    path: '/app/sales',
     label: 'Sales',
-    matchPaths: ['/sales']
+    matchPaths: ['/app/sales']
   },
   { 
     id: 'customers', 
     icon: Users, 
-    path: '/customers',
+    path: '/app/customers',
     label: 'Customers',
-    matchPaths: ['/customers']
+    matchPaths: ['/app/customers']
   },
   { 
     id: 'reports', 
     icon: FileText, 
-    path: '/reports',
+    path: '/app/reports',
     label: 'Reports',
-    matchPaths: ['/reports']
+    matchPaths: ['/app/reports']
   }
 ];
 

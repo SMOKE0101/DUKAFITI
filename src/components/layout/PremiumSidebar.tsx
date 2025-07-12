@@ -7,9 +7,7 @@ import {
   ShoppingCart, 
   Users, 
   FileText, 
-  Settings,
-  CreditCard,
-  History
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
@@ -44,18 +42,6 @@ const navigationItems = [
     icon: Users, 
     path: '/customers',
     label: 'Customers'
-  },
-  { 
-    id: 'debts', 
-    icon: CreditCard, 
-    path: '/debts',
-    label: 'Debts'
-  },
-  { 
-    id: 'history', 
-    icon: History, 
-    path: '/history',
-    label: 'History'
   },
   { 
     id: 'reports', 

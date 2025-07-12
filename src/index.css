@@ -84,27 +84,6 @@
   .dark {
     color-scheme: dark;
   }
-  
-  .dark * {
-    @apply bg-background text-foreground;
-  }
-  
-  /* Override for specific components that need different backgrounds */
-  .dark .bg-card {
-    @apply bg-card;
-  }
-  
-  .dark .bg-popover {
-    @apply bg-popover;
-  }
-  
-  .dark .bg-primary {
-    @apply bg-primary;
-  }
-  
-  .dark .bg-secondary {
-    @apply bg-secondary;
-  }
 }
 
 /* Mobile Search Modal Animations */
