@@ -90,7 +90,11 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ className }) => {
               <div className="py-2">
                 {/* Shop Settings */}
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => {
+                    setIsOpen(false);
+                    // Navigate to settings page - you can implement this navigation
+                    window.location.href = '/settings';
+                  }}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors"
                 >
                   <Settings className="h-4 w-4 text-gray-500 dark:text-gray-400" />

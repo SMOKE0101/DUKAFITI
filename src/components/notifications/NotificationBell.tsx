@@ -44,16 +44,18 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
   // Generate low stock notifications from products
   useEffect(() => {
     if (!loading && products.length > 0) {
+      // Only consider products with defined low stock threshold (> 1) to exclude unspecified quantities
       const lowStockProducts = products.filter((product: Product) => 
-        product.low_stock_threshold != null && 
-        product.current_stock <= product.low_stock_threshold
+        product.lowStockThreshold != null && 
+        product.lowStockThreshold > 1 && 
+        product.currentStock <= product.lowStockThreshold
       );
 
       const lowStockNotifications: LowStockNotification[] = lowStockProducts.map(product => ({
         id: product.id,
         type: 'inventory' as const,
         title: 'Low Stock Alert',
-        message: `${product.name} has only ${product.current_stock} units remaining (threshold: ${product.low_stock_threshold})`,
+        message: `${product.name} has only ${product.currentStock} units remaining (threshold: ${product.lowStockThreshold})`,
         timestamp: new Date(product.updatedAt),
         read: false,
         productId: product.id,

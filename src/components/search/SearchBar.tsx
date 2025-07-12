@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, X, Clock, Package, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
@@ -28,6 +29,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
   const { products = [] } = useSupabaseProducts();
   const { customers = [] } = useSupabaseCustomers();
@@ -77,7 +79,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return [...productResults, ...customerResults];
   }, [query, products, customers]);
 
-  const handleSearch = (searchQuery: string) => {
+  const handleSearch = (searchQuery: string, resultType?: 'product' | 'customer', resultId?: string) => {
     if (!searchQuery.trim()) return;
     
     // Add to recent searches
@@ -87,14 +89,28 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     });
     
     setIsOpen(false);
-    // You can implement navigation logic here
-    console.log('Searching for:', searchQuery);
+    
+    // Navigate based on result type
+    if (resultType === 'product') {
+      navigate(`/inventory?search=${encodeURIComponent(searchQuery)}${resultId ? `&highlight=${resultId}` : ''}`);
+    } else if (resultType === 'customer') {
+      navigate(`/customers?search=${encodeURIComponent(searchQuery)}${resultId ? `&highlight=${resultId}` : ''}`);
+    } else {
+      // Default search - try inventory first
+      navigate(`/inventory?search=${encodeURIComponent(searchQuery)}`);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
-    setIsOpen(value.length > 0);
+    setIsOpen(value.length > 0 || recentSearches.length > 0);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch(query);
+    }
   };
 
   const clearSearch = () => {
@@ -109,6 +125,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <Input
           value={query}
           onChange={handleInputChange}
+          onKeyPress={handleKeyPress}
           onFocus={() => setIsOpen(query.length > 0 || recentSearches.length > 0)}
           placeholder={placeholder}
           className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/70 focus:bg-white/20"
@@ -136,7 +153,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               {searchResults.map((result) => (
                 <button
                   key={`${result.type}-${result.id}`}
-                  onClick={() => handleSearch(result.name)}
+                  onClick={() => handleSearch(result.name, result.type, result.id)}
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                 >
                   {result.type === 'product' ? (
