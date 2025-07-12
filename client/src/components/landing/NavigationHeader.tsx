@@ -2,10 +2,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 const NavigationHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,22 +37,12 @@ const NavigationHeader = () => {
       <nav className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* DukaFiti Brand Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg p-1">
-              <img 
-                src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                alt="DukaFiti Logo" 
-                className="w-8 h-8"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-green-400 bg-clip-text text-transparent">
-                DukaFiti
-              </span>
-              <span className="text-xs text-green-400 font-medium -mt-1">
-                Ni DukaBora
-              </span>
-            </div>
+          <div className="flex items-center">
+            <img 
+              src={theme === 'dark' ? '/landing-logo-dark.png' : '/landing-logo-light.png'}
+              alt="DukaFiti Logo" 
+              className="h-10 w-auto transition-all duration-300 ease-in-out"
+            />
           </div>
 
           {/* Desktop Navigation */}

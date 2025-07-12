@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 const ModernLanding = () => {
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
@@ -22,6 +23,7 @@ const ModernLanding = () => {
   
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
@@ -142,15 +144,12 @@ const ModernLanding = () => {
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="Dukasmart Logo" 
-                  className="w-8 h-8"
-                />
-              </div>
-              <span className="text-2xl font-bold text-primary">Dukasmart</span>
+            <div className="flex items-center">
+              <img 
+                src={theme === 'dark' ? '/landing-logo-dark.png' : '/landing-logo-light.png'}
+                alt="DukaFiti Logo" 
+                className="h-10 w-auto transition-all duration-300 ease-in-out"
+              />
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
@@ -488,15 +487,12 @@ const ModernLanding = () => {
       <footer className="bg-foreground text-background py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="flex items-center justify-center space-x-3 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <img 
-                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                  alt="Dukasmart Logo" 
-                  className="w-6 h-6"
-                />
-              </div>
-              <span className="text-xl font-bold">Dukasmart</span>
+            <div className="flex items-center justify-center mb-4">
+              <img 
+                src={theme === 'dark' ? '/landing-logo-dark.png' : '/landing-logo-light.png'}
+                alt="DukaFiti Logo" 
+                className="h-8 w-auto transition-all duration-300 ease-in-out"
+              />
             </div>
             <p className="text-muted">Smart POS for Kenyan Dukashops</p>
             <p className="text-sm text-muted mt-4">&copy; 2024 Dukasmart. Built for Kenyan entrepreneurs.</p>

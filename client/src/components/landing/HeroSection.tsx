@@ -131,14 +131,13 @@ const HeroSection = () => {
                   {/* Status Bar */}
                   <div className="flex justify-between items-center mb-6 text-sm text-slate-400">
                     <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
+                      <div className="w-6 h-6 bg-white rounded flex items-center justify-center p-1">
                         <img 
-                          src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                          src="/landing-logo-light.png" 
                           alt="DukaFiti" 
-                          className="w-5 h-5"
+                          className="w-full h-full object-contain"
                         />
                       </div>
-                      <span className="font-semibold text-white">DukaFiti</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <div className="w-4 h-2 bg-green-400 rounded-full"></div>

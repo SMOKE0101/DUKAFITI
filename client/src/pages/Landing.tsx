@@ -3,25 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { BarChart3, Users, Package2, ShoppingCart, TrendingUp, Shield, Wifi, Star } from "lucide-react";
+import { useTheme } from "next-themes";
 
 const Landing = () => {
+  const { theme } = useTheme();
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-accent/10">
       {/* Professional Header */}
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center">
             <img 
-              src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+              src={theme === 'dark' ? '/landing-logo-dark.png' : '/landing-logo-light.png'}
               alt="DukaFiti Logo" 
-              className="w-12 h-12 rounded-xl shadow-lg"
+              className="h-12 w-auto transition-all duration-300 ease-in-out"
             />
-            <div>
-              <span className="text-3xl font-bold text-foreground tracking-tight">
-                DukaFiti
-              </span>
-              <p className="brand-tagline text-xs">DUKAFITI NI DUKABORA</p>
-            </div>
           </div>
           <Button asChild className="dukafiti-button-primary">
             <Link to="/signin">
@@ -186,15 +183,13 @@ const Landing = () => {
       {/* Professional Footer */}
       <footer className="container mx-auto px-4 py-12 border-t border-border mt-16">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="flex items-center justify-center mb-4">
             <img 
-              src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+              src={theme === 'dark' ? '/landing-logo-dark.png' : '/landing-logo-light.png'}
               alt="DukaFiti Logo" 
-              className="w-8 h-8 rounded-lg"
+              className="h-8 w-auto transition-all duration-300 ease-in-out"
             />
-            <span className="text-xl font-bold text-foreground">DukaFiti</span>
           </div>
-          <p className="brand-tagline mb-2">DUKAFITI NI DUKABORA</p>
           <p className="text-muted-foreground">&copy; 2024 DukaFiti. Umejengwa kwa ajili ya wafanyabiashara wa Kenya.</p>
         </div>
       </footer>
