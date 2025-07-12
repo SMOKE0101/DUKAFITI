@@ -23,7 +23,7 @@ import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { useTheme } from 'next-themes';
 import CubeLogo from '../branding/CubeLogo';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SearchResult {
   id: string;
