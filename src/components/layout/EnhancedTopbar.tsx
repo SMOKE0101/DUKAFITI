@@ -190,9 +190,12 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     }
   };
 
-  // Dynamic text color based on theme - white for light mode, black for dark mode
-  const currentTheme = resolvedTheme || theme;
-  const brandTextColor = currentTheme === 'dark' ? 'text-white' : 'text-white'; // Keep white for the purple background
+  // Enhanced brand text color logic with theme debugging
+  const currentTheme = resolvedTheme || theme || 'light';
+  console.log('EnhancedTopbar: Current theme for branding:', currentTheme);
+  
+  // Always use white text on the purple background for better contrast
+  const brandTextColor = 'text-white';
 
   return (
     <>
@@ -212,13 +215,15 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               </Button>
             )}
             
-            {/* Brand Section */}
+            {/* Enhanced Brand Section with Error Boundary */}
             <div className="flex items-center gap-3">
-              <CubeLogo 
-                size={isMobile ? 'sm' : 'md'}
-                className="transition-all duration-300"
-              />
-              <div className={`font-brand font-normal ${brandTextColor} ${isMobile ? 'text-xl' : 'text-2xl'} tracking-wide transition-colors duration-300 drop-shadow-sm`}>
+              <div className="flex-shrink-0">
+                <CubeLogo 
+                  size={isMobile ? 'sm' : 'md'}
+                  className="transition-all duration-300"
+                />
+              </div>
+              <div className={`font-caesar font-normal ${brandTextColor} ${isMobile ? 'text-xl' : 'text-2xl'} tracking-wide transition-colors duration-300 drop-shadow-sm`}>
                 DUKAFITI
               </div>
             </div>

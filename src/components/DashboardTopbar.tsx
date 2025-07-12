@@ -145,21 +145,24 @@ const DashboardTopbar = () => {
     }
   };
 
-  // Dynamic text color based on theme
-  const currentTheme = resolvedTheme || theme;
+  // Enhanced brand text color with debugging
+  const currentTheme = resolvedTheme || theme || 'light';
+  console.log('DashboardTopbar: Current theme for branding:', currentTheme);
   const brandTextColor = 'text-white'; // Keep white for the purple background
 
   return (
     <>
       <header className="sticky top-0 z-50 h-16 border-b shadow-sm" style={{ backgroundColor: '#602d86' }}>
         <div className="flex items-center justify-between px-6 h-full">
-          {/* Left - Brand */}
+          {/* Left - Enhanced Brand Section */}
           <div className="flex items-center gap-3">
-            <CubeLogo 
-              size="md"
-              className="transition-all duration-300"
-            />
-            <div className={`font-brand font-normal ${brandTextColor} text-2xl tracking-wide transition-colors duration-300 drop-shadow-sm`}>
+            <div className="flex-shrink-0">
+              <CubeLogo 
+                size="md"
+                className="transition-all duration-300"
+              />
+            </div>
+            <div className={`font-caesar font-normal ${brandTextColor} text-2xl tracking-wide transition-colors duration-300 drop-shadow-sm`}>
               DUKAFITI
             </div>
           </div>
