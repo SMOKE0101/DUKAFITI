@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,6 @@ import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
 import { formatCurrency } from '../../utils/currency';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 type DateRange = 'today' | 'week' | 'month' | 'custom';
 type Filter = {
@@ -37,13 +37,11 @@ const PremiumReportsPage = () => {
   const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  const isMobile = useIsMobile();
-  const isTablet = useIsTablet();
-
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { sales, loading: salesLoading } = useSupabaseSales();
 
+  // Calculate date range
   const getDateRange = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -66,11 +64,13 @@ const PremiumReportsPage = () => {
 
   const { from: fromDate, to: toDate } = getDateRange();
 
+  // Filter sales data
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
       const isInDateRange = saleDate >= fromDate && saleDate <= toDate;
       
+      // Apply active filters
       const matchesFilters = activeFilters.every(filter => {
         switch (filter.type) {
           case 'salesType':
@@ -89,6 +89,7 @@ const PremiumReportsPage = () => {
     });
   }, [sales, fromDate, toDate, activeFilters, products]);
 
+  // Calculate metrics
   const metrics = useMemo(() => {
     const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
     const totalOrders = filteredSales.length;
@@ -105,6 +106,7 @@ const PremiumReportsPage = () => {
     };
   }, [filteredSales, products]);
 
+  // Prepare chart data
   const salesTrendData = useMemo(() => {
     const groupedData: { [key: string]: number } = {};
     
@@ -138,6 +140,7 @@ const PremiumReportsPage = () => {
   const ordersPerHourData = useMemo(() => {
     const hourlyData: { [key: number]: number } = {};
     
+    // Initialize all hours
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
@@ -153,10 +156,12 @@ const PremiumReportsPage = () => {
     }));
   }, [filteredSales]);
 
+  // Get low stock alerts
   const lowStockAlerts = products
     .filter(p => p.currentStock <= (p.lowStockThreshold || 10))
     .slice(0, 3);
 
+  // Get overdue customers
   const overdueCustomers = customers
     .filter(c => c.outstandingDebt > 0)
     .slice(0, 3);
@@ -168,6 +173,7 @@ const PremiumReportsPage = () => {
   };
 
   const handleExport = (format: 'pdf' | 'csv' | 'email') => {
+    // Implementation for export functionality
     console.log(`Exporting as ${format}`);
     setShowExportMenu(false);
   };
@@ -184,8 +190,8 @@ const PremiumReportsPage = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Filters & Actions Panel */}
       <div className="sticky top-16 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4 py-3' : 'px-6 py-4'}`}>
-          <div className={`flex items-center justify-between gap-4 ${isMobile ? 'flex-col space-y-3' : ''}`}>
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
             {/* Date Range Selector */}
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gray-500" />
@@ -194,9 +200,7 @@ const PremiumReportsPage = () => {
                   <button
                     key={range}
                     onClick={() => setDateRange(range)}
-                    className={`transition-all duration-200 ${
-                      isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
-                    } font-medium rounded-md ${
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                       dateRange === range
                         ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
@@ -227,6 +231,7 @@ const PremiumReportsPage = () => {
                 </Badge>
               ))}
               
+              {/* Export Dropdown */}
               <div className="relative">
                 <Button
                   variant="outline"
@@ -258,9 +263,7 @@ const PremiumReportsPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className={`max-w-7xl mx-auto space-y-6 md:space-y-8 ${
-        isMobile ? 'px-4 py-6' : isTablet ? 'px-6 py-8' : 'px-6 py-8'
-      }`}>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
@@ -296,17 +299,13 @@ const PremiumReportsPage = () => {
             const Icon = card.icon;
             return (
               <Card key={index} className="bg-white dark:bg-gray-800 border-0 shadow-md hover:shadow-xl transition-all duration-300 animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className={isMobile ? 'p-6' : 'p-8'}>
+                <CardContent className="p-8">
                   <div className="flex items-start justify-between">
                     <div className="space-y-3">
-                      <p className={`uppercase font-medium text-gray-500 dark:text-gray-400 tracking-wide ${
-                        isMobile ? 'text-xs' : 'text-sm'
-                      }`}>
+                      <p className="text-sm uppercase font-medium text-gray-500 dark:text-gray-400 tracking-wide">
                         {card.title}
                       </p>
-                      <p className={`font-bold text-gray-900 dark:text-white ${
-                        isMobile ? 'text-2xl' : 'text-4xl'
-                      }`}>
+                      <p className="text-4xl font-bold text-gray-900 dark:text-white">
                         {card.value}
                       </p>
                     </div>
@@ -320,18 +319,12 @@ const PremiumReportsPage = () => {
           })}
         </div>
 
-        {/* Charts Section - Mobile/Tablet Single Column */}
-        <div className={`grid gap-6 ${
-          isMobile || isTablet ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'
-        }`}>
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Sales Trend Chart */}
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-md">
-            <CardHeader className={`flex flex-row items-center justify-between pb-2 ${
-              isMobile ? 'flex-col space-y-3' : ''
-            }`}>
-              <CardTitle className={`font-semibold flex items-center gap-2 ${
-                isMobile ? 'text-lg' : 'text-xl'
-              }`}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-purple-600" />
                 Sales Trend
               </CardTitle>
@@ -340,9 +333,7 @@ const PremiumReportsPage = () => {
                   <button
                     key={resolution}
                     onClick={() => setChartResolution(resolution)}
-                    className={`transition-all ${
-                      isMobile ? 'px-3 py-2 text-xs' : 'px-3 py-1 text-xs'
-                    } font-medium rounded ${
+                    className={`px-3 py-1 text-xs font-medium rounded transition-all ${
                       chartResolution === resolution
                         ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400'
@@ -354,15 +345,9 @@ const PremiumReportsPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={isMobile ? 'h-64' : isTablet ? 'h-72' : 'h-80'}>
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={salesTrendData} margin={
-                    isMobile 
-                      ? { top: 10, right: 15, left: 85, bottom: 30 }
-                      : isTablet
-                        ? { top: 15, right: 20, left: 90, bottom: 25 }
-                        : { top: 20, right: 30, left: 70, bottom: 20 }
-                  }>
+                  <AreaChart data={salesTrendData}>
                     <defs>
                       <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
@@ -373,15 +358,12 @@ const PremiumReportsPage = () => {
                     <XAxis 
                       dataKey="date" 
                       stroke="#6b7280"
-                      fontSize={isMobile ? 11 : 12}
+                      fontSize={12}
                       tickLine={false}
-                      interval={isMobile ? 'preserveStartEnd' : 0}
-                      angle={isMobile ? -45 : 0}
-                      textAnchor={isMobile ? 'end' : 'middle'}
                     />
                     <YAxis 
                       stroke="#6b7280"
-                      fontSize={isMobile ? 11 : 12}
+                      fontSize={12}
                       tickLine={false}
                       tickFormatter={(value) => `${formatCurrency(value)}`}
                     />
@@ -390,8 +372,7 @@ const PremiumReportsPage = () => {
                         backgroundColor: '#1f2937',
                         border: 'none',
                         borderRadius: '12px',
-                        color: '#fff',
-                        fontSize: isMobile ? '14px' : '12px'
+                        color: '#fff'
                       }}
                       formatter={(value: number) => [formatCurrency(value), 'Revenue']}
                     />
@@ -410,12 +391,8 @@ const PremiumReportsPage = () => {
 
           {/* Orders Per Hour Chart */}
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-md">
-            <CardHeader className={`flex flex-row items-center justify-between pb-2 ${
-              isMobile ? 'flex-col space-y-3' : ''
-            }`}>
-              <CardTitle className={`font-semibold flex items-center gap-2 ${
-                isMobile ? 'text-lg' : 'text-xl'
-              }`}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
                 <Clock className="w-5 h-5 text-blue-600" />
                 Orders Per Hour
               </CardTitle>
@@ -424,9 +401,7 @@ const PremiumReportsPage = () => {
                   <button
                     key={view}
                     onClick={() => setOrdersChartView(view)}
-                    className={`transition-all ${
-                      isMobile ? 'px-3 py-2 text-xs' : 'px-3 py-1 text-xs'
-                    } font-medium rounded ${
+                    className={`px-3 py-1 text-xs font-medium rounded transition-all ${
                       ordersChartView === view
                         ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400'
@@ -438,28 +413,19 @@ const PremiumReportsPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={isMobile ? 'h-64' : isTablet ? 'h-72' : 'h-80'}>
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ordersPerHourData} margin={
-                    isMobile 
-                      ? { top: 10, right: 15, left: 50, bottom: 40 }
-                      : isTablet
-                        ? { top: 15, right: 20, left: 45, bottom: 35 }
-                        : { top: 20, right: 30, left: 40, bottom: 20 }
-                  }>
+                  <BarChart data={ordersPerHourData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
                     <XAxis 
                       dataKey="hour" 
                       stroke="#6b7280"
-                      fontSize={isMobile ? 11 : 12}
+                      fontSize={12}
                       tickLine={false}
-                      interval={isMobile ? 'preserveStartEnd' : 0}
-                      angle={isMobile ? -45 : 0}
-                      textAnchor={isMobile ? 'end' : 'middle'}
                     />
                     <YAxis 
                       stroke="#6b7280"
-                      fontSize={isMobile ? 11 : 12}
+                      fontSize={12}
                       tickLine={false}
                     />
                     <Tooltip 
@@ -467,8 +433,7 @@ const PremiumReportsPage = () => {
                         backgroundColor: '#1f2937',
                         border: 'none',
                         borderRadius: '12px',
-                        color: '#fff',
-                        fontSize: isMobile ? '14px' : '12px'
+                        color: '#fff'
                       }}
                       formatter={(value: number) => [value, 'Orders']}
                     />
@@ -492,6 +457,7 @@ const PremiumReportsPage = () => {
 
         {/* Alerts & Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Low Stock Alerts */}
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-md">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-semibold flex items-center gap-2 text-orange-600 dark:text-orange-400">
@@ -529,6 +495,7 @@ const PremiumReportsPage = () => {
             </CardContent>
           </Card>
 
+          {/* Overdue Payments */}
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-md">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-semibold flex items-center gap-2 text-red-600 dark:text-red-400">
@@ -563,6 +530,7 @@ const PremiumReportsPage = () => {
             </CardContent>
           </Card>
 
+          {/* Quick Actions */}
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-md">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-semibold text-green-600 dark:text-green-400">

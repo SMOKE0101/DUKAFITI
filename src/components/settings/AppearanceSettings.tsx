@@ -3,20 +3,33 @@ import React, { useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { useSettings } from '../../hooks/useSettings';
 import { Palette, Sun, Moon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 
 const AppearanceSettings = () => {
   const { settings, updateSettings, loading } = useSettings();
-  const { theme, setTheme } = useTheme();
 
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    // Update both the global theme and settings
-    setTheme(newTheme);
-    updateSettings({ theme: newTheme });
+  const handleThemeChange = (theme: 'light' | 'dark') => {
+    updateSettings({ theme });
+    
+    // Apply theme immediately
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
   };
 
-  // Get the current theme, using the global theme as the source of truth
-  const currentTheme = theme || 'light';
+  // Initialize theme on component mount - ensure light is default
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const currentTheme = settings.theme || 'light';
+    
+    if (currentTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [settings.theme]);
 
   if (loading) {
     return (
@@ -34,6 +47,9 @@ const AppearanceSettings = () => {
       </div>
     );
   }
+
+  // Ensure we default to light theme if settings are not yet loaded
+  const currentTheme = settings.theme || 'light';
 
   return (
     <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-transparent">

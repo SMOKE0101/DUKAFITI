@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -14,8 +14,6 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { useTheme } from 'next-themes';
-import { LogoutConfirmDialog } from '@/components/dialogs/LogoutConfirmDialog';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -41,163 +39,214 @@ const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   const { signOut } = useAuth();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
-  const { theme } = useTheme();
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  // Hide sidebar on mobile and tablet
+  // Completely hide sidebar on mobile and tablet - return null immediately
   if (isMobile || isTablet) {
     return null;
   }
 
   const handleSignOut = async () => {
-    setShowLogoutDialog(false);
-    await signOut();
+    if (window.confirm('Are you sure you want to sign out?')) {
+      await signOut();
+    }
   };
 
-  const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/77d747ef-d8fb-4a5c-b4c7-3e43d709d5f3.png'
-    : '/lovable-uploads/b8e58169-8231-49d4-95c5-39d340fd66dd.png';
-
+  // Desktop Sidebar only - Enhanced with better animations and GPU acceleration
   return (
-    <>
-      <div className={`hidden lg:block ${className}`}>
-        <div 
-          className={cn(
-            "fixed left-0 top-16 h-[calc(100vh-4rem)] border-r flex flex-col z-30 shadow-xl",
-            "transition-all duration-300 ease-in-out",
-            "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-700/80",
-            isCollapsed ? 'w-16' : 'w-64'
-          )}
-        >
-          {/* Brand Section */}
+    <div className={`hidden lg:block ${className}`}>
+      <div 
+        className={cn(
+          "fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white/95 backdrop-blur-xl border-r border-gray-200/50", 
+          "flex flex-col z-40 shadow-2xl shadow-purple-500/5",
+          "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          "transform-gpu will-change-[width,transform]",
+          isCollapsed ? 'w-20' : 'w-72'
+        )}
+      >
+        {/* Brand Section - Enhanced with smooth animations */}
+        <div className={cn(
+          "p-6 border-b border-gray-200/50 flex-shrink-0 min-h-[88px] flex items-center overflow-hidden",
+          "bg-gradient-to-br from-purple-50/80 to-blue-50/80"
+        )}>
           <div className={cn(
-            "p-4 border-b flex-shrink-0 min-h-[72px] flex items-center",
-            "border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900",
-            isCollapsed ? 'justify-center' : 'justify-start'
+            "flex items-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            "transform-gpu will-change-transform",
+            isCollapsed ? 'justify-center' : 'gap-3'
           )}>
-            <div className="flex items-center transition-all duration-300 ease-in-out">
-              <img 
-                src={logoSrc}
-                alt="DUKAFITI Logo"
-                className={cn(
-                  "transition-all duration-300 ease-in-out object-contain",
-                  isCollapsed 
-                    ? 'w-8 h-8' 
-                    : 'h-10 w-auto max-w-[180px]'
-                )}
-              />
-              {!isCollapsed && (
-                <span className="ml-2 text-lg font-bold text-gray-900 dark:text-white transition-opacity duration-300">
-                  DUKAFITI
-                </span>
+            <div className={cn(
+              "rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0",
+              "shadow-xl shadow-purple-500/25 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+              "transform-gpu will-change-transform",
+              isCollapsed ? 'w-10 h-10' : 'w-12 h-12'
+            )}>
+              <span className={cn(
+                "text-white font-black transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                isCollapsed ? 'text-sm' : 'text-lg'
+              )}>D</span>
+            </div>
+            <div 
+              className={cn(
+                "min-w-0 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden",
+                "transform-gpu will-change-[opacity,transform,width]",
+                isCollapsed 
+                  ? 'opacity-0 w-0 max-w-0 transform translate-x-8 scale-95' 
+                  : 'opacity-100 w-auto max-w-none transform translate-x-0 scale-100'
               )}
+              style={{
+                transitionDelay: isCollapsed ? '0ms' : '200ms',
+              }}
+            >
+              <h1 className="font-mono font-black text-lg uppercase tracking-tight text-gray-900 whitespace-nowrap bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                DUKASMART
+              </h1>
+              <p className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                Smart Business
+              </p>
             </div>
           </div>
+        </div>
 
-          {/* Navigation Links */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {navigation.map((item, index) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href || (item.href === '/dashboard' && ['/app'].includes(location.pathname));
-              
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    "group flex items-center rounded-lg relative overflow-hidden",
-                    "transition-all duration-200 ease-in-out",
-                    isCollapsed ? 'justify-center p-3 w-10 h-10 mx-auto' : 'p-3 gap-3',
-                    isActive 
-                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium shadow-sm border border-gray-200/50 dark:border-gray-700/50' 
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
-                  )}
-                >
-                  <div className={cn(
-                    "flex items-center justify-center flex-shrink-0",
-                    "transition-all duration-200 ease-in-out",
-                    isCollapsed ? 'w-5 h-5' : 'w-6 h-6'
-                  )}>
-                    <Icon className="w-full h-full" />
-                  </div>
-                  
-                  {!isCollapsed && (
-                    <span className="font-medium text-sm truncate transition-opacity duration-200">
-                      {item.name}
-                    </span>
-                  )}
-                  
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900/90 dark:bg-gray-700/90 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                      {item.name}
-                    </div>
-                  )}
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          {/* Bottom Section - Logout */}
-          <div className="p-3 border-t border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900">
-            <button
-              onClick={() => setShowLogoutDialog(true)}
-              className={cn(
-                "group flex items-center rounded-lg w-full relative overflow-hidden",
-                "transition-all duration-200 ease-in-out",
-                isCollapsed ? 'justify-center p-3 h-10' : 'p-3 gap-3',
-                "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-              )}
-            >
-              <div className={cn(
-                "flex items-center justify-center flex-shrink-0",
-                "transition-all duration-200 ease-in-out",
-                isCollapsed ? 'w-5 h-5' : 'w-6 h-6'
-              )}>
-                <LogOut className="w-full h-full" />
-              </div>
-              {!isCollapsed && (
-                <span className="font-medium text-sm transition-opacity duration-200">
-                  Sign Out
-                </span>
-              )}
-              {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900/90 dark:bg-gray-700/90 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                  Sign Out
-                </div>
-              )}
-            </button>
-          </div>
-
-          {/* Toggle Button */}
-          <div className="p-3 border-t border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900">
-            <button
-              onClick={onToggle}
-              className={cn(
-                "w-full flex items-center justify-center p-2 rounded-lg transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 group",
-                "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              )}
-              aria-expanded={!isCollapsed}
-              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              <div 
+        {/* Navigation Links - Enhanced animations with staggered entrance */}
+        <nav className={cn(
+          "flex-1 p-4 space-y-2 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          "transform-gpu will-change-[overflow]",
+          isCollapsed 
+            ? 'overflow-hidden' 
+            : 'overflow-y-auto'
+        )}>
+          {navigation.map((item, index) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.href || (item.href === '/dashboard' && ['/app'].includes(location.pathname));
+            
+            return (
+              <NavLink
+                key={item.name}
+                to={item.href}
                 className={cn(
-                  "transition-transform duration-200 ease-in-out",
-                  isCollapsed ? 'rotate-0' : 'rotate-180'
+                  "group flex items-center rounded-xl relative overflow-hidden",
+                  "transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                  "transform-gpu will-change-[transform,background-color,box-shadow]",
+                  isCollapsed ? 'justify-center p-3 w-12 h-12 mx-auto' : 'p-4 gap-4',
+                  isActive 
+                    ? 'bg-gradient-to-r from-purple-100/80 to-blue-100/80 text-purple-700 shadow-lg shadow-purple-500/20 border-l-4 border-purple-600 scale-105' 
+                    : 'text-gray-700 hover:bg-gradient-to-r hover:from-purple-50/60 hover:to-blue-50/60 hover:text-purple-600 hover:scale-105 hover:shadow-md hover:shadow-purple-500/10'
                 )}
+                style={{
+                  transitionDelay: `${index * 50}ms`,
+                }}
               >
-                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
+                {/* Enhanced active background with GPU acceleration */}
+                {isActive && (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-blue-600/5 rounded-xl animate-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-400/3 to-blue-400/3 rounded-xl animate-ping" />
+                  </>
+                )}
+                
+                <div className={cn(
+                  "flex items-center justify-center rounded-lg flex-shrink-0 relative z-10",
+                  "transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu will-change-transform",
+                  isCollapsed ? 'w-6 h-6' : 'w-8 h-8',
+                  isActive 
+                    ? 'text-purple-700 scale-110' 
+                    : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
+                )}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                
+                <span 
+                  className={cn(
+                    "font-semibold text-sm min-w-0 truncate relative z-10",
+                    "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden",
+                    "transform-gpu will-change-[opacity,transform,width]",
+                    isCollapsed 
+                      ? 'opacity-0 w-0 max-w-0 transform translate-x-8 scale-95' 
+                      : 'opacity-100 w-auto max-w-none transform translate-x-0 scale-100'
+                  )}
+                  style={{
+                    transitionDelay: isCollapsed ? '0ms' : '300ms',
+                  }}
+                >
+                  {item.name}
+                </span>
+                
+                {/* Enhanced Tooltip for collapsed state */}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/90 backdrop-blur-sm text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl shadow-gray-900/20">
+                    {item.name}
+                    <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/90 rotate-45"></div>
+                  </div>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Section - Logout - Enhanced with smooth animations */}
+        <div className="p-4 border-t border-gray-200/50 space-y-2 flex-shrink-0 bg-gradient-to-br from-red-50/50 to-orange-50/50">
+          <button
+            onClick={handleSignOut}
+            className={cn(
+              "group flex items-center rounded-xl w-full relative overflow-hidden",
+              "transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+              "transform-gpu will-change-[transform,background-color]",
+              isCollapsed ? 'justify-center p-3 h-12' : 'p-4 gap-4',
+              "text-red-600 hover:bg-red-50/60 hover:scale-105 hover:shadow-md hover:shadow-red-500/10"
+            )}
+          >
+            <div className={cn(
+              "flex items-center justify-center rounded-lg flex-shrink-0",
+              "transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu will-change-transform",
+              isCollapsed ? 'w-6 h-6' : 'w-8 h-8',
+              "text-red-600 group-hover:scale-110"
+            )}>
+              <LogOut className="w-5 h-5" />
+            </div>
+            <span 
+              className={cn(
+                "font-semibold text-sm overflow-hidden",
+                "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                "transform-gpu will-change-[opacity,transform,width]",
+                isCollapsed 
+                  ? 'opacity-0 w-0 max-w-0 transform translate-x-8 scale-95' 
+                  : 'opacity-100 w-auto max-w-none transform translate-x-0 scale-100'
+              )}
+              style={{
+                transitionDelay: isCollapsed ? '0ms' : '300ms',
+              }}
+            >
+              Logout
+            </span>
+            {isCollapsed && (
+              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/90 backdrop-blur-sm text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl shadow-gray-900/20">
+                Logout
+                <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/90 rotate-45"></div>
               </div>
-            </button>
-          </div>
+            )}
+          </button>
+        </div>
+
+        {/* Enhanced Toggle Button with spring animation */}
+        <div className="p-4 border-t border-gray-200/50 flex-shrink-0">
+          <button
+            onClick={onToggle}
+            className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50/60 hover:to-blue-50/60 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 group transform-gpu will-change-transform hover:scale-105"
+            aria-expanded={!isCollapsed}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <div 
+              className={cn(
+                "p-1 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                "transform-gpu will-change-transform",
+                isCollapsed ? 'rotate-0' : 'rotate-180'
+              )}
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-purple-600 transition-colors duration-300" />
+            </div>
+          </button>
         </div>
       </div>
-
-      <LogoutConfirmDialog
-        open={showLogoutDialog}
-        onOpenChange={setShowLogoutDialog}
-        onConfirm={handleSignOut}
-      />
-    </>
+    </div>
   );
 };
 

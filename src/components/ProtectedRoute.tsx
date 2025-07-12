@@ -13,8 +13,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   useEffect(() => {
     if (!loading && !user) {
-      console.log('ProtectedRoute: No user, redirecting to signin');
-      navigate('/signin');
+      console.log('ProtectedRoute: No user, redirecting to auth');
+      navigate('/auth');
     }
   }, [user, loading, navigate]);
 
@@ -33,7 +33,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <p className="text-gray-600">Redirecting to sign in...</p>
+          <p className="text-gray-600">Redirecting to authentication...</p>
         </div>
       </div>
     );

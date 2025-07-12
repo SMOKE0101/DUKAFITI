@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { Input } from '@/components/ui/input';
@@ -174,22 +175,21 @@ const CustomersPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Modern Top Bar */}
-      <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 md:px-6">
+      <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
             <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           </div>
-          <h1 className="font-mono text-lg md:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+          <h1 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
             CUSTOMERS
           </h1>
         </div>
         <button
           onClick={() => setShowNewCustomerDrawer(true)}
-          className="px-4 md:px-6 py-2 bg-transparent border-2 border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full font-mono text-xs md:text-sm font-bold uppercase tracking-wide transition-all duration-200 flex items-center gap-2"
+          className="px-6 py-2 bg-transparent border-2 border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full font-mono text-sm font-bold uppercase tracking-wide transition-all duration-200 flex items-center gap-2"
         >
           <UserPlus className="w-4 h-4" />
-          <span className="hidden sm:inline">ADD CUSTOMER</span>
-          <span className="sm:hidden">ADD</span>
+          ADD CUSTOMER
         </button>
       </div>
 

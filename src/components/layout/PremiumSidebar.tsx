@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useTheme } from 'next-themes';
 
 interface PremiumSidebarProps {
   isOpen: boolean;
@@ -67,7 +66,6 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
   const location = useLocation();
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
-  const { theme } = useTheme();
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const shopName = user?.user_metadata?.shop_name || 'DukaSmart';
@@ -81,24 +79,9 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
     }
   };
 
-  // Get the appropriate logo based on theme and open state
-  const getLogoSrc = () => {
-    if (!isOpen) {
-      // Use cube icons for collapsed state
-      return theme === 'dark' 
-        ? '/lovable-uploads/e71b20c6-1457-4277-a594-bb9ce4f09d56.png' // Dark mode cube
-        : '/lovable-uploads/0e966e8b-29a2-4e9c-bae2-eb4b0ff1f714.png'; // Light mode cube
-    } else {
-      // Use full logos for expanded state
-      return theme === 'dark'
-        ? '/lovable-uploads/eb77e4bd-5d96-4815-a1ff-0bc09529c54a.png' // Dark mode full logo
-        : '/lovable-uploads/45d85eef-ee71-473e-95df-bb58337a9f07.png'; // Light mode full logo
-    }
-  };
-
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200/80">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
         <div className="flex justify-around items-center py-2">
           {navigationItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -112,8 +95,8 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                 className={cn(
                   "flex flex-col items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-lg transition-colors",
                   isActive 
-                    ? "text-gray-900 bg-gray-50" 
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20" 
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                 )}
               >
                 <Icon className="w-5 h-5 mb-1" />
@@ -129,39 +112,37 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
   return (
     <>
       <div className={cn(
-        "fixed left-0 top-0 h-full bg-white border-r border-gray-200/80 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-40 flex flex-col shadow-xl shadow-gray-900/5",
+        "fixed left-0 top-0 h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 z-40 flex flex-col",
         isOpen ? "w-[280px]" : "w-20"
       )}>
-        {/* Branding & Profile Section - Professional White Design */}
-        <div className="p-6 border-b border-gray-200/60 bg-white">
+        {/* Branding & Profile Section */}
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
           {isOpen ? (
             <div className="space-y-4">
-              {/* Logo with Professional Styling */}
-              <div className="flex items-center justify-center">
+              {/* Logo with Custom Icon */}
+              <div className="flex items-center space-x-3">
                 <img 
-                  src={getLogoSrc()}
-                  alt="DUKAFITI Logo"
-                  className="h-12 w-auto max-w-[200px] object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
-                  style={{
-                    filter: 'drop-shadow(0 2px 12px rgba(0, 0, 0, 0.1))'
-                  }}
+                  src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                  alt="DukaFiti Logo" 
+                  className="w-8 h-8 rounded-lg"
                 />
+                <span className="text-xl font-bold text-gray-900 dark:text-white">DukaFiti</span>
               </div>
               
-              {/* Profile Card - Enhanced Professional Design */}
+              {/* Profile Card */}
               <button
                 onClick={() => setShowProfileModal(true)}
-                className="w-full p-4 bg-gray-50/80 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 text-left group border border-gray-200/50 hover:border-gray-300/50"
+                className="w-full p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-left group"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center shadow-sm">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                       {shopName}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Owner
                     </p>
                   </div>
@@ -171,20 +152,17 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
           ) : (
             <div className="flex justify-center">
               <img 
-                src={getLogoSrc()}
-                alt="DUKAFITI Logo"
-                className="w-10 h-10 object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
-                style={{
-                  filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
-                }}
+                src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+                alt="DukaFiti Logo" 
+                className="w-8 h-8 rounded-lg"
               />
             </div>
           )}
         </div>
 
-        {/* Navigation - Professional Styling */}
+        {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {navigationItems.map((item, index) => {
+          {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || 
               (item.path === '/app' && location.pathname === '/');
@@ -194,32 +172,28 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
                 key={item.id}
                 to={item.path}
                 className={cn(
-                  "flex items-center p-3 rounded-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group relative",
-                  "transform-gpu will-change-[transform,background-color]",
-                  isOpen ? "gap-3" : "justify-center",
+                  "flex items-center p-3 rounded-xl transition-all duration-200 group relative",
                   isActive 
-                    ? "bg-gray-50 text-gray-900 font-semibold shadow-sm border border-gray-200/50" 
-                    : "text-gray-600 hover:bg-gray-50/80 hover:text-gray-900 hover:scale-[1.02] hover:shadow-sm"
+                    ? "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold shadow-sm" 
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
                 )}
-                style={{
-                  transitionDelay: `${index * 30}ms`,
-                }}
               >
-                <Icon className={cn(
-                  "w-5 h-5 flex-shrink-0 transition-all duration-300",
-                  isActive ? "text-gray-900 scale-110" : "text-gray-600 group-hover:text-gray-900 group-hover:scale-110"
-                )} />
+                {/* Active indicator */}
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-600 dark:bg-purple-400 rounded-r-full" />
+                )}
+                
+                <Icon className={cn("w-5 h-5 flex-shrink-0", isOpen ? "mr-3" : "")} />
                 
                 {isOpen && (
-                  <span className="font-medium transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                  <span className="font-medium transition-opacity duration-200">
                     {item.label}
                   </span>
                 )}
                 
                 {!isOpen && (
-                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
+                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                     {item.label}
-                    <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
                   </div>
                 )}
               </NavLink>
@@ -227,83 +201,79 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
           })}
         </nav>
 
-        {/* Utility Buttons - Professional Design */}
-        <div className="p-4 border-t border-gray-200/60 space-y-2 flex-shrink-0 bg-white">
+        {/* Utility Buttons */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
           <button
             onClick={handleLogout}
             className={cn(
-              "flex items-center w-full p-3 rounded-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] text-red-600 hover:bg-red-50/80 hover:scale-[1.02] hover:shadow-sm group",
-              !isOpen ? "justify-center" : "gap-3"
+              "flex items-center w-full p-3 rounded-xl transition-all duration-200 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 group",
+              !isOpen && "justify-center"
             )}
           >
-            <LogOut className={cn(
-              "w-5 h-5 flex-shrink-0 transition-all duration-300",
-              "text-red-600 group-hover:scale-110"
-            )} />
+            <LogOut className={cn("w-5 h-5 flex-shrink-0", isOpen ? "mr-3" : "")} />
             {isOpen && <span className="font-medium">Logout</span>}
             {!isOpen && (
-              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
+              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                 Logout
-                <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
               </div>
             )}
           </button>
         </div>
 
-        {/* Toggle Button - Professional Styling */}
-        <div className="p-4 border-t border-gray-200/60 bg-white">
+        {/* Toggle Button */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
           <Button
             variant="ghost"
             size="sm"
             onClick={onToggle}
             className={cn(
-              "w-full p-3 hover:bg-gray-50/80 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu will-change-transform hover:scale-[1.02]",
+              "w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800",
               !isOpen && "justify-center"
             )}
           >
             {isOpen ? (
               <>
-                <ChevronLeft className="w-4 h-4 mr-2 text-gray-600" />
-                <span className="text-gray-600 font-medium">Collapse</span>
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Collapse
               </>
             ) : (
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-4 h-4" />
             )}
           </Button>
         </div>
       </div>
 
-      {/* Profile Modal - Enhanced Design */}
+      {/* Profile Modal */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 Profile Information
               </h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowProfileModal(false)}
-                className="p-2 hover:bg-gray-50"
+                className="p-2"
               >
                 ×
               </Button>
             </div>
             
             <div className="text-center space-y-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">
                 <User className="w-10 h-10 text-white" />
               </div>
               
               <div>
-                <p className="text-lg font-semibold text-gray-900">
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {shopName}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {userEmail}
                 </p>
-                <p className="text-sm text-gray-700 font-medium">
+                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
                   Owner
                 </p>
               </div>

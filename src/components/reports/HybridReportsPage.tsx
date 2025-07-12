@@ -38,7 +38,7 @@ const HybridReportsPage = () => {
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date }>();
   const [activeFilters, setActiveFilters] = useState<Filter[]>([]);
   const [salesChartResolution, setSalesChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
-  const [ordersChartView, setOrdersChartView] = useState<'daily' | '2weeks'>('daily');
+  const [ordersChartView, setOrdersChartView] = useState<'daily' | 'weekly'>('daily');
 
   const { customers = [], loading: customersLoading } = useSupabaseCustomers();
   const { products = [], loading: productsLoading } = useSupabaseProducts();
@@ -216,8 +216,8 @@ const HybridReportsPage = () => {
       case 'daily':
         chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
-      case '2weeks':
-        chartFromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      case 'weekly':
+        chartFromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       default:
         chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -228,49 +228,20 @@ const HybridReportsPage = () => {
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    if (ordersChartView === 'daily') {
-      // Hourly data for daily view
-      const hourlyData: Record<number, number> = {};
-      for (let i = 0; i < 24; i++) {
-        hourlyData[i] = 0;
-      }
-      
-      chartSales.forEach(sale => {
-        const hour = new Date(sale.timestamp).getHours();
-        hourlyData[hour]++;
-      });
-      
-      return Object.entries(hourlyData).map(([hour, orders]) => ({
-        hour: `${hour.padStart(2, '0')}:00`,
-        orders
-      }));
-    } else {
-      // Daily data for 2-week view
-      const dailyData: Record<string, number> = {};
-      
-      // Initialize 14 days of data
-      for (let i = 0; i < 14; i++) {
-        const date = new Date(chartFromDate);
-        date.setDate(date.getDate() + i);
-        const dateKey = date.toISOString().substring(0, 10);
-        dailyData[dateKey] = 0;
-      }
-      
-      chartSales.forEach(sale => {
-        const saleDate = new Date(sale.timestamp);
-        const dateKey = saleDate.toISOString().substring(0, 10);
-        if (dailyData.hasOwnProperty(dateKey)) {
-          dailyData[dateKey]++;
-        }
-      });
-      
-      return Object.entries(dailyData)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, orders]) => ({
-          hour: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          orders
-        }));
+    const hourlyData: Record<number, number> = {};
+    for (let i = 0; i < 24; i++) {
+      hourlyData[i] = 0;
     }
+    
+    chartSales.forEach(sale => {
+      const hour = new Date(sale.timestamp).getHours();
+      hourlyData[hour]++;
+    });
+    
+    return Object.entries(hourlyData).map(([hour, orders]) => ({
+      hour: `${hour.padStart(2, '0')}:00`,
+      orders
+    }));
   }, [sales, ordersChartView]);
 
   const salesTableData = useMemo(() => 

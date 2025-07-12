@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
@@ -12,7 +13,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useTheme } from 'next-themes';
 
 interface AppSidebarProps {
   isOpen: boolean;
@@ -60,63 +60,41 @@ const navigationItems = [
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
-  const { theme } = useTheme();
-
-  const logoSrc = theme === 'dark' 
-    ? '/lovable-uploads/77d747ef-d8fb-4a5c-b4c7-3e43d709d5f3.png'
-    : '/lovable-uploads/b8e58169-8231-49d4-95c5-39d340fd66dd.png';
 
   return (
     <div className={cn(
-      "fixed left-0 top-0 h-full bg-white border-r border-gray-200/80 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-30 shadow-xl shadow-gray-900/5",
+      "fixed left-0 top-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30",
       isOpen ? "w-60" : "w-18"
     )}>
-      {/* Header with Professional Branding */}
-      <div className="flex items-center justify-center p-4 border-b border-gray-200/60 bg-white min-h-[72px]">
-        {isOpen ? (
-          <div className="flex items-center justify-between w-full">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+        {isOpen && (
+          <div className="flex items-center space-x-2">
             <img 
-              src={logoSrc}
-              alt="DUKAFITI Logo"
-              className="h-10 w-auto max-w-[160px] object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
-              style={{
-                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
-              }}
+              src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
+              alt="DukaFiti Logo" 
+              className="w-8 h-8 rounded-lg"
             />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggle}
-              className="p-2 hover:bg-gray-50/80 transition-all duration-300"
-            >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center space-y-2">
-            <img 
-              src={logoSrc}
-              alt="DUKAFITI Logo"
-              className="w-8 h-8 object-contain transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
-              style={{
-                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))'
-              }}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggle}
-              className="p-1 hover:bg-gray-50/80 transition-all duration-300"
-            >
-              <ChevronRight className="w-3 h-3 text-gray-600" />
-            </Button>
+            <span className="dukafiti-brand text-lg">DukaFiti</span>
           </div>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggle}
+          className="p-2 hover:bg-sidebar-accent"
+        >
+          {isOpen ? (
+            <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-sidebar-foreground" />
+          )}
+        </Button>
       </div>
 
-      {/* Navigation with Professional Styling */}
+      {/* Navigation */}
       <nav className="p-4 space-y-2">
-        {navigationItems.map((item, index) => {
+        {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path || 
             (item.path === '/app' && location.pathname === '/');
@@ -126,30 +104,19 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
               key={item.id}
               to={item.path}
               className={cn(
-                "flex items-center rounded-xl p-3 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group relative",
-                "transform-gpu will-change-[transform,background-color]",
-                isActive 
-                  ? "bg-gray-50 text-gray-900 font-semibold shadow-sm border border-gray-200/50" 
-                  : "text-gray-600 hover:bg-gray-50/80 hover:text-gray-900 hover:scale-[1.02] hover:shadow-sm",
-                !isOpen && "justify-center"
+                "nav-item group",
+                isActive && "active"
               )}
-              style={{
-                transitionDelay: `${index * 30}ms`,
-              }}
             >
-              <Icon className={cn(
-                "w-5 h-5 flex-shrink-0 transition-all duration-300",
-                isActive ? "text-gray-900 scale-110" : "text-gray-600 group-hover:text-gray-900 group-hover:scale-110"
-              )} />
+              <Icon className="w-5 h-5 flex-shrink-0" />
               {isOpen && (
-                <span className="font-medium ml-3 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                <span className="font-medium transition-opacity duration-200">
                   {item.label}
                 </span>
               )}
               {!isOpen && (
-                <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                   {item.label}
-                  <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
                 </div>
               )}
             </NavLink>
