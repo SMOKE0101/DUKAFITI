@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { formatCurrency } from '../utils/currency';
 import { useTheme } from 'next-themes';
-import CubeLogo from './branding/CubeLogo';
+import DukafitiBrand from './branding/DukafitiBrand';
 
 interface SearchResult {
   id: string;
@@ -145,26 +146,18 @@ const DashboardTopbar = () => {
     }
   };
 
-  // Enhanced brand text color with debugging
-  const currentTheme = resolvedTheme || theme || 'light';
-  console.log('DashboardTopbar: Current theme for branding:', currentTheme);
-  const brandTextColor = 'text-white'; // Keep white for the purple background
-
   return (
     <>
-      <header className="sticky top-0 z-50 h-16 border-b shadow-sm" style={{ backgroundColor: '#602d86' }}>
+      <header className="sticky top-0 z-50 h-16 border-b shadow-sm bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="flex items-center justify-between px-6 h-full">
-          {/* Left - Enhanced Brand Section */}
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              <CubeLogo 
-                size="md"
-                className="transition-all duration-300"
-              />
-            </div>
-            <div className={`font-caesar font-normal ${brandTextColor} text-2xl tracking-wide transition-colors duration-300 drop-shadow-sm`}>
-              DUKAFITI
-            </div>
+          {/* Left - Enhanced DUKAFITI Brand Section */}
+          <div className="flex items-center gap-4">
+            <DukafitiBrand 
+              size="md"
+              layout="horizontal"
+              textColor="text-white"
+              className="transition-all duration-300"
+            />
           </div>
 
           {/* Center - Global Search */}
@@ -338,7 +331,7 @@ const DashboardTopbar = () => {
               Confirm Logout
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to exit DukaSmart?
+              Are you sure you want to exit DUKAFITI?
             </p>
             
             <div className="flex gap-3">

@@ -1,164 +1,124 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import DukafitiBrand from '../branding/DukafitiBrand';
 
 const NavigationHeader = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+  const navigationItems = [
+    { name: 'Features', href: '#features' },
+    { name: 'Demo', href: '#demo' },
+    { name: 'Pricing', href: '#pricing' },
+    { name: 'Testimonials', href: '#testimonials' },
+    { name: 'Contact', href: '#contact' },
+  ];
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
+  const scrollToSection = (href: string) => {
+    const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
-      setIsMobileMenuOpen(false);
     }
-  };
-
-  const navigateToApp = () => {
-    window.location.href = '/app';
+    setIsMenuOpen(false);
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-slate-900/95 backdrop-blur-md border-b border-white/10 shadow-lg' : 'bg-slate-900/80 backdrop-blur-sm'
-    }`}>
-      <nav className="container mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* DukaFiti Brand Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg p-1">
-              <img 
-                src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                alt="DukaFiti Logo" 
-                className="w-8 h-8"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-green-400 bg-clip-text text-transparent">
-                DukaFiti
-              </span>
-              <span className="text-xs text-green-400 font-medium -mt-1">
-                Ni DukaBora
-              </span>
-            </div>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Brand Logo */}
+          <div className="flex-shrink-0">
+            <DukafitiBrand 
+              size="md" 
+              layout="horizontal"
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            />
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <button 
-              onClick={() => scrollToSection('features')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Features
-            </button>
-            <button 
-              onClick={() => scrollToSection('demo')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Live Demo
-            </button>
-            <button 
-              onClick={() => scrollToSection('pricing')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Pricing
-            </button>
-            <button 
-              onClick={() => scrollToSection('testimonials')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Success Stories
-            </button>
+          <div className="hidden md:block">
+            <div className="ml-10 flex items-baseline space-x-8">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => scrollToSection(item.href)}
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 text-sm font-medium transition-colors duration-200 hover:scale-105"
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <Button 
               variant="ghost" 
-              className="text-slate-200 hover:text-white hover:bg-white/10 font-medium transition-all duration-200"
-              onClick={navigateToApp}
+              onClick={() => window.location.href = '/auth'}
+              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
             >
               Sign In
             </Button>
             <Button 
-              className="bg-gradient-to-r from-purple-600 to-green-500 hover:from-purple-700 hover:to-green-600 text-white font-medium border-0 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-              onClick={navigateToApp}
+              onClick={() => window.location.href = '/app'}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
             >
-              Start 14-Day Free Trial
+              Get Started Free
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="text-gray-700 dark:text-gray-300"
+            >
+              {isMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 py-4 border-t border-white/10 bg-slate-900/95 backdrop-blur-md rounded-lg">
-            <div className="flex flex-col space-y-4 px-4">
-              <button 
-                onClick={() => scrollToSection('features')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
-                Features
-              </button>
-              <button 
-                onClick={() => scrollToSection('demo')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
-                Live Demo
-              </button>
-              <button 
-                onClick={() => scrollToSection('pricing')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
-                Pricing
-              </button>
-              <button 
-                onClick={() => scrollToSection('testimonials')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
-                Success Stories
-              </button>
-              <div className="pt-4 space-y-3 border-t border-white/10">
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 dark:border-gray-700">
+            <div className="px-2 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-900">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => scrollToSection(item.href)}
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 block px-3 py-2 text-base font-medium w-full text-left transition-colors duration-200"
+                >
+                  {item.name}
+                </button>
+              ))}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                 <Button 
                   variant="ghost" 
-                  className="w-full text-slate-200 hover:text-white justify-start font-medium"
-                  onClick={navigateToApp}
+                  onClick={() => window.location.href = '/auth'}
+                  className="w-full justify-start text-gray-700 dark:text-gray-300"
                 >
                   Sign In
                 </Button>
                 <Button 
-                  className="w-full bg-gradient-to-r from-purple-600 to-green-500 hover:from-purple-700 hover:to-green-600 text-white font-medium border-0"
-                  onClick={navigateToApp}
+                  onClick={() => window.location.href = '/app'}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
                 >
-                  Start 14-Day Free Trial
+                  Get Started Free
                 </Button>
               </div>
             </div>
           </div>
         )}
-      </nav>
-    </header>
+      </div>
+    </nav>
   );
 };
 
