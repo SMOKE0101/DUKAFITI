@@ -1,165 +1,93 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import CubeLogo from '@/components/branding/CubeLogo';
 
-const NavigationHeader = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+export const NavigationHeader = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  const navigateToApp = () => {
-    window.location.href = '/app';
-  };
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-slate-900/95 backdrop-blur-md border-b border-white/10 shadow-lg' : 'bg-slate-900/80 backdrop-blur-sm'
-    }`}>
-      <nav className="container mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* DukaFiti Brand Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg p-1">
-              <img 
-                src="/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png" 
-                alt="DukaFiti Logo" 
-                className="w-8 h-8"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-green-400 bg-clip-text text-transparent">
-                DukaFiti
-              </span>
-              <span className="text-xs text-green-400 font-medium -mt-1">
-                Ni DukaBora
-              </span>
-            </div>
-          </div>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200/20 dark:border-gray-700/20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <CubeLogo size="md" />
+            <span className="font-caesar text-2xl font-normal text-gray-900 dark:text-white tracking-wide">
+              DUKAFITI
+            </span>
+          </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <button 
-              onClick={() => scrollToSection('features')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
+          <nav className="hidden md:flex items-center space-x-8">
+            <Link to="/" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
+              Home
+            </Link>
+            <Link to="/features" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
               Features
-            </button>
-            <button 
-              onClick={() => scrollToSection('demo')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Live Demo
-            </button>
-            <button 
-              onClick={() => scrollToSection('pricing')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
+            </Link>
+            <Link to="/pricing" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
               Pricing
-            </button>
-            <button 
-              onClick={() => scrollToSection('testimonials')}
-              className="text-slate-200 hover:text-white transition-colors font-medium text-sm hover:scale-105 transform duration-200"
-            >
-              Success Stories
-            </button>
-          </div>
+            </Link>
+            <Link to="/contact" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
+              Contact
+            </Link>
+          </nav>
 
-          {/* Desktop CTA Buttons */}
+          {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              className="text-slate-200 hover:text-white hover:bg-white/10 font-medium transition-all duration-200"
-              onClick={navigateToApp}
-            >
-              Sign In
-            </Button>
-            <Button 
-              className="bg-gradient-to-r from-purple-600 to-green-500 hover:from-purple-700 hover:to-green-600 text-white font-medium border-0 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-              onClick={navigateToApp}
-            >
-              Start 14-Day Free Trial
-            </Button>
+            <Link to="/signin">
+              <Button variant="ghost">Sign In</Button>
+            </Link>
+            <Link to="/signup">
+              <Button>Get Started</Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={toggleMenu}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
           >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
+            {isMenuOpen ? (
+              <X className="h-6 w-6" />
             ) : (
-              <Menu className="w-6 h-6" />
+              <Menu className="h-6 w-6" />
             )}
           </button>
         </div>
 
         {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 py-4 border-t border-white/10 bg-slate-900/95 backdrop-blur-md rounded-lg">
-            <div className="flex flex-col space-y-4 px-4">
-              <button 
-                onClick={() => scrollToSection('features')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
+        {isMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-lg">
+            <nav className="flex flex-col p-4 space-y-3">
+              <Link to="/" className="block text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
+                Home
+              </Link>
+              <Link to="/features" className="block text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
                 Features
-              </button>
-              <button 
-                onClick={() => scrollToSection('demo')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
-                Live Demo
-              </button>
-              <button 
-                onClick={() => scrollToSection('pricing')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
+              </Link>
+              <Link to="/pricing" className="block text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
                 Pricing
-              </button>
-              <button 
-                onClick={() => scrollToSection('testimonials')}
-                className="text-slate-200 hover:text-white transition-colors text-left font-medium text-sm py-2"
-              >
-                Success Stories
-              </button>
-              <div className="pt-4 space-y-3 border-t border-white/10">
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-slate-200 hover:text-white justify-start font-medium"
-                  onClick={navigateToApp}
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  className="w-full bg-gradient-to-r from-purple-600 to-green-500 hover:from-purple-700 hover:to-green-600 text-white font-medium border-0"
-                  onClick={navigateToApp}
-                >
-                  Start 14-Day Free Trial
-                </Button>
-              </div>
+              </Link>
+              <Link to="/contact" className="block text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
+                Contact
+              </Link>
+            </nav>
+            <div className="flex flex-col p-4 space-y-3">
+              <Link to="/signin" className="block text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
+                Sign In
+              </Link>
+              <Link to="/signup">
+                <Button className="w-full">Get Started</Button>
+              </Link>
             </div>
           </div>
         )}
-      </nav>
+      </div>
     </header>
   );
 };
-
-export default NavigationHeader;

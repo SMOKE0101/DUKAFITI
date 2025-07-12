@@ -223,7 +223,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                   className="transition-all duration-300"
                 />
               </div>
-              <div className={`font-caesar font-normal ${brandTextColor} ${isMobile ? 'text-xl' : 'text-2xl'} tracking-wide transition-colors duration-300 drop-shadow-sm`}>
+              <div className={`font-caesar font-normal text-white ${isMobile ? 'text-xl' : 'text-2xl'} tracking-wide transition-colors duration-300 drop-shadow-sm`}>
                 DUKAFITI
               </div>
             </div>

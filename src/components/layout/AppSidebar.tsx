@@ -8,8 +8,7 @@ import {
   Users, 
   FileText, 
   Settings,
-  ChevronLeft,
-  ChevronRight
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -71,16 +70,24 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
       <div className="flex items-center justify-center p-4 border-b border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 min-h-[72px]">
         {isOpen ? (
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center justify-center flex-1">
-              <CubeLogo size="lg" className="max-w-[160px]" />
+            <div className="flex items-center justify-center flex-1 overflow-hidden">
+              <div className={cn(
+                "font-caesar text-2xl font-normal text-gray-900 dark:text-white tracking-wide transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
+                "opacity-100 scale-100"
+              )}>
+                DUKAFITI
+              </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggle}
-              className="p-2 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-300 ml-2"
+              className="p-2 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-300 ml-2 group"
             >
-              <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <Menu className={cn(
+                "w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                "group-hover:rotate-90"
+              )} />
             </Button>
           </div>
         ) : (
@@ -90,9 +97,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
               variant="ghost"
               size="sm"
               onClick={onToggle}
-              className="p-1 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-300"
+              className="p-1 hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-300 group"
             >
-              <ChevronRight className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+              <Menu className={cn(
+                "w-3 h-3 text-gray-600 dark:text-gray-400 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                "group-hover:rotate-90"
+              )} />
             </Button>
           </div>
         )}
@@ -126,7 +136,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
                 isActive ? "text-gray-900 dark:text-white scale-110" : "text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white group-hover:scale-110"
               )} />
               {isOpen && (
-                <span className="font-medium ml-3 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                <span className={cn(
+                  "font-medium ml-3 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
+                  "opacity-100 translate-x-0"
+                )}>
                   {item.label}
                 </span>
               )}
