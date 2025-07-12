@@ -1,10 +1,10 @@
 
 import React from 'react';
-import RoughBlockyDashboard from './RoughBlockyDashboard';
+import ColoredCardDashboard from './ColoredCardDashboard';
 
 const Dashboard = () => {
   return (
-    <RoughBlockyDashboard />
+    <ColoredCardDashboard />
   );
 };
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -149,7 +150,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   };
 
   const handleSearchSelect = (result: SearchResult) => {
-    navigate(result.route);
+    navigate('/app' + result.route);
     setSearchTerm('');
     setShowSearchDropdown(false);
     setShowMobileSearch(false);
@@ -421,7 +422,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                     <button
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md flex items-center gap-2 text-gray-700 dark:text-gray-300 text-sm"
                       onClick={() => {
-                        navigate('/settings');
+                        navigate('/app/settings');
                         setShowProfileMenu(false);
                       }}
                     >
@@ -431,7 +432,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                     <button
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md flex items-center gap-2 text-gray-700 dark:text-gray-300 text-sm"
                       onClick={() => {
-                        navigate('/reports');
+                        navigate('/app/reports');
                         setShowProfileMenu(false);
                       }}
                     >

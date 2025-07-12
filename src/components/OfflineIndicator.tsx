@@ -13,7 +13,7 @@ import {
   Database,
   Loader2
 } from 'lucide-react';
-import { useEnhancedOfflineManager } from '../hooks/useEnhancedOfflineManager';
+import { useRobustOfflineManager } from '../hooks/useRobustOfflineManager';
 
 const OfflineIndicator: React.FC = () => {
   const {
@@ -26,12 +26,12 @@ const OfflineIndicator: React.FC = () => {
     errors,
     forceSyncNow,
     clearSyncErrors,
-    testEnhancedOffline
-  } = useEnhancedOfflineManager();
+    testRobustOffline
+  } = useRobustOfflineManager();
 
   const handleTestOffline = async () => {
-    const result = await testEnhancedOffline();
-    console.log('Enhanced Offline Test Result:', result);
+    const result = await testRobustOffline();
+    console.log('Robust Offline Test Result:', result);
   };
 
   if (!isInitialized) {
@@ -41,7 +41,7 @@ const OfflineIndicator: React.FC = () => {
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-yellow-600 dark:text-yellow-400" />
             <span className="text-sm text-yellow-700 dark:text-yellow-300">
-              Initializing enhanced offline system...
+              Initializing robust offline system...
             </span>
           </div>
         </CardContent>
@@ -64,14 +64,14 @@ const OfflineIndicator: React.FC = () => {
                 <>
                   <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
                   <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                    Online
+                    Online - Robust Mode
                   </span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                    Offline Mode
+                    Offline Mode - Robust
                   </span>
                 </>
               )}
@@ -164,20 +164,20 @@ const OfflineIndicator: React.FC = () => {
               onClick={handleTestOffline}
               className="text-xs h-7 px-3"
             >
-              Test Offline
+              Test Robust
             </Button>
           </div>
 
           {/* Status Message */}
           <p className="text-xs text-muted-foreground">
             {isOnline 
-              ? "Enhanced offline mode ready. Data will sync automatically."
-              : "Working offline. Changes will sync when connection is restored."
+              ? "Robust offline mode ready. Data syncs automatically with field mapping."
+              : "Working offline robustly. Changes sync when connection restores."
             }
           </p>
         </div>
       </CardContent>
-    </Card>
+    </Card>  
   );
 };
 

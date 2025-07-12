@@ -28,35 +28,39 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
       <DialogContent 
         className={cn(
           isMobile 
-            ? "max-h-[90vh] w-[95vw] max-w-none m-2 p-0 flex flex-col" 
-            : "max-h-[85vh] p-0 flex flex-col",
+            ? "fixed inset-x-2 inset-y-4 h-[calc(100vh-2rem)] w-[calc(100vw-1rem)] max-w-none max-h-none m-0 p-0 flex flex-col rounded-lg overflow-hidden" 
+            : "max-h-[90vh] w-full max-w-2xl p-0 flex flex-col overflow-hidden",
           className
         )}
       >
-        {/* Mobile drag bar */}
+        {/* Mobile drag indicator */}
         {isMobile && (
-          <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-2 flex-shrink-0" />
+          <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 flex-shrink-0" />
         )}
         
-        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b border-border/50">
+        {/* Header - Fixed */}
+        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg sm:text-xl font-display font-semibold pr-2">
+            <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900 pr-2 line-clamp-1">
               {title}
             </DialogTitle>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="p-2 hover:bg-accent/10 flex-shrink-0"
+              className="p-2 hover:bg-gray-100 flex-shrink-0 rounded-full"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
-          <div className="space-y-4">
-            {children}
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto overscroll-contain bg-white">
+          <div className="p-4 sm:p-6">
+            <div className="space-y-4">
+              {children}
+            </div>
           </div>
         </div>
       </DialogContent>

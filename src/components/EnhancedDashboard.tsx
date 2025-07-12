@@ -1,9 +1,9 @@
 
 import React from 'react';
-import RoughBlockyDashboard from './RoughBlockyDashboard';
+import ColoredCardDashboard from './ColoredCardDashboard';
 
 const EnhancedDashboard = () => {
-  return <RoughBlockyDashboard />;
+  return <ColoredCardDashboard />;
 };
 
 export default EnhancedDashboard;
