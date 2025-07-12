@@ -4,41 +4,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  BarChart3, 
   TrendingUp, 
   ShoppingCart, 
   Users, 
-  Package, 
+  Package,
   AlertTriangle,
   DollarSign,
-  ArrowUpRight,
-  Activity
+  Activity,
+  BarChart3
 } from 'lucide-react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
+import EnhancedStatsCards from './dashboard/EnhancedStatsCards';
+import EnhancedCharts from './dashboard/EnhancedCharts';
 
-const RoughBlockyDashboard = () => {
+const PremiumDashboard = () => {
   const navigate = useNavigate();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { sales, loading: salesLoading } = useSupabaseSales();
 
-  console.log('Dashboard - Products data:', products);
-  console.log('Dashboard - Products loading:', productsLoading);
+  console.log('Premium Dashboard - Products data:', products);
+  console.log('Premium Dashboard - Products loading:', productsLoading);
 
-  // Calculate metrics
-  const totalProducts = products.length;
-  const totalCustomers = customers.length;
-  const totalSales = sales.length;
-
-  // Enhanced low stock calculation with better logging
+  // Calculate enhanced low stock with better logging
   const lowStockItems = products.filter(product => {
     console.log(`Product: ${product.name}, Stock: ${product.currentStock}, Threshold: ${product.lowStockThreshold}`);
     
-    // Handle different possible field names and ensure proper comparison
     const currentStock = product.currentStock ?? 0;
     const threshold = product.lowStockThreshold ?? 10;
     
@@ -52,96 +47,39 @@ const RoughBlockyDashboard = () => {
     return isLowStock;
   });
 
-  console.log('Dashboard - Low stock items:', lowStockItems);
-  console.log('Dashboard - Low stock count:', lowStockItems.length);
-
-  // Calculate total sales amount
-  const totalSalesAmount = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-
-  // Calculate profit
-  const totalProfit = sales.reduce((sum, sale) => sum + (sale.profit || 0), 0);
+  console.log('Premium Dashboard - Low stock items:', lowStockItems);
 
   // Recent sales (last 5)
   const recentSales = sales
-    .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 5);
 
   return (
-    <div className="space-y-6 p-6 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 min-h-screen">
+    <div className="space-y-8 p-6 bg-gradient-to-br from-background via-background to-muted/10 min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 font-caesar">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
           Dashboard Overview
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-muted-foreground text-lg">
           Complete view of your business performance
         </p>
       </div>
 
-      {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Products */}
-        <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Products</CardTitle>
-            <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">{totalProducts}</div>
-            {productsLoading && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Loading...</p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Enhanced Stats Cards */}
+      <EnhancedStatsCards 
+        sales={sales}
+        products={products}
+        customers={customers}
+      />
 
-        {/* Total Customers */}
-        <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 dark:hover:border-green-500 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Customers</CardTitle>
-            <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">{totalCustomers}</div>
-            {customersLoading && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Loading...</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Total Sales */}
-        <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Sales</CardTitle>
-            <ShoppingCart className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">{totalSales}</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {formatCurrency(totalSalesAmount)}
-            </p>
-            {salesLoading && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Loading...</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Total Profit */}
-        <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-yellow-400 dark:hover:border-yellow-500 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Profit</CardTitle>
-            <TrendingUp className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalProfit)}</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">All time</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Enhanced Charts */}
+      <EnhancedCharts sales={sales} />
 
       {/* Low Stock Alert Section */}
-      <Card className="border-2 border-dashed border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+      <Card className="border-2 border-dashed border-destructive/20 bg-destructive/5 dark:bg-destructive/10">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+          <CardTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
             Low Stock Alert
             {lowStockItems.length > 0 && (
@@ -154,7 +92,7 @@ const RoughBlockyDashboard = () => {
         <CardContent>
           {lowStockItems.length > 0 ? (
             <div className="space-y-3">
-              <p className="text-red-600 dark:text-red-400 text-sm">
+              <p className="text-destructive text-sm">
                 {lowStockItems.length} product{lowStockItems.length !== 1 ? 's' : ''} running low on stock:
               </p>
               <div className="grid gap-2">
@@ -163,10 +101,10 @@ const RoughBlockyDashboard = () => {
                   const threshold = product.lowStockThreshold ?? 10;
                   
                   return (
-                    <div key={product.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-700">
+                    <div key={product.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-destructive/20">
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">{product.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="font-medium text-foreground">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">
                           Stock: {currentStock === -1 ? 'Unspecified' : currentStock} 
                           {threshold && ` (Threshold: ${threshold})`}
                         </p>
@@ -182,7 +120,7 @@ const RoughBlockyDashboard = () => {
                 })}
               </div>
               {lowStockItems.length > 5 && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   And {lowStockItems.length - 5} more items...
                 </p>
               )}
@@ -213,12 +151,12 @@ const RoughBlockyDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
+      {/* Recent Activity and Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Sales */}
-        <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+        <Card className="border-0 shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Activity className="h-5 w-5" />
               Recent Sales
             </CardTitle>
@@ -227,17 +165,17 @@ const RoughBlockyDashboard = () => {
             {recentSales.length > 0 ? (
               <div className="space-y-3">
                 {recentSales.map((sale) => (
-                  <div key={sale.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div key={sale.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">{sale.productName}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium text-foreground">{sale.productName}</p>
+                      <p className="text-sm text-muted-foreground">
                         Qty: {sale.quantity} • {sale.paymentMethod}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900 dark:text-white">{formatCurrency(sale.total)}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {new Date(sale.timestamp || '').toLocaleDateString()}
+                      <p className="font-semibold text-foreground">{formatCurrency(sale.total)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(sale.timestamp).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -253,8 +191,8 @@ const RoughBlockyDashboard = () => {
               </div>
             ) : (
               <div className="text-center py-8">
-                <ShoppingCart className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">No recent sales</p>
+                <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No recent sales</p>
                 <Button 
                   onClick={() => navigate('/app/sales')} 
                   className="mt-4"
@@ -267,9 +205,9 @@ const RoughBlockyDashboard = () => {
         </Card>
 
         {/* Quick Actions */}
-        <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+        <Card className="border-0 shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <BarChart3 className="h-5 w-5" />
               Quick Actions
             </CardTitle>
@@ -316,4 +254,4 @@ const RoughBlockyDashboard = () => {
   );
 };
 
-export default RoughBlockyDashboard;
+export default PremiumDashboard;

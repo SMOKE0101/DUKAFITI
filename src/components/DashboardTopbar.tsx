@@ -51,9 +51,20 @@ const DashboardTopbar = () => {
 
   // Enhanced low stock alerts - handle both field name formats and exclude unspecified stock
   const lowStockAlerts = products.filter(p => {
-    const currentStock = p.current_stock ?? p.currentStock ?? 0;
-    const threshold = p.low_stock_threshold ?? p.lowStockThreshold ?? 10;
-    return currentStock !== -1 && currentStock <= threshold;
+    console.log(`Product: ${p.name}, Stock: ${p.currentStock}, Threshold: ${p.lowStockThreshold}`);
+    
+    // Handle different possible field names and ensure proper comparison
+    const currentStock = p.currentStock ?? 0;
+    const threshold = p.lowStockThreshold ?? 10;
+    
+    // Only consider items with specified stock (not -1 which means unspecified)
+    const isLowStock = currentStock !== -1 && currentStock <= threshold;
+    
+    if (isLowStock) {
+      console.log(`LOW STOCK DETECTED: ${p.name} - Stock: ${currentStock}, Threshold: ${threshold}`);
+    }
+    
+    return isLowStock;
   });
   const unreadNotifications = lowStockAlerts.length;
 
@@ -80,12 +91,12 @@ const DashboardTopbar = () => {
       .filter(p => p.name.toLowerCase().includes(term))
       .slice(0, 3)
       .forEach(product => {
-        const currentStock = product.current_stock ?? product.currentStock ?? 0;
+        const currentStock = product.currentStock ?? 0;
         results.push({
           id: product.id,
           type: 'product',
           title: product.name,
-          subtitle: `${formatCurrency(product.selling_price)} • Stock: ${currentStock === -1 ? 'Unspecified' : currentStock}`,
+          subtitle: `${formatCurrency(product.sellingPrice)} • Stock: ${currentStock === -1 ? 'Unspecified' : currentStock}`,
           route: '/app/inventory'
         });
       });
@@ -99,7 +110,7 @@ const DashboardTopbar = () => {
           id: customer.id,
           type: 'customer',
           title: customer.name,
-          subtitle: `${customer.phone} • Debt: ${formatCurrency(customer.outstanding_debt || customer.outstandingDebt || 0)}`,
+          subtitle: `${customer.phone} • Debt: ${formatCurrency(customer.outstandingDebt || 0)}`,
           route: '/app/customers'
         });
       });
@@ -243,8 +254,8 @@ const DashboardTopbar = () => {
                   {lowStockAlerts.length > 0 ? (
                     <div className="p-2">
                       {lowStockAlerts.map((product) => {
-                        const currentStock = product.current_stock ?? product.currentStock ?? 0;
-                        const threshold = product.low_stock_threshold ?? product.lowStockThreshold ?? 10;
+                        const currentStock = product.currentStock ?? 0;
+                        const threshold = product.lowStockThreshold ?? 10;
                         
                         return (
                           <div key={product.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md">

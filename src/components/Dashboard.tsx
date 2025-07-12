@@ -1,10 +1,10 @@
 
 import React from 'react';
-import RoughBlockyDashboard from './RoughBlockyDashboard';
+import PremiumDashboard from './PremiumDashboard';
 
 const Dashboard = () => {
   return (
-    <RoughBlockyDashboard />
+    <PremiumDashboard />
   );
 };
 
