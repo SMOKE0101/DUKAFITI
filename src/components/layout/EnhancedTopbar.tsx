@@ -13,8 +13,7 @@ import {
   Package,
   Users,
   ShoppingCart,
-  X,
-  Menu
+  X
 } from 'lucide-react';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
@@ -24,6 +23,25 @@ import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { useTheme } from 'next-themes';
 import CubeLogo from '../branding/CubeLogo';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotificationState } from '@/hooks/useNotificationState';
+
+// Hamburger Icon Component matching the design
+const HamburgerIcon: React.FC<{ isOpen?: boolean; className?: string }> = ({ 
+  isOpen = false, 
+  className = "" 
+}) => (
+  <div className={`w-6 h-6 flex flex-col justify-center items-center ${className}`}>
+    <span className={`block h-0.5 w-6 bg-current transform transition-all duration-300 ${
+      isOpen ? 'rotate-45 translate-y-1.5' : ''
+    }`} />
+    <span className={`block h-0.5 w-6 bg-current mt-1 transform transition-all duration-300 ${
+      isOpen ? 'opacity-0' : ''
+    }`} />
+    <span className={`block h-0.5 w-6 bg-current mt-1 transform transition-all duration-300 ${
+      isOpen ? '-rotate-45 -translate-y-1.5' : ''
+    }`} />
+  </div>
+);
 
 interface SearchResult {
   id: string;
@@ -55,6 +73,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   const navigate = useNavigate();
   const { theme, resolvedTheme } = useTheme();
   const { signOut } = useAuth();
+  const { markAllAsRead, setUnreadCount } = useNotificationState();
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -72,7 +91,12 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     p.currentStock !== -1 && 
     p.currentStock <= p.lowStockThreshold
   );
-  const unreadNotifications = lowStockAlerts.length;
+  
+  // Update notification count when alerts change
+  useEffect(() => {
+    const alertIds = lowStockAlerts.map(p => p.id);
+    setUnreadCount(lowStockAlerts.length, alertIds);
+  }, [lowStockAlerts, setUnreadCount]);
 
   // Global search with debounce
   useEffect(() => {
@@ -133,7 +157,6 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 
   const handleMobileSearchOpen = () => {
     setShowMobileSearch(true);
-    // Focus the input after the modal opens
     setTimeout(() => {
       const input = mobileSearchRef.current?.querySelector('input');
       input?.focus();
@@ -144,6 +167,16 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     setShowMobileSearch(false);
     setSearchTerm('');
     setSearchResults([]);
+  };
+
+  const handleNotificationsToggle = () => {
+    const newShowState = !showNotifications;
+    setShowNotifications(newShowState);
+    
+    // Mark notifications as read when opened
+    if (newShowState && lowStockAlerts.length > 0) {
+      markAllAsRead();
+    }
   };
 
   const handleLogout = async () => {
@@ -196,11 +229,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     }
   };
 
-  // Enhanced brand text color logic with theme debugging
   const currentTheme = resolvedTheme || theme || 'light';
-  console.log('EnhancedTopbar: Current theme for branding:', currentTheme);
-  
-  // Always use white text on the purple background for better contrast
   const brandTextColor = 'text-white';
 
   return (
@@ -209,19 +238,20 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
         <div className="flex items-center justify-between px-4 md:px-6 h-full">
           {/* Left - Brand and Sidebar Toggle */}
           <div className="flex items-center gap-3">
-            {/* Sidebar Toggle - Only show on desktop when not hidden */}
+            {/* Enhanced Sidebar Toggle - Only show on desktop when not hidden */}
             {!hideSidebarToggle && onSidebarToggle && !isMobile && !isTablet && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onSidebarToggle}
-                className="text-white hover:bg-white/10 p-2"
+                className="text-white hover:bg-white/10 p-2 transition-all duration-200"
+                title="Toggle Sidebar"
               >
-                <Menu className="w-5 h-5" />
+                <HamburgerIcon isOpen={!sidebarCollapsed} className="text-white" />
               </Button>
             )}
             
-            {/* Enhanced Brand Section with Error Boundary */}
+            {/* Enhanced Brand Section */}
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0">
                 <CubeLogo 
@@ -303,18 +333,18 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               </Button>
             )}
 
-            {/* Notifications */}
+            {/* Enhanced Notifications with Smart Badge */}
             <div className="relative" ref={notificationsRef}>
               <Button
                 variant="ghost"
                 size="sm"
                 className="relative text-white hover:bg-white/10 p-2"
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={handleNotificationsToggle}
               >
                 <Bell className="w-5 h-5" />
-                {unreadNotifications > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-red-500 text-white flex items-center justify-center">
-                    {unreadNotifications}
+                {lowStockAlerts.length > 0 && !showNotifications && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-red-500 text-white flex items-center justify-center animate-pulse">
+                    {lowStockAlerts.length}
                   </Badge>
                 )}
               </Button>
