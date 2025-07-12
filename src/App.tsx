@@ -135,6 +135,8 @@ function App() {
                   {/* Catch all route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                
+                {/* Toaster moved inside the AuthProvider context */}
                 <Toaster />
               </div>
             </AuthProvider>
