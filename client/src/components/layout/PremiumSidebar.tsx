@@ -84,15 +84,15 @@ export const PremiumSidebar: React.FC<PremiumSidebarProps> = ({ isOpen, onToggle
   // Get the appropriate logo based on theme and open state
   const getLogoSrc = () => {
     if (!isOpen) {
-      // Use cube icons for collapsed state
+      // Use collapsed logos for sidebar collapsed state
       return theme === 'dark' 
-        ? '/lovable-uploads/e71b20c6-1457-4277-a594-bb9ce4f09d56.png' // Dark mode cube
-        : '/lovable-uploads/0e966e8b-29a2-4e9c-bae2-eb4b0ff1f714.png'; // Light mode cube
+        ? '/sidebar-logo-dark-collapsed.png' // Dark mode collapsed
+        : '/sidebar-logo-light-collapsed.png'; // Light mode collapsed
     } else {
       // Use full logos for expanded state
       return theme === 'dark'
-        ? '/lovable-uploads/eb77e4bd-5d96-4815-a1ff-0bc09529c54a.png' // Dark mode full logo
-        : '/lovable-uploads/45d85eef-ee71-473e-95df-bb58337a9f07.png'; // Light mode full logo
+        ? '/sidebar-logo-dark.png' // Dark mode full logo
+        : '/sidebar-logo-light.png'; // Light mode full logo
     }
   };
 
