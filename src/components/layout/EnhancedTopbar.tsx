@@ -23,6 +23,7 @@ import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { useTheme } from 'next-themes';
 import CubeLogo from '../branding/CubeLogo';
+import { useAuth } from '@/hooks/use-auth';
 
 interface SearchResult {
   id: string;
@@ -53,6 +54,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 
   const navigate = useNavigate();
   const { theme, resolvedTheme } = useTheme();
+  const { signOut } = useAuth();
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -144,11 +146,15 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     setSearchResults([]);
   };
 
-  const handleLogout = () => {
-    // Add logout logic here
-    console.log('Logging out...');
-    setShowLogoutConfirm(false);
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      console.log('EnhancedTopbar: Signing out user');
+      await signOut();
+      setShowLogoutConfirm(false);
+    } catch (error) {
+      console.error('EnhancedTopbar: Sign out error:', error);
+      setShowLogoutConfirm(false);
+    }
   };
 
   // Close dropdowns when clicking outside
@@ -499,7 +505,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
               Confirm Logout
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to exit DukaSmart?
+              Are you sure you want to exit DUKAFITI?
             </p>
             
             <div className="flex gap-3">

@@ -28,6 +28,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Handle logout redirect
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out, redirecting to home');
+          // Use setTimeout to ensure state updates are complete before navigation
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 100);
+        }
       }
     );
 
@@ -96,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     console.log('Signing out');
     await supabase.auth.signOut();
+    // Navigation will be handled by the auth state change listener
   };
 
   const value = {

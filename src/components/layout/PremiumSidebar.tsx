@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
@@ -48,8 +47,17 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
   }
 
   const handleSignOut = async () => {
-    if (window.confirm('Are you sure you want to sign out?')) {
+    try {
+      console.log('PremiumSidebar: Signing out user');
       await signOut();
+    } catch (error) {
+      console.error('PremiumSidebar: Sign out error:', error);
+    }
+  };
+
+  const confirmSignOut = () => {
+    if (window.confirm('Are you sure you want to sign out?')) {
+      handleSignOut();
     }
   };
 
@@ -179,7 +187,7 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
         {/* Bottom Section - Logout with theme support */}
         <div className="p-4 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2 flex-shrink-0 bg-white dark:bg-gray-900 transition-colors duration-300">
           <button
-            onClick={handleSignOut}
+            onClick={confirmSignOut}
             className={cn(
               "group flex items-center rounded-xl w-full relative overflow-hidden",
               "transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",

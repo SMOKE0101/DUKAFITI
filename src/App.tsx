@@ -18,6 +18,7 @@ import InventoryPage from './components/InventoryPage';
 import ReportsPage from './components/ReportsPage';
 import DebtRecording from './components/DebtRecording';
 import Settings from './pages/Settings';
+import ModernLanding from './pages/ModernLanding';
 import ProtectedRoute from './components/ProtectedRoute';
 import ModernSalesPage from './components/ModernSalesPage';
 
@@ -59,8 +60,12 @@ function App() {
                   {/* Main route - redirect based on auth status */}
                   <Route path="/" element={<Index />} />
                   
+                  {/* Landing page for unauthenticated users */}
+                  <Route path="/modern-landing" element={<ModernLanding />} />
+                  
                   {/* Auth routes */}
                   <Route path="/auth" element={<AuthForm />} />
+                  <Route path="/signin" element={<AuthForm />} />
                   
                   {/* Protected routes wrapped with AppLayout */}
                   <Route path="/dashboard" element={
