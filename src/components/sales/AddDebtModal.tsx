@@ -120,10 +120,20 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
     }
   };
 
+  const handleCustomerAdded = (customer: any) => {
+    console.log('🎯 Customer added successfully, setting selection:', customer);
+    setSelectedCustomerId(customer.id);
+    setShowAddCustomer(false);
+    toast({
+      title: "Customer Added",
+      description: `${customer.name} has been selected for debt recording.`,
+    });
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] max-h-[95vh] w-[95vw] overflow-y-auto dark:bg-slate-800 fixed z-[9999]">
+        <DialogContent className="sm:max-w-[500px] max-h-[95vh] w-[95vw] overflow-y-auto bg-white dark:bg-slate-800 fixed z-[10000] mx-auto my-auto">
           <DialogHeader className="space-y-3 pb-4">
             <DialogTitle className="flex items-center gap-3 text-xl font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -151,24 +161,46 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
               <div className="flex gap-2">
                 <Select
                   value={selectedCustomerId}
-                  onValueChange={setSelectedCustomerId}
+                  onValueChange={(value) => {
+                    console.log('🎯 Customer selected:', value);
+                    setSelectedCustomerId(value);
+                  }}
                 >
-                  <SelectTrigger className="flex-1 h-12" style={{ fontSize: '16px' }}>
+                  <SelectTrigger className="flex-1 h-12 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:border-red-500 dark:focus:border-red-400" style={{ fontSize: '16px' }}>
                     <SelectValue placeholder="Choose a customer..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent 
+                    className="bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-gray-600 shadow-xl z-[10001] max-h-64 overflow-y-auto"
+                    position="popper"
+                    sideOffset={5}
+                  >
                     {customers.length === 0 ? (
-                      <div className="p-3 text-center text-sm text-muted-foreground">
-                        No customers found. Add a customer first.
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                          <UserPlus className="w-8 h-8 text-gray-400" />
+                          <p>No customers found.</p>
+                          <p className="text-xs">Click + to add a customer first.</p>
+                        </div>
                       </div>
                     ) : (
                       customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
+                        <SelectItem 
+                          key={customer.id} 
+                          value={customer.id}
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 p-3"
+                        >
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-medium">{customer.name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {customer.phone}
-                            </span>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium text-gray-900 dark:text-white">{customer.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {customer.phone}
+                              </span>
+                            </div>
+                            {customer.outstandingDebt > 0 && (
+                              <Badge variant="secondary" className="ml-2 text-xs">
+                                Debt: {formatCurrency(customer.outstandingDebt)}
+                              </Badge>
+                            )}
                           </div>
                         </SelectItem>
                       ))
@@ -179,13 +211,28 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                   type="button"
                   variant="outline"
                   size="icon"
-                  onClick={() => setShowAddCustomer(true)}
-                  className="h-11 w-11 shrink-0"
+                  onClick={() => {
+                    console.log('🎯 Opening add customer modal');
+                    setShowAddCustomer(true);
+                  }}
+                  className="h-12 w-12 shrink-0 border-2 border-red-300 dark:border-red-600 hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
                   title="Add new customer"
                 >
-                  <UserPlus className="w-4 h-4" />
+                  <UserPlus className="w-4 h-4 text-red-600 dark:text-red-400" />
                 </Button>
               </div>
+              
+              {/* Customer Selection Status */}
+              {selectedCustomer && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                      Selected: {selectedCustomer.name} ({selectedCustomer.phone})
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Debt Amount */}
@@ -323,11 +370,11 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
       {showAddCustomer && (
         <AddCustomerModal
           open={showAddCustomer}
-          onOpenChange={setShowAddCustomer}
-          onCustomerAdded={(customer) => {
-            setSelectedCustomerId(customer.id);
-            setShowAddCustomer(false);
+          onOpenChange={(open) => {
+            console.log('🎯 Add customer modal state change:', open);
+            setShowAddCustomer(open);
           }}
+          onCustomerAdded={handleCustomerAdded}
         />
       )}
     </>

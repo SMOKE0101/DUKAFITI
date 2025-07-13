@@ -76,6 +76,8 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
       const newCustomer = await createCustomer(customerData);
       
+      console.log('✅ Customer created successfully:', newCustomer);
+      
       toast({
         title: "Success!",
         description: `Customer ${formData.name} has been added successfully.`,
@@ -91,8 +93,13 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         initialDebt: 0,
       });
 
-      onCustomerAdded?.(newCustomer);
+      // Close modal first, then notify parent
       onOpenChange(false);
+      
+      // Use timeout to ensure modal closes before selecting customer
+      setTimeout(() => {
+        onCustomerAdded?.(newCustomer);
+      }, 100);
     } catch (error) {
       console.error('Error creating customer:', error);
       toast({
@@ -114,7 +121,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md w-[95vw] max-h-[95vh] overflow-y-auto bg-white dark:bg-slate-800">
+      <DialogContent className="sm:max-w-md w-[95vw] max-h-[95vh] overflow-y-auto bg-white dark:bg-slate-800 fixed z-[10002] mx-auto my-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-purple-600" />
