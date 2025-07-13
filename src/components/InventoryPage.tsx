@@ -291,7 +291,7 @@ const InventoryPage: React.FC = () => {
                   <SelectValue placeholder="All Categories" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-2 bg-white/95 backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl">
                 <SelectItem value="all" className="rounded-lg">All Categories</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category} className="rounded-lg">
@@ -309,7 +309,7 @@ const InventoryPage: React.FC = () => {
                   <SelectValue placeholder="All Stock Levels" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-2 bg-white/95 backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl">
                 <SelectItem value="all" className="rounded-lg">All Stock Levels</SelectItem>
                 <SelectItem value="in" className="rounded-lg">In Stock</SelectItem>
                 <SelectItem value="low" className="rounded-lg">Low Stock</SelectItem>

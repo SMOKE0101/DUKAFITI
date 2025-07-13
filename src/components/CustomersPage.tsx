@@ -280,7 +280,7 @@ const CustomersPage = () => {
                   <SelectValue placeholder="Filter by" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-2 bg-white/95 backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl">
                 <SelectItem value="all" className="rounded-lg">All Customers</SelectItem>
                 <SelectItem value="debt" className="rounded-lg">With Outstanding Debt</SelectItem>
                 <SelectItem value="no-debt" className="rounded-lg">No Outstanding Debt</SelectItem>
@@ -295,7 +295,7 @@ const CustomersPage = () => {
                   <SelectValue placeholder="Sort by" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-2 bg-white/95 backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl">
                 <SelectItem value="name" className="rounded-lg">Name A-Z</SelectItem>
                 <SelectItem value="debt" className="rounded-lg">Debt High-Low</SelectItem>
                 <SelectItem value="recent" className="rounded-lg">Recently Added</SelectItem>
