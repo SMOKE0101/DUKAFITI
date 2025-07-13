@@ -80,7 +80,8 @@ export const BottomNavigation: React.FC = () => {
       <div className="relative grid grid-cols-5 h-full max-w-full mx-auto px-1 py-2 pb-safe">
         {navigationItems.map((item, index) => {
           const Icon = item.icon;
-          const isActive = item.matchPaths?.some(path => location.pathname.startsWith(path)) || location.pathname === item.path;
+          // Fixed: Use exact matching instead of startsWith to prevent false positives
+          const isActive = item.matchPaths?.includes(location.pathname) || location.pathname === item.path;
           
           return (
             <NavLink
