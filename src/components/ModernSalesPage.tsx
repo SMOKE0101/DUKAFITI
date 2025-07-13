@@ -725,6 +725,39 @@ const ModernSalesPage = () => {
               grid gap-4
               ${isTablet ? 'grid-cols-3' : 'grid-cols-2 xl:grid-cols-3'}
             `}>
+              {/* Add Debt Card */}
+              <div
+                onClick={() => setShowAddDebt(true)}
+                className="border-2 border-red-400 rounded-xl bg-red-50 dark:bg-red-900/20 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 group p-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-mono font-black uppercase tracking-wide text-red-600 dark:text-red-400 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors text-sm">
+                        ADD DEBT
+                      </h3>
+                      <p className="text-red-500 dark:text-red-400 uppercase font-mono font-bold text-sm">
+                        CREDIT SALE
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 border-2 border-red-400 dark:border-red-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-red-500 dark:group-hover:border-red-400 transition-colors bg-red-100 dark:bg-red-800/50">
+                      <span className="text-red-600 dark:text-red-400 font-black text-lg">₹</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-mono font-black text-red-600 dark:text-red-400 text-base">
+                        RECORD DEBT
+                      </p>
+                      <p className="font-mono font-bold uppercase text-sm text-red-500 dark:text-red-400">
+                        CUSTOMER CREDIT
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}

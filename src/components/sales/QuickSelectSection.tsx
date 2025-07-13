@@ -259,23 +259,6 @@ const QuickSelectSection = ({ products, onAddToCart, onAddDebtClick }: QuickSele
 
           {/* Product Tiles Strip */}
           <div className="flex gap-2 overflow-x-auto pb-2 flex-1">
-            {/* Add Debt Tile - Always at index 0 */}
-            <div
-              className="relative flex-shrink-0 w-20 h-20 bg-red-500/90 hover:bg-red-600 rounded-xl shadow hover:shadow-lg transition-all duration-150 p-3 flex flex-col items-center justify-center cursor-pointer hover:-translate-y-1"
-              onClick={onAddDebtClick}
-              title="Add Debt"
-            >
-              {/* Debt Icon */}
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-1">
-                <span className="text-lg font-bold text-white">₹</span>
-              </div>
-              
-              {/* Label */}
-              <span className="text-xs font-medium text-white text-center">
-                Add Debt
-              </span>
-            </div>
-
             {favorites.map(product => (
               <div
                 key={product.id}

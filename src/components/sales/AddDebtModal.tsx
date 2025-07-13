@@ -1,18 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
-import { useSupabaseSales } from '@/hooks/useSupabaseSales';
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency } from '@/utils/currency';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertTriangle } from 'lucide-react';
+import { formatCurrency } from '@/utils/currency';
+import { DollarSign, UserPlus } from 'lucide-react';
+import AddCustomerModal from './AddCustomerModal';
 
 interface AddDebtModalProps {
   isOpen: boolean;
@@ -20,205 +20,295 @@ interface AddDebtModalProps {
 }
 
 const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-  const [amount, setAmount] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isMobile = useIsMobile();
   const { customers, updateCustomer } = useSupabaseCustomers();
+  const { products } = useSupabaseProducts();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const selectedCustomer = useMemo(() => {
-    return customers.find(c => c.id === selectedCustomerId);
-  }, [customers, selectedCustomerId]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [unitPrice, setUnitPrice] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
 
-  const currentDebt = selectedCustomer?.outstandingDebt || 0;
-  const newAmount = parseFloat(amount) || 0;
-  const totalDebt = currentDebt + newAmount;
+  const selectedProduct = products.find(p => p.id === selectedProductId);
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+  const totalAmount = parseFloat(unitPrice) * quantity || 0;
 
-  const isFormValid = selectedCustomerId && amount && newAmount > 0;
+  const handleProductChange = (productId: string) => {
+    setSelectedProductId(productId);
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setUnitPrice(product.sellingPrice.toString());
+    }
+  };
 
-  const handleSubmit = async () => {
-    if (!isFormValid || !user || !selectedCustomer) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedCustomerId || !selectedProductId || !unitPrice || quantity <= 0) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setIsSubmitting(true);
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to record debt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+
     try {
-      // Create a debt sale record
-      const saleData = {
-        user_id: user.id,
-        product_id: 'debt-record', // Special product ID for debt records
-        product_name: 'Credit Sale',
-        quantity: 1,
-        selling_price: newAmount,
-        cost_price: 0,
-        profit: 0,
-        total_amount: newAmount,
-        customer_id: selectedCustomerId,
-        customer_name: selectedCustomer.name,
-        payment_method: 'debt',
-        payment_details: {
-          debtAmount: newAmount,
-          cashAmount: 0,
-          mpesaAmount: 0,
-        },
-        timestamp: new Date().toISOString(),
-      };
+      // Create transaction record
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          customer_id: selectedCustomerId,
+          item_id: selectedProductId,
+          quantity,
+          unit_price: parseFloat(unitPrice),
+          total_amount: totalAmount,
+          notes,
+          paid: false,
+        });
 
-      const { error: saleError } = await supabase
-        .from('sales')
-        .insert([saleData]);
-
-      if (saleError) {
-        console.error('Error creating debt sale:', saleError);
-        throw new Error('Failed to record debt sale.');
+      if (transactionError) {
+        throw new Error('Failed to create transaction record');
       }
 
-      // Update customer's outstanding debt
-      await updateCustomer(selectedCustomer.id, {
-        outstandingDebt: totalDebt,
-        lastPurchaseDate: new Date().toISOString(),
-      });
+      // Update customer debt
+      if (selectedCustomer) {
+        const updatedDebt = selectedCustomer.outstandingDebt + totalAmount;
+        const updatedPurchases = selectedCustomer.totalPurchases + totalAmount;
+        
+        await updateCustomer(selectedCustomer.id, {
+          outstandingDebt: updatedDebt,
+          totalPurchases: updatedPurchases,
+          lastPurchaseDate: new Date().toISOString(),
+        });
+      }
+
+      // Update product stock
+      if (selectedProduct && selectedProduct.currentStock > 0) {
+        const newStock = Math.max(0, selectedProduct.currentStock - quantity);
+        const { error: stockError } = await supabase
+          .from('products')
+          .update({ current_stock: newStock })
+          .eq('id', selectedProductId);
+
+        if (stockError) {
+          console.error('Error updating stock:', stockError);
+        }
+      }
 
       toast({
         title: "Debt Recorded",
-        description: `${formatCurrency(newAmount)} debt added for ${selectedCustomer.name}`,
+        description: `Credit sale of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
       });
 
-      // Reset form and close modal
+      // Reset form and close
       setSelectedCustomerId('');
-      setAmount('');
+      setSelectedProductId('');
+      setQuantity(1);
+      setUnitPrice('');
+      setNotes('');
       onClose();
-
+      
     } catch (error) {
       console.error('Error recording debt:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to record debt",
+        description: "Failed to record debt transaction.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsProcessing(false);
     }
   };
 
-  const handleClose = () => {
-    setSelectedCustomerId('');
-    setAmount('');
-    onClose();
-  };
-
-  const content = (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="customer" className="text-sm font-medium">
-            Customer
-          </Label>
-          <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select customer..." />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name} — {customer.phone}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="amount" className="text-sm font-medium">
-            Amount
-          </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground font-mono">
-              KES
-            </span>
-            <Input
-              id="amount"
-              type="number"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="pl-12 font-mono"
-              min="0"
-              step="0.01"
-            />
-          </div>
-        </div>
-
-        {selectedCustomer && (
-          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium">Debt Summary</span>
-            </div>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Debt:</span>
-                <span className="font-mono">{formatCurrency(currentDebt)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">New Amount:</span>
-                <span className="font-mono">{formatCurrency(newAmount)}</span>
-              </div>
-              <div className="border-t pt-1 flex justify-between font-medium">
-                <span>Total Debt:</span>
-                <span className="font-mono text-red-600 dark:text-red-400">
-                  {formatCurrency(totalDebt)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-3">
-        <Button
-          variant="ghost"
-          onClick={handleClose}
-          className="flex-1"
-          disabled={isSubmitting}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!isFormValid || isSubmitting}
-          className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-        >
-          {isSubmitting ? 'Saving...' : 'Save Debt'}
-        </Button>
-      </div>
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Drawer open={isOpen} onOpenChange={handleClose}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Record Credit Sale</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4">
-            {content}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Record Credit Sale</DialogTitle>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <DollarSign className="w-5 h-5" />
+              Record Credit Sale
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Customer Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="customer">Customer *</Label>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedCustomerId}
+                  onValueChange={setSelectedCustomerId}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name} - {customer.phone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowAddCustomer(true)}
+                  title="Add new customer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Product Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="product">Product *</Label>
+              <Select
+                value={selectedProductId}
+                onValueChange={handleProductChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name} - {formatCurrency(product.sellingPrice)}
+                      {product.currentStock <= 0 && " (Out of Stock)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Quantity and Unit Price */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity *</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  placeholder="1"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unitPrice">Unit Price *</Label>
+                <Input
+                  id="unitPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={unitPrice}
+                  onChange={(e) => setUnitPrice(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Total Amount Display */}
+            {totalAmount > 0 && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-red-700 dark:text-red-300">
+                    Total Credit Amount:
+                  </span>
+                  <span className="text-lg font-bold text-red-600 dark:text-red-400">
+                    {formatCurrency(totalAmount)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Additional notes about this credit sale..."
+                rows={3}
+              />
+            </div>
+
+            {/* Customer Debt Info */}
+            {selectedCustomer && (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="text-sm">
+                  <div className="flex justify-between">
+                    <span>Current Debt:</span>
+                    <span className="font-medium text-yellow-700 dark:text-yellow-300">
+                      {formatCurrency(selectedCustomer.outstandingDebt)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>New Total Debt:</span>
+                    <span className="font-bold text-yellow-600 dark:text-yellow-400">
+                      {formatCurrency(selectedCustomer.outstandingDebt + totalAmount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+                disabled={isProcessing}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={isProcessing || !selectedCustomerId || !selectedProductId || !unitPrice || quantity <= 0}
+              >
+                {isProcessing ? "Recording..." : "Record Credit Sale"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Customer Modal */}
+      {showAddCustomer && (
+        <AddCustomerModal
+          open={showAddCustomer}
+          onOpenChange={setShowAddCustomer}
+          onCustomerAdded={(customer) => {
+            setSelectedCustomerId(customer.id);
+            setShowAddCustomer(false);
+          }}
+        />
+      )}
+    </>
   );
 };
 
