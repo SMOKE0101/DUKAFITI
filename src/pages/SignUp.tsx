@@ -77,17 +77,17 @@ const SignUp = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-accent/10 flex">
       {/* Left Panel - Form */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative">
+      <div className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 pt-6 pb-8 md:pt-20 md:pb-12 lg:justify-center lg:pt-0 lg:pb-0 relative">
         {/* Back Button */}
         <Link 
           to="/" 
-          className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+          className="absolute top-4 left-4 sm:top-6 sm:left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group z-10"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           <span className="text-sm font-medium">Back to Home</span>
         </Link>
 
-        <div className="max-w-md w-full space-y-8">
+        <div className="max-w-md w-full space-y-6 md:space-y-8 mt-16 sm:mt-20 lg:mt-0">
           {/* Header */}
           <div className="text-center">
             <Link to="/" className="inline-flex items-center justify-center space-x-3 mb-8 group">
