@@ -123,16 +123,19 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] max-h-[95vh] w-[95vw] overflow-y-auto dark:bg-slate-800">
-          <DialogHeader className="space-y-1">
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-              <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-4 h-4 text-red-600 dark:text-red-400" />
+        <DialogContent className="sm:max-w-[500px] max-h-[95vh] w-[95vw] overflow-y-auto dark:bg-slate-800 fixed z-[9999]">
+          <DialogHeader className="space-y-3 pb-4">
+            <DialogTitle className="flex items-center gap-3 text-xl font-bold">
+              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                <DollarSign className="w-5 h-5 text-white" />
               </div>
-              Record Cash Lending
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-red-700 dark:text-red-300">Record Cash Lending</span>
+                <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Debt Management</span>
+              </div>
             </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              Record a cash loan to a customer that will be tracked as debt
+            <DialogDescription className="text-sm text-muted-foreground bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border-l-4 border-red-500">
+              Record a cash loan to a customer that will be tracked as debt in your system
             </DialogDescription>
           </DialogHeader>
 
@@ -209,19 +212,21 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
 
             {/* Amount Summary */}
             {totalAmount > 0 && (
-              <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  <span className="font-semibold text-red-700 dark:text-red-300 text-sm">
+              <div className="bg-gradient-to-r from-red-50 via-red-50 to-orange-50 dark:from-red-900/20 dark:via-red-900/25 dark:to-orange-900/20 border-2 border-red-300 dark:border-red-700 rounded-2xl p-5 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-bold text-red-700 dark:text-red-300 text-base">
                     Debt Summary
                   </span>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-red-600 dark:text-red-400">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 rounded-xl">
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
                       Amount to lend:
                     </span>
-                    <span className="text-xl font-bold text-red-700 dark:text-red-300">
+                    <span className="text-2xl font-black text-red-700 dark:text-red-300">
                       {formatCurrency(totalAmount)}
                     </span>
                   </div>
@@ -231,31 +236,33 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
 
             {/* Customer Debt Info */}
             {selectedCustomer && (
-              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <span className="font-semibold text-amber-700 dark:text-amber-300 text-sm">
+              <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 dark:from-amber-900/20 dark:via-yellow-900/20 dark:to-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-bold text-amber-700 dark:text-amber-300 text-base">
                     Customer Debt Analysis
                   </span>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-amber-600 dark:text-amber-400">Current debt:</span>
-                    <span className="font-semibold text-amber-700 dark:text-amber-300">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 rounded-xl">
+                    <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Current debt:</span>
+                    <span className="font-bold text-lg text-amber-700 dark:text-amber-300">
                       {formatCurrency(selectedCustomer.outstandingDebt || 0)}
                     </span>
                   </div>
-                  <Separator className="bg-amber-200 dark:bg-amber-800" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-amber-600 dark:text-amber-400">New total debt:</span>
-                    <span className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                  <Separator className="bg-gradient-to-r from-amber-300 to-yellow-300 dark:from-amber-600 dark:to-yellow-600 h-0.5" />
+                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-xl border border-amber-200 dark:border-amber-600">
+                    <span className="text-sm font-medium text-amber-600 dark:text-amber-400">New total debt:</span>
+                    <span className="text-xl font-black text-amber-700 dark:text-amber-300">
                       {formatCurrency((selectedCustomer.outstandingDebt || 0) + totalAmount)}
                     </span>
                   </div>
                   {selectedCustomer.creditLimit && (selectedCustomer.outstandingDebt || 0) + totalAmount > selectedCustomer.creditLimit && (
-                    <div className="bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-2 mt-2">
-                      <p className="text-xs text-red-700 dark:text-red-300 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" />
+                    <div className="bg-gradient-to-r from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-xl p-4 mt-3">
+                      <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2 font-medium">
+                        <AlertTriangle className="w-4 h-4" />
                         Warning: This will exceed the customer's credit limit of {formatCurrency(selectedCustomer.creditLimit)}
                       </p>
                     </div>
@@ -280,30 +287,30 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
             <Separator className="my-6" />
 
             {/* Action Buttons */}
-            <div className="flex flex-col-reverse sm:flex-row gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-4 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1 h-12"
+                className="flex-1 h-14 font-semibold border-2 border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500"
                 disabled={isProcessing}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white font-semibold"
+                className="flex-1 h-14 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-200 active:scale-98"
                 disabled={isProcessing || !selectedCustomerId || !debtAmount || totalAmount <= 0}
               >
                 {isProcessing ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Recording...
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span className="font-bold">Recording...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Record Cash Lending
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="w-5 h-5" />
+                    <span className="font-bold">Record Cash Lending</span>
                   </div>
                 )}
               </Button>
