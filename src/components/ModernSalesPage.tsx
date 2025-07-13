@@ -519,7 +519,7 @@ const ModernSalesPage = () => {
                     <option value="">WALK-IN CUSTOMER</option>
                     {customers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name.toUpperCase()}
+                        {customer.name.toUpperCase()} - {customer.phone}
                       </option>
                     ))}
                   </select>
@@ -835,7 +835,7 @@ const ModernSalesPage = () => {
                     <option value="">WALK-IN CUSTOMER</option>
                     {customers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name.toUpperCase()}
+                        {customer.name.toUpperCase()} - {customer.phone}
                       </option>
                     ))}
                   </select>
