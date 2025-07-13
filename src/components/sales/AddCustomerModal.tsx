@@ -114,7 +114,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-white">
+      <DialogContent className="sm:max-w-md w-[95vw] max-h-[95vh] overflow-y-auto bg-white dark:bg-slate-800">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-purple-600" />
@@ -128,30 +128,32 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
               <Label htmlFor="name" className="text-sm font-bold text-gray-700">
                 Name *
               </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Customer name"
-                required
-                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
-                disabled={isSubmitting}
-              />
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="Customer name"
+                  required
+                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl h-12"
+                  style={{ fontSize: '16px' }}
+                  disabled={isSubmitting}
+                />
             </div>
             
             <div>
               <Label htmlFor="phone" className="text-sm font-bold text-gray-700">
                 Phone *
               </Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="Phone number"
-                required
-                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
-                disabled={isSubmitting}
-              />
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => handleChange('phone', e.target.value)}
+                  placeholder="Phone number"
+                  required
+                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl h-12"
+                  style={{ fontSize: '16px' }}
+                  disabled={isSubmitting}
+                />
             </div>
             
             <div>
@@ -228,14 +230,14 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1 border-2 border-gray-300 hover:border-gray-400 rounded-xl"
+              className="flex-1 border-2 border-gray-300 hover:border-gray-400 rounded-xl h-12"
               disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl h-12"
               disabled={isSubmitting || !formData.name.trim() || !formData.phone.trim()}
             >
               {isSubmitting ? (

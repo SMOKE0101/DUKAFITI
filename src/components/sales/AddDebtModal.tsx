@@ -123,7 +123,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] max-h-[95vh] w-[95vw] overflow-y-auto">
+        <DialogContent className="sm:max-w-[500px] max-h-[95vh] w-[95vw] overflow-y-auto dark:bg-slate-800">
           <DialogHeader className="space-y-1">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold">
               <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
@@ -150,7 +150,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                   value={selectedCustomerId}
                   onValueChange={setSelectedCustomerId}
                 >
-                  <SelectTrigger className="flex-1 h-11">
+                  <SelectTrigger className="flex-1 h-12" style={{ fontSize: '16px' }}>
                     <SelectValue placeholder="Choose a customer..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -201,7 +201,8 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                   value={debtAmount}
                   onChange={(e) => setDebtAmount(e.target.value)}
                   placeholder="0.00"
-                  className="pl-10 h-11 text-lg font-semibold"
+                  className="pl-10 h-12 text-lg font-semibold"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
             </div>
@@ -284,14 +285,14 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1 h-11"
+                className="flex-1 h-12"
                 disabled={isProcessing}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white font-semibold"
+                className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white font-semibold"
                 disabled={isProcessing || !selectedCustomerId || !debtAmount || totalAmount <= 0}
               >
                 {isProcessing ? (

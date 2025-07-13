@@ -1,10 +1,10 @@
 
 import React from 'react';
-import ModernSalesPage from './ModernSalesPage';
+import OptimizedModernSalesPage from './OptimizedModernSalesPage';
 
 const SalesManagement = () => {
-  console.log('🔥 SalesManagement component loaded - should render ModernSalesPage');
-  return <ModernSalesPage />;
+  console.log('🔥 SalesManagement component loaded - should render OptimizedModernSalesPage');
+  return <OptimizedModernSalesPage />;
 };
 
 export default SalesManagement;
