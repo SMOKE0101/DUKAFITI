@@ -36,10 +36,10 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <TooltipProvider>
-            <BrowserRouter>
-              <AuthProvider>
+        <BrowserRouter>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <AuthProvider>
+              <TooltipProvider>
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
@@ -75,13 +75,13 @@ function App() {
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
+                  <Toaster />
+                  <Sonner />
                 </div>
-                <Toaster />
-                <Sonner />
-              </AuthProvider>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ThemeProvider>
+              </TooltipProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>
   );
