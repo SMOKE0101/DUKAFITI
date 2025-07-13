@@ -109,24 +109,28 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer, onUpdateCustomer }: C
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col bg-white rounded-lg shadow-lg border z-50">
-        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col bg-white dark:bg-gray-900 rounded-xl shadow-2xl border-2 border-gray-600 z-50">
+        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b-4 border-blue-600 bg-white dark:bg-gray-900">
           <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-xl font-bold text-blue-600">{customer.name.charAt(0).toUpperCase()}</span>
+              <div className="w-12 h-12 border-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                <span className="text-xl font-bold text-blue-600 font-mono uppercase">{customer.name.charAt(0).toUpperCase()}</span>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{customer.name}</h2>
-                <p className="text-sm text-gray-600">{customer.phone}</p>
+                <h2 className="text-xl sm:text-2xl font-bold font-mono uppercase tracking-wider text-gray-900 dark:text-white">{customer.name}</h2>
+                <p className="text-sm font-mono text-gray-600 dark:text-gray-400">{customer.phone}</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Badge className={`${getRiskBadgeColor(customer.riskRating)} text-sm px-3 py-1`}>
+              <Badge className={`border-2 rounded-lg px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider ${
+                customer.riskRating === 'low' ? 'border-green-600 bg-green-50 text-green-600' :
+                customer.riskRating === 'medium' ? 'border-yellow-600 bg-yellow-50 text-yellow-600' :
+                'border-red-600 bg-red-50 text-red-600'
+              }`}>
                 {customer.riskRating.toUpperCase()} RISK
               </Badge>
               {customer.outstandingDebt > 0 && (
-                <Badge variant="destructive" className="text-sm px-3 py-1 bg-red-500 text-white">
+                <Badge className="border-2 border-red-600 bg-red-50 text-red-600 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider rounded-lg">
                   DEBT: {formatCurrency(customer.outstandingDebt)}
                 </Badge>
               )}
@@ -134,7 +138,7 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer, onUpdateCustomer }: C
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 sm:p-6">
           <div className="space-y-4 sm:space-y-6">
             {/* Outstanding Debt Alert */}
             {totalDebt > 0 && (
