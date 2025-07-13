@@ -12,6 +12,8 @@ import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus, Wifi, WifiOff 
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
+import AddDebtModal from './sales/AddDebtModal';
+import QuickSelectSection from './sales/QuickSelectSection';
 import { Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +29,7 @@ const ModernSalesPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [showAddDebt, setShowAddDebt] = useState(false);
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -707,6 +710,13 @@ const ModernSalesPage = () => {
           />
         </div>
 
+        {/* Quick Select Section */}
+        <QuickSelectSection 
+          products={products}
+          onAddToCart={addToCart}
+          onAddDebtClick={() => setShowAddDebt(true)}
+        />
+
         {/* Product Grid and Cart Layout */}
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
           {/* Product Grid */}
@@ -937,6 +947,12 @@ const ModernSalesPage = () => {
           }}
         />
       )}
+
+      {/* Add Debt Modal */}
+      <AddDebtModal
+        isOpen={showAddDebt}
+        onClose={() => setShowAddDebt(false)}
+      />
     </div>
   );
 };
