@@ -8,17 +8,23 @@ const NavigationHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigationItems = [
+    { name: 'Intro', href: '#hero' },
+    { name: 'How it Works', href: '#how-it-works' },
     { name: 'Features', href: '#features' },
-    { name: 'Demo', href: '#demo' },
-    { name: 'Pricing', href: '#pricing' },
-    { name: 'Testimonials', href: '#testimonials' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'Sign In', href: '/signin', isRoute: true },
+    { name: 'Testimonies', href: '#testimonials' },
   ];
 
-  const scrollToSection = (href: string) => {
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+  const handleNavigation = (item: { name: string; href: string; isRoute?: boolean }) => {
+    if (item.isRoute) {
+      window.location.href = item.href;
+    } else if (item.href === '#hero') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      const element = document.querySelector(item.href);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
     }
     setIsMenuOpen(false);
   };
@@ -38,13 +44,13 @@ const NavigationHeader = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-8">
+          <div className="hidden lg:block">
+            <div className="ml-8 flex items-center space-x-6 xl:space-x-8">
               {navigationItems.map((item) => (
                 <button
                   key={item.name}
-                  onClick={() => scrollToSection(item.href)}
-                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 text-sm font-medium transition-colors duration-200 hover:scale-105"
+                  onClick={() => handleNavigation(item)}
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 text-sm font-medium transition-colors duration-200 hover:scale-105 whitespace-nowrap"
                 >
                   {item.name}
                 </button>
@@ -52,15 +58,8 @@ const NavigationHeader = () => {
             </div>
           </div>
 
-          {/* Desktop CTA Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => window.location.href = '/signin'}
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              Sign In
-            </Button>
+          {/* Desktop CTA Button */}
+          <div className="hidden lg:flex items-center">
             <Button 
               onClick={() => window.location.href = '/app/dashboard'}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
@@ -93,20 +92,13 @@ const NavigationHeader = () => {
               {navigationItems.map((item) => (
                 <button
                   key={item.name}
-                  onClick={() => scrollToSection(item.href)}
+                  onClick={() => handleNavigation(item)}
                   className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 block px-3 py-2 text-base font-medium w-full text-left transition-colors duration-200"
                 >
                   {item.name}
                 </button>
               ))}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => window.location.href = '/signin'}
-                  className="w-full justify-start text-gray-700 dark:text-gray-300"
-                >
-                  Sign In
-                </Button>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Button 
                   onClick={() => window.location.href = '/app/dashboard'}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"

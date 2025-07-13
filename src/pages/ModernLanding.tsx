@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ArrowRight, Check, Star, ChevronDown, Eye, EyeOff, Clock, Store } from 'lucide-react';
+import { ArrowRight, Check, Star, ChevronDown, Eye, EyeOff, Clock, Store, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 
 const ModernLanding = () => {
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [signUpData, setSignUpData] = useState({
     name: '',
     email: '',
@@ -154,27 +155,117 @@ const ModernLanding = () => {
               <span className="text-2xl font-bold text-primary font-caesar">DukaFiti</span>
             </div>
             
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
-              <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">How it Works</a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-              <a href="#about" className="text-muted-foreground hover:text-foreground transition-colors">About</a>
+            <nav className="hidden lg:flex items-center space-x-6 xl:space-x-8">
+              <a 
+                href="#hero" 
+                onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
+              >
+                Intro
+              </a>
+              <a 
+                href="#how-it-works" 
+                className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
+              >
+                How it Works
+              </a>
+              <a 
+                href="#features" 
+                className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
+              >
+                Features
+              </a>
+              <Link 
+                to="/signin"
+                className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
+              >
+                Sign In
+              </Link>
+              <a 
+                href="#testimonials" 
+                className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
+              >
+                Testimonies
+              </a>
             </nav>
 
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" asChild className="hover:bg-muted/50">
-                <Link to="/signin">Login</Link>
+              <Button asChild className="bg-primary hover:bg-primary/90 hidden sm:flex">
+                <Link to="/signup">Get Started</Link>
               </Button>
-              <Button asChild className="bg-primary hover:bg-primary/90">
-                <Link to="/signup">Sign Up</Link>
+              
+              {/* Mobile menu button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
               </Button>
             </div>
           </div>
         </div>
+        
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-t border-border bg-background">
+            <div className="px-4 py-4 space-y-4">
+              <a 
+                href="#hero" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  window.scrollTo({ top: 0, behavior: 'smooth' }); 
+                  setIsMobileMenuOpen(false);
+                }}
+                className="block text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Intro
+              </a>
+              <a 
+                href="#how-it-works"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                How it Works
+              </a>
+              <a 
+                href="#features"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Features
+              </a>
+              <Link 
+                to="/signin"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Sign In
+              </Link>
+              <a 
+                href="#testimonials"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Testimonies
+              </a>
+              <div className="pt-4 border-t border-border">
+                <Button asChild className="w-full bg-primary hover:bg-primary/90">
+                  <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>Get Started</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-32 bg-background">
+      <section id="hero" className="py-20 lg:py-32 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
@@ -460,7 +551,7 @@ const ModernLanding = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-muted/30">
+      <section id="testimonials" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-foreground mb-4 font-caesar">What Our Customers Say</h2>
