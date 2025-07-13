@@ -350,26 +350,26 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 )}
               </Button>
 
-              {/* Notifications Dropdown - Better mobile positioning */}
+              {/* Notifications Dropdown - Mobile optimized with blocky design */}
               {showNotifications && (
                 <div className={`
-                  absolute top-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border z-50 max-h-80 overflow-y-auto
+                  absolute top-full mt-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-xl border-2 border-gray-200 dark:border-gray-700 z-50 max-h-80 overflow-y-auto
                   ${isMobile 
-                    ? 'right-0 w-[calc(100vw-3rem)] max-w-sm' 
+                    ? 'right-0 w-[calc(100vw-2rem)] max-w-xs' 
                     : isTablet 
-                      ? 'right-0 w-80 max-w-[calc(100vw-2rem)]' 
+                      ? 'right-0 w-72 max-w-[calc(100vw-2rem)]' 
                       : 'right-0 w-80'
                   }
                 `}>
-                  <div className="p-4 border-b">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                      Low Stock Alerts
+                  <div className="p-4 border-b-2 border-gray-200 dark:border-gray-700">
+                    <h3 className="font-mono text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                      LOW STOCK ALERTS
                     </h3>
                   </div>
                   {lowStockAlerts.length > 0 ? (
                     <div className="p-2 max-h-64 overflow-y-auto">
                       {lowStockAlerts.map((product) => (
-                        <div key={product.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md">
+                        <div key={product.id} className="p-3 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 rounded-xl cursor-pointer transition-all duration-200 border border-transparent hover:border-orange-300 dark:hover:border-orange-700 mb-2">
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="font-medium text-gray-900 dark:text-white text-sm truncate">
@@ -381,17 +381,20 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                             </div>
                             <Badge 
                               variant={product.currentStock <= 0 ? "destructive" : "secondary"}
-                              className="text-xs ml-2 flex-shrink-0"
+                              className="text-xs ml-2 flex-shrink-0 font-mono uppercase rounded-full"
                             >
-                              {product.currentStock <= 0 ? 'Out' : 'Low'}
+                              {product.currentStock <= 0 ? 'OUT' : 'LOW'}
                             </Badge>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                      All stocked up! 🎉
+                    <div className="p-8 text-center">
+                      <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Package className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 dark:text-gray-400 font-mono text-xs uppercase tracking-wide">All stocked up! 🎉</p>
                     </div>
                   )}
                 </div>

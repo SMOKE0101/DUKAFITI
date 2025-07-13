@@ -11,7 +11,9 @@ import {
   Plus,
   UserPlus,
   ShoppingBag,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
@@ -59,83 +61,89 @@ const ColoredCardDashboard = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Total Sales Today - Green */}
-        <Card className="border-l-4 border-l-green-500 bg-card dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-slate-400">
-              TOTAL SALES TODAY
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground dark:text-white">
-              {formatCurrency(totalSalesToday)}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Orders Today - Blue */}
-        <Card className="border-l-4 border-l-blue-500 bg-card dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-slate-400">
-              ORDERS TODAY
-            </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground dark:text-white">
-              {ordersToday}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Active Customers - Purple */}
-        <Card className="border-l-4 border-l-purple-500 bg-card dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-slate-400">
-              ACTIVE CUSTOMERS
-            </CardTitle>
-            <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground dark:text-white">
-              {activeCustomers}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Low Stock Products - Orange */}
-        <Card className="border-l-4 border-l-orange-500 bg-card dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-slate-400">
-              LOW STOCK PRODUCTS
-            </CardTitle>
-            <Package className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground dark:text-white">
-              {lowStockProducts.length}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Modern Top Bar */}
+      <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 md:px-6">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <h1 className="font-mono text-lg md:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+            DASHBOARD
+          </h1>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Low Stock Alerts */}
-        <Card className="bg-card dark:bg-slate-800/50 shadow-sm border-0 ring-1 ring-border dark:ring-slate-700">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground dark:text-white flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500 dark:text-orange-400" />
-              LOW STOCK ALERTS
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="p-6 space-y-8 max-w-7xl mx-auto">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              title: 'Total Sales Today',
+              value: formatCurrency(totalSalesToday),
+              icon: DollarSign,
+              color: 'border-green-600',
+              iconColor: 'text-green-600 dark:text-green-400'
+            },
+            {
+              title: 'Orders Today',
+              value: ordersToday.toString(),
+              icon: ShoppingCart,
+              color: 'border-blue-600',
+              iconColor: 'text-blue-600 dark:text-blue-400'
+            },
+            {
+              title: 'Active Customers',
+              value: activeCustomers.toString(),
+              icon: Users,
+              color: 'border-purple-600',
+              iconColor: 'text-purple-600 dark:text-purple-400'
+            },
+            {
+              title: 'Low Stock Products',
+              value: lowStockProducts.length.toString(),
+              icon: Package,
+              color: 'border-orange-600',
+              iconColor: 'text-orange-600 dark:text-orange-400'
+            }
+          ].map((metric, index) => {
+            const Icon = metric.icon;
+            return (
+              <div key={index} className={`border-2 ${metric.color} rounded-xl p-6 bg-transparent`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-mono text-xs font-black uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-3">
+                      {metric.title}
+                    </h3>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                      {metric.value}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+                    <Icon className={`w-5 h-5 ${metric.iconColor}`} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Low Stock Alerts */}
+          <div className="border-2 border-orange-600 rounded-xl p-6 bg-transparent">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-5 h-5 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                LOW STOCK ALERTS
+              </h3>
+            </div>
+            
             {lowStockProducts.length > 0 ? (
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {lowStockProducts.slice(0, 5).map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800/50">
+                  <div key={product.id} className="flex items-center justify-between p-3 border border-orange-300 dark:border-orange-700 rounded-lg bg-transparent">
                     <div className="flex-1">
                       <div className="font-medium text-foreground dark:text-white">{product.name}</div>
                       <div className="text-sm text-muted-foreground dark:text-slate-400">
@@ -144,47 +152,46 @@ const ColoredCardDashboard = () => {
                     </div>
                     <Badge 
                       variant={product.currentStock <= 0 ? "destructive" : "secondary"}
-                      className="ml-2"
+                      className="ml-2 font-mono text-xs uppercase"
                     >
-                      {product.currentStock <= 0 ? 'Out' : 'Low'}
+                      {product.currentStock <= 0 ? 'OUT' : 'LOW'}
                     </Badge>
                   </div>
                 ))}
                 {lowStockProducts.length > 5 && (
                   <div className="text-center">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
+                    <button
                       onClick={() => navigate('/app/inventory')}
-                      className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                      className="px-4 py-2 bg-transparent border-2 border-orange-300 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg font-mono text-xs font-bold uppercase transition-all duration-200"
                     >
                       View All ({lowStockProducts.length})
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground dark:text-slate-400">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>All products are well stocked! 🎉</p>
+              <div className="text-center py-8">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">All products are well stocked! 🎉</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Outstanding Debts */}
-        <Card className="bg-card dark:bg-slate-800/50 shadow-sm border-0 ring-1 ring-border dark:ring-slate-700">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground dark:text-white flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-red-500 dark:text-red-400" />
-              OUTSTANDING DEBTS
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          {/* Outstanding Debts */}
+          <div className="border-2 border-red-600 rounded-xl p-6 bg-transparent">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-5 h-5 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+                <DollarSign className="w-3 h-3 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                OUTSTANDING DEBTS
+              </h3>
+            </div>
+            
             {customersWithDebt.length > 0 ? (
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {customersWithDebt.slice(0, 5).map((customer) => (
-                  <div key={customer.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50">
+                  <div key={customer.id} className="flex items-center justify-between p-3 border border-red-300 dark:border-red-700 rounded-lg bg-transparent">
                     <div className="flex-1">
                       <div className="font-medium text-foreground dark:text-white">{customer.name}</div>
                       <div className="text-sm text-muted-foreground dark:text-slate-400">{customer.phone}</div>
@@ -201,60 +208,54 @@ const ColoredCardDashboard = () => {
                 ))}
                 {customersWithDebt.length > 5 && (
                   <div className="text-center">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
+                    <button
                       onClick={() => navigate('/app/customers')}
-                      className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                      className="px-4 py-2 bg-transparent border-2 border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg font-mono text-xs font-bold uppercase transition-all duration-200"
                     >
                       View All ({customersWithDebt.length})
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground dark:text-slate-400">
-                <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No outstanding debts! 💚</p>
+              <div className="text-center py-8">
+                <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">No outstanding debts! 💚</p>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
 
-      {/* Quick Actions */}
-      <Card className="bg-card dark:bg-slate-800/50 shadow-sm border-0 ring-1 ring-border dark:ring-slate-700">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground dark:text-white">
+        {/* Quick Actions */}
+        <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-transparent">
+          <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white mb-6">
             QUICK ACTIONS
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Button 
+            <button 
               onClick={() => handleQuickAction('add-sale')}
-              className="flex items-center gap-2 h-12 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white"
+              className="flex items-center justify-center gap-2 h-12 bg-transparent border-2 border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl font-mono text-sm font-bold uppercase tracking-wide transition-all duration-200"
             >
               <ShoppingBag className="h-4 w-4" />
               Record Sale
-            </Button>
-            <Button 
+            </button>
+            <button 
               onClick={() => handleQuickAction('add-product')}
-              className="flex items-center gap-2 h-12 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
+              className="flex items-center justify-center gap-2 h-12 bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl font-mono text-sm font-bold uppercase tracking-wide transition-all duration-200"
             >
               <Plus className="h-4 w-4" />
               Add Product
-            </Button>
-            <Button 
+            </button>
+            <button 
               onClick={() => handleQuickAction('add-customer')}
-              className="flex items-center gap-2 h-12 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-700 text-white"
+              className="flex items-center justify-center gap-2 h-12 bg-transparent border-2 border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl font-mono text-sm font-bold uppercase tracking-wide transition-all duration-200"
             >
               <UserPlus className="h-4 w-4" />
               Add Customer
-            </Button>
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
