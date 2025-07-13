@@ -167,7 +167,7 @@ const ModernSalesPage = () => {
         await processOfflineSale(customerId, customer);
       }
 
-      // Success - clear cart and navigate
+      // Success - clear cart and switch to search panel
       toast({
         title: "Success!",
         description: `Sale completed ${isOnline ? 'online' : 'offline'}! Total: ${formatCurrency(total)}`,
@@ -175,7 +175,7 @@ const ModernSalesPage = () => {
       
       clearCart();
       setSelectedCustomerId(null);
-      navigate('/dashboard');
+      setActivePanel('search');
 
     } catch (error) {
       console.error('❌ Checkout error:', error);
