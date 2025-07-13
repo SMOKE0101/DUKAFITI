@@ -1,13 +1,13 @@
 
 import React from 'react';
-import BlockyReportsPage from './reports/BlockyReportsPage';
+import ModernReportsPage from './reports/ModernReportsPage';
 
 const ReportsPage = () => {
   console.log('ReportsPage component rendering');
   
   return (
     <div className="w-full h-full">
-      <BlockyReportsPage />
+      <ModernReportsPage />
     </div>
   );
 };
