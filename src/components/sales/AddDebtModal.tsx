@@ -26,32 +26,21 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
   const { toast } = useToast();
 
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [unitPrice, setUnitPrice] = useState('');
+  const [debtAmount, setDebtAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
-  const selectedProduct = products.find(p => p.id === selectedProductId);
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-  const totalAmount = parseFloat(unitPrice) * quantity || 0;
-
-  const handleProductChange = (productId: string) => {
-    setSelectedProductId(productId);
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      setUnitPrice(product.sellingPrice.toString());
-    }
-  };
+  const totalAmount = parseFloat(debtAmount) || 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedCustomerId || !selectedProductId || !unitPrice || quantity <= 0) {
+    if (!selectedCustomerId || !debtAmount || totalAmount <= 0) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields.",
+        description: "Please select a customer and enter a valid debt amount.",
         variant: "destructive",
       });
       return;
@@ -69,17 +58,17 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
     setIsProcessing(true);
 
     try {
-      // Create transaction record
+      // Create transaction record for cash lending
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           user_id: user.id,
           customer_id: selectedCustomerId,
-          item_id: selectedProductId,
-          quantity,
-          unit_price: parseFloat(unitPrice),
+          item_id: null, // No product for cash lending
+          quantity: 1,
+          unit_price: totalAmount,
           total_amount: totalAmount,
-          notes,
+          notes: notes || 'Cash lending transaction',
           paid: false,
         });
 
@@ -90,38 +79,21 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
       // Update customer debt
       if (selectedCustomer) {
         const updatedDebt = selectedCustomer.outstandingDebt + totalAmount;
-        const updatedPurchases = selectedCustomer.totalPurchases + totalAmount;
         
         await updateCustomer(selectedCustomer.id, {
           outstandingDebt: updatedDebt,
-          totalPurchases: updatedPurchases,
           lastPurchaseDate: new Date().toISOString(),
         });
       }
 
-      // Update product stock
-      if (selectedProduct && selectedProduct.currentStock > 0) {
-        const newStock = Math.max(0, selectedProduct.currentStock - quantity);
-        const { error: stockError } = await supabase
-          .from('products')
-          .update({ current_stock: newStock })
-          .eq('id', selectedProductId);
-
-        if (stockError) {
-          console.error('Error updating stock:', stockError);
-        }
-      }
-
       toast({
-        title: "Debt Recorded",
-        description: `Credit sale of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
+        title: "Cash Lending Recorded",
+        description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
       });
 
       // Reset form and close
       setSelectedCustomerId('');
-      setSelectedProductId('');
-      setQuantity(1);
-      setUnitPrice('');
+      setDebtAmount('');
       setNotes('');
       onClose();
       
@@ -144,7 +116,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <DollarSign className="w-5 h-5" />
-              Record Credit Sale
+              Record Cash Lending
             </DialogTitle>
           </DialogHeader>
 
@@ -180,60 +152,27 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
               </div>
             </div>
 
-            {/* Product Selection */}
+            {/* Debt Amount */}
             <div className="space-y-2">
-              <Label htmlFor="product">Product *</Label>
-              <Select
-                value={selectedProductId}
-                onValueChange={handleProductChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - {formatCurrency(product.sellingPrice)}
-                      {product.currentStock <= 0 && " (Out of Stock)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="debtAmount">Debt Amount *</Label>
+              <Input
+                id="debtAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={debtAmount}
+                onChange={(e) => setDebtAmount(e.target.value)}
+                placeholder="0.00"
+                className="text-lg font-semibold"
+              />
             </div>
 
-            {/* Quantity and Unit Price */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                  placeholder="1"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="unitPrice">Unit Price *</Label>
-                <Input
-                  id="unitPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={unitPrice}
-                  onChange={(e) => setUnitPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            {/* Total Amount Display */}
+            {/* Debt Amount Display */}
             {totalAmount > 0 && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-red-700 dark:text-red-300">
-                    Total Credit Amount:
+                    Debt Amount:
                   </span>
                   <span className="text-lg font-bold text-red-600 dark:text-red-400">
                     {formatCurrency(totalAmount)}
@@ -249,7 +188,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes about this credit sale..."
+                placeholder="Additional notes about this cash lending transaction..."
                 rows={3}
               />
             </div>
@@ -288,9 +227,9 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
               <Button
                 type="submit"
                 className="flex-1 bg-red-600 hover:bg-red-700"
-                disabled={isProcessing || !selectedCustomerId || !selectedProductId || !unitPrice || quantity <= 0}
+                disabled={isProcessing || !selectedCustomerId || !debtAmount || totalAmount <= 0}
               >
-                {isProcessing ? "Recording..." : "Record Credit Sale"}
+                {isProcessing ? "Recording..." : "Record Cash Lending"}
               </Button>
             </div>
           </form>

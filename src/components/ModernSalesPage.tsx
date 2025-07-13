@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
-import QuickSelectSection from './sales/QuickSelectSection';
+
 import { Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -396,6 +396,43 @@ const ModernSalesPage = () => {
 
             {/* Product Grid */}
             <div className="grid grid-cols-2 gap-4 pb-20">
+              {/* Add Debt Button - Always visible on mobile */}
+              <div
+                onClick={() => setShowAddDebt(true)}
+                className="
+                  border-2 border-red-400 dark:border-red-500 rounded-xl bg-red-50 dark:bg-red-900/20 
+                  cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
+                  hover:border-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 group p-4
+                "
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-mono font-black uppercase tracking-wide text-red-700 dark:text-red-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors text-xs">
+                        RECORD DEBT
+                      </h3>
+                      <p className="text-red-600 dark:text-red-400 uppercase font-mono font-bold text-xs">
+                        CASH LENDING
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 border-2 border-red-400 dark:border-red-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-red-500 transition-colors">
+                      <UserPlus className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-mono font-black text-red-700 dark:text-red-300 text-sm">
+                        Cash Lending
+                      </p>
+                      <p className="font-mono font-bold uppercase text-xs text-red-600 dark:text-red-400">
+                        Record Debt
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
@@ -710,12 +747,6 @@ const ModernSalesPage = () => {
           />
         </div>
 
-        {/* Quick Select Section */}
-        <QuickSelectSection 
-          products={products}
-          onAddToCart={addToCart}
-          onAddDebtClick={() => setShowAddDebt(true)}
-        />
 
         {/* Product Grid and Cart Layout */}
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
