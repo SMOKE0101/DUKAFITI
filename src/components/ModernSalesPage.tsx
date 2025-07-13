@@ -398,7 +398,10 @@ const ModernSalesPage = () => {
             <div className="grid grid-cols-2 gap-4 pb-20">
               {/* Add Debt Button - Always visible on mobile */}
               <div
-                onClick={() => setShowAddDebt(true)}
+                onClick={() => {
+                  console.log('🔴 Mobile record debt button clicked!');
+                  setShowAddDebt(true);
+                }}
                 className="
                   border-2 border-red-400 dark:border-red-500 rounded-xl bg-red-50 dark:bg-red-900/20 
                   cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
@@ -677,6 +680,12 @@ const ModernSalesPage = () => {
             }}
           />
         )}
+
+        {/* Add Debt Modal - CRITICAL: Added for mobile view */}
+        <AddDebtModal
+          isOpen={showAddDebt}
+          onClose={() => setShowAddDebt(false)}
+        />
       </div>
     );
   }
