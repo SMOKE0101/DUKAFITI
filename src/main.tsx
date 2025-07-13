@@ -14,17 +14,9 @@ try {
   validateEnvironment();
 } catch (error) {
   logger.error('Environment validation failed:', error);
-  if (import.meta.env.PROD) {
-    // In production, show user-friendly error
-    document.body.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: system-ui;">
-        <div style="text-align: center; padding: 2rem;">
-          <h1 style="color: #dc2626; margin-bottom: 1rem;">Configuration Error</h1>
-          <p style="color: #6b7280;">The application is not properly configured. Please contact support.</p>
-        </div>
-      </div>
-    `;
-    throw error;
+  // Only show error in development
+  if (import.meta.env.DEV) {
+    console.error('Development environment validation failed:', error);
   }
 }
 
@@ -34,8 +26,30 @@ if (!container) {
 }
 
 const root = createRoot(container);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+
+try {
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+} catch (error) {
+  logger.error('Failed to render React app with StrictMode:', error);
+  
+  // Fallback render without React.StrictMode if there's an issue
+  try {
+    root.render(<App />);
+  } catch (fallbackError) {
+    logger.error('Failed to render React app completely:', fallbackError);
+    
+    // Last resort: show error message
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: system-ui;">
+        <div style="text-align: center; padding: 2rem;">
+          <h1 style="color: #dc2626; margin-bottom: 1rem;">Application Error</h1>
+          <p style="color: #6b7280;">Unable to start the application. Please refresh the page.</p>
+        </div>
+      </div>
+    `;
+  }
+}

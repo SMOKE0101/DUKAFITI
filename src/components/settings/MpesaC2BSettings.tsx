@@ -26,8 +26,7 @@ const MpesaC2BSettings = () => {
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="w-5 h-5" />
             M-Pesa Integration Status
-            <TooltipProvider>
-              <Tooltip>
+            <Tooltip>
                 <TooltipTrigger>
                   <Info className="w-4 h-4 text-gray-400" />
                 </TooltipTrigger>
@@ -35,7 +34,6 @@ const MpesaC2BSettings = () => {
                   <p>This integration is coming soon</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
           </CardTitle>
         </CardHeader>
         <CardContent>

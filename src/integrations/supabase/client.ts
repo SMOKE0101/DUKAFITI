@@ -5,9 +5,9 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://jrmwivphspbxmacqrava.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpybXdpdnBoc3BieG1hY3FyYXZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNzYzOTEsImV4cCI6MjA2Njk1MjM5MX0.8_XUV2gd9mVJkMCvBwgWwqWXQjlH_1YcaWD0SxvQrZI";
 
-// Validate environment variables
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error('Missing required Supabase environment variables. Please check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+// Validate environment variables in development only
+if (import.meta.env.DEV && (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY)) {
+  console.warn('Missing Supabase environment variables. Using fallback values for development.');
 }
 
 // Import the supabase client like this:
@@ -15,8 +15,9 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   }
 });

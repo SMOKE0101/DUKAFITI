@@ -26,14 +26,22 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs', '@radix-ui/react-tooltip'],
           supabase: ['@supabase/supabase-js'],
           charts: ['recharts'],
         },
+      },
+      external: (id) => {
+        // Don't externalize any dependencies in production
+        return false;
       },
     },
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(mode),
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@radix-ui/react-tooltip'],
   },
 }));
