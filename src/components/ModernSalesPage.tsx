@@ -514,7 +514,7 @@ const ModernSalesPage = () => {
                   <select
                     value={selectedCustomerId || ''}
                     onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                    className="flex-1 p-3 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-transparent font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 transition-colors uppercase"
+                    className="flex-1 p-3 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-background text-foreground font-mono font-bold focus:outline-none focus:border-purple-500 transition-colors uppercase"
                   >
                     <option value="">WALK-IN CUSTOMER</option>
                     {customers.map((customer) => (
@@ -830,7 +830,7 @@ const ModernSalesPage = () => {
                   <select
                     value={selectedCustomerId || ''}
                     onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                    className="flex-1 p-3 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-transparent font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 transition-colors uppercase"
+                    className="flex-1 p-3 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-background text-foreground font-mono font-bold focus:outline-none focus:border-purple-500 transition-colors uppercase"
                   >
                     <option value="">WALK-IN CUSTOMER</option>
                     {customers.map((customer) => (
