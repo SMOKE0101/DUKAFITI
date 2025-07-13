@@ -175,12 +175,12 @@ const ModernLanding = () => {
               >
                 Features
               </a>
-              <Link 
-                to="/signin"
+              <a 
+                href="#signup"
                 className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
               >
-                Sign In
-              </Link>
+                Sign Up
+              </a>
               <a 
                 href="#testimonials" 
                 className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
@@ -190,6 +190,9 @@ const ModernLanding = () => {
             </nav>
 
             <div className="flex items-center space-x-4">
+              <Button asChild variant="outline" className="hidden sm:flex">
+                <Link to="/signin">Login</Link>
+              </Button>
               <Button asChild className="bg-primary hover:bg-primary/90 hidden sm:flex">
                 <Link to="/signup">Get Started</Link>
               </Button>
@@ -240,13 +243,13 @@ const ModernLanding = () => {
               >
                 Features
               </a>
-              <Link 
-                to="/signin"
+              <a 
+                href="#signup"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-muted-foreground hover:text-foreground transition-colors py-2"
               >
-                Sign In
-              </Link>
+                Sign Up
+              </a>
               <a 
                 href="#testimonials"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -254,7 +257,10 @@ const ModernLanding = () => {
               >
                 Testimonies
               </a>
-              <div className="pt-4 border-t border-border">
+              <div className="pt-4 border-t border-border space-y-3">
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/signin" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
+                </Button>
                 <Button asChild className="w-full bg-primary hover:bg-primary/90">
                   <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>Get Started</Link>
                 </Button>
@@ -369,7 +375,7 @@ const ModernLanding = () => {
       </section>
 
       {/* Enhanced Sign Up Section */}
-      <section className="py-20 bg-gradient-to-br from-muted/20 to-accent/10">
+      <section id="signup" className="py-20 bg-gradient-to-br from-muted/20 to-accent/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
