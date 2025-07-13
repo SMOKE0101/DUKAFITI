@@ -40,7 +40,11 @@ const UserMenu = () => {
           <span className="hidden sm:inline text-purple-600">{shopName}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 sm:w-80 max-w-[90vw] border-2 border-purple-600 rounded-xl bg-white dark:bg-gray-900 shadow-2xl backdrop-blur-sm z-50">
+      <DropdownMenuContent 
+        align="end" 
+        className="w-72 sm:w-80 max-w-[90vw] border-2 border-purple-600 rounded-xl bg-white dark:bg-gray-900 shadow-2xl backdrop-blur-sm z-50"
+        sideOffset={8}
+      >
         <div className="border-2 border-purple-300 dark:border-purple-600 rounded-xl p-4 m-2 bg-purple-50 dark:bg-purple-900/20">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 border-2 border-purple-600 rounded-full flex items-center justify-center bg-white dark:bg-gray-800">
