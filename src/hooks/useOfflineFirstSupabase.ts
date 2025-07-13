@@ -177,12 +177,7 @@ export const useOfflineFirstSupabase = <T extends { id: string }>({
           setError(null);
           setLastSyncTime(new Date());
           
-          if (!initializationRef.current) {
-            toast({
-              title: "Data Loaded",
-              description: `${supabaseData.length} ${tableName} loaded successfully`,
-            });
-          }
+          // Data loaded successfully - no toast needed
         } catch (supabaseError) {
           console.error(`[${cacheKey}] Supabase load failed:`, supabaseError);
           
@@ -191,14 +186,10 @@ export const useOfflineFirstSupabase = <T extends { id: string }>({
           console.log(`[${cacheKey}] Falling back to ${cachedData.length} cached items`);
           
           setData(cachedData);
-          setError(`Failed to sync with server. Using cached data.`);
+          setError(null); // Don't show error for offline mode with cached data
           
           if (!initializationRef.current) {
-            toast({
-              title: "Offline Mode",
-              description: `Using cached ${tableName} data`,
-              variant: "default",
-            });
+            console.log(`[${cacheKey}] Using cached data in offline mode`);
           }
         }
       } else {
@@ -208,14 +199,10 @@ export const useOfflineFirstSupabase = <T extends { id: string }>({
         console.log(`[${cacheKey}] Loaded ${cachedData.length} items from cache`);
         
         setData(cachedData);
-        setError(isOnline ? null : "Offline - using cached data");
+        setError(null); // No error for offline mode
         
-        if (!initializationRef.current && cachedData.length === 0) {
-          toast({
-            title: "No Data Available",
-            description: `No ${tableName} found. Connect to internet to sync.`,
-            variant: "default",
-          });
+        if (!initializationRef.current && cachedData.length === 0 && !isOnline) {
+          console.log(`[${cacheKey}] No cached data available offline`);
         }
       }
       
@@ -234,11 +221,14 @@ export const useOfflineFirstSupabase = <T extends { id: string }>({
         setData([]);
       }
       
-      toast({
-        title: "Error",
-        description: `Failed to load ${tableName}. Please try again.`,
-        variant: "destructive",
-      });
+      // Only show error toast for actual failures, not offline scenarios
+      if (isOnline) {
+        toast({
+          title: "Error",
+          description: `Failed to load ${tableName}. Please try again.`,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
       loadingRef.current = false;

@@ -74,7 +74,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
   const navigate = useNavigate();
   const { theme, resolvedTheme } = useTheme();
   const { signOut } = useAuth();
-  const { markAllAsRead, setUnreadCount } = useNotificationState();
+  const { markAllAsRead, setUnreadCount, hasNewNotifications } = useNotificationState();
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -174,7 +174,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
     const newShowState = !showNotifications;
     setShowNotifications(newShowState);
     
-    // Mark notifications as read when opened
+    // Mark notifications as read when opened and there are alerts
     if (newShowState && lowStockAlerts.length > 0) {
       markAllAsRead();
     }
@@ -343,7 +343,7 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
                 onClick={handleNotificationsToggle}
               >
                 <Bell className="w-5 h-5" />
-                {lowStockAlerts.length > 0 && !showNotifications && (
+                {lowStockAlerts.length > 0 && hasNewNotifications(lowStockAlerts.map(p => p.id)) && (
                   <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-red-500 text-white flex items-center justify-center animate-pulse">
                     {lowStockAlerts.length}
                   </Badge>
