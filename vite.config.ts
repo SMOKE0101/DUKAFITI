@@ -11,8 +11,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
+    mode === 'development' && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
@@ -24,6 +23,7 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     sourcemap: mode === 'development',
     minify: mode === 'production' ? 'terser' : false,
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {
