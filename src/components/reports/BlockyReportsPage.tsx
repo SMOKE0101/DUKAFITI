@@ -413,7 +413,7 @@ const BlockyReportsPage = () => {
         <div className={`
           grid gap-4
           ${isMobile 
-            ? 'grid-cols-2' 
+            ? 'grid-cols-1' 
             : isTablet 
               ? 'grid-cols-2 lg:grid-cols-4 xl:grid-cols-7' 
               : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'

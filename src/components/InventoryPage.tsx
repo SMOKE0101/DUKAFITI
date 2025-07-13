@@ -78,9 +78,12 @@ const InventoryPage: React.FC = () => {
     setShowDeleteModal(true);
   };
 
-  const handleRestock = (product: Product) => {
-    setSelectedProduct(product);
-    setShowRestockModal(true);
+  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
+    try {
+      await addStock(product.id, quantity, buyingPrice);
+    } catch (error) {
+      console.error('Failed to add stock:', error);
+    }
   };
 
   const handleRefresh = async () => {
@@ -120,9 +123,9 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  const handleAddStock = async (id: string, quantity: number) => {
+  const handleAddStock = async (id: string, quantity: number, buyingPrice: number) => {
     try {
-      await addStock(id, quantity);
+      await addStock(id, quantity, buyingPrice);
       setShowRestockModal(false);
       setSelectedProduct(null);
     } catch (error) {
@@ -362,7 +365,9 @@ const InventoryPage: React.FC = () => {
               setSelectedProduct(null);
             }}
             product={selectedProduct}
-            onAddStock={handleAddStock}
+            onSave={(quantity: number, buyingPrice: number) => 
+              selectedProduct ? handleAddStock(selectedProduct.id, quantity, buyingPrice) : Promise.resolve()
+            }
           />
         </>
       )}
