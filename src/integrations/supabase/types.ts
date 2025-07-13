@@ -401,7 +401,7 @@ export type Database = {
           customer_id: string
           date: string | null
           id: string
-          item_id: string
+          item_id: string | null
           notes: string | null
           paid: boolean | null
           paid_date: string | null
@@ -415,7 +415,7 @@ export type Database = {
           customer_id: string
           date?: string | null
           id?: string
-          item_id: string
+          item_id?: string | null
           notes?: string | null
           paid?: boolean | null
           paid_date?: string | null
@@ -429,7 +429,7 @@ export type Database = {
           customer_id?: string
           date?: string | null
           id?: string
-          item_id?: string
+          item_id?: string | null
           notes?: string | null
           paid?: boolean | null
           paid_date?: string | null
