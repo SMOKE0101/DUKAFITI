@@ -138,11 +138,12 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
               formatter={(value: number) => [formatCurrency(value), 'Revenue']}
               labelFormatter={getTooltipLabelFormatter()}
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e2e8f0',
+                backgroundColor: 'hsl(var(--background))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                 fontSize: isMobile ? '11px' : '12px',
+                color: 'hsl(var(--foreground))',
               }}
             />
             <Line 
