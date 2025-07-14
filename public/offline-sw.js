@@ -7,17 +7,13 @@ const API_CACHE = 'dukafiti-api-v4';
 // Core app shell - critical for offline functionality
 const STATIC_ASSETS = [
   '/',
-  '/app',
-  '/dashboard',
-  '/inventory',
-  '/customers',
-  '/reports',
-  '/settings',
-  '/offline',
+  '/index.html',
   '/manifest.json',
-  // Add critical CSS and JS files
-  '/src/index.css',
-  '/src/main.tsx'
+  '/vite.svg',
+  // These will be replaced with built assets during build
+  '/src/main.tsx',
+  '/src/App.tsx',
+  '/src/index.css'
 ];
 
 // API patterns to cache
@@ -165,20 +161,44 @@ async function handleAPIRequest(request) {
   }
 }
 
-// Page requests - Handle navigation
+// Page requests - Handle navigation (serve main app for SPA routing)
 async function handlePageRequest(request) {
+  const url = new URL(request.url);
+  
   try {
+    // Try network first for navigation requests
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
+      return networkResponse;
     }
     
-    return networkResponse;
+    throw new Error('Network request failed');
     
   } catch (error) {
-    // Try cache first
+    console.log('[SW] Network failed for navigation, serving cached app');
+    
+    // For app routes, serve the cached main app (SPA)
+    if (url.pathname.startsWith('/app') || 
+        url.pathname === '/dashboard' ||
+        url.pathname === '/inventory' ||
+        url.pathname === '/customers' ||
+        url.pathname === '/reports' ||
+        url.pathname === '/settings') {
+      
+      // Try to serve cached main app
+      const staticCache = await caches.open(STATIC_CACHE);
+      const mainApp = await staticCache.match('/') || await staticCache.match('/index.html');
+      
+      if (mainApp) {
+        console.log('[SW] Serving cached main app for SPA route:', url.pathname);
+        return mainApp;
+      }
+    }
+    
+    // For other routes, try cache first
     const cache = await caches.open(DYNAMIC_CACHE);
     const cachedResponse = await cache.match(request);
     
@@ -186,25 +206,63 @@ async function handlePageRequest(request) {
       return cachedResponse;
     }
     
-    // Return offline page for navigation requests
-    const offlineResponse = await cache.match('/offline');
-    if (offlineResponse) {
-      return offlineResponse;
+    // If it's the root path or an app route, serve the main app anyway
+    if (url.pathname === '/' || url.pathname.startsWith('/app')) {
+      const staticCache = await caches.open(STATIC_CACHE);
+      const mainApp = await staticCache.match('/') || await staticCache.match('/index.html');
+      
+      if (mainApp) {
+        console.log('[SW] Serving main app as fallback for:', url.pathname);
+        return mainApp;
+      }
     }
     
-    // Fallback offline page
+    // Last resort: serve a minimal offline-aware HTML that loads the app
     return new Response(`
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
-          <title>DukaFiti - Offline</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>DukaFiti - Loading...</title>
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              min-height: 100vh; 
+              margin: 0; 
+              background: #f8fafc;
+            }
+            .loader { text-align: center; }
+            .spinner { 
+              border: 4px solid #e2e8f0; 
+              border-top: 4px solid #3b82f6; 
+              border-radius: 50%; 
+              width: 40px; 
+              height: 40px; 
+              animation: spin 1s linear infinite; 
+              margin: 0 auto 16px;
+            }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          </style>
         </head>
         <body>
-          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-            <h1>You're Offline</h1>
-            <p>DukaFiti is working offline. Your data is safe and will sync when you're back online.</p>
-            <button onclick="window.location.reload()">Try Again</button>
+          <div class="loader">
+            <div class="spinner"></div>
+            <h2>Loading DukaFiti...</h2>
+            <p>Starting offline mode...</p>
+            <script>
+              // Try to navigate to the main app
+              setTimeout(() => {
+                if (window.location.pathname !== '/') {
+                  window.location.href = '/';
+                } else {
+                  window.location.reload();
+                }
+              }, 2000);
+            </script>
           </div>
         </body>
       </html>

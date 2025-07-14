@@ -22,6 +22,7 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import OfflineAwareApp from "./components/OfflineAwareApp";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,7 +41,8 @@ function App() {
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <AuthProvider>
               <TooltipProvider>
-                <div className="min-h-screen w-full bg-background text-foreground">
+                <OfflineAwareApp>
+                  <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<ModernLanding />} />
@@ -75,9 +77,10 @@ function App() {
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                  <Toaster />
-                  <ProductionToaster />
-                </div>
+                    <Toaster />
+                    <ProductionToaster />
+                  </div>
+                </OfflineAwareApp>
               </TooltipProvider>
             </AuthProvider>
           </ThemeProvider>
