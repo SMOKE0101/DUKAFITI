@@ -21,7 +21,6 @@ import { useToast } from '@/hooks/use-toast';
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const ModernSalesPage = () => {
-  console.log('🚀 ModernSalesPage component loaded - ENHANCED WITH OFFLINE SUPPORT v4.0');
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,14 +47,14 @@ const ModernSalesPage = () => {
     const productsChannel = supabase
       .channel('products-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-        console.log('Products updated:', payload);
+        // Products updated
       })
       .subscribe();
 
     const customersChannel = supabase
       .channel('customers-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
-        console.log('Customers updated:', payload);
+        // Customers updated
       })
       .subscribe();
 
@@ -152,21 +151,11 @@ const ModernSalesPage = () => {
       const customerId = selectedCustomerId === '' ? null : selectedCustomerId;
       const customer = customers.find(c => c.id === customerId);
 
-      console.log('🛒 Starting checkout process:', {
-        cartItems: cart.length,
-        total,
-        paymentMethod,
-        customerId,
-        isOnline
-      });
-
       if (isOnline) {
         // Online sales - direct to Supabase
-        console.log('🌐 Processing ONLINE sale');
         await processOnlineSale(customerId, customer);
       } else {
         // Offline sales - store locally and queue for sync
-        console.log('📱 Processing OFFLINE sale');
         await processOfflineSale(customerId, customer);
       }
 
@@ -181,10 +170,9 @@ const ModernSalesPage = () => {
       setActivePanel('search');
 
     } catch (error) {
-      console.error('❌ Checkout error:', error);
       toast({
         title: "Error",
-        description: `Failed to complete sale: ${error.message}`,
+        description: `Failed to complete sale: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -193,7 +181,6 @@ const ModernSalesPage = () => {
   };
 
   const processOnlineSale = async (customerId: string | null, customer: Customer | null) => {
-    console.log('🌐 Processing online sale...');
     
     // Prepare sales data for batch insert
     const salesData = cart.map(item => ({
@@ -222,11 +209,8 @@ const ModernSalesPage = () => {
       .insert(salesData);
 
     if (saleError) {
-      console.error('❌ Error adding sales:', saleError);
       throw new Error('Failed to record sales.');
     }
-
-    console.log('✅ Online sales recorded successfully');
 
     // Update customer debt if this is a credit sale
     if (paymentMethod === 'debt' && customer) {
@@ -239,8 +223,6 @@ const ModernSalesPage = () => {
         totalPurchases: updatedPurchases,
         lastPurchaseDate: new Date().toISOString(),
       });
-      
-      console.log('✅ Customer debt updated');
     } else if (customer && paymentMethod !== 'debt') {
       // Update total purchases for non-debt sales
       const updatedPurchases = customer.totalPurchases + total;
@@ -249,8 +231,6 @@ const ModernSalesPage = () => {
         totalPurchases: updatedPurchases,
         lastPurchaseDate: new Date().toISOString(),
       });
-      
-      console.log('✅ Customer purchases updated');
     }
 
     // Update stock for each item
@@ -263,17 +243,13 @@ const ModernSalesPage = () => {
           .eq('id', item.id);
 
         if (productError) {
-          console.error('⚠️ Error updating product stock:', productError);
-          // Don't throw error here, just log it - sale should still complete
+          // Don't throw error here - sale should still complete
         }
       }
     }
-    
-    console.log('✅ Stock updated');
   };
 
   const processOfflineSale = async (customerId: string | null, customer: Customer | null) => {
-    console.log('📱 Processing offline sale...');
     
     // Create offline sales for each cart item
     for (const item of cart) {
@@ -298,10 +274,7 @@ const ModernSalesPage = () => {
       };
 
       await createOfflineSale(saleData);
-      console.log(`✅ Offline sale created for ${item.name}`);
     }
-
-    console.log('✅ All offline sales created and queued for sync');
   };
 
   const getStockDisplayText = (stock: number) => {
@@ -399,7 +372,6 @@ const ModernSalesPage = () => {
               {/* Add Debt Button - Always visible on mobile */}
               <div
                 onClick={() => {
-                  console.log('🔴 Mobile record debt button clicked!');
                   setShowAddDebt(true);
                 }}
                 className="

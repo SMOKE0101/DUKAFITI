@@ -182,11 +182,9 @@ const EnhancedTopbar: React.FC<EnhancedTopbarProps> = ({
 
   const handleLogout = async () => {
     try {
-      console.log('EnhancedTopbar: Signing out user');
       await signOut();
       setShowLogoutConfirm(false);
     } catch (error) {
-      console.error('EnhancedTopbar: Sign out error:', error);
       setShowLogoutConfirm(false);
     }
   };

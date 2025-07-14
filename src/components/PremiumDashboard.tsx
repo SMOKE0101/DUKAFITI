@@ -27,27 +27,14 @@ const PremiumDashboard = () => {
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { sales, loading: salesLoading } = useSupabaseSales();
 
-  console.log('Premium Dashboard - Products data:', products);
-  console.log('Premium Dashboard - Products loading:', productsLoading);
-
-  // Calculate enhanced low stock with better logging
+  // Calculate enhanced low stock items
   const lowStockItems = products.filter(product => {
-    console.log(`Product: ${product.name}, Stock: ${product.currentStock}, Threshold: ${product.lowStockThreshold}`);
-    
     const currentStock = product.currentStock ?? 0;
     const threshold = product.lowStockThreshold ?? 10;
     
     // Only consider items with specified stock (not -1 which means unspecified)
-    const isLowStock = currentStock !== -1 && currentStock <= threshold;
-    
-    if (isLowStock) {
-      console.log(`LOW STOCK DETECTED: ${product.name} - Stock: ${currentStock}, Threshold: ${threshold}`);
-    }
-    
-    return isLowStock;
+    return currentStock !== -1 && currentStock <= threshold;
   });
-
-  console.log('Premium Dashboard - Low stock items:', lowStockItems);
 
   // Recent sales (last 5)
   const recentSales = sales

@@ -12,14 +12,12 @@ const UserMenu = () => {
 
   const handleSignOut = async () => {
     try {
-      console.log('UserMenu: Signing out user');
       await signOut();
       toast({
         title: "Signed Out",
         description: "You have been successfully signed out.",
       });
     } catch (error) {
-      console.error('UserMenu: Sign out error:', error);
       toast({
         title: "Sign Out Failed",
         description: "There was an error signing out. Please try again.",
