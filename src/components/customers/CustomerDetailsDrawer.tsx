@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Customer } from '../../types';
@@ -55,8 +56,8 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-md">
-          <SheetHeader className="border-b border-gray-200 dark:border-gray-700 pb-6">
+        <SheetContent className="w-full sm:max-w-md flex flex-col h-full">
+          <SheetHeader className="border-b border-gray-200 dark:border-gray-700 pb-6 flex-shrink-0">
             <div className="flex items-center justify-between">
               <SheetTitle className="font-mono text-xl font-black uppercase tracking-wider text-gray-900 dark:text-white">
                 CUSTOMER DETAILS
@@ -84,7 +85,8 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
             </div>
           </SheetHeader>
 
-          <div className="py-6 space-y-6">
+          <ScrollArea className="flex-1 overflow-hidden">
+            <div className="py-6 space-y-6 px-1">
             {/* Basic Info */}
             <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
               <h3 className="font-mono text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-white mb-4">
@@ -207,16 +209,17 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
               </div>
             </div>
 
-            {/* Action Button */}
-            <div className="pt-4">
-              <Button
-                onClick={onClose}
-                className="w-full h-12 bg-gray-600 hover:bg-gray-700 text-white rounded-full font-mono font-bold uppercase tracking-wide"
-              >
-                CLOSE
-              </Button>
+              {/* Action Button */}
+              <div className="pt-4">
+                <Button
+                  onClick={onClose}
+                  className="w-full h-12 bg-gray-600 hover:bg-gray-700 text-white rounded-full font-mono font-bold uppercase tracking-wide"
+                >
+                  CLOSE
+                </Button>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
         </SheetContent>
       </Sheet>
 
