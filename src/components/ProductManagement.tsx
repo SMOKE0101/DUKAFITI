@@ -15,6 +15,7 @@ import FeatureLimitModal from './trial/FeatureLimitModal';
 import InventoryModal from './InventoryModal';
 import { useTrialSystem } from '../hooks/useTrialSystem';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { PRODUCT_CATEGORIES } from '../constants/categories';
 
 const ProductManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,7 +37,7 @@ const ProductManagement = () => {
     lowStockThreshold: '',
   });
 
-  const categories = ['Electronics', 'Clothing', 'Food & Beverages', 'Health & Beauty', 'Home & Garden', 'Books', 'Sports', 'Other'];
+  const categories = ['all', ...PRODUCT_CATEGORIES];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -398,7 +399,7 @@ const ProductManagement = () => {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map(category => (
+                      {PRODUCT_CATEGORIES.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
                     </SelectContent>

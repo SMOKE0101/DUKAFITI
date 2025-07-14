@@ -13,6 +13,7 @@ import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
 import ProductCard from './inventory/ProductCard';
 import { Product } from '../types';
+import { getCategoryDisplayName } from '../constants/categories';
 
 const InventoryPage: React.FC = () => {
   const { 
@@ -295,7 +296,7 @@ const InventoryPage: React.FC = () => {
                 <SelectItem value="all" className="rounded-lg">All Categories</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category} className="rounded-lg">
-                    {category}
+                    {getCategoryDisplayName(category)}
                   </SelectItem>
                 ))}
               </SelectContent>

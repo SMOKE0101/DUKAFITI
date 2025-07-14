@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Product } from '../../types';
 import { useToast } from '../../hooks/use-toast';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
+import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -16,13 +17,6 @@ interface EditProductModalProps {
   product: Product | null;
 }
 
-const CATEGORIES = [
-  'Beverages',
-  'Grains', 
-  'Household',
-  'Snacks',
-  'Miscellaneous'
-];
 
 const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, onSave, product }) => {
   const [formData, setFormData] = useState({
@@ -36,6 +30,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -46,14 +42,17 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
   useEffect(() => {
     if (product && isOpen) {
+      const isCustom = !PRODUCT_CATEGORIES.includes(product.category as any);
       setFormData({
         name: product.name,
-        category: product.category,
+        category: isCustom ? 'Other / Custom' : product.category,
         costPrice: product.costPrice.toString(),
         sellingPrice: product.sellingPrice.toString(),
         lowStockThreshold: product.lowStockThreshold?.toString() || '10',
         currentStock: product.currentStock.toString()
       });
+      setCustomCategory(isCustom ? product.category : '');
+      setShowCustomInput(isCustom);
       setErrors({});
     }
   }, [product, isOpen]);
@@ -76,6 +75,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     }
     
     if (!formData.category) newErrors.category = 'Category is required';
+    
+    if (isCustomCategory(formData.category) && !validateCustomCategory(customCategory)) {
+      newErrors.category = 'Custom category is required and must be 50 characters or less';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -89,7 +92,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     try {
       const updatedProduct = {
         name: formData.name.trim(),
-        category: formData.category,
+        category: isCustomCategory(formData.category) ? customCategory : formData.category,
         costPrice: isUnspecifiedStock ? 0 : parseFloat(formData.costPrice),
         sellingPrice: parseFloat(formData.sellingPrice),
         currentStock: isUnspecifiedStock ? -1 : parseInt(formData.currentStock),
@@ -119,7 +122,19 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
   const handleClose = () => {
     if (loading) return;
     setErrors({});
+    setCustomCategory('');
+    setShowCustomInput(false);
     onClose();
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setFormData(prev => ({ ...prev, category: value }));
+    if (isCustomCategory(value)) {
+      setShowCustomInput(true);
+    } else {
+      setShowCustomInput(false);
+      setCustomCategory('');
+    }
   };
 
   const isFormValid = formData.name && formData.sellingPrice && formData.category;
@@ -289,7 +304,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
               </Label>
               <Select 
                 value={formData.category} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                onValueChange={handleCategoryChange}
                 disabled={loading}
               >
                 <SelectTrigger className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 ${
@@ -298,13 +313,25 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent className="border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
-                  {CATEGORIES.map(category => (
+                  {PRODUCT_CATEGORIES.map(category => (
                     <SelectItem key={category} value={category} className="font-mono">
                       {category}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {showCustomInput && (
+                <div className="mt-3">
+                  <Input
+                    placeholder="Enter custom category"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                    maxLength={50}
+                    disabled={loading}
+                  />
+                </div>
+              )}
               {errors.category && <p className="text-red-500 text-sm mt-2 font-mono">{errors.category}</p>}
             </div>
 

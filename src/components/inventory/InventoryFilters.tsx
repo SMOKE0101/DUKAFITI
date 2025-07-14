@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Search, Filter, SortAsc, X, Grid3X3, List } from 'lucide-react';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
+import { PRODUCT_CATEGORIES, getCategoryDisplayName } from '../../constants/categories';
 
 interface InventoryFiltersProps {
   categories: string[];
@@ -68,7 +69,7 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
             <SelectContent className="rounded-xl bg-popover text-popover-foreground shadow-xl border-2">
               {categories.map(category => (
                 <SelectItem key={category} value={category} className="rounded-lg">
-                  {category === 'all' ? 'All Categories' : category}
+                  {category === 'all' ? 'All Categories' : getCategoryDisplayName(category)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -137,7 +138,7 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
                   value={category}
                   className="rounded-lg hover:bg-primary/10 focus:bg-primary/10"
                 >
-                  {category === 'all' ? 'All Categories' : category}
+                  {category === 'all' ? 'All Categories' : getCategoryDisplayName(category)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -207,7 +208,7 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
                 value={category}
                 className="rounded-lg hover:bg-primary/10 focus:bg-primary/10"
               >
-                {category === 'all' ? 'All Categories' : category}
+                {category === 'all' ? 'All Categories' : getCategoryDisplayName(category)}
               </SelectItem>
             ))}
           </SelectContent>

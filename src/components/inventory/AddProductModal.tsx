@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
 import { Shuffle } from 'lucide-react';
+import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -34,19 +35,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     lowStockThreshold: 10,
   });
   const [unspecifiedStock, setUnspecifiedStock] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   useEffect(() => {
     if (editingProduct) {
+      const isCustom = !PRODUCT_CATEGORIES.includes(editingProduct.category as any);
       setFormData({
         name: editingProduct.name,
         sku: editingProduct.sku || '',
-        category: editingProduct.category,
+        category: isCustom ? 'Other / Custom' : editingProduct.category,
         costPrice: editingProduct.costPrice,
         sellingPrice: editingProduct.sellingPrice,
         currentStock: editingProduct.currentStock === -1 ? 0 : editingProduct.currentStock,
         lowStockThreshold: editingProduct.lowStockThreshold,
       });
       setUnspecifiedStock(editingProduct.currentStock === -1);
+      setCustomCategory(isCustom ? editingProduct.category : '');
+      setShowCustomInput(isCustom);
     } else {
       setFormData({
         name: '',
@@ -58,6 +64,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         lowStockThreshold: 10,
       });
       setUnspecifiedStock(false);
+      setCustomCategory('');
+      setShowCustomInput(false);
     }
   }, [editingProduct, isOpen]);
 
@@ -85,6 +93,15 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       toast({
         title: "Validation Error",
         description: "Category is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isCustomCategory(formData.category) && !validateCustomCategory(customCategory)) {
+      toast({
+        title: "Validation Error",
+        description: "Custom category is required and must be 50 characters or less",
         variant: "destructive",
       });
       return;
@@ -121,6 +138,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     
     const finalFormData = {
       ...formData,
+      category: isCustomCategory(formData.category) ? customCategory : formData.category,
       currentStock: unspecifiedStock ? -1 : formData.currentStock,
       costPrice: unspecifiedStock ? 0 : formData.costPrice,
       lowStockThreshold: unspecifiedStock ? 0 : formData.lowStockThreshold
@@ -136,18 +154,15 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }));
   };
 
-  const categories = [
-    'Electronics',
-    'Clothing',
-    'Food & Beverages',
-    'Health & Beauty',
-    'Home & Garden',
-    'Sports & Outdoors',
-    'Books & Media',
-    'Toys & Games',
-    'Automotive',
-    'Other'
-  ];
+  const handleCategoryChange = (value: string) => {
+    handleInputChange('category', value);
+    if (isCustomCategory(value)) {
+      setShowCustomInput(true);
+    } else {
+      setShowCustomInput(false);
+      setCustomCategory('');
+    }
+  };
 
   const showProfitCalculation = !unspecifiedStock && formData.costPrice > 0 && formData.sellingPrice > 0;
 
@@ -212,19 +227,30 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 </Label>
                 <Select 
                   value={formData.category} 
-                  onValueChange={(value) => handleInputChange('category', value)}
+                  onValueChange={handleCategoryChange}
                 >
                   <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent className="border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
-                    {categories.map(category => (
+                    {PRODUCT_CATEGORIES.map(category => (
                       <SelectItem key={category} value={category} className="font-mono">
                         {category}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {showCustomInput && (
+                  <div className="mt-3">
+                    <Input
+                      placeholder="Enter custom category"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                      maxLength={50}
+                    />
+                  </div>
+                )}
               </div>
               
               {/* Pricing Section */}
