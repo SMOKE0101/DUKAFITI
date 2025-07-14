@@ -13,7 +13,7 @@ import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
 import ProductCard from './inventory/ProductCard';
 import { Product } from '../types';
-import { getCategoryDisplayName } from '../constants/categories';
+import { getCategoryDisplayName, PRODUCT_CATEGORIES } from '../constants/categories';
 
 const InventoryPage: React.FC = () => {
   const { 
@@ -39,11 +39,10 @@ const InventoryPage: React.FC = () => {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Get unique categories
+  // Get all available categories from constants
   const categories = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
-    return uniqueCategories.sort();
-  }, [products]);
+    return PRODUCT_CATEGORIES.filter(cat => cat !== 'Other / Custom');
+  }, []);
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -292,7 +291,7 @@ const InventoryPage: React.FC = () => {
                   <SelectValue placeholder="All Categories" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl z-50">
                 <SelectItem value="all" className="rounded-lg">All Categories</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category} className="rounded-lg">
@@ -310,7 +309,7 @@ const InventoryPage: React.FC = () => {
                   <SelectValue placeholder="All Stock Levels" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-2 bg-popover text-popover-foreground backdrop-blur-xl z-50">
                 <SelectItem value="all" className="rounded-lg">All Stock Levels</SelectItem>
                 <SelectItem value="in" className="rounded-lg">In Stock</SelectItem>
                 <SelectItem value="low" className="rounded-lg">Low Stock</SelectItem>
