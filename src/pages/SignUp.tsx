@@ -16,6 +16,7 @@ const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isEmailConfirmationSent, setIsEmailConfirmationSent] = useState(false);
 
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ const SignUp = () => {
       if (error) {
         setError(error.message);
       } else {
-        navigate('/app/dashboard');
+        setIsEmailConfirmationSent(true);
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -112,8 +113,21 @@ const SignUp = () => {
             </div>
           </div>
 
+          {/* Email Confirmation Message */}
+          {isEmailConfirmationSent && (
+            <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-lg flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-success/20 flex items-center justify-center">
+                <span className="text-xs">✓</span>
+              </div>
+              <div>
+                <p className="font-medium">Check your email!</p>
+                <p className="text-sm opacity-90">We've sent a confirmation link to {formData.email}</p>
+              </div>
+            </div>
+          )}
+
           {/* Error Message */}
-          {error && (
+          {error && !isEmailConfirmationSent && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center">
                 <span className="text-xs">!</span>
@@ -127,7 +141,7 @@ const SignUp = () => {
             type="button" 
             variant="outline" 
             onClick={handleGoogleSignUp}
-            disabled={isGoogleLoading}
+            disabled={isGoogleLoading || isEmailConfirmationSent}
             className="w-full py-3 text-base font-semibold rounded-xl border-2 hover:bg-muted/50 transition-all hover:scale-[1.02]"
           >
             {isGoogleLoading ? (
@@ -173,7 +187,8 @@ const SignUp = () => {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Enter your full name"
-                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50"
+                  disabled={isEmailConfirmationSent}
+                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -189,7 +204,8 @@ const SignUp = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Enter your email"
-                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50"
+                  disabled={isEmailConfirmationSent}
+                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -206,7 +222,8 @@ const SignUp = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Create a strong password"
-                    className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 pr-12"
+                    disabled={isEmailConfirmationSent}
+                    className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
@@ -232,7 +249,8 @@ const SignUp = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm your password"
-                    className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 pr-12"
+                    disabled={isEmailConfirmationSent}
+                    className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-primary/50 pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
@@ -247,7 +265,7 @@ const SignUp = () => {
 
             <Button 
               type="submit" 
-              disabled={isLoading}
+              disabled={isLoading || isEmailConfirmationSent}
               className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 text-base font-semibold rounded-xl transition-all hover:scale-[1.02] disabled:hover:scale-100"
             >
               {isLoading ? (
@@ -255,6 +273,8 @@ const SignUp = () => {
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Creating Account...
                 </div>
+              ) : isEmailConfirmationSent ? (
+                'Check Your Email'
               ) : (
                 'Create Account'
               )}

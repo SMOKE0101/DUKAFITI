@@ -58,7 +58,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/app/dashboard`;
+    // Use deployed URL for mobile compatibility
+    const redirectUrl = window.location.hostname === 'localhost' 
+      ? `${window.location.origin}/app/dashboard`
+      : `https://2e731d33-212e-43f1-b204-1c6ae466708b.lovableproject.com/app/dashboard`;
     
     const { error } = await supabase.auth.signUp({
       email,
@@ -72,12 +75,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/app/dashboard`;
+    // Use deployed URL for mobile compatibility
+    const redirectUrl = window.location.hostname === 'localhost' 
+      ? `${window.location.origin}/app/dashboard`
+      : `https://2e731d33-212e-43f1-b204-1c6ae466708b.lovableproject.com/app/dashboard`;
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl
+        redirectTo: redirectUrl,
+        queryParams: {
+          prompt: 'select_account'
+        }
       }
     });
     
