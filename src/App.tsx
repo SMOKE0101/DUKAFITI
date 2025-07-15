@@ -22,7 +22,9 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
-import OfflineAwareApp from "./components/OfflineAwareApp";
+import OfflineHandler from './components/OfflineHandler';
+import { useServiceWorker } from './hooks/useServiceWorker';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +36,8 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // Initialize service worker
+  useServiceWorker();
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -41,8 +45,7 @@ function App() {
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <AuthProvider>
               <TooltipProvider>
-                <OfflineAwareApp>
-                  <div className="min-h-screen w-full bg-background text-foreground">
+                <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<ModernLanding />} />
@@ -77,10 +80,10 @@ function App() {
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                    <Toaster />
-                    <ProductionToaster />
-                  </div>
-                </OfflineAwareApp>
+                  <OfflineHandler />
+                  <Toaster />
+                  <ProductionToaster />
+                </div>
               </TooltipProvider>
             </AuthProvider>
           </ThemeProvider>

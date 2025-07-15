@@ -217,56 +217,9 @@ async function handlePageRequest(request) {
       }
     }
     
-    // Last resort: serve a minimal offline-aware HTML that loads the app
-    return new Response(`
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>DukaFiti - Loading...</title>
-          <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              min-height: 100vh; 
-              margin: 0; 
-              background: #f8fafc;
-            }
-            .loader { text-align: center; }
-            .spinner { 
-              border: 4px solid #e2e8f0; 
-              border-top: 4px solid #3b82f6; 
-              border-radius: 50%; 
-              width: 40px; 
-              height: 40px; 
-              animation: spin 1s linear infinite; 
-              margin: 0 auto 16px;
-            }
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          </style>
-        </head>
-        <body>
-          <div class="loader">
-            <div class="spinner"></div>
-            <h2>Loading DukaFiti...</h2>
-            <p>Starting offline mode...</p>
-            <script>
-              // Try to navigate to the main app
-              setTimeout(() => {
-                if (window.location.pathname !== '/') {
-                  window.location.href = '/';
-                } else {
-                  window.location.reload();
-                }
-              }, 2000);
-            </script>
-          </div>
-        </body>
-      </html>
-    `, {
+    // Generate a proper offline fallback that doesn't reload
+    const offlineHtml = await generateOfflineFallback();
+    return new Response(offlineHtml, {
       status: 200,
       headers: { 'Content-Type': 'text/html' }
     });
@@ -437,6 +390,74 @@ async function removeStoredOfflineRequest(id) {
     
     request.onerror = () => reject(request.error);
   });
+}
+
+// Generate proper offline fallback that preserves React app
+async function generateOfflineFallback() {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DukaFiti - Offline Mode</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+          }
+          .offline-container { 
+            text-align: center; 
+            max-width: 400px;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+          }
+          .offline-icon { 
+            font-size: 4rem; 
+            margin-bottom: 1rem;
+            opacity: 0.8;
+          }
+          .retry-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+          }
+          .retry-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+        </style>
+      </head>
+      <body>
+        <div class="offline-container">
+          <div class="offline-icon">📱</div>
+          <h2>You're Offline</h2>
+          <p>DukaFiti is working in offline mode. Your data will sync when you're back online.</p>
+          <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
+          <button class="retry-btn" onclick="window.history.back()" style="margin-left: 10px;">Go Back</button>
+        </div>
+        <script>
+          // Check if we can access the main app without causing reload loops
+          window.addEventListener('online', () => {
+            setTimeout(() => window.location.reload(), 1000);
+          });
+        </script>
+      </body>
+    </html>
+  `;
 }
 
 // Message handling
