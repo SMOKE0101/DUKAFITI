@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +17,8 @@ import { useOfflineAwareData } from '../hooks/useOfflineAwareData';
 import { useOfflineAwareMutation } from '../hooks/useOfflineAwareMutation';
 import { PRODUCT_CATEGORIES } from '../constants/categories';
 
-interface Product {
+// Local interface matching the database structure
+interface DatabaseProduct {
   id: string;
   user_id: string;
   name: string;
@@ -31,6 +31,19 @@ interface Product {
   updated_at: string;
 }
 
+// UI interface for consistent camelCase usage
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  costPrice: number;
+  sellingPrice: number;
+  currentStock: number;
+  lowStockThreshold: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const ProductManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -41,11 +54,30 @@ const ProductManagement = () => {
   const { toast } = useToast();
   const { trialInfo, updateFeatureUsage, checkFeatureAccess } = useTrialSystem();
 
+  // Transform function to convert database format to UI format
+  const transformToProduct = (dbProduct: DatabaseProduct): Product => ({
+    id: dbProduct.id,
+    name: dbProduct.name,
+    category: dbProduct.category,
+    costPrice: dbProduct.cost_price,
+    sellingPrice: dbProduct.selling_price,
+    currentStock: dbProduct.current_stock,
+    lowStockThreshold: dbProduct.low_stock_threshold,
+    createdAt: dbProduct.created_at,
+    updatedAt: dbProduct.updated_at,
+  });
+
   // Use offline-aware data hooks
-  const { data: products, loading, refetch } = useOfflineAwareData<Product>({
+  const { data: rawProducts, loading, refetch } = useOfflineAwareData<DatabaseProduct>({
     table: 'products',
     select: '*'
   });
+
+  // Transform products to UI format
+  const products = useMemo(() => 
+    rawProducts.map(transformToProduct), 
+    [rawProducts]
+  );
 
   // Use offline-aware mutations
   const createProductMutation = useOfflineAwareMutation({
@@ -109,7 +141,7 @@ const ProductManagement = () => {
 
   // Memoize low stock products
   const lowStockProducts = useMemo(() => {
-    return products.filter(product => product.current_stock <= product.low_stock_threshold);
+    return products.filter(product => product.currentStock <= product.lowStockThreshold);
   }, [products]);
 
   const resetForm = () => {
@@ -160,6 +192,7 @@ const ProductManagement = () => {
       return;
     }
 
+    // Convert to database format
     const productData = {
       name: formData.name,
       category: formData.category,
@@ -190,10 +223,10 @@ const ProductManagement = () => {
     setFormData({
       name: product.name,
       category: product.category,
-      costPrice: product.cost_price.toString(),
-      sellingPrice: product.selling_price.toString(),
-      currentStock: product.current_stock.toString(),
-      lowStockThreshold: product.low_stock_threshold.toString(),
+      costPrice: product.costPrice.toString(),
+      sellingPrice: product.sellingPrice.toString(),
+      currentStock: product.currentStock.toString(),
+      lowStockThreshold: product.lowStockThreshold.toString(),
     });
     setShowForm(true);
   };
@@ -225,11 +258,13 @@ const ProductManagement = () => {
       const product = products.find(p => p.id === productId);
       if (!product) return;
 
-      // Update the product stock
-      updateProductMutation.mutate({
-        current_stock: product.current_stock + quantity,
+      // Convert to database format for update
+      const updateData = {
+        current_stock: product.currentStock + quantity,
         cost_price: buyingPrice, // Update cost price with latest buying price
-      }, { id: productId });
+      };
+
+      updateProductMutation.mutate(updateData, { id: productId });
 
       toast({
         title: "Stock Added Successfully",
@@ -355,22 +390,22 @@ const ProductManagement = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Cost Price:</span>
-                      <span className="font-medium">{formatCurrency(product.cost_price)}</span>
+                      <span className="font-medium">{formatCurrency(product.costPrice)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Selling Price:</span>
-                      <span className="font-medium">{formatCurrency(product.selling_price)}</span>
+                      <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Stock:</span>
-                      <Badge variant={product.current_stock <= product.low_stock_threshold ? "destructive" : "default"}>
-                        {product.current_stock} units
+                      <Badge variant={product.currentStock <= product.lowStockThreshold ? "destructive" : "default"}>
+                        {product.currentStock} units
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Profit Margin:</span>
                       <span className="font-medium text-green-600">
-                        {formatCurrency(product.selling_price - product.cost_price)}
+                        {formatCurrency(product.sellingPrice - product.costPrice)}
                       </span>
                     </div>
                   </div>
@@ -404,15 +439,15 @@ const ProductManagement = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Current Stock:</span>
-                      <Badge variant="destructive">{product.current_stock} units</Badge>
+                      <Badge variant="destructive">{product.currentStock} units</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Low Stock Alert:</span>
-                      <span className="text-sm">{product.low_stock_threshold} units</span>
+                      <span className="text-sm">{product.lowStockThreshold} units</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Selling Price:</span>
-                      <span className="font-medium">{formatCurrency(product.selling_price)}</span>
+                      <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
                     </div>
                   </div>
                   <Button
@@ -554,7 +589,7 @@ const ProductManagement = () => {
       <InventoryModal 
         open={showInventoryModal}
         onOpenChange={setShowInventoryModal}
-        products={products}
+        products={rawProducts}
         onAddStock={handleAddStock}
       />
     </div>

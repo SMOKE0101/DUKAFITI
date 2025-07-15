@@ -15,34 +15,70 @@ import {
   TrendingUp,
   Activity
 } from 'lucide-react';
-import { useSupabaseSales } from '../hooks/useSupabaseSales';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { useOfflineAwareData } from '../hooks/useOfflineAwareData';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
 
+// Define interfaces for type safety
+interface Sale {
+  id: string;
+  timestamp: string;
+  total_amount: number;
+  product_name: string;
+  quantity: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  current_stock: number;
+  low_stock_threshold: number;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  total_purchases: number;
+  outstanding_debt: number;
+  credit_limit: number;
+}
+
 const ColoredCardDashboard = () => {
-  const { sales } = useSupabaseSales();
-  const { products } = useSupabaseProducts();
-  const { customers } = useSupabaseCustomers();
   const navigate = useNavigate();
+
+  // Use offline-aware data hooks
+  const { data: sales } = useOfflineAwareData<Sale>({
+    table: 'sales',
+    select: '*'
+  });
+
+  const { data: products } = useOfflineAwareData<Product>({
+    table: 'products',
+    select: '*'
+  });
+
+  const { data: customers } = useOfflineAwareData<Customer>({
+    table: 'customers',
+    select: '*'
+  });
 
   // Calculate today's metrics
   const today = new Date().toDateString();
   const todaySales = sales.filter(sale => 
     new Date(sale.timestamp).toDateString() === today
   );
-  const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+  const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
   const ordersToday = todaySales.length;
-  const activeCustomers = customers.filter(c => c.totalPurchases > 0).length;
+  const activeCustomers = customers.filter(c => c.total_purchases > 0).length;
   
   // Low stock products (excluding unspecified stock)
   const lowStockProducts = products.filter(p => 
-    p.currentStock !== -1 && p.currentStock <= p.lowStockThreshold
+    p.current_stock !== -1 && p.current_stock <= p.low_stock_threshold
   );
 
   // Outstanding debts
-  const customersWithDebt = customers.filter(c => c.outstandingDebt > 0);
+  const customersWithDebt = customers.filter(c => c.outstanding_debt > 0);
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -147,14 +183,14 @@ const ColoredCardDashboard = () => {
                     <div className="flex-1">
                       <div className="font-medium text-foreground dark:text-white">{product.name}</div>
                       <div className="text-sm text-muted-foreground dark:text-slate-400">
-                        Stock: {product.currentStock} | Min: {product.lowStockThreshold}
+                        Stock: {product.current_stock} | Min: {product.low_stock_threshold}
                       </div>
                     </div>
                     <Badge 
-                      variant={product.currentStock <= 0 ? "destructive" : "secondary"}
+                      variant={product.current_stock <= 0 ? "destructive" : "secondary"}
                       className="ml-2 font-mono text-xs uppercase"
                     >
-                      {product.currentStock <= 0 ? 'OUT' : 'LOW'}
+                      {product.current_stock <= 0 ? 'OUT' : 'LOW'}
                     </Badge>
                   </div>
                 ))}
@@ -198,10 +234,10 @@ const ColoredCardDashboard = () => {
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-red-600 dark:text-red-400">
-                        {formatCurrency(customer.outstandingDebt)}
+                        {formatCurrency(customer.outstanding_debt)}
                       </div>
                       <div className="text-xs text-muted-foreground dark:text-slate-500">
-                        Limit: {formatCurrency(customer.creditLimit)}
+                        Limit: {formatCurrency(customer.credit_limit)}
                       </div>
                     </div>
                   </div>

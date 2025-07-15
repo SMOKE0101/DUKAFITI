@@ -21,6 +21,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { OfflineBanner } from './components/OfflineBanner';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import Dashboard from './components/Dashboard';
+import ProductManagement from './components/ProductManagement';
+import ModernSalesPage from './components/ModernSalesPage';
+import CustomersPage from './components/CustomersPage';
+import ReportsPage from './components/ReportsPage';
 
 // Create a client with proper error handling
 const queryClient = new QueryClient({
@@ -31,9 +36,10 @@ const queryClient = new QueryClient({
       retry: (failureCount, error) => {
         // Safely check error properties without assuming structure
         const errorObj = error as any;
-        if (errorObj && typeof errorObj === 'object' && errorObj.status) {
-          const status = Number(errorObj.status);
-          if (status >= 400 && status < 500) {
+        if (errorObj && typeof errorObj === 'object' && errorObj.message) {
+          // Check for network or auth errors that shouldn't retry
+          const message = errorObj.message.toLowerCase();
+          if (message.includes('unauthorized') || message.includes('forbidden')) {
             return false;
           }
         }
@@ -102,7 +108,14 @@ function App() {
                 <Route path="/app/*" element={
                   <ProtectedRoute>
                     <AppLayout>
-                      <div>App Content</div>
+                      <Routes>
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="inventory" element={<ProductManagement />} />
+                        <Route path="sales" element={<ModernSalesPage />} />
+                        <Route path="customers" element={<CustomersPage />} />
+                        <Route path="reports" element={<ReportsPage />} />
+                        <Route path="" element={<Dashboard />} />
+                      </Routes>
                     </AppLayout>
                   </ProtectedRoute>
                 } />

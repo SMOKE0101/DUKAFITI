@@ -4,7 +4,9 @@ import ColoredCardDashboard from './ColoredCardDashboard';
 
 const Dashboard = () => {
   return (
-    <ColoredCardDashboard />
+    <div className="w-full h-full">
+      <ColoredCardDashboard />
+    </div>
   );
 };
 
