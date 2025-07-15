@@ -19,7 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const OptimizedModernSalesPage = () => {
-  console.log('🚀 OptimizedModernSalesPage component loaded - ENHANCED MOBILE v1.0');
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
