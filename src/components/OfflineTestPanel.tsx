@@ -11,7 +11,8 @@ import {
   Database,
   RefreshCw,
   WifiOff,
-  Wifi
+  Wifi,
+  Trash2
 } from 'lucide-react';
 import { useEnhancedOfflineManager } from '../hooks/useEnhancedOfflineManager';
 import { useToast } from '../hooks/use-toast';
@@ -24,7 +25,8 @@ const OfflineTestPanel: React.FC = () => {
     isOnline, 
     pendingOperations,
     forceSyncNow,
-    isSyncing 
+    isSyncing,
+    clearAllOfflineData
   } = useEnhancedOfflineManager();
   const { toast } = useToast();
 
@@ -85,7 +87,6 @@ const OfflineTestPanel: React.FC = () => {
         timestamp: new Date().toISOString()
       };
       
-      // This would need to be implemented in the enhanced offline manager
       return {
         success: true,
         message: 'IndexedDB operations working'
@@ -94,7 +95,7 @@ const OfflineTestPanel: React.FC = () => {
       return {
         success: false,
         message: 'IndexedDB operations failed',
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   };
@@ -123,7 +124,7 @@ const OfflineTestPanel: React.FC = () => {
       return {
         success: false,
         message: 'Service Worker test failed',
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   };
@@ -150,6 +151,25 @@ const OfflineTestPanel: React.FC = () => {
 
   const getStatusColor = (success: boolean) => {
     return success ? 'text-green-600' : 'text-red-600';
+  };
+
+  const handleClearData = async () => {
+    if (window.confirm('Are you sure you want to clear all offline data? This cannot be undone.')) {
+      try {
+        await clearAllOfflineData();
+        toast({
+          title: "Data Cleared",
+          description: "All offline data has been cleared successfully",
+        });
+        setTestResults(null);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to clear offline data",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   return (
@@ -192,7 +212,7 @@ const OfflineTestPanel: React.FC = () => {
             ) : (
               <>
                 <TestTube className="w-4 h-4 mr-2" />
-                Run Comprehensive Test
+                Run Test
               </>
             )}
           </Button>
@@ -204,9 +224,18 @@ const OfflineTestPanel: React.FC = () => {
               variant="outline"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-              Sync Now
+              Sync
             </Button>
           )}
+
+          <Button 
+            onClick={handleClearData} 
+            variant="outline"
+            size="sm"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear
+          </Button>
         </div>
 
         {/* Test Results */}

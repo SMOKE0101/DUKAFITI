@@ -55,7 +55,7 @@ export const useOfflineFirst = () => {
     }
   }, []);
 
-  // Store offline data to IndexedDB
+  // Store offline data to IndexedDB - for seeding only, no sync queue
   const storeOfflineData = useCallback(async (table: string, data: any[]) => {
     try {
       const { offlineDB } = await import('@/utils/indexedDB');
@@ -67,7 +67,7 @@ export const useOfflineFirst = () => {
     }
   }, []);
 
-  // Queue offline action for later sync
+  // Queue offline action for later sync - only for actual user mutations
   const queueOfflineAction = useCallback(async (operation: any) => {
     try {
       const { offlineDB } = await import('@/utils/indexedDB');
@@ -78,7 +78,7 @@ export const useOfflineFirst = () => {
     }
   }, []);
 
-  // Update offline data
+  // Update offline data - for mutations only
   const updateOfflineData = useCallback(async (table: string, operation: string, data: any) => {
     try {
       const { offlineDB } = await import('@/utils/indexedDB');
@@ -112,7 +112,11 @@ export const useOfflineFirst = () => {
       // Initialize IndexedDB
       await offlineDB.init();
       
-      // Seed data if online
+      // Clear any phantom sync operations from previous sessions
+      await offlineDB.clearStore('syncQueue');
+      console.log('[OfflineFirst] Cleared phantom sync operations');
+      
+      // Seed data if online (without creating sync operations)
       if (navigator.onLine) {
         await seedOfflineData();
       }
@@ -138,7 +142,7 @@ export const useOfflineFirst = () => {
     }
   }, [user, state.isInitialized]);
 
-  // Seed offline data from Supabase
+  // Seed offline data from Supabase (read-only, no sync queue)
   const seedOfflineData = useCallback(async () => {
     if (!user) return;
 

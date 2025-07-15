@@ -3,10 +3,20 @@ import React, { memo, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { useSettings } from '../../hooks/useSettings';
 import { useTheme } from 'next-themes';
-import { Palette, Sun, Moon } from 'lucide-react';
+import { Palette, Sun, Moon, LucideIcon } from 'lucide-react';
 
-// Memoize theme option data
-const THEME_OPTIONS = [
+// Properly typed theme option interface
+interface ThemeOption {
+  value: 'light' | 'dark';
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  iconColor: string;
+  bgColor: string;
+}
+
+// Memoize theme option data with proper typing
+const THEME_OPTIONS: ThemeOption[] = [
   {
     value: 'light',
     label: 'LIGHT',
@@ -23,7 +33,7 @@ const THEME_OPTIONS = [
     iconColor: 'text-blue-500',
     bgColor: 'bg-blue-100 dark:bg-blue-900/20'
   }
-] as const;
+];
 
 // Memoized theme button component
 const ThemeButton = memo(({ 
@@ -31,34 +41,38 @@ const ThemeButton = memo(({
   isActive, 
   onSelect 
 }: { 
-  option: typeof THEME_OPTIONS[0];
+  option: ThemeOption;
   isActive: boolean;
   onSelect: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onSelect}
-    className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
-      isActive
-        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
-        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-    }`}
-  >
-    <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-      isActive ? option.bgColor : 'bg-gray-100 dark:bg-gray-800'
-    }`}>
-      <option.icon className={`w-8 h-8 ${option.iconColor}`} />
-    </div>
-    <div className="text-center">
-      <span className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-        {option.label}
-      </span>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        {option.description}
-      </p>
-    </div>
-  </button>
-));
+}) => {
+  const IconComponent = option.icon;
+  
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
+        isActive
+          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
+          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+      }`}
+    >
+      <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
+        isActive ? option.bgColor : 'bg-gray-100 dark:bg-gray-800'
+      }`}>
+        <IconComponent className={`w-8 h-8 ${option.iconColor}`} />
+      </div>
+      <div className="text-center">
+        <span className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+          {option.label}
+        </span>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {option.description}
+        </p>
+      </div>
+    </button>
+  );
+});
 
 const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();

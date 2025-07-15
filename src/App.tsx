@@ -29,10 +29,13 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
       retry: (failureCount, error) => {
-        // Check if error has a status property safely
-        const errorWithStatus = error as any;
-        if (errorWithStatus?.status && errorWithStatus.status >= 400 && errorWithStatus.status < 500) {
-          return false;
+        // Safely check error properties without assuming structure
+        const errorObj = error as any;
+        if (errorObj && typeof errorObj === 'object' && errorObj.status) {
+          const status = Number(errorObj.status);
+          if (status >= 400 && status < 500) {
+            return false;
+          }
         }
         return failureCount < 3;
       },
@@ -50,9 +53,19 @@ function App() {
     initializeOffline();
   }, [initializeOffline]);
 
-  // Register service worker for PWA functionality
+  // Register service worker for PWA functionality - only once
   useEffect(() => {
     if ('serviceWorker' in navigator) {
+      // Clear any existing registrations first
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          if (registration.scope.includes('enhanced-offline-sw')) {
+            registration.unregister();
+          }
+        });
+      });
+
+      // Register the main service worker
       navigator.serviceWorker.register('/enhanced-offline-sw.js')
         .then((registration) => {
           console.log('SW registered:', registration);
@@ -73,7 +86,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <QueryClientProvider client={queryClient}>
           <Router>
             <div className="min-h-screen bg-background">

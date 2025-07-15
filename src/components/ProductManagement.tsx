@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,13 +10,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Search, Package, AlertTriangle, Edit, Trash2, PackagePlus } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
-import { Product } from '../types';
 import { formatCurrency } from '../utils/currency';
 import FeatureLimitModal from './trial/FeatureLimitModal';
 import InventoryModal from './InventoryModal';
 import { useTrialSystem } from '../hooks/useTrialSystem';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { useOfflineAwareData } from '../hooks/useOfflineAwareData';
+import { useOfflineAwareMutation } from '../hooks/useOfflineAwareMutation';
 import { PRODUCT_CATEGORIES } from '../constants/categories';
+
+interface Product {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string;
+  cost_price: number;
+  selling_price: number;
+  current_stock: number;
+  low_stock_threshold: number;
+  created_at: string;
+  updated_at: string;
+}
 
 const ProductManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,7 +40,51 @@ const ProductManagement = () => {
   const [showFeatureLimitModal, setShowFeatureLimitModal] = useState(false);
   const { toast } = useToast();
   const { trialInfo, updateFeatureUsage, checkFeatureAccess } = useTrialSystem();
-  const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
+
+  // Use offline-aware data hooks
+  const { data: products, loading, refetch } = useOfflineAwareData<Product>({
+    table: 'products',
+    select: '*'
+  });
+
+  // Use offline-aware mutations
+  const createProductMutation = useOfflineAwareMutation({
+    table: 'products',
+    operation: 'insert',
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Product added successfully",
+      });
+      refetch();
+      resetForm();
+    }
+  });
+
+  const updateProductMutation = useOfflineAwareMutation({
+    table: 'products',
+    operation: 'update',
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
+      refetch();
+      resetForm();
+    }
+  });
+
+  const deleteProductMutation = useOfflineAwareMutation({
+    table: 'products',
+    operation: 'delete',
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+      refetch();
+    }
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -39,14 +97,20 @@ const ProductManagement = () => {
 
   const categories = ['all', ...PRODUCT_CATEGORIES];
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Memoize filtered products
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, selectedCategory]);
 
-  const lowStockProducts = products.filter(product => product.currentStock <= product.lowStockThreshold);
+  // Memoize low stock products
+  const lowStockProducts = useMemo(() => {
+    return products.filter(product => product.current_stock <= product.low_stock_threshold);
+  }, [products]);
 
   const resetForm = () => {
     setFormData({
@@ -99,34 +163,23 @@ const ProductManagement = () => {
     const productData = {
       name: formData.name,
       category: formData.category,
-      costPrice,
-      sellingPrice,
-      currentStock,
-      lowStockThreshold,
+      cost_price: costPrice,
+      selling_price: sellingPrice,
+      current_stock: currentStock,
+      low_stock_threshold: lowStockThreshold,
     };
 
     try {
       if (editingProduct) {
-        await updateProduct(editingProduct.id, productData);
-        toast({
-          title: "Success",
-          description: "Product updated successfully",
-        });
+        updateProductMutation.mutate(productData, { id: editingProduct.id });
       } else {
-        await createProduct(productData);
+        createProductMutation.mutate(productData);
         
         // Update trial usage for new products
         if (trialInfo && trialInfo.isTrialActive) {
           updateFeatureUsage('products', 1);
         }
-        
-        toast({
-          title: "Success",
-          description: "Product added successfully",
-        });
       }
-
-      resetForm();
     } catch (error) {
       console.error('Failed to save product:', error);
     }
@@ -137,10 +190,10 @@ const ProductManagement = () => {
     setFormData({
       name: product.name,
       category: product.category,
-      costPrice: product.costPrice.toString(),
-      sellingPrice: product.sellingPrice.toString(),
-      currentStock: product.currentStock.toString(),
-      lowStockThreshold: product.lowStockThreshold.toString(),
+      costPrice: product.cost_price.toString(),
+      sellingPrice: product.selling_price.toString(),
+      currentStock: product.current_stock.toString(),
+      lowStockThreshold: product.low_stock_threshold.toString(),
     });
     setShowForm(true);
   };
@@ -148,11 +201,7 @@ const ProductManagement = () => {
   const handleDelete = async (product: Product) => {
     if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
       try {
-        await deleteProduct(product.id);
-        toast({
-          title: "Success",
-          description: "Product deleted successfully",
-        });
+        deleteProductMutation.mutate({ id: product.id });
       } catch (error) {
         console.error('Failed to delete product:', error);
       }
@@ -177,10 +226,10 @@ const ProductManagement = () => {
       if (!product) return;
 
       // Update the product stock
-      await updateProduct(productId, {
-        currentStock: product.currentStock + quantity,
-        costPrice: buyingPrice, // Update cost price with latest buying price
-      });
+      updateProductMutation.mutate({
+        current_stock: product.current_stock + quantity,
+        cost_price: buyingPrice, // Update cost price with latest buying price
+      }, { id: productId });
 
       toast({
         title: "Stock Added Successfully",
@@ -197,6 +246,22 @@ const ProductManagement = () => {
       });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -290,22 +355,22 @@ const ProductManagement = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Cost Price:</span>
-                      <span className="font-medium">{formatCurrency(product.costPrice)}</span>
+                      <span className="font-medium">{formatCurrency(product.cost_price)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Selling Price:</span>
-                      <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
+                      <span className="font-medium">{formatCurrency(product.selling_price)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Stock:</span>
-                      <Badge variant={product.currentStock <= product.lowStockThreshold ? "destructive" : "default"}>
-                        {product.currentStock} units
+                      <Badge variant={product.current_stock <= product.low_stock_threshold ? "destructive" : "default"}>
+                        {product.current_stock} units
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Profit Margin:</span>
                       <span className="font-medium text-green-600">
-                        {formatCurrency(product.sellingPrice - product.costPrice)}
+                        {formatCurrency(product.selling_price - product.cost_price)}
                       </span>
                     </div>
                   </div>
@@ -339,15 +404,15 @@ const ProductManagement = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Current Stock:</span>
-                      <Badge variant="destructive">{product.currentStock} units</Badge>
+                      <Badge variant="destructive">{product.current_stock} units</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Low Stock Alert:</span>
-                      <span className="text-sm">{product.lowStockThreshold} units</span>
+                      <span className="text-sm">{product.low_stock_threshold} units</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Selling Price:</span>
-                      <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
+                      <span className="font-medium">{formatCurrency(product.selling_price)}</span>
                     </div>
                   </div>
                   <Button
@@ -387,15 +452,15 @@ const ProductManagement = () => {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Enter product name"
-                    className="h-12 text-base"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger className="h-12 text-base">
+                  <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                    <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -405,32 +470,38 @@ const ProductManagement = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="costPrice" className="text-sm font-medium">Cost Price *</Label>
+                  <Label htmlFor="costPrice" className="text-sm font-medium">Cost Price (KES) *</Label>
                   <Input
                     id="costPrice"
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.costPrice}
-                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, costPrice: e.target.value }))}
                     placeholder="0.00"
-                    className="h-12 text-base"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sellingPrice" className="text-sm font-medium">Selling Price *</Label>
+                  <Label htmlFor="sellingPrice" className="text-sm font-medium">Selling Price (KES) *</Label>
                   <Input
                     id="sellingPrice"
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.sellingPrice}
-                    onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sellingPrice: e.target.value }))}
                     placeholder="0.00"
-                    className="h-12 text-base"
+                    className="w-full"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock</Label>
                   <Input
@@ -438,9 +509,9 @@ const ProductManagement = () => {
                     type="number"
                     min="0"
                     value={formData.currentStock}
-                    onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, currentStock: e.target.value }))}
                     placeholder="0"
-                    className="h-12 text-base"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -450,18 +521,18 @@ const ProductManagement = () => {
                     type="number"
                     min="0"
                     value={formData.lowStockThreshold}
-                    onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lowStockThreshold: e.target.value }))}
                     placeholder="10"
-                    className="h-12 text-base"
+                    className="w-full"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-border">
-                <Button type="submit" className="flex-1 h-12 text-base font-medium">
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" className="flex-1" disabled={createProductMutation.loading || updateProductMutation.loading}>
                   {editingProduct ? 'Update Product' : 'Add Product'}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm} className="flex-1 h-12 text-base font-medium">
+                <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
                   Cancel
                 </Button>
               </div>
@@ -470,20 +541,21 @@ const ProductManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Inventory Modal */}
-      <InventoryModal
-        isOpen={showInventoryModal}
-        onClose={() => setShowInventoryModal(false)}
-        products={products}
-        onAddStock={handleAddStock}
+      {/* Feature Limit Modal */}
+      <FeatureLimitModal 
+        open={showFeatureLimitModal}
+        onOpenChange={setShowFeatureLimitModal}
+        feature="products"
+        currentUsage={trialInfo?.usage?.products || 0}
+        limit={trialInfo?.limits?.products || 0}
       />
 
-      {/* Feature Limit Modal */}
-      <FeatureLimitModal
-        isOpen={showFeatureLimitModal}
-        onClose={() => setShowFeatureLimitModal(false)}
-        feature="products"
-        limit={trialInfo?.limits.products || 50}
+      {/* Inventory Modal */}
+      <InventoryModal 
+        open={showInventoryModal}
+        onOpenChange={setShowInventoryModal}
+        products={products}
+        onAddStock={handleAddStock}
       />
     </div>
   );
