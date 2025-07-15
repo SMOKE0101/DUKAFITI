@@ -48,6 +48,30 @@ const initializePWA = async () => {
       window.location.reload();
     });
   }
+
+  // Initialize offline testing in development
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const { offlineTestingSuite } = await import('./utils/offlineTestingSuite');
+      console.log('[PWA] Offline testing suite loaded for development');
+      
+      // Auto-run basic tests after initialization
+      setTimeout(async () => {
+        console.log('[PWA] Running basic offline functionality validation...');
+        const results = await offlineTestingSuite.runAllTests();
+        const passedTests = results.filter(r => r.passed).length;
+        const totalTests = results.length;
+        
+        if (passedTests === totalTests) {
+          console.log(`[PWA] ✅ All ${totalTests} offline tests passed! Your PWA is working perfectly.`);
+        } else {
+          console.warn(`[PWA] ⚠️ ${totalTests - passedTests} tests failed. Check the Settings page for details.`);
+        }
+      }, 5000);
+    } catch (error) {
+      console.warn('[PWA] Offline testing suite not available:', error);
+    }
+  }
 };
 
 const container = document.getElementById('root');

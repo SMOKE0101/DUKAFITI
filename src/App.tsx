@@ -22,15 +22,16 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { OfflineBanner } from './components/OfflineBanner';
 import { PWAInstallButton } from './components/PWAInstallButton';
 
-// Create a client
+// Create a client with proper error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
       retry: (failureCount, error) => {
-        // Don't retry on 4xx errors except 408, 409, 423, 424, 429
-        if (error?.status && error.status >= 400 && error.status < 500) {
+        // Check if error has a status property safely
+        const errorWithStatus = error as any;
+        if (errorWithStatus?.status && errorWithStatus.status >= 400 && errorWithStatus.status < 500) {
           return false;
         }
         return failureCount < 3;
@@ -87,7 +88,9 @@ function App() {
                 {/* Protected routes */}
                 <Route path="/app/*" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <div>App Content</div>
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 

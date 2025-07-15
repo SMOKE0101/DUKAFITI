@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 
 interface MutationOptions {
-  table: string;
+  table: 'products' | 'customers' | 'sales' | 'transactions';
   operation: 'insert' | 'update' | 'delete';
   onSuccess?: (data?: any) => void;
   onError?: (error: Error) => void;
@@ -31,11 +31,11 @@ export const useOfflineAwareMutation = ({
         
         switch (operation) {
           case 'insert':
-            result = await supabase.from(table).insert(data).select().single();
+            result = await supabase.from(table as any).insert(data).select().single();
             break;
           case 'update':
             result = await supabase
-              .from(table)
+              .from(table as any)
               .update(data)
               .eq('id', options?.id || data.id)
               .select()
@@ -43,18 +43,18 @@ export const useOfflineAwareMutation = ({
             break;
           case 'delete':
             result = await supabase
-              .from(table)
+              .from(table as any)
               .delete()
               .eq('id', options?.id || data.id);
             break;
         }
 
-        if (result.error) throw result.error;
+        if (result?.error) throw result.error;
 
         // Update offline cache
-        await updateOfflineData(table, operation, result.data || data);
+        await updateOfflineData(table, operation === 'insert' ? 'create' : operation, result?.data || data);
         
-        onSuccess?.(result.data);
+        onSuccess?.(result?.data);
         
         toast({
           title: "Success",
@@ -65,17 +65,19 @@ export const useOfflineAwareMutation = ({
         const queueItem = {
           id: crypto.randomUUID(),
           table,
-          operation,
+          operation: operation === 'insert' ? 'create' : operation,
           data,
           options,
           timestamp: new Date().toISOString(),
-          priority: operation === 'insert' ? 'high' : 'medium'
+          priority: operation === 'insert' ? 'high' : 'medium',
+          attempts: 0,
+          synced: false
         };
 
         await queueOfflineAction(queueItem);
         
         // Optimistically update offline cache
-        await updateOfflineData(table, operation, data);
+        await updateOfflineData(table, operation === 'insert' ? 'create' : operation, data);
         
         onSuccess?.(data);
         

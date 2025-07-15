@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -42,6 +43,61 @@ export const useOfflineFirst = () => {
     cached: { products: 0, customers: 0, sales: 0, transactions: 0 },
     queued: { high: 0, medium: 0, low: 0, total: 0 }
   });
+
+  // Get offline data from IndexedDB
+  const getOfflineData = useCallback(async (table: string) => {
+    try {
+      const { offlineDB } = await import('@/utils/indexedDB');
+      return await offlineDB.getOfflineData(table);
+    } catch (error) {
+      console.error('Failed to get offline data:', error);
+      return [];
+    }
+  }, []);
+
+  // Store offline data to IndexedDB
+  const storeOfflineData = useCallback(async (table: string, data: any[]) => {
+    try {
+      const { offlineDB } = await import('@/utils/indexedDB');
+      for (const item of data) {
+        await offlineDB.storeOfflineData(table, item);
+      }
+    } catch (error) {
+      console.error('Failed to store offline data:', error);
+    }
+  }, []);
+
+  // Queue offline action for later sync
+  const queueOfflineAction = useCallback(async (operation: any) => {
+    try {
+      const { offlineDB } = await import('@/utils/indexedDB');
+      await offlineDB.addToSyncQueue(operation);
+      await updateStats();
+    } catch (error) {
+      console.error('Failed to queue offline action:', error);
+    }
+  }, []);
+
+  // Update offline data
+  const updateOfflineData = useCallback(async (table: string, operation: string, data: any) => {
+    try {
+      const { offlineDB } = await import('@/utils/indexedDB');
+      
+      switch (operation) {
+        case 'create':
+          await offlineDB.storeOfflineData(table, data);
+          break;
+        case 'update':
+          await offlineDB.storeOfflineData(table, data);
+          break;
+        case 'delete':
+          await offlineDB.deleteOfflineData(table, data.id);
+          break;
+      }
+    } catch (error) {
+      console.error('Failed to update offline data:', error);
+    }
+  }, []);
 
   // Initialize offline-first system
   const initialize = useCallback(async () => {
@@ -462,24 +518,6 @@ export const useOfflineFirst = () => {
     };
   }, [syncData, updateStats]);
 
-  // Initialize when user is available
-  useEffect(() => {
-    if (user && !state.isInitialized) {
-      initialize();
-    }
-  }, [user, state.isInitialized, initialize]);
-
-  // Periodic stats update
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (state.isInitialized) {
-        updateStats();
-      }
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [state.isInitialized, updateStats]);
-
   return {
     ...state,
     stats,
@@ -487,7 +525,11 @@ export const useOfflineFirst = () => {
     syncData,
     forceSync,
     clearOfflineData,
+    seedOfflineData,
     updateStats,
-    seedOfflineData
+    getOfflineData,
+    storeOfflineData,
+    queueOfflineAction,
+    updateOfflineData
   };
 };

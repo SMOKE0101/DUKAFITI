@@ -4,7 +4,7 @@ import { useOfflineFirst } from './useOfflineFirst';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseOfflineAwareDataOptions {
-  table: string;
+  table: 'products' | 'customers' | 'sales' | 'transactions';
   select?: string;
   filters?: Record<string, any>;
   dependencies?: any[];
@@ -27,8 +27,8 @@ export const useOfflineAwareData = <T = any>({
 
     try {
       if (isOnline) {
-        // Fetch from Supabase when online
-        let query = supabase.from(table).select(select);
+        // Fetch from Supabase when online - use type assertion for table name
+        let query = supabase.from(table as any).select(select);
         
         // Apply filters
         Object.entries(filters).forEach(([key, value]) => {
@@ -44,7 +44,7 @@ export const useOfflineAwareData = <T = any>({
         // Store in offline cache
         if (freshData) {
           await storeOfflineData(table, freshData);
-          setData(freshData);
+          setData(freshData as T[]);
         }
       } else {
         // Fetch from offline cache when offline
@@ -58,7 +58,7 @@ export const useOfflineAwareData = <T = any>({
           }
         });
         
-        setData(filteredData);
+        setData(filteredData as T[]);
       }
     } catch (err) {
       console.error(`Error fetching ${table}:`, err);
@@ -68,7 +68,7 @@ export const useOfflineAwareData = <T = any>({
       try {
         const fallbackData = await getOfflineData(table);
         if (fallbackData) {
-          setData(fallbackData);
+          setData(fallbackData as T[]);
         }
       } catch (offlineError) {
         console.error('Failed to load offline fallback:', offlineError);
