@@ -3,7 +3,6 @@ import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineAwareData } from '@/hooks/useOfflineAwareData';
 import { transformDatabaseProduct, transformDatabaseCustomer, transformDatabaseSale } from '@/utils/dataTransforms';
-import ColoredCardDashboard from './ColoredCardDashboard';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +89,13 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Calculate dashboard stats
+  const totalProducts = products.length;
+  const totalCustomers = customers.length;
+  const totalSales = sales.length;
+  const totalRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
+  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -101,11 +107,81 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <ColoredCardDashboard 
-        products={products}
-        customers={customers}
-        sales={sales}
-      />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="w-6 h-6 bg-blue-600 rounded"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Products</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalProducts}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <div className="w-6 h-6 bg-green-600 rounded"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Customers</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalCustomers}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="w-6 h-6 bg-purple-600 rounded"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Sales</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalSales}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <div className="w-6 h-6 bg-orange-600 rounded"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  KSh {totalRevenue.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Low Stock Alert */}
+      {lowStockProducts.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-2">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-medium">Low Stock Alert</span>
+            </div>
+            <p className="text-sm text-orange-600 dark:text-orange-400">
+              {lowStockProducts.length} product(s) are running low on stock
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

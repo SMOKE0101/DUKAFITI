@@ -27,7 +27,7 @@ import { offlineTestingSuite } from '@/utils/offlineTestingSuite';
 
 interface TestResult {
   name: string;
-  passed: boolean;
+  success: boolean;
   error?: string;
   details?: any;
 }
@@ -69,7 +69,7 @@ export const OfflineTestingPanel = () => {
     return Database;
   };
 
-  const passedTests = results.filter(r => r.passed).length;
+  const passedTests = results.filter(r => r.success).length;
   const totalTests = results.length;
   const passRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
 
@@ -179,7 +179,7 @@ export const OfflineTestingPanel = () => {
                 
                 return (
                   <Card key={index} className={`border-l-4 ${
-                    result.passed 
+                    result.success 
                       ? 'border-l-green-500 bg-green-50 dark:bg-green-950/20' 
                       : 'border-l-red-500 bg-red-50 dark:bg-red-950/20'
                   }`}>
@@ -190,7 +190,7 @@ export const OfflineTestingPanel = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{result.name}</span>
-                            {result.passed ? (
+                            {result.success ? (
                               <CheckCircle className="h-4 w-4 text-green-600" />
                             ) : (
                               <XCircle className="h-4 w-4 text-red-600" />
@@ -198,7 +198,7 @@ export const OfflineTestingPanel = () => {
                           </div>
                           
                           <div className="text-sm text-muted-foreground mt-1">
-                            {result.passed ? (
+                            {result.success ? (
                               result.details || 'Test passed successfully'
                             ) : (
                               result.error || 'Test failed'
@@ -207,10 +207,10 @@ export const OfflineTestingPanel = () => {
                         </div>
                         
                         <Badge 
-                          variant={result.passed ? "default" : "destructive"}
+                          variant={result.success ? "default" : "destructive"}
                           className="text-xs"
                         >
-                          {result.passed ? 'PASS' : 'FAIL'}
+                          {result.success ? 'PASS' : 'FAIL'}
                         </Badge>
                       </div>
                     </CardContent>

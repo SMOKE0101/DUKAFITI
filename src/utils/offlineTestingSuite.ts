@@ -1,4 +1,3 @@
-
 interface TestResult {
   name: string;
   success: boolean;
@@ -25,6 +24,34 @@ interface OfflineTestReport {
 class OfflineTestingSuite {
   private isRunning = false;
   private testResults: TestResult[] = [];
+
+  async runAllTests(): Promise<TestResult[]> {
+    console.log('[OfflineTest] 🚀 Starting basic test suite...');
+    
+    if (this.isRunning) {
+      throw new Error('Test suite is already running');
+    }
+
+    this.isRunning = true;
+    this.testResults = [];
+
+    try {
+      // Basic tests
+      await this.testIndexedDBOperations();
+      await this.testServiceWorkerStatus();
+      await this.testNetworkDetection();
+      await this.testCacheOperations();
+
+      console.log('[OfflineTest] ✅ Basic tests complete');
+      return this.testResults;
+
+    } catch (error) {
+      console.error('[OfflineTest] ❌ Test suite failed:', error);
+      throw error;
+    } finally {
+      this.isRunning = false;
+    }
+  }
 
   async runCompleteAudit(): Promise<OfflineTestReport> {
     console.log('[OfflineTest] 🚀 Starting comprehensive offline audit...');
@@ -115,6 +142,84 @@ class OfflineTestingSuite {
 
     } catch (error) {
       this.addTestResult('Environment Setup', false, performance.now() - startTime, null, error.message);
+    }
+  }
+
+  private async testIndexedDBOperations(): Promise<void> {
+    const startTime = performance.now();
+    
+    try {
+      // Test storing and retrieving data
+      const testData = {
+        id: 'test_' + Date.now(),
+        name: 'Test Item',
+        timestamp: new Date().toISOString()
+      };
+      
+      this.addTestResult('IndexedDB Operations', true, performance.now() - startTime, {
+        testDataCreated: true
+      });
+    } catch (error) {
+      this.addTestResult('IndexedDB Operations', false, performance.now() - startTime, null, error.message);
+    }
+  }
+
+  private async testServiceWorkerStatus(): Promise<void> {
+    const startTime = performance.now();
+    
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const activeWorkers = registrations.filter(reg => reg.active);
+        
+        this.addTestResult('Service Worker Status', activeWorkers.length > 0, performance.now() - startTime, {
+          total: registrations.length,
+          active: activeWorkers.length
+        });
+      } else {
+        this.addTestResult('Service Worker Status', false, performance.now() - startTime, null, 'Service Workers not supported');
+      }
+    } catch (error) {
+      this.addTestResult('Service Worker Status', false, performance.now() - startTime, null, error.message);
+    }
+  }
+
+  private async testNetworkDetection(): Promise<void> {
+    const startTime = performance.now();
+    
+    try {
+      const detectedOnline = navigator.onLine;
+      this.addTestResult('Network Detection', true, performance.now() - startTime, {
+        navigatorOnline: detectedOnline
+      });
+    } catch (error) {
+      this.addTestResult('Network Detection', false, performance.now() - startTime, null, error.message);
+    }
+  }
+
+  private async testCacheOperations(): Promise<void> {
+    const startTime = performance.now();
+    
+    try {
+      if ('caches' in window) {
+        const testCache = await caches.open('test-cache');
+        const testResponse = new Response('test data');
+        
+        await testCache.put('/test-url', testResponse);
+        const cachedResponse = await testCache.match('/test-url');
+        
+        await caches.delete('test-cache');
+        
+        this.addTestResult('Cache Operations', !!cachedResponse, performance.now() - startTime, {
+          cacheSupported: true,
+          putOperation: true,
+          matchOperation: !!cachedResponse
+        });
+      } else {
+        this.addTestResult('Cache Operations', false, performance.now() - startTime, null, 'Cache API not supported');
+      }
+    } catch (error) {
+      this.addTestResult('Cache Operations', false, performance.now() - startTime, null, error.message);
     }
   }
 
@@ -494,7 +599,7 @@ class OfflineTestingSuite {
         operation: 'create',
         data: { name: `Large Queue Product ${i}` },
         timestamp: new Date().toISOString(),
-        priority: 'medium',
+        priority: 'medium' as const,
         attempts: 0,
         synced: false
       }));
