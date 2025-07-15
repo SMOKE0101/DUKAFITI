@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,9 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
+import { PWAInstallButton } from '@/components/PWAInstallButton';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { OfflineDataManager } from '@/components/OfflineDataManager';
 
 const SettingsPage = () => {
   const { user } = useAuth();
@@ -68,6 +72,8 @@ const SettingsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <OfflineBanner />
+      
       {/* Modern Top Bar */}
       <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
@@ -77,6 +83,10 @@ const SettingsPage = () => {
           <h1 className="font-mono text-lg md:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
             SETTINGS
           </h1>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <OfflineDataManager />
         </div>
       </div>
 

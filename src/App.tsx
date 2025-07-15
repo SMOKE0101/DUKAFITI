@@ -1,94 +1,113 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { ProductionToaster } from "@/components/ui/production-toast";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./hooks/useAuth";
-import { ThemeProvider } from "next-themes";
-import Index from "./pages/Index";
-import Landing from "./pages/Landing";
-import ModernLanding from "./pages/ModernLanding";
-import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
-import NotFound from "./pages/NotFound";
-import Settings from "./pages/Settings";
-import Offline from "./pages/Offline";
-import ProtectedRoute from "./components/ProtectedRoute";
-import PremiumAppLayout from "./components/layout/PremiumAppLayout";
-import Dashboard from "./components/Dashboard";
-import ModernSalesPage from "./components/ModernSalesPage";
-import InventoryPage from "./components/InventoryPage";
-import CustomersPage from "./components/CustomersPage";
-import ReportsPage from "./components/ReportsPage";
-import ErrorBoundary from "./components/ErrorBoundary";
-import OfflineHandler from './components/OfflineHandler';
-import { useServiceWorker } from './hooks/useServiceWorker';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
+import { Toaster } from '@/components/ui/sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useOfflineFirst } from '@/hooks/useOfflineFirst';
+import { useServiceWorker } from '@/hooks/useServiceWorker';
 
+// Pages
+import Landing from './pages/Landing';
+import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
+import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
 
+// Components
+import AppLayout from './components/layout/AppLayout';
+import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import { OfflineBanner } from './components/OfflineBanner';
+import { PWAInstallButton } from './components/PWAInstallButton';
+
+// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 3,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors except 408, 409, 423, 424, 429
+        if (error?.status && error.status >= 400 && error.status < 500) {
+          return false;
+        }
+        return failureCount < 3;
+      },
     },
   },
 });
 
 function App() {
-  // Initialize service worker
-  useServiceWorker();
+  const { user, loading } = useAuth();
+  const { isOnline, initialize: initializeOffline } = useOfflineFirst();
+  const { swRegistration } = useServiceWorker();
+
+  // Initialize offline capabilities
+  useEffect(() => {
+    initializeOffline();
+  }, [initializeOffline]);
+
+  // Register service worker for PWA functionality
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/enhanced-offline-sw.js')
+        .then((registration) => {
+          console.log('SW registered:', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed:', registrationError);
+        });
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <AuthProvider>
-              <TooltipProvider>
-                <div className="min-h-screen w-full bg-background text-foreground">
-                  <Routes>
-                    {/* Public routes */}
-                    <Route path="/" element={<ModernLanding />} />
-                    <Route path="/modern-landing" element={<ModernLanding />} />
-                    <Route path="/landing" element={<Landing />} />
-                    <Route path="/signin" element={<SignIn />} />
-                    <Route path="/signup" element={<SignUp />} />
-                    <Route path="/auth" element={<Navigate to="/signin" replace />} />
-                    <Route path="/offline" element={<Offline />} />
-                    
-                    {/* Dashboard compatibility route */}
-                    <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-                    
-                    {/* Protected routes with layout */}
-                    <Route path="/app" element={
-                      <ProtectedRoute>
-                        <PremiumAppLayout />
-                      </ProtectedRoute>
-                    }>
-                      <Route index element={<Navigate to="/app/dashboard" replace />} />
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="sales" element={<ModernSalesPage />} />
-                      <Route path="inventory" element={<InventoryPage />} />
-                      <Route path="customers" element={<CustomersPage />} />
-                      <Route path="reports" element={<ReportsPage />} />
-                      <Route path="settings" element={<Settings />} />
-                    </Route>
-                    
-                    {/* Legacy route redirect */}
-                    <Route path="/index" element={<Index />} />
-                    
-                    {/* 404 */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                  <OfflineHandler />
-                  <Toaster />
-                  <ProductionToaster />
-                </div>
-              </TooltipProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <Router>
+            <div className="min-h-screen bg-background">
+              <OfflineBanner />
+              
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Landing />} />
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/signup" element={<SignUp />} />
+                
+                {/* Protected routes */}
+                <Route path="/app/*" element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Catch all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              
+              <PWAInstallButton />
+            </div>
+          </Router>
+          
+          <Toaster />
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

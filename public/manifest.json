@@ -1,18 +1,21 @@
 
 {
-  "name": "DukaFiti - Dukafiti Ni Dukabora",
+  "name": "DukaFiti - Kenya's Smart Shop Management System",
   "short_name": "DukaFiti",
-  "description": "Kenya's most advanced shop management system with M-Pesa integration and offline support",
+  "description": "Kenya's most advanced offline-first shop management system with M-Pesa integration and comprehensive business analytics",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
   "scope": "/",
+  "lang": "sw",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "edge_side_panel": {
     "preferred_width": 400
   },
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "icons": [
     {
       "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
@@ -63,10 +66,7 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["business", "productivity", "finance"],
-  "lang": "sw",
-  "dir": "ltr",
-  "prefer_related_applications": false,
+  "categories": ["business", "productivity", "finance", "retail"],
   "related_applications": [],
   "protocol_handlers": [],
   "file_handlers": [],
@@ -94,6 +94,46 @@
           "sizes": "96x96"
         }
       ]
+    },
+    {
+      "name": "Wateja",
+      "short_name": "Wateja",
+      "description": "Simamia wateja na madeni",
+      "url": "/app?action=customers",
+      "icons": [
+        {
+          "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Ripoti",
+      "short_name": "Ripoti",
+      "description": "Ona ripoti za biashara",
+      "url": "/app?action=reports",
+      "icons": [
+        {
+          "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
+          "sizes": "96x96"
+        }
+      ]
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "DukaFiti Dashboard"
+    }
+  ],
+  "features": [
+    "offline-first",
+    "progressive-web-app",
+    "background-sync",
+    "push-notifications",
+    "installable"
   ]
 }
