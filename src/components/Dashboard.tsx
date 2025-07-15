@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useOfflineAwareData } from '@/hooks/useOfflineAwareData';
+import { useOfflineFirst } from '@/hooks/useOfflineFirst';
 import { transformDatabaseProduct, transformDatabaseCustomer, transformDatabaseSale } from '@/utils/dataTransforms';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,53 +10,55 @@ import OfflineValidator from './OfflineValidator';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-
-  // Fetch data using offline-aware hooks
-  const { 
-    data: rawProducts = [], 
-    loading: loadingProducts, 
-    error: productsError,
-    refetch: refetchProducts 
-  } = useOfflineAwareData({
-    table: 'products',
-    dependencies: [user?.id]
+  const { getOfflineData, isInitialized } = useOfflineFirst();
+  const [data, setData] = React.useState<{
+    products: any[];
+    customers: any[];
+    sales: any[];
+    loading: boolean;
+    error: string | null;
+  }>({
+    products: [],
+    customers: [],
+    sales: [],
+    loading: true,
+    error: null
   });
 
-  const { 
-    data: rawCustomers = [], 
-    loading: loadingCustomers, 
-    error: customersError,
-    refetch: refetchCustomers 
-  } = useOfflineAwareData({
-    table: 'customers',
-    dependencies: [user?.id]
-  });
+  const loadData = React.useCallback(async () => {
+    if (!isInitialized) return;
+    
+    try {
+      setData(prev => ({ ...prev, loading: true, error: null }));
+      
+      const [products, customers, sales] = await Promise.all([
+        getOfflineData('products'),
+        getOfflineData('customers'),
+        getOfflineData('sales')
+      ]);
+      
+      setData({
+        products: Array.isArray(products) ? products : [],
+        customers: Array.isArray(customers) ? customers : [],
+        sales: Array.isArray(sales) ? sales : [],
+        loading: false,
+        error: null
+      });
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      setData(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to load data'
+      }));
+    }
+  }, [getOfflineData, isInitialized]);
 
-  const { 
-    data: rawSales = [], 
-    loading: loadingSales, 
-    error: salesError,
-    refetch: refetchSales 
-  } = useOfflineAwareData({
-    table: 'sales',
-    dependencies: [user?.id]
-  });
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  // Transform data
-  const products = rawProducts.map(transformDatabaseProduct);
-  const customers = rawCustomers.map(transformDatabaseCustomer);
-  const sales = rawSales.map(transformDatabaseSale);
-
-  const isLoading = loadingProducts || loadingCustomers || loadingSales;
-  const hasError = productsError || customersError || salesError;
-
-  const handleRetry = () => {
-    refetchProducts();
-    refetchCustomers();
-    refetchSales();
-  };
-
-  if (isLoading) {
+  if (data.loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -67,7 +69,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (hasError) {
+  if (data.error) {
     return (
       <div className="p-6">
         <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
@@ -76,12 +78,8 @@ const Dashboard: React.FC = () => {
               <AlertTriangle className="h-5 w-5" />
               <span>Error loading dashboard data</span>
             </div>
-            <div className="space-y-2 text-sm text-red-600 dark:text-red-400 mb-4">
-              {productsError && <p>Products: {productsError}</p>}
-              {customersError && <p>Customers: {customersError}</p>}
-              {salesError && <p>Sales: {salesError}</p>}
-            </div>
-            <Button onClick={handleRetry} variant="outline">
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">{data.error}</p>
+            <Button onClick={loadData} variant="outline">
               Try Again
             </Button>
           </CardContent>
@@ -90,7 +88,11 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Calculate dashboard stats - Fixed: use 'total' instead of 'totalAmount'
+  // Transform and calculate stats
+  const products = data.products.map(transformDatabaseProduct);
+  const customers = data.customers.map(transformDatabaseCustomer);
+  const sales = data.sales.map(transformDatabaseSale);
+
   const totalProducts = products.length;
   const totalCustomers = customers.length;
   const totalSales = sales.length;

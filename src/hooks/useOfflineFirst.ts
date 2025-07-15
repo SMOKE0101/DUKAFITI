@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { offlineDB } from '@/utils/indexedDB';
 
 interface OfflineState {
   isOnline: boolean;
@@ -11,21 +12,6 @@ interface OfflineState {
   queuedOperations: number;
   lastSyncTime?: Date;
   error?: string;
-}
-
-interface OfflineStats {
-  cached: {
-    products: number;
-    customers: number;
-    sales: number;
-    transactions: number;
-  };
-  queued: {
-    high: number;
-    medium: number;
-    low: number;
-    total: number;
-  };
 }
 
 export const useOfflineFirst = () => {
@@ -39,66 +25,6 @@ export const useOfflineFirst = () => {
     queuedOperations: 0
   });
 
-  const [stats, setStats] = useState<OfflineStats>({
-    cached: { products: 0, customers: 0, sales: 0, transactions: 0 },
-    queued: { high: 0, medium: 0, low: 0, total: 0 }
-  });
-
-  // Get offline data from IndexedDB
-  const getOfflineData = useCallback(async (table: string) => {
-    try {
-      const { offlineDB } = await import('@/utils/indexedDB');
-      return await offlineDB.getOfflineData(table);
-    } catch (error) {
-      console.error('Failed to get offline data:', error);
-      return [];
-    }
-  }, []);
-
-  // Store offline data to IndexedDB - for seeding only, no sync queue
-  const storeOfflineData = useCallback(async (table: string, data: any[]) => {
-    try {
-      const { offlineDB } = await import('@/utils/indexedDB');
-      for (const item of data) {
-        await offlineDB.storeOfflineData(table, item);
-      }
-    } catch (error) {
-      console.error('Failed to store offline data:', error);
-    }
-  }, []);
-
-  // Queue offline action for later sync - only for actual user mutations
-  const queueOfflineAction = useCallback(async (operation: any) => {
-    try {
-      const { offlineDB } = await import('@/utils/indexedDB');
-      await offlineDB.addToSyncQueue(operation);
-      await updateStats();
-    } catch (error) {
-      console.error('Failed to queue offline action:', error);
-    }
-  }, []);
-
-  // Update offline data - for mutations only
-  const updateOfflineData = useCallback(async (table: string, operation: string, data: any) => {
-    try {
-      const { offlineDB } = await import('@/utils/indexedDB');
-      
-      switch (operation) {
-        case 'create':
-          await offlineDB.storeOfflineData(table, data);
-          break;
-        case 'update':
-          await offlineDB.storeOfflineData(table, data);
-          break;
-        case 'delete':
-          await offlineDB.deleteOfflineData(table, data.id);
-          break;
-      }
-    } catch (error) {
-      console.error('Failed to update offline data:', error);
-    }
-  }, []);
-
   // Initialize offline-first system
   const initialize = useCallback(async () => {
     if (!user || state.isInitialized) return;
@@ -106,23 +32,17 @@ export const useOfflineFirst = () => {
     try {
       console.log('[OfflineFirst] Initializing offline-first system...');
       
-      // Import IndexedDB utilities dynamically
-      const { offlineDB } = await import('@/utils/indexedDB');
-      
       // Initialize IndexedDB
       await offlineDB.init();
       
-      // Clear any phantom sync operations from previous sessions
+      // Clear sync queue on fresh start to avoid phantom operations
       await offlineDB.clearStore('syncQueue');
-      console.log('[OfflineFirst] Cleared phantom sync operations');
+      console.log('[OfflineFirst] Cleared sync queue');
       
-      // Seed data if online (without creating sync operations)
+      // Seed data if online
       if (navigator.onLine) {
         await seedOfflineData();
       }
-      
-      // Get initial stats
-      await updateStats();
       
       setState(prev => ({ 
         ...prev, 
@@ -142,13 +62,12 @@ export const useOfflineFirst = () => {
     }
   }, [user, state.isInitialized]);
 
-  // Seed offline data from Supabase (read-only, no sync queue)
+  // Seed offline data from Supabase
   const seedOfflineData = useCallback(async () => {
     if (!user) return;
 
     try {
       console.log('[OfflineFirst] Seeding offline data...');
-      const { offlineDB } = await import('@/utils/indexedDB');
       
       // Fetch and cache products
       const { data: products } = await supabase
@@ -158,7 +77,18 @@ export const useOfflineFirst = () => {
       
       if (products) {
         for (const product of products) {
-          await offlineDB.storeOfflineData('products', product);
+          await offlineDB.storeOfflineData('products', {
+            id: product.id,
+            user_id: product.user_id,
+            name: product.name,
+            category: product.category,
+            cost_price: product.cost_price,
+            selling_price: product.selling_price,
+            current_stock: product.current_stock,
+            low_stock_threshold: product.low_stock_threshold || 10,
+            created_at: product.created_at,
+            updated_at: product.updated_at
+          });
         }
         console.log(`[OfflineFirst] Cached ${products.length} products`);
       }
@@ -171,7 +101,18 @@ export const useOfflineFirst = () => {
       
       if (customers) {
         for (const customer of customers) {
-          await offlineDB.storeOfflineData('customers', customer);
+          await offlineDB.storeOfflineData('customers', {
+            id: customer.id,
+            user_id: customer.user_id,
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email,
+            address: customer.address,
+            credit_limit: customer.credit_limit || 1000,
+            outstanding_debt: customer.outstanding_debt || 0,
+            created_date: customer.created_date || customer.created_at,
+            updated_at: customer.updated_at
+          });
         }
         console.log(`[OfflineFirst] Cached ${customers.length} customers`);
       }
@@ -188,23 +129,25 @@ export const useOfflineFirst = () => {
       
       if (sales) {
         for (const sale of sales) {
-          await offlineDB.storeOfflineData('sales', sale);
+          await offlineDB.storeOfflineData('sales', {
+            id: sale.id,
+            user_id: sale.user_id,
+            product_id: sale.product_id,
+            product_name: sale.product_name,
+            quantity: sale.quantity,
+            selling_price: sale.selling_price,
+            cost_price: sale.cost_price,
+            profit: sale.profit,
+            total_amount: sale.total_amount,
+            payment_method: sale.payment_method,
+            customer_id: sale.customer_id,
+            customer_name: sale.customer_name,
+            payment_details: sale.payment_details,
+            timestamp: sale.timestamp || sale.created_at,
+            synced: true
+          });
         }
         console.log(`[OfflineFirst] Cached ${sales.length} recent sales`);
-      }
-      
-      // Fetch and cache recent transactions
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', thirtyDaysAgo.toISOString());
-      
-      if (transactions) {
-        for (const transaction of transactions) {
-          await offlineDB.storeOfflineData('transactions', transaction);
-        }
-        console.log(`[OfflineFirst] Cached ${transactions.length} recent transactions`);
       }
 
     } catch (error) {
@@ -212,289 +155,43 @@ export const useOfflineFirst = () => {
     }
   }, [user]);
 
-  // Update statistics
-  const updateStats = useCallback(async () => {
+  // Get offline data
+  const getOfflineData = useCallback(async (table: string) => {
     try {
-      const { offlineDB } = await import('@/utils/indexedDB');
-      
-      // Get cached data counts
-      const [products, customers, sales, transactions] = await Promise.all([
-        offlineDB.getOfflineData('products').then(data => data?.length || 0),
-        offlineDB.getOfflineData('customers').then(data => data?.length || 0),
-        offlineDB.getOfflineData('sales').then(data => data?.length || 0),
-        offlineDB.getOfflineData('transactions').then(data => data?.length || 0)
-      ]);
-      
-      // Get queued operations by priority
-      const [highPriority, mediumPriority, lowPriority] = await Promise.all([
-        offlineDB.getSyncQueueByPriority('high').then(data => data?.length || 0),
-        offlineDB.getSyncQueueByPriority('medium').then(data => data?.length || 0),
-        offlineDB.getSyncQueueByPriority('low').then(data => data?.length || 0)
-      ]);
-      
-      const totalQueued = highPriority + mediumPriority + lowPriority;
-      
-      setStats({
-        cached: { products, customers, sales, transactions },
-        queued: { 
-          high: highPriority, 
-          medium: mediumPriority, 
-          low: lowPriority, 
-          total: totalQueued 
-        }
-      });
-      
-      setState(prev => ({ ...prev, queuedOperations: totalQueued }));
-      
+      return await offlineDB.getOfflineData(table);
     } catch (error) {
-      console.error('[OfflineFirst] Failed to update stats:', error);
+      console.error('Failed to get offline data:', error);
+      return [];
     }
   }, []);
 
-  // Sync data when online
-  const syncData = useCallback(async () => {
-    if (!state.isOnline || state.syncInProgress || !user) return;
-
-    setState(prev => ({ ...prev, syncInProgress: true, error: undefined }));
-
+  // Store offline data
+  const storeOfflineData = useCallback(async (table: string, data: any[]) => {
     try {
-      console.log('[OfflineFirst] Starting data sync...');
-      const { offlineDB } = await import('@/utils/indexedDB');
-      
-      // Get unsynced operations
-      const unsyncedOps = await offlineDB.getUnsyncedOperations();
-      
-      if (unsyncedOps.length === 0) {
-        console.log('[OfflineFirst] No operations to sync');
-        setState(prev => ({ ...prev, syncInProgress: false, lastSyncTime: new Date() }));
-        return;
-      }
-      
-      console.log(`[OfflineFirst] Syncing ${unsyncedOps.length} operations...`);
-      
-      let successCount = 0;
-      let failureCount = 0;
-      
-      // Sort by priority and timestamp
-      const sortedOps = unsyncedOps.sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        }
-        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-      });
-      
-      // Sync operations
-      for (const operation of sortedOps) {
-        try {
-          const success = await syncOperation(operation);
-          if (success) {
-            await offlineDB.removeFromSyncQueue(operation.id);
-            successCount++;
-          } else {
-            failureCount++;
-          }
-        } catch (error) {
-          console.error('[OfflineFirst] Failed to sync operation:', operation.id, error);
-          failureCount++;
-        }
-      }
-      
-      // Update stats
-      await updateStats();
-      
-      // Show notification
-      if (successCount > 0) {
-        toast({
-          title: "Sync Complete",
-          description: `${successCount} operations synced successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
-        });
-      }
-      
-      setState(prev => ({ 
-        ...prev, 
-        syncInProgress: false, 
-        lastSyncTime: new Date() 
-      }));
-      
-      console.log(`[OfflineFirst] ✅ Sync complete: ${successCount} success, ${failureCount} failed`);
-      
-    } catch (error) {
-      console.error('[OfflineFirst] ❌ Sync failed:', error);
-      setState(prev => ({ 
-        ...prev, 
-        syncInProgress: false, 
-        error: 'Sync failed. Will retry automatically.' 
-      }));
-    }
-  }, [state.isOnline, state.syncInProgress, user, toast, updateStats]);
-
-  // Sync individual operation
-  const syncOperation = async (operation: any): Promise<boolean> => {
-    try {
-      switch (operation.type) {
-        case 'sale':
-          return await syncSale(operation.data);
-        case 'product':
-          return await syncProduct(operation);
-        case 'customer':
-          return await syncCustomer(operation);
-        case 'transaction':
-          return await syncTransaction(operation);
-        default:
-          console.warn('[OfflineFirst] Unknown operation type:', operation.type);
-          return false;
+      for (const item of data) {
+        await offlineDB.storeOfflineData(table, item);
       }
     } catch (error) {
-      console.error('[OfflineFirst] Operation sync failed:', error);
-      return false;
+      console.error('Failed to store offline data:', error);
     }
-  };
+  }, []);
 
-  // Sync sale
-  const syncSale = async (saleData: any): Promise<boolean> => {
+  // Queue offline action
+  const queueOfflineAction = useCallback(async (operation: any) => {
     try {
-      const { error } = await supabase
-        .from('sales')
-        .insert([saleData]);
-      
-      if (error) throw error;
-      
-      // Update local inventory
-      await updateLocalInventory(saleData.product_id, -saleData.quantity);
-      
-      return true;
+      await offlineDB.addToSyncQueue(operation);
+      const queue = await offlineDB.getSyncQueue();
+      setState(prev => ({ ...prev, queuedOperations: queue.length }));
     } catch (error) {
-      console.error('[OfflineFirst] Failed to sync sale:', error);
-      return false;
+      console.error('Failed to queue offline action:', error);
     }
-  };
-
-  // Sync product
-  const syncProduct = async (operation: any): Promise<boolean> => {
-    try {
-      if (operation.operation === 'create') {
-        const { error } = await supabase
-          .from('products')
-          .insert([operation.data]);
-        if (error) throw error;
-      } else if (operation.operation === 'update') {
-        const { error } = await supabase
-          .from('products')
-          .update(operation.data.updates)
-          .eq('id', operation.data.id);
-        if (error) throw error;
-      } else if (operation.operation === 'delete') {
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', operation.data.id);
-        if (error) throw error;
-      }
-      return true;
-    } catch (error) {
-      console.error('[OfflineFirst] Failed to sync product:', error);
-      return false;
-    }
-  };
-
-  // Sync customer
-  const syncCustomer = async (operation: any): Promise<boolean> => {
-    try {
-      if (operation.operation === 'create') {
-        const { error } = await supabase
-          .from('customers')
-          .insert([operation.data]);
-        if (error) throw error;
-      } else if (operation.operation === 'update') {
-        const { error } = await supabase
-          .from('customers')
-          .update(operation.data.updates)
-          .eq('id', operation.data.id);
-        if (error) throw error;
-      }
-      return true;
-    } catch (error) {
-      console.error('[OfflineFirst] Failed to sync customer:', error);
-      return false;
-    }
-  };
-
-  // Sync transaction
-  const syncTransaction = async (operation: any): Promise<boolean> => {
-    try {
-      if (operation.operation === 'create') {
-        const { error } = await supabase
-          .from('transactions')
-          .insert([operation.data]);
-        if (error) throw error;
-      }
-      return true;
-    } catch (error) {
-      console.error('[OfflineFirst] Failed to sync transaction:', error);
-      return false;
-    }
-  };
-
-  // Update local inventory
-  const updateLocalInventory = async (productId: string, quantityChange: number) => {
-    try {
-      const { offlineDB } = await import('@/utils/indexedDB');
-      const product = await offlineDB.getOfflineData('products', productId);
-      
-      if (product) {
-        const updatedProduct = {
-          ...product,
-          current_stock: Math.max(0, product.current_stock + quantityChange),
-          updated_at: new Date().toISOString()
-        };
-        
-        await offlineDB.storeOfflineData('products', updatedProduct);
-      }
-    } catch (error) {
-      console.error('[OfflineFirst] Failed to update local inventory:', error);
-    }
-  };
-
-  // Clear offline data
-  const clearOfflineData = useCallback(async () => {
-    try {
-      const { offlineDB } = await import('@/utils/indexedDB');
-      await offlineDB.clearStore('sales');
-      await offlineDB.clearStore('products');
-      await offlineDB.clearStore('customers');
-      await offlineDB.clearStore('transactions');
-      await offlineDB.clearStore('syncQueue');
-      
-      await updateStats();
-      
-      toast({
-        title: "Data Cleared",
-        description: "All offline data has been cleared.",
-      });
-      
-    } catch (error) {
-      console.error('[OfflineFirst] Failed to clear offline data:', error);
-    }
-  }, [toast, updateStats]);
-
-  // Force sync
-  const forceSync = useCallback(async () => {
-    if (state.isOnline) {
-      await syncData();
-    }
-  }, [state.isOnline, syncData]);
+  }, []);
 
   // Handle online/offline events
   useEffect(() => {
     const handleOnline = () => {
       console.log('[OfflineFirst] Device back online');
       setState(prev => ({ ...prev, isOnline: true }));
-      
-      // Trigger sync after a short delay
-      setTimeout(() => {
-        syncData();
-      }, 1000);
     };
 
     const handleOffline = () => {
@@ -502,38 +199,28 @@ export const useOfflineFirst = () => {
       setState(prev => ({ ...prev, isOnline: false }));
     };
 
-    // Service worker messages
-    const handleSWMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'SYNC_COMPLETED') {
-        console.log('[OfflineFirst] Service worker sync completed');
-        updateStats();
-        setState(prev => ({ ...prev, lastSyncTime: new Date() }));
-      }
-    };
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
     };
-  }, [syncData, updateStats]);
+  }, []);
+
+  // Initialize when user is available
+  useEffect(() => {
+    if (user && !state.isInitialized) {
+      initialize();
+    }
+  }, [user, state.isInitialized, initialize]);
 
   return {
     ...state,
-    stats,
     initialize,
-    syncData,
-    forceSync,
-    clearOfflineData,
     seedOfflineData,
-    updateStats,
     getOfflineData,
     storeOfflineData,
-    queueOfflineAction,
-    updateOfflineData
+    queueOfflineAction
   };
 };

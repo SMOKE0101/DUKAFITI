@@ -43,19 +43,6 @@ interface OfflineCustomer {
   updated_at?: string;
 }
 
-interface OfflineTransaction {
-  id: string;
-  user_id: string;
-  customer_id: string;
-  item_id: string;
-  quantity: number;
-  unit_price: number;
-  total_amount: number;
-  paid: boolean;
-  notes?: string;
-  date: string;
-}
-
 interface SyncQueueItem {
   id: string;
   type: 'sale' | 'product' | 'customer' | 'transaction';
@@ -70,7 +57,7 @@ interface SyncQueueItem {
 class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private dbName = 'DukaFitiOffline';
-  private version = 4; // Increased version for schema fixes
+  private version = 5; // Increased version for fixes
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -95,62 +82,53 @@ class OfflineDatabase {
   }
 
   private createStores(db: IDBDatabase): void {
-    // Sales store
-    if (!db.objectStoreNames.contains('sales')) {
-      const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
-      salesStore.createIndex('user_id', 'user_id', { unique: false });
-      salesStore.createIndex('product_id', 'product_id', { unique: false });
-      salesStore.createIndex('timestamp', 'timestamp', { unique: false });
-      salesStore.createIndex('synced', 'synced', { unique: false });
+    // Clear old stores if they exist
+    const storeNames = ['sales', 'products', 'customers', 'transactions', 'syncQueue'];
+    
+    for (const storeName of storeNames) {
+      if (db.objectStoreNames.contains(storeName)) {
+        db.deleteObjectStore(storeName);
+      }
     }
+
+    // Sales store
+    const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
+    salesStore.createIndex('user_id', 'user_id', { unique: false });
+    salesStore.createIndex('product_id', 'product_id', { unique: false });
+    salesStore.createIndex('timestamp', 'timestamp', { unique: false });
+    salesStore.createIndex('synced', 'synced', { unique: false });
 
     // Products store
-    if (!db.objectStoreNames.contains('products')) {
-      const productsStore = db.createObjectStore('products', { keyPath: 'id' });
-      productsStore.createIndex('user_id', 'user_id', { unique: false });
-      productsStore.createIndex('category', 'category', { unique: false });
-      productsStore.createIndex('name', 'name', { unique: false });
-    }
+    const productsStore = db.createObjectStore('products', { keyPath: 'id' });
+    productsStore.createIndex('user_id', 'user_id', { unique: false });
+    productsStore.createIndex('category', 'category', { unique: false });
+    productsStore.createIndex('name', 'name', { unique: false });
 
     // Customers store
-    if (!db.objectStoreNames.contains('customers')) {
-      const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
-      customersStore.createIndex('user_id', 'user_id', { unique: false });
-      customersStore.createIndex('name', 'name', { unique: false });
-      customersStore.createIndex('phone', 'phone', { unique: false });
-    }
+    const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
+    customersStore.createIndex('user_id', 'user_id', { unique: false });
+    customersStore.createIndex('name', 'name', { unique: false });
+    customersStore.createIndex('phone', 'phone', { unique: false });
 
     // Transactions store
-    if (!db.objectStoreNames.contains('transactions')) {
-      const transactionsStore = db.createObjectStore('transactions', { keyPath: 'id' });
-      transactionsStore.createIndex('user_id', 'user_id', { unique: false });
-      transactionsStore.createIndex('customer_id', 'customer_id', { unique: false });
-      transactionsStore.createIndex('date', 'date', { unique: false });
-    }
+    const transactionsStore = db.createObjectStore('transactions', { keyPath: 'id' });
+    transactionsStore.createIndex('user_id', 'user_id', { unique: false });
+    transactionsStore.createIndex('customer_id', 'customer_id', { unique: false });
+    transactionsStore.createIndex('date', 'date', { unique: false });
 
-    // Enhanced sync queue
-    if (!db.objectStoreNames.contains('syncQueue')) {
-      const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-      syncStore.createIndex('type', 'type', { unique: false });
-      syncStore.createIndex('priority', 'priority', { unique: false });
-      syncStore.createIndex('timestamp', 'timestamp', { unique: false });
-      syncStore.createIndex('synced', 'synced', { unique: false });
-      syncStore.createIndex('attempts', 'attempts', { unique: false });
-    }
+    // Sync queue store
+    const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+    syncStore.createIndex('type', 'type', { unique: false });
+    syncStore.createIndex('priority', 'priority', { unique: false });
+    syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+    syncStore.createIndex('synced', 'synced', { unique: false });
 
-    // Offline requests store (for service worker)
-    if (!db.objectStoreNames.contains('offlineRequests')) {
-      const requestsStore = db.createObjectStore('offlineRequests', { keyPath: 'id' });
-      requestsStore.createIndex('timestamp', 'timestamp', { unique: false });
-      requestsStore.createIndex('method', 'method', { unique: false });
-    }
-
-    console.log('IndexedDB stores created/updated successfully');
+    console.log('IndexedDB stores created successfully');
   }
 
-  // Enhanced store operations
   async storeOfflineData(storeName: string, data: any): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
+    if (!data || !data.id) throw new Error('Data must have an id field');
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([storeName], 'readwrite');
@@ -205,12 +183,16 @@ class OfflineDatabase {
     });
   }
 
-  // Enhanced sync queue operations
-  async getSyncQueue(): Promise<any[]> {
-    return this.getOfflineData('syncQueue');
+  // Sync queue operations
+  async getSyncQueue(): Promise<SyncQueueItem[]> {
+    const data = await this.getOfflineData('syncQueue');
+    return Array.isArray(data) ? data : [];
   }
 
-  async addToSyncQueue(operation: any): Promise<void> {
+  async addToSyncQueue(operation: SyncQueueItem): Promise<void> {
+    if (!operation.id) {
+      operation.id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
     return this.storeOfflineData('syncQueue', operation);
   }
 
@@ -218,28 +200,7 @@ class OfflineDatabase {
     return this.deleteOfflineData('syncQueue', id);
   }
 
-  async updateSyncQueueItem(operation: any): Promise<void> {
-    return this.storeOfflineData('syncQueue', operation);
-  }
-
-  // Get sync queue by priority
-  async getSyncQueueByPriority(priority: 'high' | 'medium' | 'low'): Promise<any[]> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['syncQueue'], 'readonly');
-      const store = transaction.objectStore('syncQueue');
-      const index = store.index('priority');
-      
-      const request = index.getAll(priority);
-      
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  // Get unsynced operations - Fixed the boolean issue
-  async getUnsyncedOperations(): Promise<any[]> {
+  async getUnsyncedOperations(): Promise<SyncQueueItem[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     return new Promise((resolve, reject) => {
@@ -247,15 +208,13 @@ class OfflineDatabase {
       const store = transaction.objectStore('syncQueue');
       const index = store.index('synced');
       
-      // Use IDBKeyRange for boolean values
-      const request = index.getAll(IDBKeyRange.only(false));
+      const request = index.getAll(false);
       
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
   }
 
-  // Data statistics
   async getDataStats(): Promise<{ [key: string]: number }> {
     const stats: { [key: string]: number } = {};
     const stores = ['sales', 'products', 'customers', 'transactions', 'syncQueue'];
@@ -273,18 +232,22 @@ class OfflineDatabase {
     return stats;
   }
 
-  // Test offline functionality
   async testOfflineCapabilities(): Promise<{ success: boolean; details: any }> {
     console.log('[IndexedDB] Testing offline capabilities...');
     
     try {
-      // Test data creation
+      // Test data creation with proper structure
       const testData = {
-        id: 'test_' + Date.now(),
+        id: `test_${Date.now()}`,
+        user_id: 'test-user',
         name: 'Test Product',
         category: 'Test',
-        price: 100,
-        timestamp: new Date().toISOString()
+        cost_price: 100,
+        selling_price: 150,
+        current_stock: 10,
+        low_stock_threshold: 5,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       // Test storing data
@@ -299,8 +262,8 @@ class OfflineDatabase {
       console.log('[IndexedDB] ✅ Retrieve test passed');
 
       // Test sync queue
-      const syncItem = {
-        id: 'sync_test_' + Date.now(),
+      const syncItem: SyncQueueItem = {
+        id: `sync_test_${Date.now()}`,
         type: 'product',
         operation: 'create',
         data: testData,
@@ -340,7 +303,7 @@ class OfflineDatabase {
       return {
         success: false,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Unknown error',
           message: 'Offline capabilities test failed'
         }
       };
@@ -350,15 +313,21 @@ class OfflineDatabase {
 
 export const offlineDB = new OfflineDatabase();
 
-// Auto-run tests when database is initialized
+// Initialize and test on load
 offlineDB.init().then(() => {
-  // Run comprehensive tests
+  console.log('[IndexedDB] 🎉 Database initialized successfully!');
+  
+  // Run tests after initialization
   setTimeout(async () => {
-    const testResult = await offlineDB.testOfflineCapabilities();
-    if (testResult.success) {
-      console.log('[IndexedDB] 🎉 All offline tests passed successfully!');
-    } else {
-      console.error('[IndexedDB] 💥 Offline tests failed:', testResult.details);
+    try {
+      const testResult = await offlineDB.testOfflineCapabilities();
+      if (testResult.success) {
+        console.log('[IndexedDB] 🎉 All offline tests passed!');
+      } else {
+        console.error('[IndexedDB] 💥 Offline tests failed:', testResult.details);
+      }
+    } catch (error) {
+      console.error('[IndexedDB] Failed to run tests:', error);
     }
   }, 1000);
 }).catch(error => {
