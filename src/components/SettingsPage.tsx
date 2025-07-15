@@ -336,6 +336,8 @@ const SettingsPage = () => {
           </div>
         </div>
       </div>
+      
+      <PWAInstallButton />
     </div>
   );
 };
