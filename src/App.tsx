@@ -20,6 +20,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { OfflineBanner } from './components/OfflineBanner';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { OfflineAuditPanel } from './components/OfflineAuditPanel';
 import Dashboard from './components/Dashboard';
 import ProductManagement from './components/ProductManagement';
 import ModernSalesPage from './components/ModernSalesPage';
@@ -55,17 +56,17 @@ function App() {
     initializeOffline();
   }, [initializeOffline]);
 
-  // Enhanced service worker registration
+  // Enhanced service worker registration with comprehensive offline support
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      console.log('[App] Registering enhanced service worker...');
+      console.log('[App] 🚀 Registering enhanced offline service worker...');
       
       // Clear any existing registrations
       navigator.serviceWorker.getRegistrations().then(registrations => {
         registrations.forEach(registration => {
-          if (registration.scope.includes('offline-sw') || 
-              registration.scope.includes('enhanced-offline-sw')) {
-            console.log('[App] Unregistering old service worker');
+          if (registration.scope.includes('offline-sw') && 
+              !registration.scope.includes('enhanced-offline-sw')) {
+            console.log('[App] 🧹 Unregistering old service worker');
             registration.unregister();
           }
         });
@@ -73,19 +74,25 @@ function App() {
 
       // Register the enhanced service worker
       navigator.serviceWorker.register('/enhanced-offline-sw.js', {
-        scope: '/'
+        scope: '/',
+        updateViaCache: 'none' // Always check for updates
       })
         .then((registration) => {
-          console.log('[App] ✅ Enhanced SW registered:', registration);
+          console.log('[App] ✅ Enhanced SW registered successfully:', registration);
+          
+          // Enable offline test mode
+          (window as any).__offlineTestMode__ = true;
           
           // Listen for service worker messages
           navigator.serviceWorker.addEventListener('message', (event) => {
-            console.log('[App] SW message:', event.data);
+            console.log('[App] 📨 SW message:', event.data);
             
             if (event.data?.type === 'SW_ACTIVATED') {
-              console.log('[App] Service worker activated with version:', event.data.data.version);
+              console.log('[App] 🎉 Service worker activated with enhanced offline capabilities');
             } else if (event.data?.type === 'SYNC_COMPLETED') {
-              console.log('[App] Background sync completed');
+              console.log('[App] 🔄 Background sync completed successfully');
+            } else if (event.data?.type === 'CACHE_UPDATED') {
+              console.log('[App] 📦 Cache updated with new content');
             }
           });
           
@@ -95,24 +102,51 @@ function App() {
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[App] New service worker available');
-                  // Optionally notify user about update
+                  console.log('[App] 🆕 New service worker available');
+                  // Could show update notification here
                 }
               });
             }
           });
+
+          // Auto-trigger background sync on registration
+          if (registration.active && !isOnline) {
+            registration.active.postMessage({ type: 'TRIGGER_SYNC' });
+          }
         })
         .catch((registrationError) => {
-          console.error('[App] ❌ SW registration failed:', registrationError);
+          console.error('[App] ❌ Enhanced SW registration failed:', registrationError);
         });
 
       // Handle service worker controller change
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[App] Service worker controller changed');
+        console.log('[App] 🔄 Service worker controller changed - reloading');
         window.location.reload();
       });
+
+      // Handle online/offline events
+      const handleOnline = () => {
+        console.log('[App] 🌐 Back online - triggering sync');
+        navigator.serviceWorker.ready.then(registration => {
+          if (registration.active) {
+            registration.active.postMessage({ type: 'TRIGGER_SYNC' });
+          }
+        });
+      };
+
+      const handleOffline = () => {
+        console.log('[App] 📴 Gone offline - switching to cache-first mode');
+      };
+
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
     }
-  }, []);
+  }, [isOnline]);
 
   if (loading) {
     return (
@@ -149,6 +183,7 @@ function App() {
                         <Route path="sales" element={<ModernSalesPage />} />
                         <Route path="customers" element={<CustomersPage />} />
                         <Route path="reports" element={<ReportsPage />} />
+                        <Route path="audit" element={<OfflineAuditPanel />} />
                         <Route path="" element={<Dashboard />} />
                       </Routes>
                     </AppLayout>

@@ -13,7 +13,7 @@ import InventoryModal from './inventory/InventoryModal';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
 import { Product } from '../types';
 import { transformDatabaseProduct } from '@/utils/dataTransforms';
-import { FeatureLimitModal } from './trial/FeatureLimitModal';
+import FeatureLimitModal from './trial/FeatureLimitModal';
 
 const ProductManagement: React.FC = () => {
   const { user } = useAuth();
@@ -349,7 +349,7 @@ const ProductManagement: React.FC = () => {
 
       {/* Products Grid */}
       <InventoryProductGrid
-        products={products} // Now passing transformed products
+        products={filteredProducts}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
         onRestock={handleRestock}
@@ -370,7 +370,7 @@ const ProductManagement: React.FC = () => {
       <FeatureLimitModal
         open={isFeatureLimitModalOpen}
         onOpenChange={setIsFeatureLimitModalOpen}
-        featureName="Products"
+        feature="Products"
         currentUsage={totalProducts}
         limit={50}
       />
