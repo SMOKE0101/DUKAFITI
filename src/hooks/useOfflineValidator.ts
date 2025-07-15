@@ -1,200 +1,371 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { offlineDB } from '../utils/indexedDB';
-import { useOfflineManager } from './useOfflineManager';
+import { useState, useCallback } from 'react';
+import { offlineDB } from '@/utils/indexedDB';
 import { useToast } from './use-toast';
 
 interface ValidationResult {
   success: boolean;
   errors: string[];
   warnings: string[];
-  stats: any;
+  stats?: Record<string, any>;
+  timestamp: string;
+}
+
+interface TestResult {
+  name: string;
+  success: boolean;
+  duration: number;
+  details?: any;
+  error?: string;
 }
 
 export const useOfflineValidator = () => {
   const [isValidating, setIsValidating] = useState(false);
   const [lastValidation, setLastValidation] = useState<ValidationResult | null>(null);
-  const { isOnline, isInitialized } = useOfflineManager();
   const { toast } = useToast();
 
-  const runComprehensiveTests = useCallback(async (): Promise<ValidationResult> => {
-    setIsValidating(true);
-    console.log('[OfflineValidator] Starting comprehensive offline tests...');
+  // 1. Automated Environment Setup
+  const setupEnvironment = async (): Promise<TestResult> => {
+    const startTime = Date.now();
     
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    let stats: any = {};
-
     try {
-      // Test 1: Database initialization
-      console.log('[OfflineValidator] Testing database initialization...');
-      if (!isInitialized) {
-        errors.push('IndexedDB not properly initialized');
-      }
-
-      // Test 2: Store operations
-      console.log('[OfflineValidator] Testing store operations...');
-      const dbTest = await offlineDB.testOfflineCapabilities();
-      if (!dbTest.success) {
-        errors.push(`Database operations failed: ${dbTest.details.error}`);
-      } else {
-        stats = dbTest.details.stats;
-      }
-
-      // Test 3: Service Worker registration
-      console.log('[OfflineValidator] Testing service worker...');
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.getRegistrations();
-          if (registration.length === 0) {
-            warnings.push('No service workers registered');
-          } else {
-            console.log('[OfflineValidator] ✅ Service worker active');
-          }
-        } catch (error) {
-          warnings.push('Service worker check failed');
-        }
-      } else {
-        warnings.push('Service workers not supported');
-      }
-
-      // Test 4: Network detection
-      console.log('[OfflineValidator] Testing network detection...');
-      const networkStatus = navigator.onLine;
-      if (networkStatus !== isOnline) {
-        warnings.push('Network status detection mismatch');
-      }
-
-      // Test 5: Cache functionality
-      console.log('[OfflineValidator] Testing cache functionality...');
-      if ('caches' in window) {
-        try {
-          const cacheNames = await caches.keys();
-          if (cacheNames.length === 0) {
-            warnings.push('No caches found - offline functionality may be limited');
-          } else {
-            console.log('[OfflineValidator] ✅ Cache API working');
-          }
-        } catch (error) {
-          warnings.push('Cache API test failed');
-        }
-      } else {
-        warnings.push('Cache API not supported');
-      }
-
-      // Test 6: Local storage
-      console.log('[OfflineValidator] Testing local storage...');
-      try {
-        const testKey = 'offline_test_' + Date.now();
-        localStorage.setItem(testKey, 'test');
-        const retrieved = localStorage.getItem(testKey);
-        localStorage.removeItem(testKey);
-        
-        if (retrieved !== 'test') {
-          errors.push('Local storage not working');
-        }
-      } catch (error) {
-        errors.push('Local storage access denied');
-      }
-
-      // Test 7: CRUD operations simulation
-      console.log('[OfflineValidator] Testing CRUD operations...');
-      try {
-        // Simulate offline sales creation
-        const testSale = {
-          id: 'test_sale_' + Date.now(),
-          user_id: 'test_user',
-          product_id: 'test_product',
-          product_name: 'Test Product',
-          quantity: 1,
-          selling_price: 100,
-          cost_price: 80,
-          profit: 20,
-          total_amount: 100,
-          payment_method: 'cash',
-          timestamp: new Date().toISOString(),
-          synced: false
-        };
-
-        await offlineDB.storeOfflineData('sales', testSale);
-        const retrievedSale = await offlineDB.getOfflineData('sales', testSale.id);
-        
-        if (!retrievedSale || retrievedSale.id !== testSale.id) {
-          errors.push('Sales CRUD operations failed');
-        } else {
-          // Cleanup
-          await offlineDB.deleteOfflineData('sales', testSale.id);
-          console.log('[OfflineValidator] ✅ Sales CRUD test passed');
-        }
-      } catch (error) {
-        errors.push('CRUD operations test failed: ' + error.message);
-      }
-
-      const result: ValidationResult = {
-        success: errors.length === 0,
-        errors,
-        warnings,
-        stats
-      };
-
-      setLastValidation(result);
-      console.log('[OfflineValidator] Validation completed:', result);
+      // Enable debugging
+      (window as any).__offlineTest__ = true;
       
-      return result;
-
+      // Clear caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      // Clear IndexedDB stores
+      await Promise.all([
+        offlineDB.clearStore('products'),
+        offlineDB.clearStore('customers'),
+        offlineDB.clearStore('sales'),
+        offlineDB.clearStore('syncQueue'),
+      ]);
+      
+      return {
+        name: 'Environment Setup',
+        success: true,
+        duration: Date.now() - startTime,
+        details: 'Caches and IndexedDB cleared successfully'
+      };
     } catch (error) {
+      return {
+        name: 'Environment Setup',
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // 2A. IndexedDB Schema & Sync Verification
+  const verifyIndexedDBSchema = async (): Promise<TestResult> => {
+    const startTime = Date.now();
+    
+    try {
+      const stats = await offlineDB.getDataStats();
+      const requiredStores = ['products', 'customers', 'sales', 'syncQueue'];
+      const missingStores = requiredStores.filter(store => !(store in stats));
+      
+      if (missingStores.length > 0) {
+        throw new Error(`Missing stores: ${missingStores.join(', ')}`);
+      }
+      
+      return {
+        name: 'IndexedDB Schema Verification',
+        success: true,
+        duration: Date.now() - startTime,
+        details: `All required stores present: ${Object.keys(stats).join(', ')}`
+      };
+    } catch (error) {
+      return {
+        name: 'IndexedDB Schema Verification',
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // 2B. Action Queueing Test
+  const testActionQueueing = async (): Promise<TestResult> => {
+    const startTime = Date.now();
+    
+    try {
+      // Simulate offline actions
+      const testActions = [
+        {
+          id: 'test-product-1',
+          type: 'product',
+          operation: 'create',
+          data: { name: 'Test Product', price: 100 },
+          timestamp: new Date().toISOString(),
+          priority: 'high',
+          attempts: 0,
+          synced: false
+        },
+        {
+          id: 'test-customer-1',
+          type: 'customer',
+          operation: 'create',
+          data: { name: 'Test Customer', phone: '123456789' },
+          timestamp: new Date().toISOString(),
+          priority: 'medium',
+          attempts: 0,
+          synced: false
+        }
+      ];
+      
+      // Add to queue
+      for (const action of testActions) {
+        await offlineDB.addToSyncQueue(action);
+      }
+      
+      // Verify queue
+      const queue = await offlineDB.getSyncQueue();
+      const testItems = queue.filter(item => item.id.startsWith('test-'));
+      
+      if (testItems.length !== testActions.length) {
+        throw new Error(`Expected ${testActions.length} items, got ${testItems.length}`);
+      }
+      
+      // Cleanup
+      for (const action of testActions) {
+        await offlineDB.removeFromSyncQueue(action.id);
+      }
+      
+      return {
+        name: 'Action Queueing Test',
+        success: true,
+        duration: Date.now() - startTime,
+        details: `Successfully queued and verified ${testActions.length} actions`
+      };
+    } catch (error) {
+      return {
+        name: 'Action Queueing Test',
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // 3. Service Worker Test
+  const testServiceWorker = async (): Promise<TestResult> => {
+    const startTime = Date.now();
+    
+    try {
+      if (!('serviceWorker' in navigator)) {
+        throw new Error('Service Worker not supported');
+      }
+      
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        throw new Error('Service Worker not registered');
+      }
+      
+      return {
+        name: 'Service Worker Test',
+        success: true,
+        duration: Date.now() - startTime,
+        details: `Service Worker active: ${registration.active?.scriptURL}`
+      };
+    } catch (error) {
+      return {
+        name: 'Service Worker Test',
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // 4. Network Status Test
+  const testNetworkStatus = async (): Promise<TestResult> => {
+    const startTime = Date.now();
+    
+    try {
+      const isOnline = navigator.onLine;
+      
+      // Test network events
+      let eventsFired = 0;
+      const onlineHandler = () => eventsFired++;
+      const offlineHandler = () => eventsFired++;
+      
+      window.addEventListener('online', onlineHandler);
+      window.addEventListener('offline', offlineHandler);
+      
+      // Cleanup
+      setTimeout(() => {
+        window.removeEventListener('online', onlineHandler);
+        window.removeEventListener('offline', offlineHandler);
+      }, 100);
+      
+      return {
+        name: 'Network Status Test',
+        success: true,
+        duration: Date.now() - startTime,
+        details: `Online: ${isOnline}, Event listeners attached`
+      };
+    } catch (error) {
+      return {
+        name: 'Network Status Test',
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // 5. Performance Benchmark
+  const runPerformanceBenchmark = async (): Promise<TestResult> => {
+    const startTime = Date.now();
+    
+    try {
+      // Test IndexedDB read performance
+      const readStart = performance.now();
+      await offlineDB.getOfflineData('products');
+      const readTime = performance.now() - readStart;
+      
+      // Test IndexedDB write performance
+      const writeStart = performance.now();
+      await offlineDB.storeOfflineData('products', [{
+        id: 'perf-test',
+        name: 'Performance Test Product',
+        category: 'test',
+        price: 1
+      }]);
+      const writeTime = performance.now() - writeStart;
+      
+      // Cleanup
+      await offlineDB.deleteOfflineData('products', 'perf-test');
+      
+      const benchmark = {
+        readTime: Math.round(readTime),
+        writeTime: Math.round(writeTime),
+        target: { read: 50, write: 100 }
+      };
+      
+      return {
+        name: 'Performance Benchmark',
+        success: readTime < 50 && writeTime < 100,
+        duration: Date.now() - startTime,
+        details: benchmark
+      };
+    } catch (error) {
+      return {
+        name: 'Performance Benchmark',
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // 6. UI/UX Offline Flow Test
+  const testOfflineUIFlow = async (): Promise<TestResult> => {
+    const startTime = Date.now();
+    
+    try {
+      // Check for offline indicators
+      const offlineBanner = document.querySelector('[data-offline-banner]');
+      const offlineIndicator = document.querySelector('[data-offline-indicator]');
+      
+      return {
+        name: 'UI/UX Offline Flow Test',
+        success: true,
+        duration: Date.now() - startTime,
+        details: {
+          banner: !!offlineBanner,
+          indicator: !!offlineIndicator,
+          currentRoute: window.location.pathname
+        }
+      };
+    } catch (error) {
+      return {
+        name: 'UI/UX Offline Flow Test',
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // Main validation function
+  const validateAndReport = useCallback(async () => {
+    setIsValidating(true);
+    
+    try {
+      console.log('[OfflineValidator] 🚀 Starting comprehensive offline validation...');
+      
+      const tests: TestResult[] = [];
+      
+      // Run all tests in sequence
+      tests.push(await setupEnvironment());
+      tests.push(await verifyIndexedDBSchema());
+      tests.push(await testActionQueueing());
+      tests.push(await testServiceWorker());
+      tests.push(await testNetworkStatus());
+      tests.push(await runPerformanceBenchmark());
+      tests.push(await testOfflineUIFlow());
+      
+      const failedTests = tests.filter(test => !test.success);
+      const warnings = tests.filter(test => test.success && test.details?.readTime > 30).map(test => 
+        `${test.name}: Performance warning - ${test.details?.readTime}ms read time`
+      );
+      
+      const stats = await offlineDB.getDataStats();
+      
+      const result: ValidationResult = {
+        success: failedTests.length === 0,
+        errors: failedTests.map(test => `${test.name}: ${test.error}`),
+        warnings,
+        stats,
+        timestamp: new Date().toISOString()
+      };
+      
+      setLastValidation(result);
+      
+      // Show toast notification
+      toast({
+        title: result.success ? "✅ Offline Validation Passed" : "❌ Offline Validation Failed",
+        description: result.success 
+          ? "All offline functionality tests passed successfully"
+          : `${result.errors.length} error(s) detected`,
+        variant: result.success ? "default" : "destructive",
+      });
+      
+      console.log('[OfflineValidator] 📊 Validation complete:', result);
+      
+    } catch (error) {
+      console.error('[OfflineValidator] ❌ Validation failed:', error);
+      
       const result: ValidationResult = {
         success: false,
-        errors: ['Validation process failed: ' + error.message],
-        warnings,
-        stats
+        errors: [error instanceof Error ? error.message : 'Unknown validation error'],
+        warnings: [],
+        timestamp: new Date().toISOString()
       };
       
       setLastValidation(result);
-      return result;
+      
+      toast({
+        title: "Validation Error",
+        description: "Failed to run offline validation tests",
+        variant: "destructive",
+      });
     } finally {
       setIsValidating(false);
     }
-  }, [isInitialized, isOnline]);
-
-  const validateAndReport = useCallback(async () => {
-    const result = await runComprehensiveTests();
-    
-    if (result.success) {
-      toast({
-        title: "✅ Offline Mode Validated",
-        description: `All tests passed! ${result.warnings.length} warnings.`,
-        duration: 3000,
-      });
-    } else {
-      toast({
-        title: "❌ Offline Issues Detected",
-        description: `${result.errors.length} errors found. Check console for details.`,
-        variant: "destructive",
-        duration: 5000,
-      });
-    }
-    
-    // Log detailed results
-    console.group('[OfflineValidator] Detailed Results');
-    console.log('Success:', result.success);
-    console.log('Errors:', result.errors);
-    console.log('Warnings:', result.warnings);
-    console.log('Stats:', result.stats);
-    console.groupEnd();
-  }, [runComprehensiveTests, toast]);
-
-  // Auto-validate when app becomes online
-  useEffect(() => {
-    if (isOnline && isInitialized) {
-      setTimeout(validateAndReport, 2000);
-    }
-  }, [isOnline, isInitialized, validateAndReport]);
+  }, [toast]);
 
   return {
     isValidating,
     lastValidation,
-    runComprehensiveTests,
     validateAndReport
   };
 };

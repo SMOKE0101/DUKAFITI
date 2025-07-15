@@ -6,6 +6,7 @@ import { transformDatabaseProduct, transformDatabaseCustomer, transformDatabaseS
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import OfflineValidator from './OfflineValidator';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -89,11 +90,11 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Calculate dashboard stats
+  // Calculate dashboard stats - Fixed: use 'total' instead of 'totalAmount'
   const totalProducts = products.length;
   const totalCustomers = customers.length;
   const totalSales = sales.length;
-  const totalRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
+  const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
   const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
 
   return (
@@ -182,6 +183,11 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Offline System Validator */}
+      <div className="mt-8">
+        <OfflineValidator />
+      </div>
     </div>
   );
 };
