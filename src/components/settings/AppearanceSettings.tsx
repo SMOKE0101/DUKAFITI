@@ -1,20 +1,95 @@
 
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { useSettings } from '../../hooks/useSettings';
 import { useTheme } from 'next-themes';
 import { Palette, Sun, Moon } from 'lucide-react';
 
+// Memoize theme option data
+const THEME_OPTIONS = [
+  {
+    value: 'light',
+    label: 'LIGHT',
+    description: 'Clean and bright interface',
+    icon: Sun,
+    iconColor: 'text-yellow-500',
+    bgColor: 'bg-yellow-100 dark:bg-yellow-900/20'
+  },
+  {
+    value: 'dark', 
+    label: 'DARK',
+    description: 'Easy on the eyes',
+    icon: Moon,
+    iconColor: 'text-blue-500',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/20'
+  }
+] as const;
+
+// Memoized theme button component
+const ThemeButton = memo(({ 
+  option, 
+  isActive, 
+  onSelect 
+}: { 
+  option: typeof THEME_OPTIONS[0];
+  isActive: boolean;
+  onSelect: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onSelect}
+    className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
+      isActive
+        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
+        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+    }`}
+  >
+    <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
+      isActive ? option.bgColor : 'bg-gray-100 dark:bg-gray-800'
+    }`}>
+      <option.icon className={`w-8 h-8 ${option.iconColor}`} />
+    </div>
+    <div className="text-center">
+      <span className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+        {option.label}
+      </span>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        {option.description}
+      </p>
+    </div>
+  </button>
+));
+
 const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
-  const { theme: currentTheme } = useTheme();
+  const { setTheme } = useTheme();
 
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    console.log('Theme change initiated:', newTheme, 'Current theme:', currentTheme);
+  // Use only settings theme as source of truth - no automatic switching
+  const activeTheme = useMemo(() => {
+    return settings.theme || 'light';
+  }, [settings.theme]);
+
+  const handleThemeChange = useMemo(() => (newTheme: 'light' | 'dark') => {
+    console.log('Manual theme change:', newTheme);
     
-    // Update settings - this will handle both local state and theme provider sync
+    // Update theme immediately for instant UI feedback
+    setTheme(newTheme);
+    
+    // Save to persistent storage
     saveSettings({ theme: newTheme });
-  };
+  }, [setTheme, saveSettings]);
+
+  // Memoize theme buttons to prevent recreation
+  const themeButtons = useMemo(() => 
+    THEME_OPTIONS.map((option) => (
+      <ThemeButton
+        key={option.value}
+        option={option}
+        isActive={activeTheme === option.value}
+        onSelect={() => handleThemeChange(option.value)}
+      />
+    )), [activeTheme, handleThemeChange]
+  );
 
   if (loading) {
     return (
@@ -33,14 +108,8 @@ const AppearanceSettings = () => {
     );
   }
 
-  // Use settings theme as the source of truth, with fallback to current theme
-  const activeTheme = settings.theme || currentTheme || 'light';
-  
-  console.log('Rendering AppearanceSettings - Settings theme:', settings.theme, 'Current theme:', currentTheme, 'Active theme:', activeTheme);
-
   return (
     <div className="w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8">
-      {/* Theme Selection */}
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="text-center">
           <div className="flex items-center justify-center gap-3 mb-2">
@@ -54,53 +123,11 @@ const AppearanceSettings = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button
-            type="button"
-            onClick={() => handleThemeChange('light')}
-            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
-              activeTheme === 'light'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              activeTheme === 'light'
-                ? 'bg-yellow-100 dark:bg-yellow-900/20' 
-                : 'bg-gray-100 dark:bg-gray-800'
-            }`}>
-              <Sun className="w-8 h-8 text-yellow-500" />
-            </div>
-            <div className="text-center">
-              <span className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">LIGHT</span>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Clean and bright interface</p>
-            </div>
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => handleThemeChange('dark')}
-            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
-              activeTheme === 'dark'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              activeTheme === 'dark'
-                ? 'bg-blue-100 dark:bg-blue-900/20' 
-                : 'bg-gray-100 dark:bg-gray-800'
-            }`}>
-              <Moon className="w-8 h-8 text-blue-500" />
-            </div>
-            <div className="text-center">
-              <span className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">DARK</span>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Easy on the eyes</p>
-            </div>
-          </button>
+          {themeButtons}
         </div>
       </div>
     </div>
   );
 };
 
-export default AppearanceSettings;
+export default memo(AppearanceSettings);
