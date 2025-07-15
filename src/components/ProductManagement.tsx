@@ -1,596 +1,378 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Filter, Package, AlertTriangle, TrendingUp, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Search, Package, AlertTriangle, Edit, Trash2, PackagePlus } from 'lucide-react';
-import { useToast } from '../hooks/use-toast';
-import { formatCurrency } from '../utils/currency';
-import FeatureLimitModal from './trial/FeatureLimitModal';
-import InventoryModal from './InventoryModal';
-import { useTrialSystem } from '../hooks/useTrialSystem';
-import { useOfflineAwareData } from '../hooks/useOfflineAwareData';
-import { useOfflineAwareMutation } from '../hooks/useOfflineAwareMutation';
-import { PRODUCT_CATEGORIES } from '../constants/categories';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useOfflineAwareData } from '@/hooks/useOfflineAwareData';
+import { useOfflineAwareMutation } from '@/hooks/useOfflineAwareMutation';
+import InventoryModal from './inventory/InventoryModal';
+import InventoryProductGrid from './inventory/InventoryProductGrid';
+import { Product } from '../types';
+import { transformDatabaseProduct } from '@/utils/dataTransforms';
+import { FeatureLimitModal } from './trial/FeatureLimitModal';
 
-// Local interface matching the database structure
-interface DatabaseProduct {
-  id: string;
-  user_id: string;
-  name: string;
-  category: string;
-  cost_price: number;
-  selling_price: number;
-  current_stock: number;
-  low_stock_threshold: number;
-  created_at: string;
-  updated_at: string;
-}
-
-// UI interface for consistent camelCase usage
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  costPrice: number;
-  sellingPrice: number;
-  currentStock: number;
-  lowStockThreshold: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const ProductManagement = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showForm, setShowForm] = useState(false);
-  const [showInventoryModal, setShowInventoryModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [showFeatureLimitModal, setShowFeatureLimitModal] = useState(false);
+const ProductManagement: React.FC = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { trialInfo, updateFeatureUsage, checkFeatureAccess } = useTrialSystem();
+  
+  // State management
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [showLowStock, setShowLowStock] = useState(false);
+  const [isFeatureLimitModalOpen, setIsFeatureLimitModalOpen] = useState(false);
 
-  // Transform function to convert database format to UI format
-  const transformToProduct = (dbProduct: DatabaseProduct): Product => ({
-    id: dbProduct.id,
-    name: dbProduct.name,
-    category: dbProduct.category,
-    costPrice: dbProduct.cost_price,
-    sellingPrice: dbProduct.selling_price,
-    currentStock: dbProduct.current_stock,
-    lowStockThreshold: dbProduct.low_stock_threshold,
-    createdAt: dbProduct.created_at,
-    updatedAt: dbProduct.updated_at,
-  });
-
-  // Use offline-aware data hooks
-  const { data: rawProducts, loading, refetch } = useOfflineAwareData<DatabaseProduct>({
+  // Fetch products using offline-aware hook
+  const { 
+    data: rawProducts = [], 
+    loading, 
+    error, 
+    refetch 
+  } = useOfflineAwareData({
     table: 'products',
-    select: '*'
+    dependencies: [user?.id]
   });
 
-  // Transform products to UI format
-  const products = useMemo(() => 
-    rawProducts.map(transformToProduct), 
-    [rawProducts]
-  );
+  // Transform database products to UI format
+  const products: Product[] = rawProducts.map(transformDatabaseProduct);
 
-  // Use offline-aware mutations
-  const createProductMutation = useOfflineAwareMutation({
+  // Product mutation hooks
+  const { mutate: createProduct, loading: creating } = useOfflineAwareMutation({
     table: 'products',
     operation: 'insert',
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Product added successfully",
+        title: "Product Added",
+        description: "Product has been added successfully",
       });
+      setIsModalOpen(false);
       refetch();
-      resetForm();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to add product",
+        variant: "destructive",
+      });
     }
   });
 
-  const updateProductMutation = useOfflineAwareMutation({
+  const { mutate: updateProduct, loading: updating } = useOfflineAwareMutation({
     table: 'products',
     operation: 'update',
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Product updated successfully",
+        title: "Product Updated",
+        description: "Product has been updated successfully",
       });
+      setIsModalOpen(false);
+      setEditingProduct(null);
       refetch();
-      resetForm();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update product",
+        variant: "destructive",
+      });
     }
   });
 
-  const deleteProductMutation = useOfflineAwareMutation({
+  const { mutate: deleteProduct, loading: deleting } = useOfflineAwareMutation({
     table: 'products',
     operation: 'delete',
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Product deleted successfully",
+        title: "Product Deleted",
+        description: "Product has been deleted successfully",
       });
       refetch();
-    }
-  });
-
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    costPrice: '',
-    sellingPrice: '',
-    currentStock: '',
-    lowStockThreshold: '',
-  });
-
-  const categories = ['all', ...PRODUCT_CATEGORIES];
-
-  // Memoize filtered products
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.category.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchTerm, selectedCategory]);
-
-  // Memoize low stock products
-  const lowStockProducts = useMemo(() => {
-    return products.filter(product => product.currentStock <= product.lowStockThreshold);
-  }, [products]);
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      category: '',
-      costPrice: '',
-      sellingPrice: '',
-      currentStock: '',
-      lowStockThreshold: '',
-    });
-    setEditingProduct(null);
-    setShowForm(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Check trial limits for new products
-    if (!editingProduct && trialInfo && trialInfo.isTrialActive) {
-      const canCreateProduct = checkFeatureAccess('products');
-      if (!canCreateProduct) {
-        setShowFeatureLimitModal(true);
-        return;
-      }
-    }
-
-    if (!formData.name || !formData.category || !formData.costPrice || !formData.sellingPrice) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const costPrice = parseFloat(formData.costPrice);
-    const sellingPrice = parseFloat(formData.sellingPrice);
-    const currentStock = parseInt(formData.currentStock) || 0;
-    const lowStockThreshold = parseInt(formData.lowStockThreshold) || 10;
-
-    if (costPrice < 0 || sellingPrice < 0 || currentStock < 0) {
-      toast({
-        title: "Validation Error",
-        description: "Prices and stock cannot be negative",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Convert to database format
-    const productData = {
-      name: formData.name,
-      category: formData.category,
-      cost_price: costPrice,
-      selling_price: sellingPrice,
-      current_stock: currentStock,
-      low_stock_threshold: lowStockThreshold,
-    };
-
-    try {
-      if (editingProduct) {
-        updateProductMutation.mutate(productData, { id: editingProduct.id });
-      } else {
-        createProductMutation.mutate(productData);
-        
-        // Update trial usage for new products
-        if (trialInfo && trialInfo.isTrialActive) {
-          updateFeatureUsage('products', 1);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to save product:', error);
-    }
-  };
-
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      category: product.category,
-      costPrice: product.costPrice.toString(),
-      sellingPrice: product.sellingPrice.toString(),
-      currentStock: product.currentStock.toString(),
-      lowStockThreshold: product.lowStockThreshold.toString(),
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (product: Product) => {
-    if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
-      try {
-        deleteProductMutation.mutate({ id: product.id });
-      } catch (error) {
-        console.error('Failed to delete product:', error);
-      }
-    }
-  };
-
-  const handleAddProduct = () => {
-    // Check trial limits before showing form
-    if (trialInfo && trialInfo.isTrialActive) {
-      const canCreateProduct = checkFeatureAccess('products');
-      if (!canCreateProduct) {
-        setShowFeatureLimitModal(true);
-        return;
-      }
-    }
-    setShowForm(true);
-  };
-
-  const handleAddStock = async (productId: string, quantity: number, buyingPrice: number, supplier?: string) => {
-    try {
-      const product = products.find(p => p.id === productId);
-      if (!product) return;
-
-      // Convert to database format for update
-      const updateData = {
-        current_stock: product.currentStock + quantity,
-        cost_price: buyingPrice, // Update cost price with latest buying price
-      };
-
-      updateProductMutation.mutate(updateData, { id: productId });
-
-      toast({
-        title: "Stock Added Successfully",
-        description: `Stock recorded: ${quantity} × ${product.name} at KES ${buyingPrice.toFixed(2)} each.`,
-      });
-
-      setShowInventoryModal(false);
-    } catch (error) {
-      console.error('Failed to add stock:', error);
+    },
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to add stock. Please try again.",
+        description: "Failed to delete product",
         variant: "destructive",
       });
     }
+  });
+
+  // Product operations
+  const handleSaveProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) return;
+
+    const dbProduct = {
+      user_id: user.id,
+      name: productData.name,
+      category: productData.category,
+      cost_price: productData.costPrice,
+      selling_price: productData.sellingPrice,
+      current_stock: productData.currentStock,
+      low_stock_threshold: productData.lowStockThreshold || 10,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (editingProduct) {
+      updateProduct({
+        ...dbProduct,
+        id: editingProduct.id
+      }, { id: editingProduct.id });
+    } else {
+      createProduct({
+        ...dbProduct,
+        id: crypto.randomUUID()
+      });
+    }
   };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    if (window.confirm(`Are you sure you want to delete "${product.name}"?`)) {
+      deleteProduct({ id: product.id });
+    }
+  };
+
+  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
+    const updatedProduct = {
+      ...product,
+      currentStock: product.currentStock + quantity,
+      costPrice: buyingPrice,
+      updatedAt: new Date().toISOString()
+    };
+
+    const dbProduct = {
+      user_id: user!.id,
+      name: updatedProduct.name,
+      category: updatedProduct.category,
+      cost_price: updatedProduct.costPrice,
+      selling_price: updatedProduct.sellingPrice,
+      current_stock: updatedProduct.currentStock,
+      low_stock_threshold: updatedProduct.lowStockThreshold,
+      updated_at: updatedProduct.updatedAt
+    };
+
+    updateProduct(dbProduct, { id: product.id });
+  };
+
+  // Filtering logic
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    const matchesLowStock = !showLowStock || product.currentStock <= (product.lowStockThreshold || 10);
+    
+    return matchesSearch && matchesCategory && matchesLowStock;
+  });
+
+  // Get unique categories
+  const categories = [...new Set(products.map(product => product.category))];
+
+  // Calculate stats
+  const totalProducts = products.length;
+  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
+  const totalValue = products.reduce((sum, p) => sum + (p.currentStock * p.costPrice), 0);
+  const totalProfit = products.reduce((sum, p) => sum + (p.currentStock * (p.sellingPrice - p.costPrice)), 0);
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded-xl"></div>
-            ))}
-          </div>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Inventory Management</h1>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="p-6">
+        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Error loading products: {error}</span>
+            </div>
+            <Button onClick={refetch} className="mt-4">Try Again</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
-          <p className="text-gray-600">Manage your inventory and product catalog</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Inventory Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage your products, track stock levels, and monitor inventory value
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => setShowInventoryModal(true)} 
-            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full transition-all hover:shadow-lg"
-            title="Record new stock arrival"
-          >
-            <PackagePlus className="w-4 h-4" />
-            <span>Add Inventory</span>
-          </Button>
-          <Button onClick={handleAddProduct} className="flex items-center space-x-2">
-            <Plus className="w-4 h-4" />
-            <span>Add Product</span>
-          </Button>
-        </div>
+        
+        <Button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-primary hover:bg-primary/90 text-white shadow-lg"
+          disabled={creating}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Product
+        </Button>
       </div>
 
-      <Tabs defaultValue="all" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="all">All Products ({products.length})</TabsTrigger>
-          <TabsTrigger value="low-stock">
-            Low Stock ({lowStockProducts.length})
-            {lowStockProducts.length > 0 && <AlertTriangle className="w-4 h-4 ml-2 text-orange-500" />}
-          </TabsTrigger>
-        </TabsList>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">Total Products</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{totalProducts}</p>
+              </div>
+              <div className="bg-blue-200 dark:bg-blue-800/50 p-3 rounded-full">
+                <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <TabsContent value="all" className="space-y-6">
-          {/* Search and Filter */}
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-orange-200 dark:border-orange-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-600 dark:text-orange-400 text-sm font-medium">Low Stock Items</p>
+                <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{lowStockProducts}</p>
+              </div>
+              <div className="bg-orange-200 dark:bg-orange-800/50 p-3 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-600 dark:text-green-400 text-sm font-medium">Inventory Value</p>
+                <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                  KSh {totalValue.toLocaleString()}
+                </p>
+              </div>
+              <div className="bg-green-200 dark:bg-green-800/50 p-3 rounded-full">
+                <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-600 dark:text-purple-400 text-sm font-medium">Potential Profit</p>
+                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                  KSh {totalProfit.toLocaleString()}
+                </p>
+              </div>
+              <div className="bg-purple-200 dark:bg-purple-800/50 p-3 rounded-full">
+                <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            >
+              <option value="">All Categories</option>
+              {categories.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+
+            <Button
+              variant={showLowStock ? "default" : "outline"}
+              onClick={() => setShowLowStock(!showLowStock)}
+              className="whitespace-nowrap"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Low Stock Only
+              {lowStockProducts > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {lowStockProducts}
+                </Badge>
+              )}
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map(product => (
-              <Card key={product.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{product.name}</CardTitle>
-                      <Badge variant="secondary" className="mt-1">
-                        {product.category}
-                      </Badge>
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(product)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(product)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Cost Price:</span>
-                      <span className="font-medium">{formatCurrency(product.costPrice)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Selling Price:</span>
-                      <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Stock:</span>
-                      <Badge variant={product.currentStock <= product.lowStockThreshold ? "destructive" : "default"}>
-                        {product.currentStock} units
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Profit Margin:</span>
-                      <span className="font-medium text-green-600">
-                        {formatCurrency(product.sellingPrice - product.costPrice)}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">
-                {searchTerm ? "No products match your search" : "No products added yet"}
-              </p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="low-stock">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {lowStockProducts.map(product => (
-              <Card key={product.id} className="border-orange-200 hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="w-5 h-5 text-orange-500" />
-                    <CardTitle className="text-lg">{product.name}</CardTitle>
-                  </div>
-                  <Badge variant="secondary">{product.category}</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Current Stock:</span>
-                      <Badge variant="destructive">{product.currentStock} units</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Low Stock Alert:</span>
-                      <span className="text-sm">{product.lowStockThreshold} units</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Selling Price:</span>
-                      <span className="font-medium">{formatCurrency(product.sellingPrice)}</span>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => handleEdit(product)}
-                    className="w-full mt-4"
-                    variant="outline"
-                  >
-                    Update Stock
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {lowStockProducts.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-green-500 mx-auto mb-4" />
-              <p className="text-gray-600">All products are well stocked!</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Add/Edit Product Modal */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-2xl h-[90vh] sm:max-h-[85vh] flex flex-col mx-auto my-auto rounded-lg border-0 p-0">
-          <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b">
-            <DialogTitle className="text-lg sm:text-xl font-bold">
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">Product Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter product name"
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PRODUCT_CATEGORIES.map(category => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="costPrice" className="text-sm font-medium">Cost Price (KES) *</Label>
-                  <Input
-                    id="costPrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.costPrice}
-                    onChange={(e) => setFormData(prev => ({ ...prev, costPrice: e.target.value }))}
-                    placeholder="0.00"
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sellingPrice" className="text-sm font-medium">Selling Price (KES) *</Label>
-                  <Input
-                    id="sellingPrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.sellingPrice}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sellingPrice: e.target.value }))}
-                    placeholder="0.00"
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock</Label>
-                  <Input
-                    id="currentStock"
-                    type="number"
-                    min="0"
-                    value={formData.currentStock}
-                    onChange={(e) => setFormData(prev => ({ ...prev, currentStock: e.target.value }))}
-                    placeholder="0"
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lowStockThreshold" className="text-sm font-medium">Low Stock Alert</Label>
-                  <Input
-                    id="lowStockThreshold"
-                    type="number"
-                    min="0"
-                    value={formData.lowStockThreshold}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lowStockThreshold: e.target.value }))}
-                    placeholder="10"
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" className="flex-1" disabled={createProductMutation.loading || updateProductMutation.loading}>
-                  {editingProduct ? 'Update Product' : 'Add Product'}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Feature Limit Modal */}
-      <FeatureLimitModal 
-        open={showFeatureLimitModal}
-        onOpenChange={setShowFeatureLimitModal}
-        feature="products"
-        currentUsage={trialInfo?.usage?.products || 0}
-        limit={trialInfo?.limits?.products || 0}
+      {/* Products Grid */}
+      <InventoryProductGrid
+        products={products} // Now passing transformed products
+        onEdit={handleEditProduct}
+        onDelete={handleDeleteProduct}
+        onRestock={handleRestock}
       />
 
-      {/* Inventory Modal */}
-      <InventoryModal 
-        open={showInventoryModal}
-        onOpenChange={setShowInventoryModal}
-        products={rawProducts}
-        onAddStock={handleAddStock}
+      {/* Modals */}
+      <InventoryModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingProduct(null);
+        }}
+        onSave={handleSaveProduct}
+        product={editingProduct}
+        isLoading={creating || updating}
+      />
+
+      <FeatureLimitModal
+        open={isFeatureLimitModalOpen}
+        onOpenChange={setIsFeatureLimitModalOpen}
+        featureName="Products"
+        currentUsage={totalProducts}
+        limit={50}
       />
     </div>
   );

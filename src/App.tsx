@@ -6,7 +6,6 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineFirst } from '@/hooks/useOfflineFirst';
-import { useServiceWorker } from '@/hooks/useServiceWorker';
 
 // Pages
 import Landing from './pages/Landing';
@@ -34,10 +33,8 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
       retry: (failureCount, error) => {
-        // Safely check error properties without assuming structure
         const errorObj = error as any;
         if (errorObj && typeof errorObj === 'object' && errorObj.message) {
-          // Check for network or auth errors that shouldn't retry
           const message = errorObj.message.toLowerCase();
           if (message.includes('unauthorized') || message.includes('forbidden')) {
             return false;
@@ -52,40 +49,78 @@ const queryClient = new QueryClient({
 function App() {
   const { user, loading } = useAuth();
   const { isOnline, initialize: initializeOffline } = useOfflineFirst();
-  const { swRegistration } = useServiceWorker();
 
   // Initialize offline capabilities
   useEffect(() => {
     initializeOffline();
   }, [initializeOffline]);
 
-  // Register service worker for PWA functionality - only once
+  // Enhanced service worker registration
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      // Clear any existing registrations first
+      console.log('[App] Registering enhanced service worker...');
+      
+      // Clear any existing registrations
       navigator.serviceWorker.getRegistrations().then(registrations => {
         registrations.forEach(registration => {
-          if (registration.scope.includes('enhanced-offline-sw')) {
+          if (registration.scope.includes('offline-sw') || 
+              registration.scope.includes('enhanced-offline-sw')) {
+            console.log('[App] Unregistering old service worker');
             registration.unregister();
           }
         });
       });
 
-      // Register the main service worker
-      navigator.serviceWorker.register('/enhanced-offline-sw.js')
+      // Register the enhanced service worker
+      navigator.serviceWorker.register('/enhanced-offline-sw.js', {
+        scope: '/'
+      })
         .then((registration) => {
-          console.log('SW registered:', registration);
+          console.log('[App] ✅ Enhanced SW registered:', registration);
+          
+          // Listen for service worker messages
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            console.log('[App] SW message:', event.data);
+            
+            if (event.data?.type === 'SW_ACTIVATED') {
+              console.log('[App] Service worker activated with version:', event.data.data.version);
+            } else if (event.data?.type === 'SYNC_COMPLETED') {
+              console.log('[App] Background sync completed');
+            }
+          });
+          
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[App] New service worker available');
+                  // Optionally notify user about update
+                }
+              });
+            }
+          });
         })
         .catch((registrationError) => {
-          console.log('SW registration failed:', registrationError);
+          console.error('[App] ❌ SW registration failed:', registrationError);
         });
+
+      // Handle service worker controller change
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('[App] Service worker controller changed');
+        window.location.reload();
+      });
     }
   }, []);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading DukaFiti...</p>
+        </div>
       </div>
     );
   }
