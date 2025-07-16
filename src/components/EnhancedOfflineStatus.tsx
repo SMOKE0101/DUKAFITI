@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Wifi, WifiOff, Clock, Sync, AlertCircle } from 'lucide-react';
+import { Wifi, WifiOff, Clock, RotateCcw, AlertCircle } from 'lucide-react';
 import { useOfflineManager } from '../hooks/useOfflineManager';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 
@@ -106,12 +106,12 @@ const EnhancedOfflineStatus = () => {
               >
                 {isSyncing ? (
                   <>
-                    <Sync className="h-3 w-3 mr-1 animate-spin" />
+                    <RotateCcw className="h-3 w-3 mr-1 animate-spin" />
                     Syncing...
                   </>
                 ) : (
                   <>
-                    <Sync className="h-3 w-3 mr-1" />
+                    <RotateCcw className="h-3 w-3 mr-1" />
                     Sync Now
                   </>
                 )}

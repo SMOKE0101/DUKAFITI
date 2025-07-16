@@ -1,345 +1,167 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { offlineDB, OfflineProduct, OfflineCustomer, OfflineSale } from '../utils/offlineDB';
 import { useOfflineSync } from './useOfflineSync';
+import { offlineDB } from '../utils/offlineDB';
 
-export const useOfflineProducts = () => {
+export const useOfflineData = () => {
   const { user } = useAuth();
-  const { updateQueuedActionsCount } = useOfflineSync();
-  const [products, setProducts] = useState<OfflineProduct[]>([]);
+  const { syncData } = useOfflineSync();
+  
+  const [data, setData] = useState({
+    products: [],
+    customers: [],
+    sales: [],
+    transactions: []
+  });
+  
   const [isLoading, setIsLoading] = useState(true);
-  const [isOnline] = useState(navigator.onLine);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadProducts = useCallback(async () => {
-    if (!user) return;
-
+  const loadOfflineData = useCallback(async () => {
+    if (!user?.id) return;
+    
     try {
       setIsLoading(true);
-
-      if (isOnline) {
-        // Try to fetch from server first
-        try {
-          const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .eq('user_id', user.id);
-
-          if (error) throw error;
-
-          if (data) {
-            await offlineDB.storeProducts(data);
-            setProducts(data);
-          }
-        } catch (error) {
-          console.log('[useOfflineProducts] Server fetch failed, using local data');
-          const localProducts = await offlineDB.getProducts(user.id);
-          setProducts(localProducts);
-        }
-      } else {
-        // Load from local storage
-        const localProducts = await offlineDB.getProducts(user.id);
-        setProducts(localProducts);
-      }
-    } catch (error) {
-      console.error('[useOfflineProducts] Failed to load products:', error);
+      setError(null);
+      
+      const [products, customers, sales, transactions] = await Promise.all([
+        offlineDB.getProducts(user.id),
+        offlineDB.getCustomers(user.id),
+        offlineDB.getSales(user.id),
+        offlineDB.getAllOfflineData('transactions', user.id)
+      ]);
+      
+      setData({
+        products: products || [],
+        customers: customers || [],
+        sales: sales || [],
+        transactions: transactions || []
+      });
+      
+    } catch (err) {
+      console.error('Failed to load offline data:', err);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [user, isOnline]);
+  }, [user?.id]);
 
-  const createProduct = async (productData: Omit<OfflineProduct, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    if (!user) throw new Error('User not authenticated');
-
-    const newProduct: OfflineProduct = {
-      ...productData,
-      id: `offline_product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      user_id: user.id,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      synced: false
-    };
-
-    // Store locally immediately
-    await offlineDB.store('products', newProduct);
-    
-    // Queue for sync
-    await offlineDB.queueAction({
-      type: 'CREATE',
-      table: 'products',
-      data: newProduct,
-      user_id: user.id
-    });
-
-    // Update local state
-    setProducts(prev => [...prev, newProduct]);
-    await updateQueuedActionsCount();
-
-    return newProduct;
-  };
-
-  const updateProduct = async (id: string, updates: Partial<OfflineProduct>) => {
-    if (!user) throw new Error('User not authenticated');
-
-    const existingProduct = await offlineDB.getProduct(id);
-    if (!existingProduct) throw new Error('Product not found');
-
-    const updatedProduct = {
-      ...existingProduct,
-      ...updates,
-      updated_at: new Date().toISOString(),
-      synced: false
-    };
-
-    // Store locally immediately
-    await offlineDB.store('products', updatedProduct);
-    
-    // Queue for sync
-    await offlineDB.queueAction({
-      type: 'UPDATE',
-      table: 'products',
-      data: updatedProduct,
-      user_id: user.id
-    });
-
-    // Update local state
-    setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p));
-    await updateQueuedActionsCount();
-
-    return updatedProduct;
-  };
-
-  const deleteProduct = async (id: string) => {
-    if (!user) throw new Error('User not authenticated');
-
-    // Remove locally immediately
-    await offlineDB.delete('products', id);
-    
-    // Queue for sync
-    await offlineDB.queueAction({
-      type: 'DELETE',
-      table: 'products',
-      data: { id },
-      user_id: user.id
-    });
-
-    // Update local state
-    setProducts(prev => prev.filter(p => p.id !== id));
-    await updateQueuedActionsCount();
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
-
-  return {
-    products,
-    isLoading,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    refreshProducts: loadProducts
-  };
-};
-
-export const useOfflineCustomers = () => {
-  const { user } = useAuth();
-  const { updateQueuedActionsCount } = useOfflineSync();
-  const [customers, setCustomers] = useState<OfflineCustomer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOnline] = useState(navigator.onLine);
-
-  const loadCustomers = useCallback(async () => {
-    if (!user) return;
-
+  const addProduct = useCallback(async (productData: any) => {
     try {
-      setIsLoading(true);
+      const product = {
+        ...productData,
+        id: `offline_product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        user_id: user?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (isOnline) {
-        try {
-          const { data, error } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('user_id', user.id);
+      await offlineDB.store('products', product);
+      
+      // Add to sync queue
+      await offlineDB.addToSyncQueue({
+        id: `sync_${Date.now()}`,
+        type: 'product',
+        operation: 'create',
+        data: product,
+        timestamp: new Date().toISOString(),
+        priority: 'medium',
+        attempts: 0,
+        synced: false
+      });
 
-          if (error) throw error;
-
-          if (data) {
-            await offlineDB.storeCustomers(data);
-            setCustomers(data);
-          }
-        } catch (error) {
-          console.log('[useOfflineCustomers] Server fetch failed, using local data');
-          const localCustomers = await offlineDB.getCustomers(user.id);
-          setCustomers(localCustomers);
-        }
-      } else {
-        const localCustomers = await offlineDB.getCustomers(user.id);
-        setCustomers(localCustomers);
-      }
+      // Refresh data
+      await loadOfflineData();
+      
+      return product;
     } catch (error) {
-      console.error('[useOfflineCustomers] Failed to load customers:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to add product:', error);
+      throw error;
     }
-  }, [user, isOnline]);
+  }, [user?.id, loadOfflineData]);
 
-  const createCustomer = async (customerData: Omit<OfflineCustomer, 'id' | 'user_id' | 'created_date'>) => {
-    if (!user) throw new Error('User not authenticated');
-
-    const newCustomer: OfflineCustomer = {
-      ...customerData,
-      id: `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      user_id: user.id,
-      created_date: new Date().toISOString(),
-      synced: false
-    };
-
-    await offlineDB.store('customers', newCustomer);
-    
-    await offlineDB.queueAction({
-      type: 'CREATE',
-      table: 'customers',
-      data: newCustomer,
-      user_id: user.id
-    });
-
-    setCustomers(prev => [...prev, newCustomer]);
-    await updateQueuedActionsCount();
-
-    return newCustomer;
-  };
-
-  const updateCustomer = async (id: string, updates: Partial<OfflineCustomer>) => {
-    if (!user) throw new Error('User not authenticated');
-
-    const existingCustomer = await offlineDB.getCustomer(id);
-    if (!existingCustomer) throw new Error('Customer not found');
-
-    const updatedCustomer = {
-      ...existingCustomer,
-      ...updates,
-      updated_at: new Date().toISOString(),
-      synced: false
-    };
-
-    await offlineDB.store('customers', updatedCustomer);
-    
-    await offlineDB.queueAction({
-      type: 'UPDATE',
-      table: 'customers',
-      data: updatedCustomer,
-      user_id: user.id
-    });
-
-    setCustomers(prev => prev.map(c => c.id === id ? updatedCustomer : c));
-    await updateQueuedActionsCount();
-
-    return updatedCustomer;
-  };
-
-  useEffect(() => {
-    loadCustomers();
-  }, [loadCustomers]);
-
-  return {
-    customers,
-    isLoading,
-    createCustomer,
-    updateCustomer,
-    refreshCustomers: loadCustomers
-  };
-};
-
-export const useOfflineSales = () => {
-  const { user } = useAuth();
-  const { updateQueuedActionsCount } = useOfflineSync();
-  const [sales, setSales] = useState<OfflineSale[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOnline] = useState(navigator.onLine);
-
-  const loadSales = useCallback(async () => {
-    if (!user) return;
-
+  const addCustomer = useCallback(async (customerData: any) => {
     try {
-      setIsLoading(true);
+      const customer = {
+        ...customerData,
+        id: `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        user_id: user?.id,
+        created_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (isOnline) {
-        try {
-          const { data, error } = await supabase
-            .from('sales')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('timestamp', { ascending: false });
+      await offlineDB.store('customers', customer);
+      
+      // Add to sync queue
+      await offlineDB.addToSyncQueue({
+        id: `sync_${Date.now()}`,
+        type: 'customer',
+        operation: 'create',
+        data: customer,
+        timestamp: new Date().toISOString(),
+        priority: 'medium',
+        attempts: 0,
+        synced: false
+      });
 
-          if (error) throw error;
-
-          if (data) {
-            await offlineDB.storeSales(data);
-            setSales(data);
-          }
-        } catch (error) {
-          console.log('[useOfflineSales] Server fetch failed, using local data');
-          const localSales = await offlineDB.getSales(user.id);
-          setSales(localSales.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-        }
-      } else {
-        const localSales = await offlineDB.getSales(user.id);
-        setSales(localSales.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-      }
+      // Refresh data
+      await loadOfflineData();
+      
+      return customer;
     } catch (error) {
-      console.error('[useOfflineSales] Failed to load sales:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to add customer:', error);
+      throw error;
     }
-  }, [user, isOnline]);
+  }, [user?.id, loadOfflineData]);
 
-  const createSale = async (saleData: Omit<OfflineSale, 'id' | 'user_id' | 'timestamp'>) => {
-    if (!user) throw new Error('User not authenticated');
+  const addSale = useCallback(async (saleData: any) => {
+    try {
+      const sale = {
+        ...saleData,
+        id: `offline_sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        user_id: user?.id,
+        timestamp: new Date().toISOString(),
+        synced: false
+      };
 
-    const newSale: OfflineSale = {
-      ...saleData,
-      id: `offline_sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      user_id: user.id,
-      timestamp: new Date().toISOString(),
-      synced: false
-    };
+      await offlineDB.storeSale(sale);
+      
+      // Add to sync queue
+      await offlineDB.addToSyncQueue({
+        id: `sync_${Date.now()}`,
+        type: 'sale',
+        operation: 'create',
+        data: sale,
+        timestamp: new Date().toISOString(),
+        priority: 'high',
+        attempts: 0,
+        synced: false
+      });
 
-    // Store locally immediately
-    await offlineDB.store('sales', newSale);
-    
-    // Update product stock locally
-    if (newSale.product_id && newSale.quantity) {
-      const product = await offlineDB.getProduct(newSale.product_id);
-      if (product) {
-        await offlineDB.updateProductStock(newSale.product_id, product.current_stock - newSale.quantity);
-      }
+      // Refresh data
+      await loadOfflineData();
+      
+      return sale;
+    } catch (error) {
+      console.error('Failed to add sale:', error);
+      throw error;
     }
-    
-    // Queue for sync
-    await offlineDB.queueAction({
-      type: 'CREATE',
-      table: 'sales',
-      data: newSale,
-      user_id: user.id
-    });
+  }, [user?.id, loadOfflineData]);
 
-    // Update local state
-    setSales(prev => [newSale, ...prev]);
-    await updateQueuedActionsCount();
-
-    return newSale;
-  };
-
+  // Load data on mount and when user changes
   useEffect(() => {
-    loadSales();
-  }, [loadSales]);
+    loadOfflineData();
+  }, [loadOfflineData]);
 
   return {
-    sales,
+    data,
     isLoading,
-    createSale,
-    refreshSales: loadSales
+    error,
+    addProduct,
+    addCustomer,
+    addSale,
+    refreshData: loadOfflineData,
+    syncData
   };
 };
