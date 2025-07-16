@@ -108,14 +108,14 @@ class OfflineOrderManager {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['orders'], 'readonly');
       const store = transaction.objectStore('orders');
-      const index = store.index('synced');
       
-      const request = index.getAll(false); // Get only unsynced orders
+      const request = store.getAll();
       
       request.onsuccess = () => {
-        const orders = request.result || [];
-        console.log(`[OfflineOrderManager] Found ${orders.length} unsynced orders`);
-        resolve(orders);
+        const allOrders = request.result || [];
+        const unsyncedOrders = allOrders.filter(order => !order.synced);
+        console.log(`[OfflineOrderManager] Found ${unsyncedOrders.length} unsynced orders`);
+        resolve(unsyncedOrders);
       };
       
       request.onerror = () => {
