@@ -1,6 +1,13 @@
 
 import { useEffect, useState } from 'react';
 
+// Extend the ServiceWorkerRegistration interface to include sync
+interface ExtendedServiceWorkerRegistration extends ServiceWorkerRegistration {
+  sync?: {
+    register: (tag: string) => Promise<void>;
+  };
+}
+
 export const useServiceWorker = () => {
   const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -42,12 +49,13 @@ export const useServiceWorker = () => {
             setUpdateAvailable(true);
           }
 
-          // Background sync registration (with fallback for unsupported browsers)
+          // Background sync registration (with proper type checking)
           try {
             if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-              // Check if registration has sync property before using
-              if (registration.sync) {
-                await registration.sync.register('background-sync');
+              const extendedRegistration = registration as ExtendedServiceWorkerRegistration;
+              if (extendedRegistration.sync) {
+                await extendedRegistration.sync.register('background-sync');
+                console.log('[SW] Background sync registered successfully');
               }
             } else {
               console.warn('[SW] Background sync not supported by this browser');
