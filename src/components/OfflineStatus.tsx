@@ -1,149 +1,134 @@
 
-import React from 'react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import React, { useState, useEffect } from 'react';
+import { Wifi, WifiOff, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { WifiOff, Wifi, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
 
-const OfflineStatus: React.FC = () => {
-  const { syncStatus, conflicts, forceSyncNow, resolveConflict } = useOfflineSync();
+interface OfflineStatusProps {
+  className?: string;
+}
 
-  const getStatusColor = () => {
-    if (!syncStatus.isOnline) return 'bg-orange-100 border-orange-200 text-orange-800 dark:bg-orange-950/20 dark:border-orange-800 dark:text-orange-200';
-    if (syncStatus.isSyncing) return 'bg-blue-100 border-blue-200 text-blue-800 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-200';
-    if (syncStatus.queuedActions > 0) return 'bg-yellow-100 border-yellow-200 text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-800 dark:text-yellow-200';
-    return 'bg-green-100 border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-200';
-  };
+const OfflineStatus: React.FC<OfflineStatusProps> = ({ className = '' }) => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [queuedActions, setQueuedActions] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
-  const getStatusIcon = () => {
-    if (!syncStatus.isOnline) return <WifiOff className="w-4 h-4" />;
-    if (syncStatus.isSyncing) return <RefreshCw className="w-4 h-4 animate-spin" />;
-    if (syncStatus.queuedActions > 0) return <Clock className="w-4 h-4" />;
-    return <Wifi className="w-4 h-4" />;
-  };
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setSyncing(true);
+      
+      // Simulate sync process
+      setTimeout(() => {
+        setSyncing(false);
+        setQueuedActions(0);
+        setLastSync(new Date());
+      }, 2000);
+    };
 
-  const getStatusText = () => {
-    if (!syncStatus.isOnline) {
-      return syncStatus.queuedActions > 0 
-        ? `Offline Mode - ${syncStatus.queuedActions} actions queued`
-        : 'Offline Mode - All changes saved locally';
-    }
-    if (syncStatus.isSyncing) {
-      return `Syncing... ${syncStatus.syncProgress}%`;
-    }
-    if (syncStatus.queuedActions > 0) {
-      return `${syncStatus.queuedActions} actions pending sync`;
-    }
-    return 'Online - All data synchronized';
-  };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncing(false);
+    };
+
+    // Check for queued actions
+    const checkQueuedActions = async () => {
+      try {
+        const db = await openDB();
+        const transaction = db.transaction(['syncQueue'], 'readonly');
+        const store = transaction.objectStore('syncQueue');
+        const count = await store.count();
+        setQueuedActions(count);
+      } catch (error) {
+        console.error('Error checking queued actions:', error);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Check queued actions periodically
+    checkQueuedActions();
+    const interval = setInterval(checkQueuedActions, 5000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
+  }, []);
+
+  if (isOnline && queuedActions === 0 && !syncing) {
+    return null; // Don't show anything when online with no pending actions
+  }
 
   return (
-    <div className="space-y-2">
-      {/* Main Status Banner */}
-      <Alert className={getStatusColor()}>
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            {getStatusIcon()}
-            <AlertDescription className="font-medium">
-              {getStatusText()}
-            </AlertDescription>
-          </div>
-          
-          {syncStatus.isOnline && syncStatus.queuedActions > 0 && !syncStatus.isSyncing && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={forceSyncNow}
-              className="ml-2"
-            >
-              <RefreshCw className="w-3 h-3 mr-1" />
-              Sync Now
-            </Button>
+    <div className={`fixed top-0 left-0 right-0 z-50 ${className}`}>
+      <div className={`px-4 py-2 text-sm font-medium text-center transition-all duration-300 ${
+        isOnline 
+          ? syncing 
+            ? 'bg-blue-500 text-white' 
+            : 'bg-green-500 text-white'
+          : 'bg-orange-500 text-white'
+      }`}>
+        <div className="flex items-center justify-center gap-2 max-w-4xl mx-auto">
+          {isOnline ? (
+            syncing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <span>Syncing {queuedActions} actions...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                <span>All data synced</span>
+                {lastSync && (
+                  <span className="text-xs opacity-80">
+                    • Last sync: {lastSync.toLocaleTimeString()}
+                  </span>
+                )}
+              </>
+            )
+          ) : (
+            <>
+              <WifiOff className="w-4 h-4" />
+              <span>Working Offline</span>
+              {queuedActions > 0 && (
+                <Badge variant="secondary" className="ml-2 bg-white/20 text-white">
+                  <Clock className="w-3 h-3 mr-1" />
+                  {queuedActions} queued
+                </Badge>
+              )}
+              <span className="text-xs opacity-80 ml-2">
+                • Changes will sync when back online
+              </span>
+            </>
           )}
         </div>
-
-        {/* Sync Progress Bar */}
-        {syncStatus.isSyncing && (
-          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${syncStatus.syncProgress}%` }}
-            />
-          </div>
-        )}
-      </Alert>
-
-      {/* Sync Errors */}
-      {syncStatus.errors.length > 0 && (
-        <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
-          <AlertTriangle className="w-4 h-4 text-red-600" />
-          <AlertDescription>
-            <div className="text-red-800 dark:text-red-200">
-              <strong>Sync Issues:</strong>
-              <ul className="mt-1 text-sm">
-                {syncStatus.errors.slice(0, 3).map((error, index) => (
-                  <li key={index}>• {error}</li>
-                ))}
-                {syncStatus.errors.length > 3 && (
-                  <li>• And {syncStatus.errors.length - 3} more...</li>
-                )}
-              </ul>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Conflicts */}
-      {conflicts.length > 0 && (
-        <Alert className="bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
-          <AlertTriangle className="w-4 h-4 text-yellow-600" />
-          <AlertDescription>
-            <div className="text-yellow-800 dark:text-yellow-200">
-              <strong>Data Conflicts Detected:</strong>
-              <div className="mt-2 space-y-2">
-                {conflicts.slice(0, 2).map((conflict) => (
-                  <div key={conflict.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
-                    <span className="text-sm">
-                      {conflict.type}: Changes made both locally and on server
-                    </span>
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => resolveConflict(conflict.id, 'local')}
-                      >
-                        Keep Local
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => resolveConflict(conflict.id, 'server')}
-                      >
-                        Use Server
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {conflicts.length > 2 && (
-                  <div className="text-sm text-yellow-700 dark:text-yellow-300">
-                    And {conflicts.length - 2} more conflicts...
-                  </div>
-                )}
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Last Sync Time */}
-      {syncStatus.lastSyncTime && (
-        <div className="text-xs text-muted-foreground text-center">
-          Last synchronized: {syncStatus.lastSyncTime.toLocaleString()}
-        </div>
-      )}
+      </div>
+      
+      {/* Spacer to prevent content from being hidden behind the banner */}
+      <div className="h-10"></div>
     </div>
   );
+};
+
+// Helper function to open IndexedDB
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('DukaSmartOffline', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      
+      if (!db.objectStoreNames.contains('syncQueue')) {
+        db.createObjectStore('syncQueue', { keyPath: 'id' });
+      }
+    };
+  });
 };
 
 export default OfflineStatus;

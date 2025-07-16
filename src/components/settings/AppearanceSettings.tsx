@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { useSettings } from '../../hooks/useSettings';
 import { useTheme } from 'next-themes';
@@ -7,10 +7,24 @@ import { Palette, Sun, Moon } from 'lucide-react';
 
 const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
-  const { theme: currentTheme } = useTheme();
+  const { theme: currentTheme, setTheme } = useTheme();
+  const [localTheme, setLocalTheme] = useState<'light' | 'dark'>('light');
+
+  // Initialize local theme from settings, not current theme
+  useEffect(() => {
+    if (settings.theme && settings.theme !== 'system') {
+      setLocalTheme(settings.theme as 'light' | 'dark');
+    } else {
+      // Default to light if system theme
+      setLocalTheme('light');
+    }
+  }, [settings.theme]);
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    console.log('Theme change initiated:', newTheme, 'Current theme:', currentTheme);
+    console.log('User explicitly selected theme:', newTheme);
+    
+    // Update local state immediately for instant feedback
+    setLocalTheme(newTheme);
     
     // Update settings - this will handle both local state and theme provider sync
     saveSettings({ theme: newTheme });
@@ -33,11 +47,6 @@ const AppearanceSettings = () => {
     );
   }
 
-  // Use settings theme as the source of truth, with fallback to current theme
-  const activeTheme = settings.theme || currentTheme || 'light';
-  
-  console.log('Rendering AppearanceSettings - Settings theme:', settings.theme, 'Current theme:', currentTheme, 'Active theme:', activeTheme);
-
   return (
     <div className="w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8">
       {/* Theme Selection */}
@@ -58,13 +67,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('light')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
-              activeTheme === 'light'
+              localTheme === 'light'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              activeTheme === 'light'
+              localTheme === 'light'
                 ? 'bg-yellow-100 dark:bg-yellow-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>
@@ -80,13 +89,13 @@ const AppearanceSettings = () => {
             type="button"
             onClick={() => handleThemeChange('dark')}
             className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
-              activeTheme === 'dark'
+              localTheme === 'dark'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              activeTheme === 'dark'
+              localTheme === 'dark'
                 ? 'bg-blue-100 dark:bg-blue-900/20' 
                 : 'bg-gray-100 dark:bg-gray-800'
             }`}>

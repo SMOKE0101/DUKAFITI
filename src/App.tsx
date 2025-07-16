@@ -23,6 +23,7 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import OfflineStatus from "./components/OfflineStatus";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,35 +46,43 @@ const queryClient = new QueryClient({
 
 function App() {
   useEffect(() => {
-    // Register enhanced service worker for offline functionality
+    // Enhanced service worker registration for robust offline support
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
         try {
-          // Unregister any existing service workers first
+          // Unregister any existing service workers to prevent conflicts
           const registrations = await navigator.serviceWorker.getRegistrations();
           await Promise.all(registrations.map(registration => registration.unregister()));
           
           console.log('[App] Cleared existing service workers');
           
-          // Register the new service worker
+          // Register the enhanced service worker
           const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/'
+            scope: '/',
+            updateViaCache: 'none' // Always check for updates
           });
           
-          console.log('[App] Enhanced Service Worker registered successfully:', registration.scope);
+          console.log('[App] Enhanced Service Worker registered:', registration.scope);
           
-          // Listen for service worker updates
+          // Handle service worker updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[App] New service worker installed');
-                  if (window.confirm('New version available! Reload to update?')) {
-                    window.location.reload();
-                  }
+                  console.log('[App] New service worker available');
+                  // Auto-update in background for seamless experience
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
                 }
               });
+            }
+          });
+
+          // Listen for service worker messages
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'SW_UPDATED') {
+              console.log('[App] Service worker updated, reloading...');
+              window.location.reload();
             }
           });
 
@@ -83,13 +92,21 @@ function App() {
       });
     }
 
-    // Enhanced PWA install prompt handling
+    // Enhanced PWA install prompt
     let deferredPrompt: any;
     
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('[App] PWA install prompt available');
       e.preventDefault();
       deferredPrompt = e;
+      
+      // Show custom install prompt after a delay
+      setTimeout(() => {
+        if (deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+          // Could show a custom install banner here
+          console.log('[App] PWA can be installed');
+        }
+      }, 5000);
     });
 
     window.addEventListener('appinstalled', () => {
@@ -97,21 +114,50 @@ function App() {
       deferredPrompt = null;
     });
 
-    // Enhanced online/offline event handling
+    // Enhanced online/offline handling
     const handleOnline = () => {
       console.log('[App] Application came online');
-      // Notify service worker to sync
+      // Trigger background sync
       if (navigator.serviceWorker?.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'SYNC_NOW' });
       }
     };
 
     const handleOffline = () => {
-      console.log('[App] Application went offline');
+      console.log('[App] Application went offline - offline mode enabled');
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Initialize offline database
+    const initOfflineDB = async () => {
+      try {
+        if (typeof window !== 'undefined' && 'indexedDB' in window) {
+          const request = indexedDB.open('DukaSmartOffline', 1);
+          
+          request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
+            
+            // Create required object stores
+            const stores = ['settings', 'products', 'customers', 'sales', 'syncQueue'];
+            stores.forEach(storeName => {
+              if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { keyPath: 'id' });
+              }
+            });
+          };
+          
+          request.onsuccess = () => {
+            console.log('[App] Offline database initialized');
+          };
+        }
+      } catch (error) {
+        console.error('[App] Failed to initialize offline database:', error);
+      }
+    };
+
+    initOfflineDB();
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -123,10 +169,13 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <AuthProvider>
               <TooltipProvider>
                 <div className="min-h-screen w-full bg-background text-foreground">
+                  {/* Global offline status indicator */}
+                  <OfflineStatus />
+                  
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<ModernLanding />} />
@@ -140,7 +189,7 @@ function App() {
                     {/* Dashboard compatibility route */}
                     <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                     
-                    {/* Protected routes with layout and offline support */}
+                    {/* Protected routes with enhanced offline support */}
                     <Route path="/app" element={
                       <ProtectedRoute>
                         <PremiumAppLayout />

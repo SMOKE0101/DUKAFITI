@@ -1,9 +1,8 @@
+const CACHE_NAME = 'dukasmart-v3.0.0';
+const RUNTIME_CACHE = 'dukasmart-runtime-v3.0.0';
+const API_CACHE = 'dukasmart-api-v3.0.0';
 
-const CACHE_NAME = 'dukasmart-v2.0.0';
-const RUNTIME_CACHE = 'dukasmart-runtime-v2.0.0';
-const API_CACHE = 'dukasmart-api-v2.0.0';
-
-// Core app shell resources that must be cached
+// Enhanced core app shell resources for full offline support
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -12,9 +11,25 @@ const CORE_ASSETS = [
   '/favicon.ico'
 ];
 
-// Install event - cache core assets
+// SPA routes that should serve the app shell
+const SPA_ROUTES = [
+  '/app',
+  '/app/dashboard',
+  '/app/sales',
+  '/app/inventory',
+  '/app/customers',
+  '/app/reports',
+  '/app/settings',
+  '/dashboard',
+  '/inventory',
+  '/customers',
+  '/reports',
+  '/settings'
+];
+
+// Install event - cache core assets and app shell
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v2.0.0');
+  console.log('[SW] Installing service worker v3.0.0');
   
   event.waitUntil(
     Promise.all([
@@ -32,7 +47,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v2.0.0');
+  console.log('[SW] Activating service worker v3.0.0');
   
   event.waitUntil(
     Promise.all([
@@ -53,7 +68,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - handle all network requests
+// Enhanced fetch event handling
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -71,7 +86,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleStaticAsset(request));
   } else if (isAPIRequest(request)) {
     event.respondWith(handleAPIRequest(request));
-  } else if (isNavigationRequest(request)) {
+  } else if (isNavigationRequest(request) || isSPARoute(url.pathname)) {
     event.respondWith(handleNavigation(request));
   } else {
     event.respondWith(handleGenericRequest(request));
@@ -106,27 +121,45 @@ async function handleStaticAsset(request) {
   }
 }
 
-// Handle API requests (stale-while-revalidate with cache fallback)
+// Handle API requests (cache-first with background update for settings)
 async function handleAPIRequest(request) {
   try {
     const cache = await caches.open(API_CACHE);
     const cachedResponse = await cache.match(request);
     
-    // Always try network first for fresh data
-    const networkPromise = fetch(request).then(response => {
-      if (response.ok) {
-        cache.put(request, response.clone());
+    // For settings and profile data, serve from cache first for instant loading
+    if (request.url.includes('/profiles') || request.url.includes('/shop_settings')) {
+      if (cachedResponse) {
+        // Serve cached response immediately
+        updateCacheInBackground(request, cache);
+        return cachedResponse;
       }
-      return response;
-    }).catch(() => null);
+    }
     
-    const networkResponse = await networkPromise;
+    // Try network first for fresh data
+    const networkResponse = await fetch(request);
     
-    if (networkResponse) {
+    if (networkResponse.ok) {
+      cache.put(request, networkResponse.clone());
       return networkResponse;
     }
     
     // Network failed, use cache if available
+    if (cachedResponse) {
+      const response = cachedResponse.clone();
+      response.headers.set('x-served-by', 'sw-cache');
+      response.headers.set('x-offline', 'true');
+      return response;
+    }
+    
+    throw new Error('No cache available');
+    
+  } catch (error) {
+    console.log('[SW] API request failed, trying cache:', request.url);
+    
+    const cache = await caches.open(API_CACHE);
+    const cachedResponse = await cache.match(request);
+    
     if (cachedResponse) {
       const response = cachedResponse.clone();
       response.headers.set('x-served-by', 'sw-cache');
@@ -149,22 +182,6 @@ async function handleAPIRequest(request) {
         }
       }
     );
-    
-  } catch (error) {
-    console.error('[SW] API request failed:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Request failed', 
-        message: error.message,
-        offline: !navigator.onLine
-      }),
-      { 
-        status: 503,
-        headers: { 
-          'Content-Type': 'application/json'
-        }
-      }
-    );
   }
 }
 
@@ -183,7 +200,7 @@ async function handleNavigation(request) {
     throw new Error('Network request failed');
     
   } catch (error) {
-    console.log('[SW] Navigation failed, serving app shell');
+    console.log('[SW] Navigation failed, serving app shell for:', request.url);
     
     // Serve cached app shell for SPA routes
     const cache = await caches.open(CACHE_NAME);
@@ -193,8 +210,8 @@ async function handleNavigation(request) {
       return appShell;
     }
     
-    // Fallback offline page
-    return new Response(generateOfflinePage(), {
+    // Fallback to enhanced offline page that preserves app functionality
+    return new Response(generateEnhancedOfflinePage(), {
       status: 200,
       headers: { 'Content-Type': 'text/html' }
     });
@@ -313,7 +330,13 @@ async function syncOfflineRequests() {
   }
 }
 
-// Helper functions
+// Enhanced helper functions
+function isSPARoute(pathname) {
+  return SPA_ROUTES.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+}
+
 function isStaticAsset(request) {
   const url = new URL(request.url);
   return url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ico|webp)$/);
@@ -327,7 +350,7 @@ function isAPIRequest(request) {
 
 function isNavigationRequest(request) {
   return request.mode === 'navigate' || 
-         (request.method === 'GET' && request.headers.get('accept').includes('text/html'));
+         (request.method === 'GET' && request.headers.get('accept')?.includes('text/html'));
 }
 
 async function updateCacheInBackground(request, cache) {
@@ -340,6 +363,104 @@ async function updateCacheInBackground(request, cache) {
     // Ignore background update errors
   }
 }
+
+// Enhanced offline page that maintains app functionality
+function generateEnhancedOfflinePage() {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DukaSmart - Working Offline</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background: #f8fafc;
+            color: #1e293b;
+          }
+          .container { 
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          .offline-icon { 
+            font-size: 3rem; 
+            margin-bottom: 1rem;
+          }
+          .retry-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0.5rem;
+            font-weight: 500;
+          }
+          .retry-btn:hover {
+            background: #2563eb;
+          }
+          .features {
+            text-align: left;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="offline-icon">📱</div>
+          <h2>DukaSmart - Working Offline</h2>
+          <p>Your business app is running in offline mode. You can still:</p>
+          
+          <div class="features">
+            <ul>
+              <li>✅ Browse previously visited pages</li>
+              <li>✅ View cached data and settings</li>
+              <li>✅ Create new sales and customers (will sync later)</li>
+              <li>✅ Access offline dashboard and reports</li>
+            </ul>
+          </div>
+          
+          <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
+          <button class="retry-btn" onclick="window.history.back()">Go Back</button>
+        </div>
+        
+        <script>
+          // Auto-refresh when back online
+          window.addEventListener('online', () => {
+            setTimeout(() => window.location.reload(), 1000);
+          });
+          
+          // Try to navigate to main app after a delay
+          setTimeout(() => {
+            if (window.location.pathname !== '/') {
+              window.location.href = '/';
+            }
+          }, 2000);
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+// Message handling
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  } else if (event.data && event.data.type === 'SYNC_NOW') {
+    event.waitUntil(syncOfflineRequests());
+  }
+});
 
 // IndexedDB operations for offline requests
 async function storeOfflineRequest(requestData) {
@@ -407,77 +528,3 @@ async function removeStoredOfflineRequest(id) {
     request.onerror = () => reject(request.error);
   });
 }
-
-function generateOfflinePage() {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DukaSmart - Offline Mode</title>
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            display: flex; 
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh; 
-            margin: 0; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-          }
-          .offline-container { 
-            text-align: center; 
-            max-width: 400px;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-          }
-          .offline-icon { 
-            font-size: 4rem; 
-            margin-bottom: 1rem;
-          }
-          .retry-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: all 0.3s ease;
-          }
-          .retry-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-          }
-        </style>
-      </head>
-      <body>
-        <div class="offline-container">
-          <div class="offline-icon">📱</div>
-          <h2>DukaSmart - Offline Mode</h2>
-          <p>Your business app is working offline. All data will sync when you're back online.</p>
-          <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
-          <button class="retry-btn" onclick="window.history.back()" style="margin-left: 10px;">Go Back</button>
-        </div>
-        <script>
-          window.addEventListener('online', () => {
-            setTimeout(() => window.location.reload(), 1000);
-          });
-        </script>
-      </body>
-    </html>
-  `;
-}
-
-// Message handling
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  } else if (event.data && event.data.type === 'SYNC_NOW') {
-    event.waitUntil(syncOfflineRequests());
-  }
-});

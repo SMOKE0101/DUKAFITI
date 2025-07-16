@@ -77,9 +77,9 @@ export const useSettings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const [initialized, setInitialized] = useState(false);
+  const [themeInitialized, setThemeInitialized] = useState(false);
 
-  // Load settings from Supabase
+  // Load settings from cache first, then network
   const loadSettings = async () => {
     if (!user) {
       setSettings(defaultSettings);
@@ -88,7 +88,20 @@ export const useSettings = () => {
     }
 
     try {
-      // Load from profiles table
+      // Try to load from IndexedDB first for instant loading
+      const cachedSettings = await loadFromCache(user.id);
+      if (cachedSettings) {
+        setSettings(cachedSettings);
+        setLoading(false);
+        
+        // Only set theme if not already initialized to prevent auto-change
+        if (!themeInitialized && cachedSettings.theme) {
+          setTheme(cachedSettings.theme);
+          setThemeInitialized(true);
+        }
+      }
+
+      // Load from Supabase in background
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('shop_name, location, business_type, sms_notifications_enabled')
@@ -97,6 +110,7 @@ export const useSettings = () => {
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error loading profile:', profileError);
+        return;
       }
 
       // Load theme from shop_settings table
@@ -129,25 +143,41 @@ export const useSettings = () => {
 
       setSettings(loadedSettings);
       
-      // Only set theme if not initialized to prevent auto-switching
-      if (!initialized) {
-        setTheme(currentTheme);
-        setInitialized(true);
+      // Cache the settings for offline use
+      await cacheSettings(user.id, loadedSettings);
+      
+      // Only update theme if explicitly different and not during initial load
+      if (themeInitialized && loadedSettings.theme !== theme) {
+        setTheme(loadedSettings.theme);
+      } else if (!themeInitialized) {
+        setTheme(loadedSettings.theme);
+        setThemeInitialized(true);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
+      
+      // Fallback to cached settings if network fails
+      const cachedSettings = await loadFromCache(user.id);
+      if (cachedSettings) {
+        setSettings(cachedSettings);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Save settings to Supabase
+  // Save settings with immediate cache update
   const saveSettings = async (newSettings: Partial<ShopSettings>) => {
     if (!user) return;
 
     try {
       const updatedSettings = { ...settings, ...newSettings };
+      
+      // Update local state immediately for instant feedback
       setSettings(updatedSettings);
+      
+      // Cache immediately for offline access
+      await cacheSettings(user.id, updatedSettings);
 
       // Update profile data
       if (newSettings.shopName !== undefined || 
@@ -173,7 +203,9 @@ export const useSettings = () => {
 
       // Update theme setting
       if (newSettings.theme !== undefined) {
-        setTheme(newSettings.theme);
+        // Only update theme if user explicitly changed it
+        setTheme(updatedSettings.theme);
+        setThemeInitialized(true);
         
         const { error: themeError } = await supabase
           .from('shop_settings')
@@ -197,10 +229,13 @@ export const useSettings = () => {
       });
     } catch (error) {
       console.error('Error saving settings:', error);
+      
+      // Queue for offline sync if network fails
+      await queueSettingsUpdate(user.id, newSettings);
+      
       toast({
-        title: "Error",
-        description: "Failed to save settings. Please try again.",
-        variant: "destructive",
+        title: "Settings Queued",
+        description: "Settings saved locally and will sync when online.",
       });
     }
   };
@@ -262,10 +297,83 @@ export const useSettings = () => {
     settings,
     loading,
     saveSettings,
-    updateSettings,
+    updateSettings: saveSettings,
     refreshSettings: loadSettings,
     exportSettings,
     importSettings,
     resetSettings,
   };
+};
+
+// Cache management functions
+const loadFromCache = async (userId: string): Promise<ShopSettings | null> => {
+  try {
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+      const db = await openDB();
+      const transaction = db.transaction(['settings'], 'readonly');
+      const store = transaction.objectStore('settings');
+      const result = await store.get(`settings_${userId}`);
+      return result?.data || null;
+    }
+  } catch (error) {
+    console.error('Error loading settings from cache:', error);
+  }
+  return null;
+};
+
+const cacheSettings = async (userId: string, settings: ShopSettings): Promise<void> => {
+  try {
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+      const db = await openDB();
+      const transaction = db.transaction(['settings'], 'readwrite');
+      const store = transaction.objectStore('settings');
+      await store.put({
+        id: `settings_${userId}`,
+        data: settings,
+        timestamp: Date.now()
+      });
+    }
+  } catch (error) {
+    console.error('Error caching settings:', error);
+  }
+};
+
+const queueSettingsUpdate = async (userId: string, settings: Partial<ShopSettings>): Promise<void> => {
+  try {
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+      const db = await openDB();
+      const transaction = db.transaction(['syncQueue'], 'readwrite');
+      const store = transaction.objectStore('syncQueue');
+      await store.add({
+        id: `settings_update_${Date.now()}`,
+        type: 'settings_update',
+        userId,
+        data: settings,
+        timestamp: Date.now()
+      });
+    }
+  } catch (error) {
+    console.error('Error queuing settings update:', error);
+  }
+};
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('DukaSmartOffline', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      
+      if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings', { keyPath: 'id' });
+      }
+      
+      if (!db.objectStoreNames.contains('syncQueue')) {
+        db.createObjectStore('syncQueue', { keyPath: 'id' });
+      }
+    };
+  });
 };
