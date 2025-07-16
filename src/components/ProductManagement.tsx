@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import InventoryModal from './inventory/InventoryModal';
+import AddProductModal from './inventory/AddProductModal';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
 import { Product } from '../types';
 import FeatureLimitModal from './trial/FeatureLimitModal';
@@ -18,7 +19,8 @@ const ProductManagement: React.FC = () => {
   const { toast } = useToast();
   
   // State management
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -51,25 +53,16 @@ const ProductManagement: React.FC = () => {
     };
 
     try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, dbProduct);
-        toast({
-          title: "Product Updated",
-          description: "Product has been updated successfully",
-        });
-      } else {
-        await createProduct(dbProduct);
-        toast({
-          title: "Product Added",
-          description: "Product has been added successfully",
-        });
-      }
-      setIsModalOpen(false);
-      setEditingProduct(null);
+      await createProduct(dbProduct);
+      toast({
+        title: "Product Added",
+        description: "Product has been added successfully",
+      });
+      setIsAddProductModalOpen(false);
     } catch (error) {
       toast({
         title: "Error",
-        description: editingProduct ? "Failed to update product" : "Failed to add product",
+        description: "Failed to add product",
         variant: "destructive",
       });
     }
@@ -77,7 +70,7 @@ const ProductManagement: React.FC = () => {
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setIsModalOpen(true);
+    setIsAddProductModalOpen(true);
   };
 
   const handleDeleteProduct = async (product: Product) => {
@@ -98,7 +91,10 @@ const ProductManagement: React.FC = () => {
     }
   };
 
-  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
+  const handleAddStock = async (productId: string, quantity: number, buyingPrice: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
     const updatedProduct = {
       current_stock: product.current_stock + quantity,
       cost_price: buyingPrice,
@@ -118,6 +114,10 @@ const ProductManagement: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
+    await handleAddStock(product.id, quantity, buyingPrice);
   };
 
   // Filtering logic
@@ -186,14 +186,25 @@ const ProductManagement: React.FC = () => {
           </p>
         </div>
         
-        <Button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-primary hover:bg-primary/90 text-white shadow-lg"
-          disabled={loading}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Product
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setIsInventoryModalOpen(true)}
+            variant="outline"
+            className="shadow-lg"
+            disabled={loading}
+          >
+            <Package className="w-4 h-4 mr-2" />
+            Add Stock
+          </Button>
+          <Button 
+            onClick={() => setIsAddProductModalOpen(true)}
+            className="bg-primary hover:bg-primary/90 text-white shadow-lg"
+            disabled={loading}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -313,14 +324,20 @@ const ProductManagement: React.FC = () => {
 
       {/* Modals */}
       <InventoryModal
-        isOpen={isModalOpen}
+        isOpen={isInventoryModalOpen}
+        onClose={() => setIsInventoryModalOpen(false)}
+        products={products}
+        onAddStock={handleAddStock}
+      />
+
+      <AddProductModal
+        isOpen={isAddProductModalOpen}
         onClose={() => {
-          setIsModalOpen(false);
+          setIsAddProductModalOpen(false);
           setEditingProduct(null);
         }}
         onSave={handleSaveProduct}
-        product={editingProduct}
-        isLoading={loading}
+        existingProduct={editingProduct}
       />
 
       <FeatureLimitModal
