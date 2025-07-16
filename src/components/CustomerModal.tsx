@@ -12,7 +12,7 @@ interface CustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: Customer | null;
-  onSave: (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSave: (customerData: Omit<Customer, 'id' | 'created_at' | 'updated_at'>) => void;
 }
 
 const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps) => {
@@ -22,7 +22,7 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
     phone: '',
     email: '',
     address: '',
-    creditLimit: '1000',
+    credit_limit: '1000',
     initialDebt: '0',
   });
 
@@ -34,8 +34,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
         phone: customer.phone || '',
         email: customer.email || '',
         address: customer.address || '',
-        creditLimit: customer.creditLimit?.toString() || '1000',
-        initialDebt: customer.outstandingDebt?.toString() || '0',
+        credit_limit: customer.credit_limit?.toString() || '1000',
+        initialDebt: customer.outstanding_debt?.toString() || '0',
       });
     } else {
       setFormData({
@@ -43,7 +43,7 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
         phone: '',
         email: '',
         address: '',
-        creditLimit: '1000',
+        credit_limit: '1000',
         initialDebt: '0',
       });
     }
@@ -61,7 +61,7 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
       return;
     }
 
-    const creditLimit = parseFloat(formData.creditLimit) || 1000;
+    const creditLimit = parseFloat(formData.credit_limit) || 1000;
     const initialDebt = parseFloat(formData.initialDebt) || 0;
 
     if (creditLimit < 0) {
@@ -87,12 +87,13 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
       phone: formData.phone.trim(),
       email: formData.email.trim(),
       address: formData.address.trim(),
-      createdDate: customer?.createdDate || new Date().toISOString(),
-      totalPurchases: customer?.totalPurchases || 0,
-      outstandingDebt: initialDebt,
-      creditLimit: creditLimit,
-      riskRating: customer?.riskRating || 'low',
-      lastPurchaseDate: customer?.lastPurchaseDate,
+      created_date: customer?.created_date || new Date().toISOString(),
+      total_purchases: customer?.total_purchases || 0,
+      outstanding_debt: initialDebt,
+      credit_limit: creditLimit,
+      risk_rating: customer?.risk_rating || 'low',
+      last_purchase_date: customer?.last_purchase_date,
+      user_id: customer?.user_id || ''
     });
   };
 
@@ -177,8 +178,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }: CustomerModalProps
                     type="number"
                     min="0"
                     step="0.01"
-                    value={formData.creditLimit}
-                    onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
+                    value={formData.credit_limit}
+                    onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
                     placeholder="1000"
                     className="h-12 text-base focus-visible:ring-2 focus-visible:ring-primary"
                   />

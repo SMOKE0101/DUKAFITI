@@ -15,6 +15,7 @@ export interface Sale {
   payment_details?: any;
   timestamp: string;
   synced: boolean;
+  created_at?: string;
 }
 
 export interface Product {
@@ -39,8 +40,26 @@ export interface Customer {
   address?: string;
   credit_limit: number;
   outstanding_debt: number;
+  total_purchases?: number;
   created_date: string;
   updated_at?: string;
+  last_purchase_date?: string;
+  risk_rating?: 'low' | 'medium' | 'high';
+}
+
+export interface Transaction {
+  id: string;
+  user_id: string;
+  customer_id: string;
+  item_id: string;
+  quantity: number;
+  unit_price: number;
+  total_amount: number;
+  notes?: string;
+  date: string;
+  paid: boolean;
+  paid_date?: string;
+  created_at?: string;
 }
 
 export interface SyncQueueItem {
@@ -52,4 +71,32 @@ export interface SyncQueueItem {
   priority: 'high' | 'medium' | 'low';
   attempts: number;
   synced: boolean;
+}
+
+export interface OfflineData {
+  products: Product[];
+  customers: Customer[];
+  sales: Sale[];
+  transactions: Transaction[];
+  lastSync: string;
+}
+
+export interface SyncProgress {
+  isOnline: boolean;
+  isSyncing: boolean;
+  queueLength: number;
+  lastSyncTime?: string;
+  syncError?: string;
+}
+
+export interface PWAInstallPrompt {
+  canInstall: boolean;
+  prompt: () => void;
+  dismiss: () => void;
+}
+
+export interface NetworkStatus {
+  isOnline: boolean;
+  connectionType?: string;
+  effectiveType?: string;
 }

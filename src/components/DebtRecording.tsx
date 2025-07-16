@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { CreditCard, Calculator } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,15 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '../hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
-import { Customer, Product, Transaction } from '../types';
+import { Customer, Product } from '../types';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { useSupabaseTransactions } from '../hooks/useSupabaseTransactions';
 
 const DebtRecording = () => {
   const { customers } = useSupabaseCustomers();
   const { products, updateProduct } = useSupabaseProducts();
-  const { createTransaction } = useSupabaseTransactions();
   
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [formData, setFormData] = useState({
@@ -35,7 +34,7 @@ const DebtRecording = () => {
     if (productSearch) {
       const filtered = products.filter(product =>
         product.name.toLowerCase().includes(productSearch.toLowerCase()) &&
-        product.currentStock > 0
+        product.current_stock > 0
       );
       setFilteredProducts(filtered);
     } else {
@@ -51,7 +50,7 @@ const DebtRecording = () => {
     if (selectedProduct && formData.quantity) {
       const quantity = parseInt(formData.quantity);
       if (!isNaN(quantity) && quantity > 0) {
-        setCalculatedTotal(selectedProduct.sellingPrice * quantity);
+        setCalculatedTotal(selectedProduct.selling_price * quantity);
         return;
       }
     }
@@ -99,10 +98,10 @@ const DebtRecording = () => {
       return;
     }
 
-    if (quantity > selectedProduct.currentStock) {
+    if (quantity > selectedProduct.current_stock) {
       toast({
         title: "Error",
-        description: `Not enough stock. Available: ${selectedProduct.currentStock}`,
+        description: `Not enough stock. Available: ${selectedProduct.current_stock}`,
         variant: "destructive",
       });
       return;
@@ -111,25 +110,10 @@ const DebtRecording = () => {
     setIsLoading(true);
 
     try {
-      // Create transaction
-      const newTransaction = {
-        customerId: formData.customerId,
-        itemId: formData.itemId,
-        quantity,
-        unitPrice: selectedProduct.sellingPrice,
-        totalAmount: calculatedTotal,
-        notes: formData.notes.trim(),
-        date: new Date().toISOString(),
-        paid: false,
-        paidDate: null,
-      };
-
-      await createTransaction(newTransaction);
-
       // Update product stock
       await updateProduct(formData.itemId, {
-        currentStock: selectedProduct.currentStock - quantity,
-        updatedAt: new Date().toISOString()
+        current_stock: selectedProduct.current_stock - quantity,
+        updated_at: new Date().toISOString()
       });
 
       // Reset form
@@ -217,8 +201,8 @@ const DebtRecording = () => {
                             <div className="text-sm text-gray-500">{product.category}</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium">{formatCurrency(product.sellingPrice)}</div>
-                            <div className="text-sm text-gray-500">Stock: {product.currentStock}</div>
+                            <div className="font-medium">{formatCurrency(product.selling_price)}</div>
+                            <div className="text-sm text-gray-500">Stock: {product.current_stock}</div>
                           </div>
                         </div>
                       </button>
@@ -234,8 +218,8 @@ const DebtRecording = () => {
                       <div className="text-sm text-blue-600">{selectedProduct.category}</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium text-blue-800">{formatCurrency(selectedProduct.sellingPrice)}</div>
-                      <div className="text-sm text-blue-600">Stock: {selectedProduct.currentStock}</div>
+                      <div className="font-medium text-blue-800">{formatCurrency(selectedProduct.selling_price)}</div>
+                      <div className="text-sm text-blue-600">Stock: {selectedProduct.current_stock}</div>
                     </div>
                   </div>
                 </div>
@@ -249,15 +233,15 @@ const DebtRecording = () => {
                 id="quantity"
                 type="number"
                 min="1"
-                max={selectedProduct?.currentStock || 1}
+                max={selectedProduct?.current_stock || 1}
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                 placeholder="1"
                 required
               />
-              {selectedProduct && parseInt(formData.quantity) > selectedProduct.currentStock && (
+              {selectedProduct && parseInt(formData.quantity) > selectedProduct.current_stock && (
                 <p className="text-sm text-red-500 mt-1">
-                  Insufficient stock. Available: {selectedProduct.currentStock}
+                  Insufficient stock. Available: {selectedProduct.current_stock}
                 </p>
               )}
             </div>
@@ -272,7 +256,7 @@ const DebtRecording = () => {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Unit Price:</span>
-                    <span>{formatCurrency(selectedProduct?.sellingPrice || 0)}</span>
+                    <span>{formatCurrency(selectedProduct?.selling_price || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Quantity:</span>

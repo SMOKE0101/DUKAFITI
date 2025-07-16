@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +44,7 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
     setIsSubmitting(true);
     try {
       const paymentAmount = parseFloat(amount);
-      const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
+      const newBalance = Math.max(0, customer.outstanding_debt - paymentAmount);
       
       // Create payment record using a dummy product ID for payments
       const { error: salesError } = await supabase
@@ -71,8 +72,8 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
 
       // Update customer balance
       const updateResult = await updateCustomer(customer.id, {
-        outstandingDebt: newBalance,
-        lastPurchaseDate: new Date().toISOString()
+        outstanding_debt: newBalance,
+        last_purchase_date: new Date().toISOString()
       });
 
       if (updateResult && 'error' in updateResult && updateResult.error) {
@@ -121,7 +122,7 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
           <div className="space-y-1 mt-2">
             <p className="text-muted-foreground">{customer.name}</p>
             <p className="text-sm text-muted-foreground">
-              Outstanding: <span className="font-medium text-red-600">{formatCurrency(customer.outstandingDebt)}</span>
+              Outstanding: <span className="font-medium text-red-600">{formatCurrency(customer.outstanding_debt)}</span>
             </p>
           </div>
         )}
@@ -142,10 +143,10 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
               onChange={(e) => setAmount(e.target.value)}
               className="pl-12"
               placeholder="0.00"
-              max={customer?.outstandingDebt || 0}
+              max={customer?.outstanding_debt || 0}
             />
           </div>
-          {customer && parseFloat(amount) > customer.outstandingDebt && (
+          {customer && parseFloat(amount) > customer.outstanding_debt && (
             <p className="text-sm text-yellow-600 mt-1">
               Amount exceeds outstanding debt. Excess will be credited.
             </p>

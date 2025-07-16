@@ -61,7 +61,7 @@ const CheckoutPanel = ({
           </Select>
           {selectedCustomer && (
             <div className="mt-2 text-xs text-gray-600">
-              Outstanding Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+              Outstanding Debt: {formatCurrency(selectedCustomer.outstanding_debt)}
             </div>
           )}
         </CardContent>
