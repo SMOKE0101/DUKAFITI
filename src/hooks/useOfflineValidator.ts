@@ -1,149 +1,200 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { offlineDB } from '../utils/indexedDB';
 import { useOfflineManager } from './useOfflineManager';
-import { offlineDB } from '../utils/offlineDB';
+import { useToast } from './use-toast';
 
 interface ValidationResult {
   success: boolean;
   errors: string[];
   warnings: string[];
-  stats?: any;
-  timestamp: string;
+  stats: any;
 }
 
 export const useOfflineValidator = () => {
-  const { isOnline, pendingActions } = useOfflineManager();
-  const [validationResults, setValidationResults] = useState({
-    dbHealth: false,
-    cacheHealth: false,
-    syncQueueHealth: false,
-    dataIntegrity: false
-  });
   const [isValidating, setIsValidating] = useState(false);
   const [lastValidation, setLastValidation] = useState<ValidationResult | null>(null);
+  const { isOnline, isInitialized } = useOfflineManager();
+  const { toast } = useToast();
 
-  const runValidation = async () => {
+  const runComprehensiveTests = useCallback(async (): Promise<ValidationResult> => {
     setIsValidating(true);
+    console.log('[OfflineValidator] Starting comprehensive offline tests...');
     
-    try {
-      // Test database connectivity
-      const dbTest = await offlineDB.testDatabase();
-      
-      // Test cache health (check if service worker is active)
-      const cacheTest = 'serviceWorker' in navigator && navigator.serviceWorker.controller !== null;
-      
-      // Test sync queue
-      const syncQueue = await offlineDB.getSyncQueue();
-      const syncQueueTest = Array.isArray(syncQueue);
-      
-      // Test data integrity (basic checks) - using getStats instead of getDataStats
-      const stats = await offlineDB.getStats();
-      const dataIntegrityTest = typeof stats === 'object' && stats !== null;
-      
-      setValidationResults({
-        dbHealth: dbTest,
-        cacheHealth: cacheTest,
-        syncQueueHealth: syncQueueTest,
-        dataIntegrity: dataIntegrityTest
-      });
-      
-    } catch (error) {
-      console.error('Validation failed:', error);
-      setValidationResults({
-        dbHealth: false,
-        cacheHealth: false,
-        syncQueueHealth: false,
-        dataIntegrity: false
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
-  const validateAndReport = async () => {
-    setIsValidating(true);
     const errors: string[] = [];
     const warnings: string[] = [];
     let stats: any = {};
 
     try {
-      // Test database connectivity
-      const dbTest = await offlineDB.testDatabase();
-      if (!dbTest) {
-        errors.push('Database connectivity test failed');
+      // Test 1: Database initialization
+      console.log('[OfflineValidator] Testing database initialization...');
+      if (!isInitialized) {
+        errors.push('IndexedDB not properly initialized');
       }
-      
-      // Test cache health
-      const cacheTest = 'serviceWorker' in navigator && navigator.serviceWorker.controller !== null;
-      if (!cacheTest) {
-        warnings.push('Service worker not active - offline functionality may be limited');
+
+      // Test 2: Store operations
+      console.log('[OfflineValidator] Testing store operations...');
+      const dbTest = await offlineDB.testOfflineCapabilities();
+      if (!dbTest.success) {
+        errors.push(`Database operations failed: ${dbTest.details.error}`);
+      } else {
+        stats = dbTest.details.stats;
       }
-      
-      // Test sync queue
-      const syncQueue = await offlineDB.getSyncQueue();
-      if (!Array.isArray(syncQueue)) {
-        errors.push('Sync queue is not accessible');
-      } else if (syncQueue.length > 10) {
-        warnings.push(`Large sync queue detected: ${syncQueue.length} pending operations`);
+
+      // Test 3: Service Worker registration
+      console.log('[OfflineValidator] Testing service worker...');
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.getRegistrations();
+          if (registration.length === 0) {
+            warnings.push('No service workers registered');
+          } else {
+            console.log('[OfflineValidator] ✅ Service worker active');
+          }
+        } catch (error) {
+          warnings.push('Service worker check failed');
+        }
+      } else {
+        warnings.push('Service workers not supported');
       }
-      
-      // Get data stats
-      stats = await offlineDB.getStats();
-      if (!stats) {
-        warnings.push('Unable to retrieve data statistics');
+
+      // Test 4: Network detection
+      console.log('[OfflineValidator] Testing network detection...');
+      const networkStatus = navigator.onLine;
+      if (networkStatus !== isOnline) {
+        warnings.push('Network status detection mismatch');
+      }
+
+      // Test 5: Cache functionality
+      console.log('[OfflineValidator] Testing cache functionality...');
+      if ('caches' in window) {
+        try {
+          const cacheNames = await caches.keys();
+          if (cacheNames.length === 0) {
+            warnings.push('No caches found - offline functionality may be limited');
+          } else {
+            console.log('[OfflineValidator] ✅ Cache API working');
+          }
+        } catch (error) {
+          warnings.push('Cache API test failed');
+        }
+      } else {
+        warnings.push('Cache API not supported');
+      }
+
+      // Test 6: Local storage
+      console.log('[OfflineValidator] Testing local storage...');
+      try {
+        const testKey = 'offline_test_' + Date.now();
+        localStorage.setItem(testKey, 'test');
+        const retrieved = localStorage.getItem(testKey);
+        localStorage.removeItem(testKey);
+        
+        if (retrieved !== 'test') {
+          errors.push('Local storage not working');
+        }
+      } catch (error) {
+        errors.push('Local storage access denied');
+      }
+
+      // Test 7: CRUD operations simulation
+      console.log('[OfflineValidator] Testing CRUD operations...');
+      try {
+        // Simulate offline sales creation
+        const testSale = {
+          id: 'test_sale_' + Date.now(),
+          user_id: 'test_user',
+          product_id: 'test_product',
+          product_name: 'Test Product',
+          quantity: 1,
+          selling_price: 100,
+          cost_price: 80,
+          profit: 20,
+          total_amount: 100,
+          payment_method: 'cash',
+          timestamp: new Date().toISOString(),
+          synced: false
+        };
+
+        await offlineDB.storeOfflineData('sales', testSale);
+        const retrievedSale = await offlineDB.getOfflineData('sales', testSale.id);
+        
+        if (!retrievedSale || retrievedSale.id !== testSale.id) {
+          errors.push('Sales CRUD operations failed');
+        } else {
+          // Cleanup
+          await offlineDB.deleteOfflineData('sales', testSale.id);
+          console.log('[OfflineValidator] ✅ Sales CRUD test passed');
+        }
+      } catch (error) {
+        errors.push('CRUD operations test failed: ' + error.message);
       }
 
       const result: ValidationResult = {
         success: errors.length === 0,
         errors,
         warnings,
-        stats,
-        timestamp: new Date().toISOString()
+        stats
       };
 
       setLastValidation(result);
-
-      // Update simple validation results
-      setValidationResults({
-        dbHealth: dbTest,
-        cacheHealth: cacheTest,
-        syncQueueHealth: Array.isArray(syncQueue),
-        dataIntegrity: !!stats
-      });
+      console.log('[OfflineValidator] Validation completed:', result);
+      
+      return result;
 
     } catch (error) {
-      console.error('Validation failed:', error);
       const result: ValidationResult = {
         success: false,
-        errors: [`Validation process failed: ${error.message}`],
-        warnings: [],
-        timestamp: new Date().toISOString()
+        errors: ['Validation process failed: ' + error.message],
+        warnings,
+        stats
       };
-      setLastValidation(result);
       
-      setValidationResults({
-        dbHealth: false,
-        cacheHealth: false,
-        syncQueueHealth: false,
-        dataIntegrity: false
-      });
+      setLastValidation(result);
+      return result;
     } finally {
       setIsValidating(false);
     }
-  };
+  }, [isInitialized, isOnline]);
 
-  // Run validation on mount and when going offline/online
+  const validateAndReport = useCallback(async () => {
+    const result = await runComprehensiveTests();
+    
+    if (result.success) {
+      toast({
+        title: "✅ Offline Mode Validated",
+        description: `All tests passed! ${result.warnings.length} warnings.`,
+        duration: 3000,
+      });
+    } else {
+      toast({
+        title: "❌ Offline Issues Detected",
+        description: `${result.errors.length} errors found. Check console for details.`,
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+    
+    // Log detailed results
+    console.group('[OfflineValidator] Detailed Results');
+    console.log('Success:', result.success);
+    console.log('Errors:', result.errors);
+    console.log('Warnings:', result.warnings);
+    console.log('Stats:', result.stats);
+    console.groupEnd();
+  }, [runComprehensiveTests, toast]);
+
+  // Auto-validate when app becomes online
   useEffect(() => {
-    runValidation();
-  }, [isOnline]);
+    if (isOnline && isInitialized) {
+      setTimeout(validateAndReport, 2000);
+    }
+  }, [isOnline, isInitialized, validateAndReport]);
 
   return {
-    validationResults,
     isValidating,
-    runValidation,
-    validateAndReport,
     lastValidation,
-    pendingActionsCount: pendingActions.length,
-    isOnline
+    runComprehensiveTests,
+    validateAndReport
   };
 };

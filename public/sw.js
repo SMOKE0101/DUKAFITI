@@ -1,544 +1,184 @@
 
-const CACHE_NAME = 'dukasmart-v3.3.0';
-const RUNTIME_CACHE = 'dukasmart-runtime-v3.3.0';
-const API_CACHE = 'dukasmart-api-v3.3.0';
-
-// Enhanced core app shell resources for full offline support
-const CORE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/vite.svg',
-  '/favicon.ico'
-];
-
-// All SPA routes that should serve the app shell
-const SPA_ROUTES = [
+const CACHE_NAME = 'dukafiti-v2';
+const urlsToCache = [
   '/',
   '/app',
-  '/app/',
-  '/app/dashboard',
-  '/app/sales',
-  '/app/inventory', 
-  '/app/customers',
-  '/app/reports',
-  '/app/settings',
-  '/dashboard',
-  '/sales',
-  '/inventory',
-  '/customers',
-  '/reports',
-  '/settings',
-  '/signin',
-  '/signup',
-  '/landing',
-  '/modern-landing'
+  '/static/js/bundle.js',
+  '/static/css/main.css',
+  '/manifest.json',
+  '/fonts/inter-var.woff2'
 ];
 
-// Install event - cache core assets and app shell
+// Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3.3.0');
-  
   event.waitUntil(
-    Promise.all([
-      caches.open(CACHE_NAME).then(cache => {
-        console.log('[SW] Caching core assets');
-        return cache.addAll(CORE_ASSETS).catch(err => {
-          console.warn('[SW] Failed to cache some core assets:', err);
-          // Continue even if some assets fail to cache
-        });
-      }),
-      caches.open(RUNTIME_CACHE),
-      caches.open(API_CACHE)
-    ])
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('DukaFiti cache opened');
+        return cache.addAll(urlsToCache);
+      })
   );
-  
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches and claim clients immediately
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3.3.0');
-  
-  event.waitUntil(
-    Promise.all([
-      caches.keys().then(cacheNames => {
-        return Promise.all(
-          cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME && 
-                cacheName !== RUNTIME_CACHE && 
-                cacheName !== API_CACHE) {
-              console.log('[SW] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      }),
-      self.clients.claim()
-    ])
+// Fetch event - serve from cache, fallback to network
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        // Return cached version or fetch from network
+        if (response) {
+          return response;
+        }
+        
+        return fetch(event.request).then((response) => {
+          // Check if we received a valid response
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+
+          // Clone the response
+          const responseToCache = response.clone();
+
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+
+          return response;
+        });
+      })
   );
 });
 
-// CRITICAL: Enhanced fetch event handling for ALL SPA routes
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
 
-  // Skip non-GET requests for caching
-  if (request.method !== 'GET') {
-    if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
-      event.respondWith(handleOfflineWrite(request));
-    }
-    return;
-  }
-
-  // Handle different request types with proper navigation detection
-  if (isStaticAsset(request)) {
-    event.respondWith(handleStaticAsset(request));
-  } else if (isAPIRequest(request)) {
-    event.respondWith(handleAPIRequest(request));
-  } else if (isNavigationRequest(request) || isSPARoute(url.pathname)) {
-    // CRITICAL: Always serve app shell for ALL SPA routes - NEVER static offline page
-    event.respondWith(handleNavigationToAppShell(request));
-  } else {
-    event.respondWith(handleGenericRequest(request));
+// Background sync for offline transactions
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync-sales') {
+    event.waitUntil(syncPendingSales());
+  } else if (event.tag === 'background-sync-inventory') {
+    event.waitUntil(syncPendingInventory());
   }
 });
 
-// ENHANCED: Always serve the React app shell for navigation requests to ANY SPA route
-async function handleNavigationToAppShell(request) {
-  const url = new URL(request.url);
-  
-  console.log('[SW] Navigation request for:', url.pathname);
-  
-  try {
-    // First try network for fresh content
-    const networkResponse = await fetch(request, { timeout: 2000 });
-    if (networkResponse.ok) {
-      // Cache successful responses
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, networkResponse.clone());
-      console.log('[SW] ✅ Served fresh content for:', url.pathname);
-      return networkResponse;
-    }
-  } catch (error) {
-    console.log('[SW] Network failed for navigation, serving cached app shell');
-  }
-  
-  // Network failed or slow - serve cached app shell
-  const appShell = await getAppShellFromCache();
-  
-  if (appShell) {
-    console.log('[SW] ✅ Successfully served React app shell for:', url.pathname);
-    return appShell;
-  }
-  
-  // Final fallback: generate minimal React app shell that will bootstrap
-  console.log('[SW] ⚠️ Serving minimal app shell as last resort for:', url.pathname);
-  return new Response(generateReactAppShell(), {
-    status: 200,
-    headers: { 'Content-Type': 'text/html' }
-  });
-}
-
-// ENHANCED: Get React app shell from cache (prioritizes app shell over static offline page)
-async function getAppShellFromCache() {
-  const cache = await caches.open(CACHE_NAME);
-  
-  // Try to get the main app shell in order of preference
-  let appShell = await cache.match('/');
-  if (!appShell) {
-    appShell = await cache.match('/index.html');
-  }
-  
-  if (appShell) {
-    console.log('[SW] ✅ Found cached React app shell');
-    return appShell.clone();
-  }
-  
-  console.log('[SW] ❌ No cached React app shell found');
-  return null;
-}
-
-// Handle static assets (cache-first strategy)
-async function handleStaticAsset(request) {
-  try {
-    const cache = await caches.open(CACHE_NAME);
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-      // Serve from cache immediately, update cache in background
-      updateCacheInBackground(request, cache);
-      return cachedResponse;
-    }
-    
-    // Not in cache, fetch and cache
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-    
-  } catch (error) {
-    console.error('[SW] Static asset fetch failed:', error);
-    return new Response('Asset not available offline', { 
-      status: 503,
-      statusText: 'Service Unavailable'
-    });
-  }
-}
-
-// Handle API requests (network-first with extensive caching)
-async function handleAPIRequest(request) {
-  try {
-    const cache = await caches.open(API_CACHE);
-    
-    // Try network first for fresh data
-    const networkResponse = await fetch(request, { timeout: 5000 });
-    
-    if (networkResponse.ok) {
-      // Cache successful responses
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    }
-    
-    throw new Error('Network response not ok');
-    
-  } catch (error) {
-    console.log('[SW] API request failed, trying cache:', request.url);
-    
-    const cache = await caches.open(API_CACHE);
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-      const response = cachedResponse.clone();
-      response.headers.set('x-served-by', 'sw-cache');
-      response.headers.set('x-offline', 'true');
-      return response;
-    }
-    
-    // No cache available, return offline response
-    return new Response(
-      JSON.stringify({ 
-        error: 'Offline', 
-        message: 'This data is not available offline',
-        offline: true
-      }),
-      { 
-        status: 503,
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-offline': 'true'
-        }
+// Push notification handling
+self.addEventListener('push', (event) => {
+  const options = {
+    body: event.data ? event.data.text() : 'DukaFiti notification',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
+    actions: [
+      {
+        action: 'explore',
+        title: 'Open DukaFiti',
+        icon: '/icons/icon-192x192.png'
+      },
+      {
+        action: 'close',
+        title: 'Close notification',
+        icon: '/icons/icon-192x192.png'
       }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification('DukaFiti', options)
+  );
+});
+
+// Notification click handling
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'explore') {
+    event.waitUntil(
+      clients.openWindow('/app')
     );
   }
-}
-
-// Handle generic requests
-async function handleGenericRequest(request) {
-  try {
-    const cache = await caches.open(RUNTIME_CACHE);
-    
-    // Try network first
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    }
-    
-    // Network failed, use cache
-    const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    throw new Error('No cached response available');
-    
-  } catch (error) {
-    const cache = await caches.open(RUNTIME_CACHE);
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    return new Response('Resource not available offline', { 
-      status: 503,
-      statusText: 'Service Unavailable'
-    });
-  }
-}
-
-// Enhanced offline write requests with better error handling
-async function handleOfflineWrite(request) {
-  try {
-    return await fetch(request);
-  } catch (error) {
-    console.log('[SW] Write request failed, queuing for sync:', request.url);
-    
-    // Store request for later sync with enhanced error handling
-    try {
-      const requestData = {
-        id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        url: request.url,
-        method: request.method,
-        headers: Object.fromEntries(request.headers.entries()),
-        body: await request.clone().text(),
-        timestamp: Date.now(),
-      };
-      
-      await storeOfflineRequest(requestData);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          queued: true,
-          offline: true,
-          message: 'Request queued for sync when online',
-          id: requestData.id
-        }),
-        { 
-          status: 202,
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-offline': 'true'
-          }
-        }
-      );
-    } catch (storeError) {
-      console.error('[SW] Failed to store offline request:', storeError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Failed to queue request for sync',
-          offline: true
-        }),
-        { 
-          status: 500,
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-offline': 'true'
-          }
-        }
-      );
-    }
-  }
-}
-
-// Enhanced helper functions
-function isSPARoute(pathname) {
-  // Normalize pathname
-  const normalizedPath = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-  
-  return SPA_ROUTES.some(route => {
-    const normalizedRoute = route.endsWith('/') ? route.slice(0, -1) : route;
-    return normalizedPath === normalizedRoute || 
-           normalizedPath.startsWith(normalizedRoute + '/') ||
-           normalizedPath === '' || 
-           normalizedPath === '/';
-  });
-}
-
-function isStaticAsset(request) {
-  const url = new URL(request.url);
-  return url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ico|webp)$/);
-}
-
-function isAPIRequest(request) {
-  return request.url.includes('/api/') || 
-         request.url.includes('supabase.co') ||
-         request.url.includes('/rest/v1/');
-}
-
-function isNavigationRequest(request) {
-  return request.mode === 'navigate' || 
-         (request.method === 'GET' && request.headers.get('accept')?.includes('text/html'));
-}
-
-async function updateCacheInBackground(request, cache) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response);
-    }
-  } catch (error) {
-    // Ignore background update errors
-  }
-}
-
-// CRITICAL: Generate React app shell that will bootstrap from IndexedDB (NEVER static offline message)
-function generateReactAppShell() {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DukaSmart - Offline Mode</title>
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            margin: 0; 
-            padding: 0;
-            background: #f8fafc;
-          }
-          #root { min-height: 100vh; }
-          .loading { 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh; 
-            flex-direction: column;
-            color: #64748b;
-          }
-          .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 16px;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
-        <div id="root">
-          <div class="loading">
-            <div class="spinner"></div>
-            <p>Loading DukaSmart...</p>
-            <p style="font-size: 12px; color: #94a3b8;">Initializing offline mode...</p>
-          </div>
-        </div>
-        <script type="module" src="/src/main.tsx"></script>
-      </body>
-    </html>
-  `;
-}
-
-// Background sync event
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync triggered:', event.tag);
-  
-  if (event.tag === 'offline-sync') {
-    event.waitUntil(syncOfflineRequests());
-  }
 });
 
-// Message handling
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  } else if (event.data && event.data.type === 'SYNC_NOW') {
-    event.waitUntil(syncOfflineRequests());
-  }
-});
-
-// Enhanced IndexedDB operations for offline requests
-async function storeOfflineRequest(requestData) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('DukaSmartOffline', 1);
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains('offlineRequests')) {
-        db.createObjectStore('offlineRequests', { keyPath: 'id' });
-      }
-    };
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      
-      // Check if the object store exists
-      if (!db.objectStoreNames.contains('offlineRequests')) {
-        console.error('[SW] Object store offlineRequests does not exist');
-        reject(new Error('Object store not found'));
-        return;
-      }
-      
-      const transaction = db.transaction(['offlineRequests'], 'readwrite');
-      const store = transaction.objectStore('offlineRequests');
-      
-      store.add(requestData);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function getStoredOfflineRequests() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('DukaSmartOffline', 1);
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains('offlineRequests')) {
-        resolve([]);
-        return;
-      }
-      
-      const transaction = db.transaction(['offlineRequests'], 'readonly');
-      const store = transaction.objectStore('offlineRequests');
-      const getAll = store.getAll();
-      
-      getAll.onsuccess = () => resolve(getAll.result || []);
-      getAll.onerror = () => reject(getAll.error);
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function removeStoredOfflineRequest(id) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('DukaSmartOffline', 1);
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      const transaction = db.transaction(['offlineRequests'], 'readwrite');
-      const store = transaction.objectStore('offlineRequests');
-      
-      store.delete(id);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function syncOfflineRequests() {
+// Background sync functions
+async function syncPendingSales() {
   try {
-    const requests = await getStoredOfflineRequests();
-    console.log(`[SW] Syncing ${requests.length} offline requests`);
+    // Get pending sales from IndexedDB or localStorage
+    const pendingSales = await getPendingSales();
     
-    for (const requestData of requests) {
+    for (const sale of pendingSales) {
       try {
-        const response = await fetch(requestData.url, {
-          method: requestData.method,
-          headers: requestData.headers,
-          body: requestData.body,
+        await fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sale)
         });
         
-        if (response.ok) {
-          await removeStoredOfflineRequest(requestData.id);
-          console.log('[SW] Synced offline request:', requestData.url);
-        } else {
-          console.warn('[SW] Sync failed for request:', requestData.url, response.status);
-        }
+        // Remove from pending after successful sync
+        await removePendingSale(sale.id);
       } catch (error) {
-        console.error('[SW] Failed to sync request:', requestData.url, error);
+        console.error('Failed to sync sale:', error);
       }
     }
   } catch (error) {
-    console.error('[SW] Sync process failed:', error);
+    console.error('Background sync failed:', error);
   }
+}
+
+async function syncPendingInventory() {
+  try {
+    const pendingUpdates = await getPendingInventoryUpdates();
+    
+    for (const update of pendingUpdates) {
+      try {
+        await fetch('/api/inventory', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(update)
+        });
+        
+        await removePendingInventoryUpdate(update.id);
+      } catch (error) {
+        console.error('Failed to sync inventory update:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Inventory sync failed:', error);
+  }
+}
+
+// Helper functions for offline data management
+async function getPendingSales() {
+  // Implementation would use IndexedDB to retrieve pending sales
+  return [];
+}
+
+async function removePendingSale(id) {
+  // Implementation would remove the sale from IndexedDB
+}
+
+async function getPendingInventoryUpdates() {
+  // Implementation would use IndexedDB to retrieve pending inventory updates
+  return [];
+}
+
+async function removePendingInventoryUpdate(id) {
+  // Implementation would remove the update from IndexedDB
 }

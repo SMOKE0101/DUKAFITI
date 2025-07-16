@@ -1,14 +1,25 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { offlineDB } from '../utils/indexedDB';
+import { supabase } from '../integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { offlineDB } from '../utils/offlineDB';
+import { useToast } from './use-toast';
 
-export interface OfflineAction {
+interface OfflineState {
+  isOnline: boolean;
+  isInitialized: boolean;
+  isSyncing: boolean;
+  pendingOperations: number;
+  syncProgress: number;
+  lastSyncTime: string | null;
+  errors: string[];
+}
+
+interface OfflineOperation {
   id: string;
-  type: 'product' | 'customer' | 'sale' | 'transaction';
+  type: 'sale' | 'product' | 'customer' | 'transaction';
   operation: 'create' | 'update' | 'delete';
   data: any;
-  timestamp: number;
+  timestamp: string;
   priority: 'high' | 'medium' | 'low';
   attempts: number;
   synced: boolean;
@@ -16,14 +27,34 @@ export interface OfflineAction {
 
 export const useOfflineManager = () => {
   const { user } = useAuth();
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [pendingActions, setPendingActions] = useState<OfflineAction[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  
+  const [offlineState, setOfflineState] = useState<OfflineState>({
+    isOnline: navigator.onLine,
+    isInitialized: false,
+    isSyncing: false,
+    pendingOperations: 0,
+    syncProgress: 0,
+    lastSyncTime: localStorage.getItem('lastSyncTime'),
+    errors: []
+  });
 
-  // Monitor online/offline status
+  // Initialize offline capabilities
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    initializeOfflineSystem();
+    
+    const handleOnline = () => {
+      console.log('[OfflineManager] Online detected');
+      setOfflineState(prev => ({ ...prev, isOnline: true }));
+      if (user) {
+        setTimeout(() => syncPendingOperations(), 1000);
+      }
+    };
+
+    const handleOffline = () => {
+      console.log('[OfflineManager] Offline detected');
+      setOfflineState(prev => ({ ...prev, isOnline: false }));
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -32,191 +63,453 @@ export const useOfflineManager = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [user]);
 
-  // Load pending actions on mount
-  useEffect(() => {
-    const loadPendingActions = async () => {
-      try {
-        const actions = await offlineDB.getSyncQueue();
-        setPendingActions(actions);
-      } catch (error) {
-        console.error('[OfflineManager] Failed to load pending actions:', error);
+  const initializeOfflineSystem = async () => {
+    try {
+      console.log('[OfflineManager] Initializing offline system...');
+      
+      // Register service worker with better error handling
+      if ('serviceWorker' in navigator) {
+        try {
+          // Only register offline-sw.js to avoid conflicts
+          const registration = await navigator.serviceWorker.register('/offline-sw.js', {
+            scope: '/'
+          });
+          console.log('[OfflineManager] Service Worker registered successfully:', registration.scope);
+          
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  toast({
+                    title: "App Updated",
+                    description: "New version available. Restart to apply updates.",
+                    duration: 5000,
+                  });
+                }
+              });
+            }
+          });
+          
+          // Test service worker functionality
+          if (navigator.serviceWorker.controller) {
+            console.log('[OfflineManager] Service Worker is active and controlling');
+          }
+          
+        } catch (error) {
+          console.error('[OfflineManager] Service Worker registration failed:', error);
+          // Don't throw - continue with degraded functionality
+        }
       }
-    };
 
-    loadPendingActions();
-  }, []);
-
-  const addOfflineOperation = useCallback(async (
-    type: OfflineAction['type'],
-    operation: OfflineAction['operation'],
-    data: any,
-    priority: OfflineAction['priority'] = 'medium'
-  ): Promise<string> => {
-    if (!user?.id) {
-      throw new Error('User not authenticated');
+      // Initialize IndexedDB
+      await offlineDB.init();
+      
+      // Load pending operations count
+      await loadPendingOperationsCount();
+      
+      setOfflineState(prev => ({ ...prev, isInitialized: true }));
+      console.log('[OfflineManager] Offline system initialized successfully');
+      
+    } catch (error) {
+      console.error('[OfflineManager] Failed to initialize offline system:', error);
+      setOfflineState(prev => ({ 
+        ...prev, 
+        isInitialized: true, // Still mark as initialized to prevent infinite loops
+        errors: [...prev.errors, `Initialization failed: ${error.message}`]
+      }));
     }
+  };
 
-    const actionId = `${type}_${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const loadPendingOperationsCount = async () => {
+    try {
+      const queue = await offlineDB.getSyncQueue();
+      setOfflineState(prev => ({ 
+        ...prev, 
+        pendingOperations: queue?.length || 0 
+      }));
+    } catch (error) {
+      console.error('[OfflineManager] Failed to load pending operations:', error);
+    }
+  };
+
+  // Add operation to offline queue
+  const addOfflineOperation = useCallback(async (
+    type: 'sale' | 'product' | 'customer' | 'transaction',
+    operation: 'create' | 'update' | 'delete',
+    data: any,
+    priority: 'high' | 'medium' | 'low' = 'medium'
+  ): Promise<string> => {
+    const operationId = `${type}_${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const action: OfflineAction = {
-      id: actionId,
+    const offlineOperation: OfflineOperation = {
+      id: operationId,
       type,
       operation,
-      data: { ...data, user_id: user.id },
-      timestamp: Date.now(),
+      data: { ...data, user_id: user?.id },
+      timestamp: new Date().toISOString(),
       priority,
       attempts: 0,
       synced: false
     };
 
     try {
-      // Store in IndexedDB sync queue
-      await offlineDB.addToSyncQueue(action);
+      // Store in IndexedDB
+      await offlineDB.addToSyncQueue(offlineOperation);
       
-      // Update local state
-      setPendingActions(prev => [...prev, action]);
+      // Update local storage immediately for UI responsiveness
+      await updateLocalStorage(type, operation, data);
       
-      console.log(`[OfflineManager] Added ${type} ${operation} to queue:`, actionId);
-      return actionId;
+      // Update pending count
+      await loadPendingOperationsCount();
+      
+      // Try immediate sync if online
+      if (offlineState.isOnline && user) {
+        setTimeout(() => syncPendingOperations(), 500);
+      }
+      
+      console.log(`[OfflineManager] Added ${type} ${operation} to offline queue:`, operationId);
+      return operationId;
+      
     } catch (error) {
-      console.error('[OfflineManager] Failed to add operation to queue:', error);
+      console.error('[OfflineManager] Failed to add offline operation:', error);
       throw error;
     }
-  }, [user?.id]);
+  }, [user, offlineState.isOnline]);
 
-  const getOfflineData = useCallback(async (type: string): Promise<any[]> => {
+  // Update local storage for immediate UI feedback
+  const updateLocalStorage = async (type: string, operation: string, data: any) => {
     try {
       switch (type) {
-        case 'products':
-          return await offlineDB.getProducts(user?.id || '');
-        case 'customers':
-          return await offlineDB.getCustomers(user?.id || '');
-        case 'sales':
-          return await offlineDB.getSales(user?.id || '');
-        default:
-          return await offlineDB.getAllOfflineData(type, user?.id);
+        case 'sale':
+          if (operation === 'create') {
+            await offlineDB.storeOfflineData('sales', data);
+            // Update product stock locally
+            if (data.product_id && data.quantity) {
+              const product = await offlineDB.getOfflineData('products', data.product_id);
+              if (product) {
+                product.current_stock = Math.max(0, product.current_stock - data.quantity);
+                await offlineDB.storeOfflineData('products', product);
+              }
+            }
+          }
+          break;
+          
+        case 'product':
+          await offlineDB.storeOfflineData('products', data);
+          break;
+          
+        case 'customer':
+          await offlineDB.storeOfflineData('customers', data);
+          break;
+          
+        case 'transaction':
+          await offlineDB.storeOfflineData('transactions', data);
+          break;
       }
     } catch (error) {
+      console.error('[OfflineManager] Failed to update local storage:', error);
+    }
+  };
+
+  // Sync pending operations
+  const syncPendingOperations = useCallback(async () => {
+    if (!offlineState.isOnline || offlineState.isSyncing || !user) {
+      return;
+    }
+
+    setOfflineState(prev => ({ 
+      ...prev, 
+      isSyncing: true, 
+      syncProgress: 0,
+      errors: []
+    }));
+
+    try {
+      const operations = await offlineDB.getSyncQueue();
+      const totalOperations = operations?.length || 0;
+
+      if (totalOperations === 0) {
+        setOfflineState(prev => ({ 
+          ...prev, 
+          isSyncing: false,
+          lastSyncTime: new Date().toISOString()
+        }));
+        localStorage.setItem('lastSyncTime', new Date().toISOString());
+        return;
+      }
+
+      console.log(`[OfflineManager] Starting sync of ${totalOperations} operations`);
+
+      // Sort by priority and timestamp
+      const sortedOperations = operations.sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      });
+
+      let completed = 0;
+      const errors: string[] = [];
+
+      for (const operation of sortedOperations) {
+        try {
+          const success = await syncSingleOperation(operation);
+          if (success) {
+            await offlineDB.removeFromSyncQueue(operation.id);
+            completed++;
+          } else {
+            // Increment attempts
+            operation.attempts++;
+            if (operation.attempts >= 3) {
+              await offlineDB.removeFromSyncQueue(operation.id);
+              errors.push(`Max attempts reached for ${operation.type} ${operation.operation}`);
+            } else {
+              await offlineDB.addToSyncQueue(operation);
+            }
+          }
+        } catch (error) {
+          console.error(`[OfflineManager] Failed to sync operation ${operation.id}:`, error);
+          errors.push(`Failed to sync ${operation.type}: ${error.message}`);
+        }
+
+        // Update progress
+        const progress = Math.round(((completed + errors.length) / totalOperations) * 100);
+        setOfflineState(prev => ({ ...prev, syncProgress: progress }));
+      }
+
+      const finalPendingCount = totalOperations - completed;
+      const syncTime = new Date().toISOString();
+      
+      setOfflineState(prev => ({ 
+        ...prev, 
+        isSyncing: false,
+        pendingOperations: finalPendingCount,
+        lastSyncTime: syncTime,
+        errors: errors
+      }));
+
+      localStorage.setItem('lastSyncTime', syncTime);
+      
+      if (completed > 0) {
+        toast({
+          title: "Sync Complete",
+          description: `${completed} operations synced successfully`,
+          duration: 3000,
+        });
+      }
+
+      if (errors.length > 0) {
+        toast({
+          title: "Sync Issues",
+          description: `${errors.length} operations failed to sync`,
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+
+      console.log(`[OfflineManager] Sync completed: ${completed} synced, ${errors.length} errors, ${finalPendingCount} pending`);
+
+    } catch (error) {
+      console.error('[OfflineManager] Sync process failed:', error);
+      setOfflineState(prev => ({ 
+        ...prev, 
+        isSyncing: false,
+        errors: [...prev.errors, `Sync failed: ${error.message}`]
+      }));
+    }
+  }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
+
+  const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
+    try {
+      switch (operation.type) {
+        case 'sale':
+          return await syncSale(operation);
+        case 'product':
+          return await syncProduct(operation);
+        case 'customer':
+          return await syncCustomer(operation);
+        case 'transaction':
+          return await syncTransaction(operation);
+        default:
+          console.warn(`[OfflineManager] Unknown operation type: ${operation.type}`);
+          return false;
+      }
+    } catch (error) {
+      console.error(`[OfflineManager] Error syncing ${operation.type}:`, error);
+      return false;
+    }
+  };
+
+  const syncSale = async (operation: OfflineOperation): Promise<boolean> => {
+    try {
+      const { data } = operation;
+      
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('sales')
+          .insert([{
+            user_id: user?.id,
+            product_id: data.product_id,
+            product_name: data.product_name,
+            quantity: data.quantity,
+            selling_price: data.selling_price,
+            cost_price: data.cost_price,
+            profit: data.profit,
+            total_amount: data.total_amount,
+            payment_method: data.payment_method,
+            customer_id: data.customer_id,
+            customer_name: data.customer_name,
+            payment_details: data.payment_details || {},
+            timestamp: data.timestamp || new Date().toISOString(),
+            synced: true
+          }]);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[OfflineManager] Sale sync error:', error);
+      return false;
+    }
+  };
+
+  const syncProduct = async (operation: OfflineOperation): Promise<boolean> => {
+    try {
+      const { data } = operation;
+      
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('products')
+          .insert([{
+            user_id: user?.id,
+            name: data.name,
+            category: data.category,
+            cost_price: data.cost_price,
+            selling_price: data.selling_price,
+            current_stock: data.current_stock || 0,
+            low_stock_threshold: data.low_stock_threshold || 10
+          }]);
+        
+        return !error;
+      } else if (operation.operation === 'update') {
+        const { error } = await supabase
+          .from('products')
+          .update(data.updates)
+          .eq('id', data.id)
+          .eq('user_id', user?.id);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[OfflineManager] Product sync error:', error);
+      return false;
+    }
+  };
+
+  const syncCustomer = async (operation: OfflineOperation): Promise<boolean> => {
+    try {
+      const { data } = operation;
+      
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('customers')
+          .insert([{
+            user_id: user?.id,
+            name: data.name,
+            phone: data.phone,
+            email: data.email,
+            address: data.address,
+            credit_limit: data.credit_limit || 1000,
+            outstanding_debt: data.outstanding_debt || 0
+          }]);
+        
+        return !error;
+      } else if (operation.operation === 'update') {
+        const { error } = await supabase
+          .from('customers')
+          .update(data.updates)
+          .eq('id', data.id)
+          .eq('user_id', user?.id);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[OfflineManager] Customer sync error:', error);
+      return false;
+    }
+  };
+
+  const syncTransaction = async (operation: OfflineOperation): Promise<boolean> => {
+    try {
+      const { data } = operation;
+      
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('transactions')
+          .insert([{
+            user_id: user?.id,
+            customer_id: data.customer_id,
+            item_id: data.item_id,
+            quantity: data.quantity,
+            unit_price: data.unit_price,
+            total_amount: data.total_amount,
+            paid: data.paid || false,
+            notes: data.notes
+          }]);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[OfflineManager] Transaction sync error:', error);
+      return false;
+    }
+  };
+
+  // Force sync now
+  const forceSyncNow = useCallback(async () => {
+    if (offlineState.isOnline && !offlineState.isSyncing) {
+      await syncPendingOperations();
+    } else if (!offlineState.isOnline) {
+      toast({
+        title: "Offline Mode",
+        description: "Cannot sync while offline. Data will sync when connection is restored.",
+        variant: "default",
+      });
+    }
+  }, [offlineState.isOnline, offlineState.isSyncing, syncPendingOperations, toast]);
+
+  // Clear sync errors
+  const clearSyncErrors = useCallback(() => {
+    setOfflineState(prev => ({ ...prev, errors: [] }));
+  }, []);
+
+  // Get offline data with better error handling
+  const getOfflineData = useCallback(async (type: string, id?: string) => {
+    try {
+      return await offlineDB.getOfflineData(type, id);
+    } catch (error) {
       console.error(`[OfflineManager] Failed to get offline data for ${type}:`, error);
-      return [];
-    }
-  }, [user?.id]);
-
-  const storeOfflineData = useCallback(async (type: string, data: any): Promise<void> => {
-    try {
-      await offlineDB.store(type, { ...data, user_id: user?.id });
-      console.log(`[OfflineManager] Stored ${type} data offline:`, data.id);
-    } catch (error) {
-      console.error(`[OfflineManager] Failed to store ${type} data:`, error);
-      throw error;
-    }
-  }, [user?.id]);
-
-  const removeFromQueue = useCallback(async (actionId: string): Promise<void> => {
-    try {
-      await offlineDB.removeFromSyncQueue(actionId);
-      setPendingActions(prev => prev.filter(action => action.id !== actionId));
-      console.log(`[OfflineManager] Removed action from queue:`, actionId);
-    } catch (error) {
-      console.error('[OfflineManager] Failed to remove action from queue:', error);
-      throw error;
+      return null;
     }
   }, []);
-
-  const clearAllPendingActions = useCallback(async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      await offlineDB.clearStore('syncQueue');
-      setPendingActions([]);
-      console.log('[OfflineManager] Cleared all pending actions');
-    } catch (error) {
-      console.error('[OfflineManager] Failed to clear pending actions:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const refreshPendingActions = useCallback(async (): Promise<void> => {
-    try {
-      const actions = await offlineDB.getSyncQueue();
-      setPendingActions(actions);
-    } catch (error) {
-      console.error('[OfflineManager] Failed to refresh pending actions:', error);
-    }
-  }, []);
-
-  // Enhanced offline CRUD operations
-  const createOfflineProduct = useCallback(async (productData: any): Promise<any> => {
-    const product = {
-      ...productData,
-      id: `offline_product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      user_id: user?.id,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Store locally
-    await storeOfflineData('products', product);
-    
-    // Queue for sync
-    await addOfflineOperation('product', 'create', product, 'medium');
-    
-    return product;
-  }, [user?.id, storeOfflineData, addOfflineOperation]);
-
-  const updateOfflineProduct = useCallback(async (id: string, updates: any): Promise<any> => {
-    const product = await offlineDB.getProduct(id);
-    if (!product) throw new Error('Product not found');
-
-    const updatedProduct = {
-      ...product,
-      ...updates,
-      updated_at: new Date().toISOString()
-    };
-
-    // Update locally
-    await storeOfflineData('products', updatedProduct);
-    
-    // Queue for sync
-    await addOfflineOperation('product', 'update', updatedProduct, 'medium');
-    
-    return updatedProduct;
-  }, [storeOfflineData, addOfflineOperation]);
-
-  const createOfflineCustomer = useCallback(async (customerData: any): Promise<any> => {
-    const customer = {
-      ...customerData,
-      id: `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      user_id: user?.id,
-      created_date: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Store locally
-    await storeOfflineData('customers', customer);
-    
-    // Queue for sync
-    await addOfflineOperation('customer', 'create', customer, 'medium');
-    
-    return customer;
-  }, [user?.id, storeOfflineData, addOfflineOperation]);
 
   return {
-    isOnline,
-    pendingActions,
-    isLoading,
+    ...offlineState,
     addOfflineOperation,
+    syncPendingOperations,
+    forceSyncNow,
+    clearSyncErrors,
     getOfflineData,
-    storeOfflineData,
-    removeFromQueue,
-    clearAllPendingActions,
-    refreshPendingActions,
-    createOfflineProduct,
-    updateOfflineProduct,
-    createOfflineCustomer,
-    hasPendingActions: pendingActions.length > 0
   };
 };

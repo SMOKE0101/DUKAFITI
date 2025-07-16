@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { useOfflineManager } from './useOfflineManager';
-import { offlineDB } from '../utils/offlineDB';
 import { Sale } from '../types';
 
 export const useOfflineSales = () => {
@@ -12,7 +11,7 @@ export const useOfflineSales = () => {
     setIsCreating(true);
     
     try {
-      console.log('[OfflineSales] 💾 Creating offline sale:', saleData);
+      console.log('[OfflineSales] Creating offline sale:', saleData);
 
       const sale = {
         ...saleData,
@@ -21,29 +20,14 @@ export const useOfflineSales = () => {
         timestamp: saleData.timestamp || new Date().toISOString()
       };
 
-      // Store the sale directly in IndexedDB with enhanced error handling
-      try {
-        await offlineDB.storeSale(sale);
-        console.log('[OfflineSales] ✅ Sale stored in IndexedDB successfully');
-      } catch (dbError) {
-        console.error('[OfflineSales] ❌ Failed to store sale in IndexedDB:', dbError);
-        throw new Error(`Database storage failed: ${dbError.message}`);
-      }
-
-      // Add to offline queue with high priority for eventual sync
-      try {
-        const operationId = await addOfflineOperation('sale', 'create', sale, 'high');
-        console.log('[OfflineSales] ✅ Sale added to sync queue with operation ID:', operationId);
-      } catch (queueError) {
-        console.warn('[OfflineSales] ⚠️ Failed to add to sync queue (sale still stored locally):', queueError);
-        // Don't fail the operation if sync queue fails, sale is still stored locally
-      }
+      // Add to offline queue with high priority
+      const operationId = await addOfflineOperation('sale', 'create', sale, 'high');
       
-      console.log('[OfflineSales] ✅ Sale created offline successfully');
+      console.log('[OfflineSales] Sale created offline with operation ID:', operationId);
       return sale;
       
     } catch (error) {
-      console.error('[OfflineSales] ❌ Failed to create offline sale:', error);
+      console.error('[OfflineSales] Failed to create offline sale:', error);
       throw new Error(`Failed to create offline sale: ${error.message}`);
     } finally {
       setIsCreating(false);
@@ -52,84 +36,17 @@ export const useOfflineSales = () => {
 
   const getOfflineSales = useCallback(async (): Promise<Sale[]> => {
     try {
-      console.log('[OfflineSales] 📖 Fetching offline sales...');
-      
-      // Try to get from IndexedDB directly first
-      const sales = await offlineDB.getAllOfflineData('sales');
-      
-      if (Array.isArray(sales)) {
-        console.log(`[OfflineSales] ✅ Retrieved ${sales.length} sales from IndexedDB`);
-        
-        // Map offline sales data to Sale interface
-        const mappedSales = sales.map(sale => ({
-          ...sale,
-          // Ensure proper data mapping for UI
-          id: sale.id,
-          productId: sale.product_id,
-          productName: sale.product_name,
-          customerId: sale.customer_id,
-          customerName: sale.customer_name,
-          quantity: sale.quantity,
-          sellingPrice: sale.selling_price,
-          costPrice: sale.cost_price,
-          total: sale.total_amount,
-          profit: sale.profit,
-          paymentMethod: sale.payment_method,
-          paymentDetails: sale.payment_details || {},
-          timestamp: sale.timestamp,
-          synced: sale.synced || false
-        }));
-        
-        return mappedSales;
-      }
-      
-      console.log('[OfflineSales] ⚠️ No sales found in IndexedDB');
-      return [];
+      const sales = await getOfflineData('sales');
+      return Array.isArray(sales) ? sales : [];
     } catch (error) {
-      console.error('[OfflineSales] ❌ Failed to get offline sales:', error);
-      
-      // Fallback to the offline manager's data
-      try {
-        const fallbackSales = await getOfflineData('sales');
-        return Array.isArray(fallbackSales) ? fallbackSales : [];
-      } catch (fallbackError) {
-        console.error('[OfflineSales] ❌ Fallback also failed:', fallbackError);
-        return [];
-      }
+      console.error('[OfflineSales] Failed to get offline sales:', error);
+      return [];
     }
   }, [getOfflineData]);
-
-  const getSalesStats = useCallback(async () => {
-    try {
-      const sales = await getOfflineSales();
-      const totalSales = sales.length;
-      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-      const totalProfit = sales.reduce((sum, sale) => sum + (sale.profit || 0), 0);
-      const unsyncedSales = sales.filter(sale => !sale.synced).length;
-      
-      console.log(`[OfflineSales] 📊 Stats: ${totalSales} sales, ${unsyncedSales} unsynced`);
-      
-      return {
-        totalSales,
-        totalRevenue,
-        totalProfit,
-        unsyncedSales
-      };
-    } catch (error) {
-      console.error('[OfflineSales] ❌ Failed to get sales stats:', error);
-      return {
-        totalSales: 0,
-        totalRevenue: 0,
-        totalProfit: 0,
-        unsyncedSales: 0
-      };
-    }
-  }, [getOfflineSales]);
 
   return {
     createOfflineSale,
     getOfflineSales,
-    getSalesStats,
     isCreating,
     isOnline
   };
