@@ -82,7 +82,7 @@ const CustomerManagement: React.FC = () => {
     setShowRepaymentDrawer(true);
   };
 
-  const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'created_date' | 'updated_at'>) => {
     try {
       if (editingCustomer) {
         await updateCustomer(editingCustomer.id, customerData);
@@ -168,7 +168,7 @@ const CustomerManagement: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(customers.reduce((sum, c) => sum + c.totalPurchases, 0))}
+                  {formatCurrency(customers.reduce((sum, c) => sum + (c.total_purchases || 0), 0))}
                 </div>
                 <div className="text-sm text-green-700">Total Sales</div>
               </div>
@@ -183,7 +183,7 @@ const CustomerManagement: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-orange-600">
-                  {formatCurrency(customers.reduce((sum, c) => sum + c.outstandingDebt, 0))}
+                  {formatCurrency(customers.reduce((sum, c) => sum + c.outstanding_debt, 0))}
                 </div>
                 <div className="text-sm text-orange-700">Outstanding Debt</div>
               </div>
@@ -204,15 +204,15 @@ const CustomerManagement: React.FC = () => {
                   </div>
                   <div>
                     <CardTitle className="text-lg">{customer.name}</CardTitle>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskBadgeColor(customer.riskRating)}`}>
-                      {customer.riskRating} risk
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskBadgeColor(customer.risk_rating)}`}>
+                      {customer.risk_rating} risk
                     </span>
                   </div>
                 </div>
                 <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  customer.outstandingDebt > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  customer.outstanding_debt > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                 }`}>
-                  Balance: {formatCurrency(customer.outstandingDebt)}
+                  Balance: {formatCurrency(customer.outstanding_debt)}
                 </div>
               </div>
             </CardHeader>
@@ -237,11 +237,11 @@ const CustomerManagement: React.FC = () => {
               <div className="pt-3 border-t space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Purchases:</span>
-                  <span className="font-medium text-green-600">{formatCurrency(customer.totalPurchases)}</span>
+                  <span className="font-medium text-green-600">{formatCurrency(customer.total_purchases || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Credit Limit:</span>
-                  <span className="font-medium">{formatCurrency(customer.creditLimit)}</span>
+                  <span className="font-medium">{formatCurrency(customer.credit_limit)}</span>
                 </div>
               </div>
 
@@ -261,7 +261,7 @@ const CustomerManagement: React.FC = () => {
                   variant="outline" 
                   size="sm" 
                   className="flex-1"
-                  disabled={customer.outstandingDebt === 0}
+                  disabled={customer.outstanding_debt === 0}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRecordPayment(customer);
