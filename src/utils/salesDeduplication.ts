@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 
 export class SalesDeduplication {
@@ -30,16 +31,45 @@ export class SalesDeduplication {
    */
   static async findDuplicateSales(): Promise<any[]> {
     try {
-      // Since PostgreSQL doesn't support .group() method in Supabase client,
-      // we'll use a raw SQL query to find duplicates
-      const { data, error } = await supabase.rpc('find_duplicate_sales', {});
+      // Get all sales with offline_id, ordered by created_at
+      const { data: allSales, error } = await supabase
+        .from('sales')
+        .select('id, offline_id, created_at')
+        .not('offline_id', 'is', null)
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('[SalesDeduplication] Error finding duplicates:', error);
         return [];
       }
 
-      return data || [];
+      if (!allSales || allSales.length === 0) {
+        return [];
+      }
+
+      // Group by offline_id and find duplicates
+      const salesByOfflineId = new Map<string, any[]>();
+      
+      allSales.forEach(sale => {
+        if (!salesByOfflineId.has(sale.offline_id)) {
+          salesByOfflineId.set(sale.offline_id, []);
+        }
+        salesByOfflineId.get(sale.offline_id)!.push(sale);
+      });
+
+      // Return only groups that have duplicates (more than 1 sale)
+      const duplicates: any[] = [];
+      for (const [offlineId, sales] of salesByOfflineId) {
+        if (sales.length > 1) {
+          duplicates.push({
+            offline_id: offlineId,
+            count: sales.length,
+            sales: sales
+          });
+        }
+      }
+
+      return duplicates;
     } catch (error) {
       console.error('[SalesDeduplication] Error finding duplicates:', error);
       return [];
