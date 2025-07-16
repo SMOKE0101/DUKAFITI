@@ -51,7 +51,7 @@ export const useOfflineDataManager = () => {
       // Store sale locally
       await offlineDB.storeOfflineData('sales', sale);
 
-      // Add to sync queue
+      // Add to sync queue with attempts property
       await offlineDB.addToSyncQueue({
         id: `sync_${sale.id}`,
         type: 'sale',
@@ -60,6 +60,7 @@ export const useOfflineDataManager = () => {
         synced: false,
         operation: 'create',
         priority: 'high',
+        attempts: 0,
       });
 
       // Update local inventory
@@ -103,10 +104,10 @@ export const useOfflineDataManager = () => {
 
         await offlineDB.storeOfflineData('products', updatedProduct);
 
-        // Add to sync queue for inventory update
+        // Add to sync queue for inventory update with attempts property
         await offlineDB.addToSyncQueue({
           id: `sync_inventory_${productId}_${Date.now()}`,
-          type: 'inventory',
+          type: 'product',
           data: {
             productId,
             quantityChange,
@@ -116,6 +117,7 @@ export const useOfflineDataManager = () => {
           synced: false,
           operation: 'update',
           priority: 'medium',
+          attempts: 0,
         });
       }
     } catch (error) {
@@ -137,12 +139,13 @@ export const useOfflineDataManager = () => {
 
       await offlineDB.addToSyncQueue({
         id: `sync_${product.id}`,
-        type: 'inventory',
+        type: 'product',
         data: product,
         timestamp: new Date().toISOString(),
         synced: false,
         operation: 'create',
         priority: 'medium',
+        attempts: 0,
       });
 
       if (isOnline) {
@@ -188,6 +191,7 @@ export const useOfflineDataManager = () => {
         synced: false,
         operation: 'create',
         priority: 'low',
+        attempts: 0,
       });
 
       if (isOnline) {
@@ -227,6 +231,7 @@ export const useOfflineDataManager = () => {
         synced: false,
         operation: 'update',
         priority: 'low',
+        attempts: 0,
       });
 
       if (isOnline) {

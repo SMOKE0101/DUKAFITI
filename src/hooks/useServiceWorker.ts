@@ -42,14 +42,18 @@ export const useServiceWorker = () => {
             setUpdateAvailable(true);
           }
 
-          // Background sync registration (with fallback)
+          // Background sync registration (with fallback for unsupported browsers)
           try {
             if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-              // Only register if the browser supports background sync
-              await registration.sync?.register('background-sync');
+              // Check if registration has sync property before using
+              if (registration.sync) {
+                await registration.sync.register('background-sync');
+              }
+            } else {
+              console.warn('[SW] Background sync not supported by this browser');
             }
           } catch (error) {
-            console.warn('[SW] Background sync not supported:', error);
+            console.warn('[SW] Background sync registration failed:', error);
           }
 
         } catch (error) {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -17,7 +18,7 @@ interface OfflineState {
 
 interface OfflineOperation {
   id: string;
-  type: 'sale' | 'product' | 'customer';
+  type: 'sale' | 'product' | 'customer' | 'inventory';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp: string;
@@ -262,6 +263,7 @@ export const useOfflineManager = () => {
         case 'sale':
           return await syncSale(operation);
         case 'product':
+        case 'inventory':
           return await syncProduct(operation);
         case 'customer':
           return await syncCustomer(operation);
