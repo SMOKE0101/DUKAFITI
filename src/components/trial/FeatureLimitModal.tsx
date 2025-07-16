@@ -5,22 +5,20 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
 interface FeatureLimitModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
   feature: string;
-  currentUsage: number;
   limit: number;
 }
 
 const FeatureLimitModal: React.FC<FeatureLimitModalProps> = ({
-  open,
-  onOpenChange,
+  isOpen,
+  onClose,
   feature,
-  currentUsage,
   limit
 }) => {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -31,11 +29,10 @@ const FeatureLimitModal: React.FC<FeatureLimitModalProps> = ({
         <div className="space-y-4">
           <p className="text-muted-foreground">
             You've reached the trial limit of {limit} {feature}. 
-            Current usage: {currentUsage}/{limit}.
             Upgrade to continue using this feature.
           </p>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+            <Button variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
             <Button className="flex-1">

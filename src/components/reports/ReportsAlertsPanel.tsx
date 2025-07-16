@@ -14,12 +14,12 @@ interface ReportsAlertsPanelProps {
 const ReportsAlertsPanel: React.FC<ReportsAlertsPanelProps> = ({ products, customers }) => {
   const lowStockProducts = useMemo(() => {
     return products.filter(product => 
-      product.current_stock <= (product.low_stock_threshold || 10)
+      product.currentStock <= (product.lowStockThreshold || 10)
     );
   }, [products]);
 
   const overdueCustomers = useMemo(() => {
-    return customers.filter(customer => customer.outstanding_debt > 0);
+    return customers.filter(customer => customer.outstandingDebt > 0);
   }, [customers]);
 
   return (
@@ -60,10 +60,10 @@ const ReportsAlertsPanel: React.FC<ReportsAlertsPanelProps> = ({ products, custo
                   </div>
                   <div className="text-right">
                     <Badge variant="destructive" className="mb-1">
-                      {product.current_stock} left
+                      {product.currentStock} left
                     </Badge>
                     <p className="text-xs text-muted-foreground">
-                      Threshold: {product.low_stock_threshold || 10}
+                      Threshold: {product.lowStockThreshold || 10}
                     </p>
                   </div>
                   <AlertTriangle className="w-5 h-5 text-red-500 ml-3" />
@@ -110,10 +110,10 @@ const ReportsAlertsPanel: React.FC<ReportsAlertsPanelProps> = ({ products, custo
                   </div>
                   <div className="text-right">
                     <Badge variant="destructive" className="mb-1">
-                      {formatCurrency(customer.outstanding_debt)}
+                      {formatCurrency(customer.outstandingDebt)}
                     </Badge>
                     <p className="text-xs text-muted-foreground">
-                      Risk: {customer.risk_rating}
+                      Risk: {customer.riskRating}
                     </p>
                   </div>
                   <AlertTriangle className="w-5 h-5 text-orange-500 ml-3" />

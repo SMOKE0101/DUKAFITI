@@ -26,11 +26,11 @@ const ReportsSummaryCards: React.FC<ReportsSummaryCardsProps> = ({
   }, [sales, dateRange]);
 
   const metrics = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
     const totalOrders = filteredSales.length;
-    const activeCustomers = new Set(filteredSales.map(sale => sale.customer_id).filter(Boolean)).size;
+    const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
-      product.current_stock <= (product.low_stock_threshold || 10)
+      product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
 
     return {

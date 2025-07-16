@@ -4,15 +4,14 @@ export const useServiceWorker = () => {
   const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [cacheStats, setCacheStats] = useState<any>(null);
 
   useEffect(() => {
-    // Register enhanced service worker after React app has fully loaded
+    // Register service worker after React app has fully loaded
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          console.log('[SW] Registering enhanced offline service worker...');
-          const registration = await navigator.serviceWorker.register('/enhanced-offline-sw.js', {
+          console.log('[SW] Registering service worker...');
+          const registration = await navigator.serviceWorker.register('/offline-sw.js', {
             scope: '/',
             updateViaCache: 'none'
           });
@@ -95,34 +94,11 @@ export const useServiceWorker = () => {
     }
   };
 
-  const getCacheStats = async () => {
-    if (swRegistration?.active) {
-      const channel = new MessageChannel();
-      return new Promise((resolve) => {
-        channel.port1.onmessage = (event) => {
-          setCacheStats(event.data.stats);
-          resolve(event.data.stats);
-        };
-        
-        swRegistration.active.postMessage({ type: 'CACHE_STATS' }, [channel.port2]);
-      });
-    }
-  };
-
-  const clearCache = () => {
-    if (swRegistration?.active) {
-      swRegistration.active.postMessage({ type: 'CLEAR_CACHE' });
-    }
-  };
-
   return {
     isOnline,
     updateAvailable,
     skipWaiting,
     triggerSync,
-    getCacheStats,
-    clearCache,
-    cacheStats,
     swRegistration
   };
 };

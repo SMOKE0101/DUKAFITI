@@ -27,7 +27,7 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
     phone: '',
     email: '',
     address: '',
-    credit_limit: 0
+    creditLimit: 0
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,7 +39,7 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
         phone: customer.phone || '',
         email: customer.email || '',
         address: customer.address || '',
-        credit_limit: customer.credit_limit || 0
+        creditLimit: customer.creditLimit || 0
       });
     }
   }, [customer, isOpen]);
@@ -63,7 +63,7 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
         phone: formData.phone.trim(),
         email: formData.email.trim(),
         address: formData.address.trim(),
-        credit_limit: formData.credit_limit
+        creditLimit: formData.creditLimit
       });
       
       toast({
@@ -165,16 +165,16 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-credit_limit" className="text-sm font-medium font-mono uppercase tracking-wider text-gray-900 dark:text-white">
+                <Label htmlFor="edit-creditLimit" className="text-sm font-medium font-mono uppercase tracking-wider text-gray-900 dark:text-white">
                   Credit Limit
                 </Label>
                 <Input
-                  id="edit-credit_limit"
+                  id="edit-creditLimit"
                   type="number"
                   min="0"
                   step="0.01"
-                  value={formData.credit_limit}
-                  onChange={(e) => setFormData({ ...formData, credit_limit: Number(e.target.value) })}
+                  value={formData.creditLimit}
+                  onChange={(e) => setFormData({ ...formData, creditLimit: Number(e.target.value) })}
                   placeholder="0.00"
                   className="h-12 text-base border-2 border-gray-600 bg-transparent rounded-xl font-mono focus-visible:ring-2 focus-visible:ring-blue-600"
                   disabled={isLoading}

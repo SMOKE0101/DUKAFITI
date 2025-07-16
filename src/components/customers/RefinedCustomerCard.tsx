@@ -36,9 +36,9 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
   };
 
   const getBalanceStatus = () => {
-    if (customer.outstanding_debt === 0) {
+    if (customer.outstandingDebt === 0) {
       return { color: 'bg-green-100 text-green-800', avatarColor: 'bg-green-100 text-green-600' };
-    } else if (customer.outstanding_debt <= 1000) {
+    } else if (customer.outstandingDebt <= 1000) {
       return { color: 'bg-yellow-100 text-yellow-800', avatarColor: 'bg-yellow-100 text-yellow-600' };
     } else {
       return { color: 'bg-red-100 text-red-800', avatarColor: 'bg-red-100 text-red-600' };
@@ -92,7 +92,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
               {/* Credit Limit Field */}
               <p className="text-sm text-gray-500 mt-2">
                 <span className="font-medium">Credit Limit:</span>{' '}
-                {customer.credit_limit ? formatCurrency(customer.credit_limit) : 'Unlimited'}
+                {customer.creditLimit ? formatCurrency(customer.creditLimit) : 'Unlimited'}
               </p>
             </div>
           </div>
@@ -100,7 +100,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
           {/* Balance Badge - Fixed positioning */}
           <div className="flex-shrink-0 ml-2">
             <Badge className={`px-3 py-1 rounded-full text-sm ${balanceStatus.color}`}>
-              {formatCurrency(customer.outstanding_debt)}
+              {formatCurrency(customer.outstandingDebt)}
             </Badge>
           </div>
         </div>
@@ -124,7 +124,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
             <TooltipTrigger asChild>
               <Button
                 onClick={() => onRecordRepayment(customer)}
-                disabled={customer.outstanding_debt === 0}
+                disabled={customer.outstandingDebt === 0}
                 className="w-10 h-10 bg-green-100 dark:bg-green-900/20 text-green-600 rounded-full hover:bg-green-200 dark:hover:bg-green-900/40 transition-all duration-200 hover:scale-110 active:scale-95 p-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 aria-label="Record payment"
               >

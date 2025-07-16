@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -79,35 +78,35 @@ const ModernReportsPage = () => {
       const matchesFilters = activeFilters.every(filter => {
         switch (filter.type) {
           case 'salesType':
-            return sale.payment_method === filter.value;
+            return sale.paymentMethod === filter.value;
           case 'category':
-            const product = products.find(p => p.id === sale.product_id);
+            const product = products.find(p => p.id === sale.productId);
             return product?.category === filter.value;
           case 'customer':
-            return sale.customer_id === filter.value;
+            return sale.customerId === filter.value;
           default:
             return true;
         }
       });
       
-      return isInDateRange && matchesFilters && sale.total_amount >= 0;
+      return isInDateRange && matchesFilters && sale.total >= 0;
     });
   }, [sales, fromDate, toDate, activeFilters, products]);
 
   // Calculate metrics for summary cards
   const metrics = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
     const totalOrders = filteredSales.length;
-    const activeCustomers = new Set(filteredSales.map(sale => sale.customer_id).filter(Boolean)).size;
+    const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
-      product.current_stock !== -1 && product.current_stock <= (product.low_stock_threshold || 10)
+      product.currentStock !== -1 && product.currentStock <= (product.lowStockThreshold || 10)
     ).length;
     const cashRevenue = filteredSales
-      .filter(s => s.payment_method === 'cash')
-      .reduce((sum, sale) => sum + sale.total_amount, 0);
+      .filter(s => s.paymentMethod === 'cash')
+      .reduce((sum, sale) => sum + sale.total, 0);
     const mpesaRevenue = filteredSales
-      .filter(s => s.payment_method === 'mpesa')
-      .reduce((sum, sale) => sum + sale.total_amount, 0);
+      .filter(s => s.paymentMethod === 'mpesa')
+      .reduce((sum, sale) => sum + sale.total, 0);
 
     return {
       totalRevenue,
@@ -121,10 +120,10 @@ const ModernReportsPage = () => {
 
   const salesTableData = useMemo(() => {
     let data = filteredSales.map(sale => ({
-      productName: sale.product_name,
+      productName: sale.productName,
       quantity: sale.quantity,
-      revenue: sale.total_amount,
-      customer: sale.customer_name || 'Walk-in Customer',
+      revenue: sale.total,
+      customer: sale.customerName || 'Walk-in Customer',
       date: new Date(sale.timestamp).toLocaleDateString()
     }));
 
@@ -152,17 +151,17 @@ const ModernReportsPage = () => {
 
   const paymentsTableData = useMemo(() => 
     filteredSales
-      .filter(sale => sale.customer_name)
+      .filter(sale => sale.customerName)
       .map(sale => ({
-        customer: sale.customer_name,
-        amount: sale.total_amount,
-        method: sale.payment_method.charAt(0).toUpperCase() + sale.payment_method.slice(1),
+        customer: sale.customerName,
+        amount: sale.total,
+        method: sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1),
         date: new Date(sale.timestamp).toLocaleDateString()
       })), [filteredSales]
   );
 
-  const lowStockProducts = products.filter(p => p.current_stock !== -1 && p.current_stock <= (p.low_stock_threshold || 10)).slice(0, 5);
-  const overdueCustomers = customers.filter(c => c.outstanding_debt > 0).slice(0, 5);
+  const lowStockProducts = products.filter(p => p.currentStock !== -1 && p.currentStock <= (p.lowStockThreshold || 10)).slice(0, 5);
+  const overdueCustomers = customers.filter(c => c.outstandingDebt > 0).slice(0, 5);
 
   const removeFilter = (filterToRemove: Filter) => {
     setActiveFilters(prev => prev.filter(f => 
@@ -491,7 +490,7 @@ const ModernReportsPage = () => {
                         <p className="text-sm text-gray-500 dark:text-gray-400">{product.category}</p>
                       </div>
                       <Badge variant="destructive">
-                        {product.current_stock} left
+                        {product.currentStock} left
                       </Badge>
                     </div>
                   ))}
@@ -522,7 +521,7 @@ const ModernReportsPage = () => {
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-red-600 dark:text-red-400">
-                          {formatCurrency(customer.outstanding_debt)}
+                          {formatCurrency(customer.outstandingDebt)}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">overdue</p>
                       </div>

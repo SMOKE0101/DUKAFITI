@@ -61,10 +61,10 @@ const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
                   <span className="text-gray-900 dark:text-white">{customer.email}</span>
                 </div>
               )}
-              {customer.outstanding_debt && customer.outstanding_debt > 0 && (
+              {customer.outstandingDebt && customer.outstandingDebt > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Outstanding Debt:</span>
-                  <span className="text-red-600 font-bold">KES {customer.outstanding_debt.toFixed(2)}</span>
+                  <span className="text-red-600 font-bold">KES {customer.outstandingDebt.toFixed(2)}</span>
                 </div>
               )}
             </div>

@@ -44,7 +44,7 @@ const defaultSettings: ShopSettings = {
   businessType: '',
   smsNotifications: false,
   emailNotifications: false,
-  theme: 'light', // Default to light, not system
+  theme: 'system',
   currency: 'KES',
   lowStockThreshold: 10,
   businessHours: {
@@ -76,7 +76,7 @@ export const useSettings = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [initialized, setInitialized] = useState(false);
 
   // Load settings from Supabase
@@ -111,11 +111,11 @@ export const useSettings = () => {
         console.error('Error loading theme:', themeError);
       }
 
-      // Extract theme from settings_value with fallback to light
-      let currentTheme = 'light';
+      // Safely extract theme from settings_value
+      let currentTheme = 'system';
       if (themeData?.settings_value && typeof themeData.settings_value === 'object') {
         const settingsObj = themeData.settings_value as { theme?: string };
-        currentTheme = settingsObj.theme || 'light';
+        currentTheme = settingsObj.theme || 'system';
       }
 
       const loadedSettings: ShopSettings = {
@@ -129,9 +129,8 @@ export const useSettings = () => {
 
       setSettings(loadedSettings);
       
-      // CRITICAL: Only set theme on initial load, never auto-switch based on system
+      // Only set theme if not initialized to prevent auto-switching
       if (!initialized) {
-        console.log('Initial theme load:', currentTheme);
         setTheme(currentTheme);
         setInitialized(true);
       }
@@ -172,9 +171,9 @@ export const useSettings = () => {
         }
       }
 
-      // Update theme setting - ONLY when explicitly changed by user
+      // Update theme setting
       if (newSettings.theme !== undefined) {
-        console.log('User manually changed theme to:', newSettings.theme);
+        setTheme(newSettings.theme);
         
         const { error: themeError } = await supabase
           .from('shop_settings')
@@ -206,7 +205,7 @@ export const useSettings = () => {
     }
   };
 
-  // Load settings on mount - only once
+  // Load settings on mount
   useEffect(() => {
     loadSettings();
   }, [user]);

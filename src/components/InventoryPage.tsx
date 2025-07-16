@@ -53,9 +53,9 @@ const InventoryPage: React.FC = () => {
       const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
       
       const matchesStock = stockFilter === 'all' ||
-                          (stockFilter === 'low' && product.current_stock <= product.low_stock_threshold) ||
-                          (stockFilter === 'out' && product.current_stock === 0) ||
-                          (stockFilter === 'in' && product.current_stock > 0);
+                          (stockFilter === 'low' && product.currentStock <= product.lowStockThreshold) ||
+                          (stockFilter === 'out' && product.currentStock === 0) ||
+                          (stockFilter === 'in' && product.currentStock > 0);
       
       return matchesSearch && matchesCategory && matchesStock;
     });
@@ -63,9 +63,9 @@ const InventoryPage: React.FC = () => {
 
   // Statistics
   const totalProducts = products.length;
-  const lowStockCount = products.filter(p => p.current_stock <= p.low_stock_threshold && p.current_stock > 0).length;
-  const outOfStockCount = products.filter(p => p.current_stock === 0).length;
-  const totalValue = products.reduce((sum, p) => sum + (p.selling_price * p.current_stock), 0);
+  const lowStockCount = products.filter(p => p.currentStock <= p.lowStockThreshold && p.currentStock > 0).length;
+  const outOfStockCount = products.filter(p => p.currentStock === 0).length;
+  const totalValue = products.reduce((sum, p) => sum + (p.sellingPrice * p.currentStock), 0);
 
   // Handle actions
   const handleEdit = (product: Product) => {
@@ -94,7 +94,7 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  const handleAddProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await createProduct(productData);
       setShowAddModal(false);

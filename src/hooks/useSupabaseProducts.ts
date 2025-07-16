@@ -1,176 +1,343 @@
 
-import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
-import { supabase } from '../integrations/supabase/client';
+import { useToast } from './use-toast';
+import { useOfflineFirstSupabase } from './useOfflineFirstSupabase';
 import { Product } from '../types';
+import { useState, useEffect } from 'react';
 
 export const useSupabaseProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  const fetchProducts = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
+  // Transform functions for field mapping
+  const transformToLocal = (product: any): Product => {
+    if (!product) {
+      console.warn('Received null/undefined product in transformToLocal');
+      return {
+        id: '',
+        name: '',
+        category: '',
+        costPrice: 0,
+        sellingPrice: 0,
+        currentStock: 0,
+        lowStockThreshold: 10,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    return {
+      id: product.id || '',
+      name: product.name || '',
+      category: product.category || '',
+      costPrice: Number(product.cost_price || product.costPrice || 0),
+      sellingPrice: Number(product.selling_price || product.sellingPrice || 0),
+      currentStock: Number(product.current_stock || product.currentStock || 0),
+      lowStockThreshold: Number(product.low_stock_threshold || product.lowStockThreshold || 10),
+      createdAt: product.created_at || product.createdAt || new Date().toISOString(),
+      updatedAt: product.updated_at || product.updatedAt || new Date().toISOString(),
+    };
+  };
 
-      const { data, error: fetchError } = await supabase
+  const transformFromLocal = (product: Product): any => ({
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    cost_price: Number(product.costPrice || 0),
+    selling_price: Number(product.sellingPrice || 0),
+    current_stock: Number(product.currentStock || 0),
+    low_stock_threshold: Number(product.lowStockThreshold || 10),
+    created_at: product.createdAt,
+    updated_at: product.updatedAt,
+  });
+
+  const loadFromSupabase = async () => {
+    if (!user) {
+      console.log('[useSupabaseProducts] No user authenticated');
+      return [];
+    }
+    
+    console.log('[useSupabaseProducts] Loading products from Supabase...');
+    
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (fetchError) throw fetchError;
+      if (error) {
+        console.error('[useSupabaseProducts] Supabase error:', error);
+        throw new Error(`Failed to load products: ${error.message}`);
+      }
 
-      setProducts(data || []);
-    } catch (err) {
-      console.error('Error fetching products:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch products');
-    } finally {
-      setLoading(false);
+      if (!data) {
+        console.log('[useSupabaseProducts] No data returned from Supabase');
+        return [];
+      }
+
+      console.log('[useSupabaseProducts] Loaded products from Supabase:', data.length);
+      return data.map(transformToLocal).filter(product => product.id); // Filter out invalid products
+    } catch (error) {
+      console.error('[useSupabaseProducts] Load error:', error);
+      throw error;
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
+  const {
+    data: products,
+    loading,
+    error,
+    refresh: refreshProducts,
+    isOnline,
+    lastSyncTime,
+    testOffline
+  } = useOfflineFirstSupabase<Product>({
+    cacheKey: 'products',
+    tableName: 'products',
+    loadFromSupabase,
+    transformToLocal,
+    transformFromLocal
+  });
 
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [user]);
-
-  const createProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!user) throw new Error('User not authenticated');
+  // Create product with offline support
+  const createProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) {
+      throw new Error('No user authenticated');
+    }
 
     try {
+      console.log('[useSupabaseProducts] Creating product:', productData);
+
+      if (!isOnline) {
+        toast({
+          title: "Offline Mode",
+          description: "Product will be created when connection is restored",
+          variant: "default",
+        });
+        throw new Error('Cannot create product while offline');
+      }
+
+      const { supabase } = await import('@/integrations/supabase/client');
+
       const { data, error } = await supabase
         .from('products')
-        .insert([{
-          ...productData,
+        .insert({
           user_id: user.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
+          name: productData.name,
+          category: productData.category,
+          cost_price: productData.costPrice,
+          selling_price: productData.sellingPrice,
+          current_stock: productData.currentStock || 0,
+          low_stock_threshold: productData.lowStockThreshold || 10,
+        })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useSupabaseProducts] Create error:', error);
+        throw new Error(`Failed to create product: ${error.message}`);
+      }
 
-      setProducts(prev => [data, ...prev]);
-      return data;
-    } catch (err) {
-      console.error('Error creating product:', err);
-      throw err;
+      console.log('[useSupabaseProducts] Product created successfully:', data);
+      const newProduct = transformToLocal(data);
+      
+      // Refresh data to sync with cache
+      await refreshProducts();
+      
+      toast({
+        title: "Success",
+        description: "Product created successfully",
+      });
+
+      return newProduct;
+    } catch (error) {
+      console.error('[useSupabaseProducts] Create product error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Error",
+        description: `Failed to create product: ${errorMessage}`,
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
+  // Update product with offline support
   const updateProduct = async (id: string, updates: Partial<Product>) => {
-    if (!user) throw new Error('User not authenticated');
+    if (!user) {
+      throw new Error('No user authenticated');
+    }
 
     try {
+      console.log('[useSupabaseProducts] Updating product:', id, updates);
+
+      if (!isOnline) {
+        toast({
+          title: "Offline Mode",
+          description: "Changes will sync when connection is restored",
+          variant: "default",
+        });
+        throw new Error('Cannot update product while offline');
+      }
+
+      const { supabase } = await import('@/integrations/supabase/client');
+
       const { data, error } = await supabase
         .from('products')
         .update({
-          ...updates,
-          updated_at: new Date().toISOString()
+          name: updates.name,
+          category: updates.category,
+          cost_price: updates.costPrice,
+          selling_price: updates.sellingPrice,
+          current_stock: updates.currentStock,
+          low_stock_threshold: updates.lowStockThreshold,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useSupabaseProducts] Update error:', error);
+        throw new Error(`Failed to update product: ${error.message}`);
+      }
 
-      setProducts(prev => prev.map(product => 
-        product.id === id ? { ...product, ...data } : product
-      ));
+      console.log('[useSupabaseProducts] Product updated successfully:', data);
+      const updatedProduct = transformToLocal(data);
+      
+      // Refresh data to sync with cache
+      await refreshProducts();
+      
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
 
-      return data;
-    } catch (err) {
-      console.error('Error updating product:', err);
-      throw err;
+      return updatedProduct;
+    } catch (error) {
+      console.error('[useSupabaseProducts] Update product error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Error",
+        description: `Failed to update product: ${errorMessage}`,
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
+  // Delete product with offline support
   const deleteProduct = async (id: string) => {
-    if (!user) throw new Error('User not authenticated');
+    if (!user) {
+      throw new Error('No user authenticated');
+    }
 
     try {
+      console.log('[useSupabaseProducts] Deleting product:', id);
+
+      if (!isOnline) {
+        toast({
+          title: "Offline Mode",
+          description: "Cannot delete product while offline",
+          variant: "destructive",
+        });
+        throw new Error('Cannot delete product while offline');
+      }
+
+      const { supabase } = await import('@/integrations/supabase/client');
+
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useSupabaseProducts] Delete error:', error);
+        throw new Error(`Failed to delete product: ${error.message}`);
+      }
 
-      setProducts(prev => prev.filter(product => product.id !== id));
-    } catch (err) {
-      console.error('Error deleting product:', err);
-      throw err;
+      console.log('[useSupabaseProducts] Product deleted successfully');
+      
+      // Refresh data to sync with cache
+      await refreshProducts();
+      
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+    } catch (error) {
+      console.error('[useSupabaseProducts] Delete product error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Error",
+        description: `Failed to delete product: ${errorMessage}`,
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
-  const addStock = async (id: string, quantity: number, buyingPrice: number, supplier?: string) => {
-    if (!user) throw new Error('User not authenticated');
+  // Add stock function with offline support
+  const addStock = async (productId: string, quantity: number, buyingPrice: number, supplier?: string) => {
+    if (!user) {
+      throw new Error('No user authenticated');
+    }
 
     try {
-      const product = products.find(p => p.id === id);
-      if (!product) throw new Error('Product not found');
+      console.log('[useSupabaseProducts] Adding stock:', { productId, quantity, buyingPrice, supplier });
 
-      const newStock = product.current_stock + quantity;
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        throw new Error('Product not found');
+      }
 
-      const { data, error } = await supabase
-        .from('products')
-        .update({
-          current_stock: newStock,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
+      if (!isOnline) {
+        toast({
+          title: "Offline Mode",
+          description: "Stock changes will sync when connection is restored",
+          variant: "default",
+        });
+        throw new Error('Cannot add stock while offline');
+      }
 
-      if (error) throw error;
+      // Update the product stock
+      await updateProduct(productId, {
+        currentStock: product.currentStock + quantity,
+        costPrice: buyingPrice, // Update cost price with latest buying price
+      });
 
-      setProducts(prev => prev.map(p => 
-        p.id === id ? { ...p, current_stock: newStock } : p
-      ));
-
-      return data;
-    } catch (err) {
-      console.error('Error adding stock:', err);
-      throw err;
+      toast({
+        title: "Stock Added Successfully",
+        description: `Added ${quantity} units of ${product.name}`,
+      });
+    } catch (error) {
+      console.error('[useSupabaseProducts] Add stock error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Error",
+        description: `Failed to add stock: ${errorMessage}`,
+        variant: "destructive",
+      });
+      throw error;
     }
-  };
-
-  const refreshProducts = async () => {
-    await fetchProducts();
   };
 
   return {
     products,
     loading,
     error,
-    isOnline,
     createProduct,
     updateProduct,
     deleteProduct,
     addStock,
-    refreshProducts
+    refreshProducts,
+    isOnline,
+    lastSyncTime,
+    testOffline
   };
 };

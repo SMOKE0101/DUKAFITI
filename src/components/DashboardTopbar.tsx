@@ -1,282 +1,376 @@
 
-import React, { useState } from 'react';
-import { Package, TrendingUp, Users, AlertTriangle, DollarSign, Zap } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Search, 
+  Bell, 
+  User, 
+  Settings, 
+  FileText, 
+  LogOut,
+  Package,
+  Users,
+  ShoppingCart,
+  X
+} from 'lucide-react';
+import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { formatCurrency } from '../utils/currency';
-import { useOfflineAwareData } from '../hooks/useOfflineAwareData';
-import { Product, Customer, Sale } from '../types';
+import { useTheme } from 'next-themes';
+import DukafitiBrand from './branding/DukafitiBrand';
+
+interface SearchResult {
+  id: string;
+  type: 'product' | 'customer' | 'sale';
+  title: string;
+  subtitle: string;
+  route: string;
+}
 
 const DashboardTopbar = () => {
-  const { 
-    products = [], 
-    customers = [], 
-    sales = [],
-    loading,
-    error 
-  } = useOfflineAwareData();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Calculate metrics
-  const lowStockProducts = products.filter(
-    product => product.current_stock <= product.low_stock_threshold
-  );
-  
-  const totalStock = products.reduce((total, product) => {
-    return total + (product.current_stock || 0);
-  }, 0);
+  const navigate = useNavigate();
+  const { theme, resolvedTheme } = useTheme();
+  const searchRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
-  const totalInventoryValue = products.reduce((total, product) => {
-    return total + (product.current_stock * product.selling_price);
-  }, 0);
+  const { products } = useSupabaseProducts();
+  const { customers } = useSupabaseCustomers();
+  const { sales } = useSupabaseSales();
 
-  const customersWithDebt = customers.filter(
-    customer => customer.outstanding_debt > 0
-  );
+  // Enhanced low stock alerts - handle both field name formats and exclude unspecified stock
+  const lowStockAlerts = products.filter(p => {
+    console.log(`Product: ${p.name}, Stock: ${p.currentStock}, Threshold: ${p.lowStockThreshold}`);
+    
+    // Handle different possible field names and ensure proper comparison
+    const currentStock = p.currentStock ?? 0;
+    const threshold = p.lowStockThreshold ?? 10;
+    
+    // Only consider items with specified stock (not -1 which means unspecified)
+    const isLowStock = currentStock !== -1 && currentStock <= threshold;
+    
+    if (isLowStock) {
+      console.log(`LOW STOCK DETECTED: ${p.name} - Stock: ${currentStock}, Threshold: ${threshold}`);
+    }
+    
+    return isLowStock;
+  });
+  const unreadNotifications = lowStockAlerts.length;
 
-  const totalOutstandingDebt = customersWithDebt.reduce(
-    (total, customer) => total + customer.outstanding_debt,
-    0
-  );
+  // Global search with debounce
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (searchTerm.length >= 2) {
+        performSearch();
+      } else {
+        setSearchResults([]);
+        setShowSearchDropdown(false);
+      }
+    }, 300);
 
-  const today = new Date().toISOString().split('T')[0];
-  const todaySales = sales.filter(sale => 
-    sale.timestamp?.split('T')[0] === today
-  );
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, products, customers, sales]);
 
-  const todayRevenue = todaySales.reduce(
-    (total, sale) => total + sale.total_amount,
-    0
-  );
+  const performSearch = () => {
+    const results: SearchResult[] = [];
+    const term = searchTerm.toLowerCase();
 
-  const todayProfit = todaySales.reduce(
-    (total, sale) => total + (sale.profit || 0),
-    0
-  );
+    // Search products
+    products
+      .filter(p => p.name.toLowerCase().includes(term))
+      .slice(0, 3)
+      .forEach(product => {
+        const currentStock = product.currentStock ?? 0;
+        results.push({
+          id: product.id,
+          type: 'product',
+          title: product.name,
+          subtitle: `${formatCurrency(product.sellingPrice)} • Stock: ${currentStock === -1 ? 'Unspecified' : currentStock}`,
+          route: '/app/inventory'
+        });
+      });
 
-  if (error) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-600">Error loading dashboard data: {error}</p>
-      </div>
-    );
-  }
+    // Search customers
+    customers
+      .filter(c => c.name.toLowerCase().includes(term) || c.phone.includes(term))
+      .slice(0, 3)
+      .forEach(customer => {
+        results.push({
+          id: customer.id,
+          type: 'customer',
+          title: customer.name,
+          subtitle: `${customer.phone} • Debt: ${formatCurrency(customer.outstandingDebt || 0)}`,
+          route: '/app/customers'
+        });
+      });
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(8)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
+    setSearchResults(results);
+    setShowSearchDropdown(results.length > 0);
+  };
+
+  const handleSearchSelect = (result: SearchResult) => {
+    navigate(result.route);
+    setSearchTerm('');
+    setShowSearchDropdown(false);
+  };
+
+  const handleLogout = () => {
+    // Add logout logic here
+    console.log('Logging out...');
+    setShowLogoutConfirm(false);
+    navigate('/');
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'product': return <Package className="w-4 h-4" />;
+      case 'customer': return <Users className="w-4 h-4" />;
+      case 'sale': return <ShoppingCart className="w-4 h-4" />;
+      default: return null;
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Products */}
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-600 text-sm font-medium">Total Products</p>
-                <p className="text-2xl font-bold text-blue-700">{products.length}</p>
-                <p className="text-xs text-blue-500 mt-1">Total Stock: {totalStock.toLocaleString()}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
+    <>
+      <header className="sticky top-0 z-50 h-16 border-b shadow-sm bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="flex items-center justify-between px-6 h-full">
+          {/* Left - Enhanced DUKAFITI Brand Section */}
+          <div className="flex items-center gap-4">
+            <DukafitiBrand 
+              size="md"
+              layout="horizontal"
+              textColor="text-white"
+              className="transition-all duration-300"
+            />
+          </div>
 
-        {/* Low Stock Alert */}
-        <Card className={`${
-          lowStockProducts.length > 0 
-            ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' 
-            : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
-        } hover:shadow-md transition-shadow`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`${
-                  lowStockProducts.length > 0 ? 'text-red-600' : 'text-green-600'
-                } text-sm font-medium`}>
-                  Low Stock Products
-                </p>
-                <p className={`text-2xl font-bold ${
-                  lowStockProducts.length > 0 ? 'text-red-700' : 'text-green-700'
-                }`}>
-                  {lowStockProducts.length}
-                </p>
-                {lowStockProducts.length > 0 && (
-                  <p className="text-xs text-red-500 mt-1">Needs restocking</p>
-                )}
-              </div>
-              <AlertTriangle className={`h-8 w-8 ${
-                lowStockProducts.length > 0 ? 'text-red-600' : 'text-green-600'
-              }`} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Customers */}
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-600 text-sm font-medium">Total Customers</p>
-                <p className="text-2xl font-bold text-purple-700">{customers.length}</p>
-                <p className="text-xs text-purple-500 mt-1">
-                  With Debt: {customersWithDebt.length}
-                </p>
-              </div>
-              <Users className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Outstanding Debt */}
-        <Card className={`${
-          totalOutstandingDebt > 0 
-            ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200' 
-            : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
-        } hover:shadow-md transition-shadow`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`${
-                  totalOutstandingDebt > 0 ? 'text-yellow-600' : 'text-green-600'
-                } text-sm font-medium`}>
-                  Outstanding Debt
-                </p>
-                <p className={`text-2xl font-bold ${
-                  totalOutstandingDebt > 0 ? 'text-yellow-700' : 'text-green-700'
-                }`}>
-                  {formatCurrency(totalOutstandingDebt)}
-                </p>
-                <p className={`text-xs mt-1 ${
-                  totalOutstandingDebt > 0 ? 'text-yellow-500' : 'text-green-500'
-                }`}>
-                  {customersWithDebt.length} customers
-                </p>
-              </div>
-              <DollarSign className={`h-8 w-8 ${
-                totalOutstandingDebt > 0 ? 'text-yellow-600' : 'text-green-600'
-              }`} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Today's Revenue */}
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-emerald-600 text-sm font-medium">Today's Revenue</p>
-                <p className="text-2xl font-bold text-emerald-700">{formatCurrency(todayRevenue)}</p>
-                <p className="text-xs text-emerald-500 mt-1">{todaySales.length} sales</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-emerald-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Today's Profit */}
-        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-indigo-600 text-sm font-medium">Today's Profit</p>
-                <p className="text-2xl font-bold text-indigo-700">{formatCurrency(todayProfit)}</p>
-                <p className="text-xs text-indigo-500 mt-1">Net earnings</p>
-              </div>
-              <Zap className="h-8 w-8 text-indigo-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Inventory Value */}
-        <Card className="bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-teal-600 text-sm font-medium">Inventory Value</p>
-                <p className="text-2xl font-bold text-teal-700">{formatCurrency(totalInventoryValue)}</p>
-                <p className="text-xs text-teal-500 mt-1">At selling price</p>
-              </div>
-              <Package className="h-8 w-8 text-teal-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* System Status */}
-        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">System Status</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">Online</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">All systems operational</p>
-              </div>
-              <div className="flex flex-col gap-1">
-                <Badge variant="secondary" className="text-xs">
-                  Active
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      {(lowStockProducts.length > 0 || customersWithDebt.length > 0) && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions Needed</h3>
-          <div className="space-y-3">
-            {lowStockProducts.length > 0 && (
-              <div className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div>
-                  <p className="font-medium text-red-800">
-                    {lowStockProducts.length} products need restocking
-                  </p>
-                  <p className="text-sm text-red-600">
-                    Low stock products: {lowStockProducts.slice(0, 2).map(p => p.name).join(', ')}
-                    {lowStockProducts.length > 2 && ` and ${lowStockProducts.length - 2} more`}
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">
-                  View All
+          {/* Center - Global Search */}
+          <div className="flex-1 max-w-md mx-8 relative" ref={searchRef}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search products, customers, orders…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
+                className="pl-10 pr-10 bg-white/90 border-white/20 text-gray-900 placeholder:text-gray-500"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setShowSearchDropdown(false);
+                  }}
+                >
+                  <X className="w-4 h-4" />
                 </Button>
-              </div>
-            )}
-            
-            {customersWithDebt.length > 0 && (
-              <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div>
-                  <p className="font-medium text-yellow-800">
-                    {formatCurrency(totalOutstandingDebt)} in outstanding debt
-                  </p>
-                  <p className="text-sm text-yellow-600">
-                    {customersWithDebt.length} customers have pending payments
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" className="border-yellow-300 text-yellow-700 hover:bg-yellow-100">
-                  Follow Up
-                </Button>
+              )}
+            </div>
+
+            {/* Search Dropdown */}
+            {showSearchDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border z-50 max-h-80 overflow-y-auto">
+                {searchResults.map((result) => (
+                  <button
+                    key={`${result.type}-${result.id}`}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b last:border-b-0"
+                    onClick={() => handleSearchSelect(result)}
+                  >
+                    <div className="text-gray-500 dark:text-gray-400">
+                      {getTypeIcon(result.type)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {result.title}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {result.subtitle}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
           </div>
+
+          {/* Right - Actions */}
+          <div className="flex items-center gap-3">
+            {/* Notifications */}
+            <div className="relative" ref={notificationsRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative text-white hover:bg-white/10"
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadNotifications > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-red-500 text-white flex items-center justify-center">
+                    {unreadNotifications}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border z-50 max-h-80 overflow-y-auto">
+                  <div className="p-4 border-b">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      Low Stock Alerts
+                    </h3>
+                  </div>
+                  {lowStockAlerts.length > 0 ? (
+                    <div className="p-2">
+                      {lowStockAlerts.map((product) => {
+                        const currentStock = product.currentStock ?? 0;
+                        const threshold = product.lowStockThreshold ?? 10;
+                        
+                        return (
+                          <div key={product.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {product.name}
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  Stock: {currentStock}, Threshold: {threshold}
+                                </div>
+                              </div>
+                              <Badge 
+                                variant={currentStock <= 0 ? "destructive" : "secondary"}
+                                className="text-xs"
+                              >
+                                {currentStock <= 0 ? 'Out of Stock' : 'Low Stock'}
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                      All stocked up! 🎉
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Profile Menu */}
+            <div className="relative" ref={profileRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/10"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+              >
+                <User className="w-5 h-5" />
+              </Button>
+
+              {/* Profile Dropdown */}
+              {showProfileMenu && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border z-50">
+                  <div className="p-2">
+                    <button
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                      onClick={() => {
+                        navigate('/app/settings');
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </button>
+                    <button
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                      onClick={() => {
+                        navigate('/app/reports');
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      <FileText className="w-4 h-4" />
+                      Reports
+                    </button>
+                    <button
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md flex items-center gap-2 text-red-600 dark:text-red-400"
+                      onClick={() => {
+                        setShowLogoutConfirm(true);
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+              Confirm Logout
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to exit DUKAFITI?
+            </p>
+            
+            <div className="flex gap-3">
+              <Button
+                onClick={handleLogout}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                Yes, Logout
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

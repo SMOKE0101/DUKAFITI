@@ -63,7 +63,7 @@ const OptimizedModernSalesPage = () => {
   }, []);
 
   const total = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.selling_price * item.quantity, 0);
+    return cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   }, [cart]);
 
   const filteredProducts = useMemo(() => {
@@ -75,7 +75,7 @@ const OptimizedModernSalesPage = () => {
   }, [products, searchTerm]);
 
   const addToCart = (product: Product) => {
-    if (product.current_stock === 0) {
+    if (product.currentStock === 0) {
       const shouldAdd = window.confirm('This product is out of stock. Do you want to add it anyway?');
       if (!shouldAdd) return;
     }
@@ -166,10 +166,10 @@ const OptimizedModernSalesPage = () => {
         product_id: item.id,
         product_name: item.name,
         quantity: item.quantity,
-        selling_price: item.selling_price,
-        cost_price: item.cost_price,
-        profit: (item.selling_price - item.cost_price) * item.quantity,
-        total_amount: item.selling_price * item.quantity,
+        selling_price: item.sellingPrice,
+        cost_price: item.costPrice,
+        profit: (item.sellingPrice - item.costPrice) * item.quantity,
+        total_amount: item.sellingPrice * item.quantity,
         customer_id: customerId,
         customer_name: customer?.name || null,
         payment_method: paymentMethod,
@@ -187,18 +187,18 @@ const OptimizedModernSalesPage = () => {
       }
 
       if (paymentMethod === 'debt' && customer) {
-        const currentDebt = customer.outstanding_debt || 0;
+        const currentDebt = customer.outstandingDebt || 0;
         await updateCustomer(customer.id, {
-          outstanding_debt: currentDebt + (item.selling_price * item.quantity),
-          total_purchases: (customer.total_purchases || 0) + (item.selling_price * item.quantity),
-          last_purchase_date: new Date().toISOString(),
+          outstandingDebt: currentDebt + (item.sellingPrice * item.quantity),
+          totalPurchases: (customer.totalPurchases || 0) + (item.sellingPrice * item.quantity),
+          lastPurchaseDate: new Date().toISOString(),
         });
       }
 
       const { error: stockError } = await supabase
         .from('products')
         .update({
-          current_stock: Math.max(0, item.current_stock - item.quantity)
+          current_stock: Math.max(0, item.currentStock - item.quantity)
         })
         .eq('id', item.id);
 
@@ -217,10 +217,10 @@ const OptimizedModernSalesPage = () => {
         product_id: item.id,
         product_name: item.name,
         quantity: item.quantity,
-        selling_price: item.selling_price,
-        cost_price: item.cost_price,
-        profit: (item.selling_price - item.cost_price) * item.quantity,
-        total_amount: item.selling_price * item.quantity,
+        selling_price: item.sellingPrice,
+        cost_price: item.costPrice,
+        profit: (item.sellingPrice - item.costPrice) * item.quantity,
+        total_amount: item.sellingPrice * item.quantity,
         customer_id: customerId,
         customer_name: customer?.name || null,
         payment_method: paymentMethod,
@@ -256,6 +256,7 @@ const OptimizedModernSalesPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Mobile-Optimized Header */}
       <header className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-40 shadow-lg">
         <div className="mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
@@ -318,12 +319,14 @@ const OptimizedModernSalesPage = () => {
       </header>
 
       <main className="flex-1 flex">
+        {/* Left Panel - Product Search & Quick Picks - Mobile Optimized */}
         <div className={`${
           isMobile 
             ? activePanel === 'search' ? 'flex' : 'hidden'
             : 'flex'
         } flex-col ${isMobile ? 'w-full' : 'w-2/3 border-r border-gray-200/60 dark:border-slate-700/60'}`}>
           
+          {/* Search Section - Enhanced Mobile */}
           <div className="p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 border-b border-gray-200/60 dark:border-slate-700/60">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
@@ -333,7 +336,7 @@ const OptimizedModernSalesPage = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-700 border-2 border-purple-200 dark:border-purple-600/30 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
-                style={{ fontSize: '16px' }}
+                style={{ fontSize: '16px' }} // Prevent zoom on iOS
               />
               {searchTerm && (
                 <button
@@ -346,6 +349,7 @@ const OptimizedModernSalesPage = () => {
             </div>
           </div>
 
+          {/* Quick Select Section - Touch-Optimized */}
           <div className="p-3 sm:p-4 bg-white/30 dark:bg-slate-800/30 border-b border-gray-200/40 dark:border-slate-700/40">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">⚡ Quick Picks</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -359,16 +363,17 @@ const OptimizedModernSalesPage = () => {
                     {product.name}
                   </div>
                   <div className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                    {formatCurrency(product.selling_price)}
+                    {formatCurrency(product.sellingPrice)}
                   </div>
-                  <div className={`text-xs mt-1 ${getStockColorClass(product.current_stock)}`}>
-                    {getStockDisplayText(product.current_stock)}
+                  <div className={`text-xs mt-1 ${getStockColorClass(product.currentStock)}`}>
+                    {getStockDisplayText(product.currentStock)}
                   </div>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Product Grid - Mobile Optimized */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-20">
               {filteredProducts.length === 0 ? (
@@ -400,10 +405,10 @@ const OptimizedModernSalesPage = () => {
                     <div className="flex justify-between items-end">
                       <div>
                         <div className="text-purple-600 dark:text-purple-400 font-bold text-lg">
-                          {formatCurrency(product.selling_price)}
+                          {formatCurrency(product.sellingPrice)}
                         </div>
-                        <div className={`text-xs ${getStockColorClass(product.current_stock)}`}>
-                          Stock: {getStockDisplayText(product.current_stock)}
+                        <div className={`text-xs ${getStockColorClass(product.currentStock)}`}>
+                          Stock: {getStockDisplayText(product.currentStock)}
                         </div>
                       </div>
                     </div>
@@ -414,12 +419,14 @@ const OptimizedModernSalesPage = () => {
           </div>
         </div>
 
+        {/* Right Panel - Cart & Checkout - Mobile Optimized */}
         <div className={`${
           isMobile 
             ? activePanel === 'cart' ? 'flex' : 'hidden'
             : 'flex'
         } flex-col ${isMobile ? 'w-full' : 'w-1/3'} bg-white/60 dark:bg-slate-800/60`}>
           
+          {/* Cart Header - Compact on Mobile */}
           <div className="p-3 sm:p-4 border-b border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
@@ -440,6 +447,7 @@ const OptimizedModernSalesPage = () => {
             </div>
           </div>
 
+          {/* Cart Items - Touch-Optimized */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
             {cart.length === 0 ? (
               <div className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -459,7 +467,7 @@ const OptimizedModernSalesPage = () => {
                         {item.name}
                       </h3>
                       <p className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                        {formatCurrency(item.selling_price)}
+                        {formatCurrency(item.sellingPrice)}
                       </p>
                     </div>
                     <button
@@ -492,7 +500,7 @@ const OptimizedModernSalesPage = () => {
                     <div className="text-right">
                       <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Subtotal</div>
                       <div className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                        {formatCurrency(item.selling_price * item.quantity)}
+                        {formatCurrency(item.sellingPrice * item.quantity)}
                       </div>
                     </div>
                   </div>
@@ -501,8 +509,11 @@ const OptimizedModernSalesPage = () => {
             )}
           </div>
 
+          {/* Checkout Section - Mobile Optimized */}
           {cart.length > 0 && (
             <div className="p-3 sm:p-4 border-t border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 space-y-4 pb-safe">
+              
+              {/* Customer Selection - Touch-Friendly */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                   Customer (Optional)
@@ -512,7 +523,7 @@ const OptimizedModernSalesPage = () => {
                     value={selectedCustomerId || ''}
                     onChange={(e) => setSelectedCustomerId(e.target.value || null)}
                     className="flex-1 px-3 py-3 bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white"
-                    style={{ fontSize: '16px' }}
+                    style={{ fontSize: '16px' }} // Prevent zoom on iOS
                   >
                     <option value="">Select customer...</option>
                     {customers.map((customer) => (
@@ -531,6 +542,7 @@ const OptimizedModernSalesPage = () => {
                 </div>
               </div>
 
+              {/* Payment Method Selection - Touch-Optimized */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                   Payment Method
@@ -552,6 +564,7 @@ const OptimizedModernSalesPage = () => {
                 </div>
               </div>
 
+              {/* Debt-specific validation */}
               {paymentMethod === 'debt' && !selectedCustomerId && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3">
                   <p className="text-yellow-700 dark:text-yellow-300 text-sm font-bold">
@@ -560,6 +573,7 @@ const OptimizedModernSalesPage = () => {
                 </div>
               )}
 
+              {/* Quick Action Buttons - Mobile Stack */}
               <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
                 <button
                   onClick={() => setShowAddCustomer(true)}
@@ -577,6 +591,7 @@ const OptimizedModernSalesPage = () => {
                 </button>
               </div>
 
+              {/* Checkout Button - Enhanced for Mobile */}
               <button
                 onClick={handleCheckout}
                 disabled={
@@ -600,6 +615,7 @@ const OptimizedModernSalesPage = () => {
         </div>
       </main>
 
+      {/* Modals */}
       {showAddCustomer && (
         <AddCustomerModal
           open={showAddCustomer}

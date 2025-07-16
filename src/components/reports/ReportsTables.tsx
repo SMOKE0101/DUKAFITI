@@ -1,10 +1,13 @@
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download } from 'lucide-react';
-import { Sale } from '../../types';
+import { Search, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
+import { Sale } from '../../types';
 
 interface ReportsTablesProps {
   sales: Sale[];
@@ -12,6 +15,12 @@ interface ReportsTablesProps {
 }
 
 const ReportsTables: React.FC<ReportsTablesProps> = ({ sales, dateRange }) => {
+  const [salesSearchTerm, setSalesSearchTerm] = useState('');
+  const [paymentsSearchTerm, setPaymentsSearchTerm] = useState('');
+  const [salesCurrentPage, setSalesCurrentPage] = useState(1);
+  const [paymentsCurrentPage, setPaymentsCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const saleDate = new Date(sale.timestamp).toISOString().split('T')[0];
@@ -19,100 +28,239 @@ const ReportsTables: React.FC<ReportsTablesProps> = ({ sales, dateRange }) => {
     });
   }, [sales, dateRange]);
 
-  const recentSales = useMemo(() => {
+  // Sales Report Table Data
+  const salesTableData = useMemo(() => {
     return filteredSales
+      .filter(sale => 
+        sale.productName.toLowerCase().includes(salesSearchTerm.toLowerCase()) ||
+        (sale.customerName && sale.customerName.toLowerCase().includes(salesSearchTerm.toLowerCase()))
+      )
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 10)
-      .map(sale => ({
-        id: sale.id,
-        product: sale.product_name,
-        customer: sale.customer_name || 'Walk-in Customer',
-        amount: sale.total_amount,
-        payment: sale.payment_method,
-        date: new Date(sale.timestamp).toLocaleDateString()
-      }));
-  }, [filteredSales]);
+      .slice((salesCurrentPage - 1) * itemsPerPage, salesCurrentPage * itemsPerPage);
+  }, [filteredSales, salesSearchTerm, salesCurrentPage]);
 
-  const paymentSummary = useMemo(() => {
-    const summary = filteredSales.reduce((acc, sale) => {
-      const method = sale.payment_method;
-      acc[method] = (acc[method] || 0) + sale.total_amount;
-      return acc;
-    }, {} as Record<string, number>);
+  // Payments Report Table Data
+  const paymentsTableData = useMemo(() => {
+    return filteredSales
+      .filter(sale => sale.customerName) // Only sales with customers
+      .filter(sale => 
+        (sale.customerName && sale.customerName.toLowerCase().includes(paymentsSearchTerm.toLowerCase()))
+      )
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice((paymentsCurrentPage - 1) * itemsPerPage, paymentsCurrentPage * itemsPerPage);
+  }, [filteredSales, paymentsSearchTerm, paymentsCurrentPage]);
 
-    return Object.entries(summary).map(([method, amount]) => ({
-      method: method.charAt(0).toUpperCase() + method.slice(1),
-      amount,
-      count: filteredSales.filter(sale => sale.payment_method === method).length
+  const salesTotalPages = Math.ceil(filteredSales.length / itemsPerPage);
+  const paymentsTotalPages = Math.ceil(paymentsTableData.length / itemsPerPage);
+
+  const handleExportSalesCSV = () => {
+    const csvData = salesTableData.map(sale => ({
+      'Product Name': sale.productName,
+      'Quantity Sold': sale.quantity,
+      'Revenue': sale.total,
+      'Customer': sale.customerName || 'Walk-in',
+      'Date': new Date(sale.timestamp).toLocaleDateString()
     }));
-  }, [filteredSales]);
+    
+    const headers = Object.keys(csvData[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => headers.map(header => row[header]).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sales-report-${dateRange.from}-to-${dateRange.to}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportPaymentsCSV = () => {
+    const csvData = paymentsTableData.map(sale => ({
+      'Customer': sale.customerName,
+      'Amount Paid': sale.total,
+      'Payment Method': sale.paymentMethod,
+      'Date': new Date(sale.timestamp).toLocaleDateString()
+    }));
+    
+    const headers = Object.keys(csvData[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => headers.map(header => row[header]).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payments-report-${dateRange.from}-to-${dateRange.to}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Recent Sales Table */}
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* Sales Report Table */}
       <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Recent Sales</CardTitle>
-          <Download className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" />
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Sales Report</CardTitle>
+            <Button onClick={handleExportSalesCSV} size="sm" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export CSV
+            </Button>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products or customers..."
+              value={salesSearchTerm}
+              onChange={(e) => setSalesSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 text-sm font-medium text-gray-500">Product</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-500">Customer</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-500">Amount</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-500">Payment</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-500">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentSales.map((sale, index) => (
-                  <tr key={sale.id} className={index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700/30' : ''}>
-                    <td className="py-3 text-sm text-gray-900 dark:text-white">{sale.product}</td>
-                    <td className="py-3 text-sm text-gray-900 dark:text-white">{sale.customer}</td>
-                    <td className="py-3 text-sm font-medium text-green-600">
-                      {formatCurrency(sale.amount)}
-                    </td>
-                    <td className="py-3">
-                      <Badge variant={sale.payment === 'cash' ? 'default' : 'secondary'}>
-                        {sale.payment}
-                      </Badge>
-                    </td>
-                    <td className="py-3 text-sm text-gray-500">{sale.date}</td>
-                  </tr>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead>Qty Sold</TableHead>
+                  <TableHead>Revenue</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {salesTableData.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell className="font-medium">{sale.productName}</TableCell>
+                    <TableCell>{sale.quantity}</TableCell>
+                    <TableCell className="font-semibold text-green-600">
+                      {formatCurrency(sale.total)}
+                    </TableCell>
+                    <TableCell>{sale.customerName || 'Walk-in'}</TableCell>
+                    <TableCell>
+                      {new Date(sale.timestamp).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {(salesCurrentPage - 1) * itemsPerPage + 1} to {Math.min(salesCurrentPage * itemsPerPage, filteredSales.length)} of {filteredSales.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSalesCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={salesCurrentPage === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm">{salesCurrentPage} of {salesTotalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSalesCurrentPage(prev => Math.min(salesTotalPages, prev + 1))}
+                disabled={salesCurrentPage === salesTotalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Payment Summary Table */}
+      {/* Payments Report Table */}
       <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Payment Summary</CardTitle>
-          <Download className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" />
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Payments Report</CardTitle>
+            <Button onClick={handleExportPaymentsCSV} size="sm" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export CSV
+            </Button>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search customers..."
+              value={paymentsSearchTerm}
+              onChange={(e) => setPaymentsSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {paymentSummary.map((payment, index) => (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{payment.method}</p>
-                  <p className="text-sm text-gray-500">{payment.count} transactions</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(payment.amount)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {((payment.amount / filteredSales.reduce((sum, sale) => sum + sale.total_amount, 0)) * 100).toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Amount Paid</TableHead>
+                  <TableHead>Payment Method</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paymentsTableData.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell className="font-medium">{sale.customerName}</TableCell>
+                    <TableCell className="font-semibold text-green-600">
+                      {formatCurrency(sale.total)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          sale.paymentMethod === 'cash' ? 'default' :
+                          sale.paymentMethod === 'mpesa' ? 'secondary' : 'destructive'
+                        }
+                      >
+                        {sale.paymentMethod.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(sale.timestamp).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {(paymentsCurrentPage - 1) * itemsPerPage + 1} to {Math.min(paymentsCurrentPage * itemsPerPage, paymentsTableData.length)} of {paymentsTableData.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPaymentsCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={paymentsCurrentPage === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm">{paymentsCurrentPage} of {paymentsTotalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPaymentsCurrentPage(prev => Math.min(paymentsTotalPages, prev + 1))}
+                disabled={paymentsCurrentPage === paymentsTotalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

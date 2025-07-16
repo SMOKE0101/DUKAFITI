@@ -36,11 +36,11 @@ const RoughBlockyDashboard = () => {
 
   // Enhanced low stock calculation with better logging
   const lowStockItems = products.filter(product => {
-    console.log(`Product: ${product.name}, Stock: ${product.current_stock}, Threshold: ${product.low_stock_threshold}`);
+    console.log(`Product: ${product.name}, Stock: ${product.currentStock}, Threshold: ${product.lowStockThreshold}`);
     
     // Handle different possible field names and ensure proper comparison
-    const currentStock = product.current_stock ?? 0;
-    const threshold = product.low_stock_threshold ?? 10;
+    const currentStock = product.currentStock ?? 0;
+    const threshold = product.lowStockThreshold ?? 10;
     
     // Only consider items with specified stock (not -1 which means unspecified)
     const isLowStock = currentStock !== -1 && currentStock <= threshold;
@@ -56,7 +56,7 @@ const RoughBlockyDashboard = () => {
   console.log('Dashboard - Low stock count:', lowStockItems.length);
 
   // Calculate total sales amount
-  const totalSalesAmount = sales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+  const totalSalesAmount = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
 
   // Calculate profit
   const totalProfit = sales.reduce((sum, sale) => sum + (sale.profit || 0), 0);
@@ -159,8 +159,8 @@ const RoughBlockyDashboard = () => {
               </p>
               <div className="grid gap-2">
                 {lowStockItems.slice(0, 5).map((product) => {
-                  const currentStock = product.current_stock ?? 0;
-                  const threshold = product.low_stock_threshold ?? 10;
+                  const currentStock = product.currentStock ?? 0;
+                  const threshold = product.lowStockThreshold ?? 10;
                   
                   return (
                     <div key={product.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-700">
@@ -229,13 +229,13 @@ const RoughBlockyDashboard = () => {
                 {recentSales.map((sale) => (
                   <div key={sale.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">{sale.product_name}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{sale.productName}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Qty: {sale.quantity} • {sale.payment_method}
+                        Qty: {sale.quantity} • {sale.paymentMethod}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900 dark:text-white">{formatCurrency(sale.total_amount)}</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{formatCurrency(sale.total)}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {new Date(sale.timestamp || '').toLocaleDateString()}
                       </p>

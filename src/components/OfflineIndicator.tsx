@@ -20,43 +20,61 @@ import { useSupabaseSales } from '../hooks/useSupabaseSales';
 
 const OfflineIndicator: React.FC = () => {
   const { 
-    customers,
+    isOnline: customersOnline, 
+    lastSyncTime: customersSync, 
     loading: customersLoading,
-    error: customersError
+    error: customersError,
+    testOffline: testCustomersOffline 
   } = useSupabaseCustomers();
   
   const { 
-    products,
     isOnline: productsOnline, 
+    lastSyncTime: productsSync, 
     loading: productsLoading,
-    error: productsError
+    error: productsError,
+    testOffline: testProductsOffline 
   } = useSupabaseProducts();
   
   const { 
-    sales,
+    isOnline: salesOnline, 
+    lastSyncTime: salesSync, 
     loading: salesLoading,
-    error: salesError
+    error: salesError,
+    testOffline: testSalesOffline 
   } = useSupabaseSales();
 
-  // Mock online status for hooks that don't provide it
-  const customersOnline = !customersError;
-  const salesOnline = !salesError;
-  
   const isOnline = customersOnline && productsOnline && salesOnline;
   const isLoading = customersLoading || productsLoading || salesLoading;
   const hasErrors = !!(customersError || productsError || salesError);
   const errors = [customersError, productsError, salesError].filter(Boolean);
 
+  const lastSyncTimes = [customersSync, productsSync, salesSync].filter(Boolean);
+  const mostRecentSync = lastSyncTimes.length > 0 
+    ? new Date(Math.max(...lastSyncTimes.map(time => new Date(time!).getTime())))
+    : null;
+
   const handleTestOffline = async () => {
     console.log('[OfflineIndicator] Testing offline functionality...');
-    // Basic offline test - just log current state
-    console.log('[OfflineIndicator] Current state:', {
-      customers: customers.length,
-      products: products.length,
-      sales: sales.length,
-      isOnline,
-      hasErrors
-    });
+    
+    try {
+      const [customersTest, productsTest, salesTest] = await Promise.all([
+        testCustomersOffline(),
+        testProductsOffline(),
+        testSalesOffline()
+      ]);
+
+      console.log('[OfflineIndicator] Test results:', {
+        customers: customersTest,
+        products: productsTest,
+        sales: salesTest
+      });
+
+      const allPassed = customersTest.success && productsTest.success && salesTest.success;
+      
+      console.log('[OfflineIndicator] All tests passed:', allPassed);
+    } catch (error) {
+      console.error('[OfflineIndicator] Testing failed:', error);
+    }
   };
 
   const getStatusColor = () => {
@@ -129,6 +147,16 @@ const OfflineIndicator: React.FC = () => {
               </Badge>
             </div>
           </div>
+
+          {/* Last Sync Time */}
+          {mostRecentSync && (
+            <div className="flex items-center gap-2">
+              <Clock className="h-3 w-3 text-muted-foreground dark:text-slate-500" />
+              <span className="text-xs text-muted-foreground dark:text-slate-400">
+                Last sync: {mostRecentSync.toLocaleTimeString()}
+              </span>
+            </div>
+          )}
 
           {/* Errors */}
           {hasErrors && (

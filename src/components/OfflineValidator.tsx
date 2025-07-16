@@ -168,7 +168,7 @@ const OfflineValidator: React.FC = () => {
               <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded border border-green-200 dark:border-green-800">
                 <p className="text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
                   <Wifi className="w-4 h-4" />
-                  🎉 Offline functionality is working perfectly!
+                  🎉 Offline functionality is working perfectly! Your app will work seamlessly even without internet connection.
                 </p>
               </div>
             )}

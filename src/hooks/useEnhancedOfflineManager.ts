@@ -1,357 +1,689 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useOfflineFirst } from './useOfflineFirst';
+import { supabase } from '../integrations/supabase/client';
+import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
-import { offlineDB } from '@/utils/indexedDB';
 
-interface OfflineMetrics {
-  cacheHits: number;
-  cacheMisses: number;
-  syncSuccess: number;
-  syncFailures: number;
-  queueSize: number;
-  lastSyncTime?: Date;
-  avgResponseTime: number;
+interface OfflineState {
+  isOnline: boolean;
+  isInitialized: boolean;
+  isSyncing: boolean;
+  pendingOperations: number;
+  syncProgress: number;
+  lastSyncTime: string | null;
+  errors: string[];
 }
 
-interface ConflictItem {
+interface OfflineOperation {
   id: string;
-  table: string;
-  localData: any;
-  serverData: any;
+  type: 'sale' | 'product' | 'customer' | 'transaction';
+  operation: 'create' | 'update' | 'delete';
+  data: any;
   timestamp: string;
+  priority: 'high' | 'medium' | 'low';
+  attempts: number;
+  synced: boolean;
 }
+
+// Enhanced IndexedDB Manager with proper field mapping
+class EnhancedOfflineDB {
+  private db: IDBDatabase | null = null;
+  private dbName = 'DukaFitiEnhanced';
+  private version = 2;
+
+  async init(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, this.version);
+
+      request.onerror = () => {
+        console.error('Enhanced IndexedDB failed to open:', request.error);
+        reject(request.error);
+      };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        console.log('Enhanced IndexedDB initialized successfully');
+        resolve();
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        this.createStores(db);
+      };
+    });
+  }
+
+  private createStores(db: IDBDatabase): void {
+    // Clear existing stores to prevent conflicts
+    const existingStores = Array.from(db.objectStoreNames);
+    existingStores.forEach(storeName => {
+      if (db.objectStoreNames.contains(storeName)) {
+        db.deleteObjectStore(storeName);
+      }
+    });
+
+    // Sales store with proper field mapping
+    const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
+    salesStore.createIndex('userId', 'userId', { unique: false });
+    salesStore.createIndex('productId', 'productId', { unique: false });
+    salesStore.createIndex('timestamp', 'timestamp', { unique: false });
+    salesStore.createIndex('synced', 'synced', { unique: false });
+
+    // Products store with camelCase fields
+    const productsStore = db.createObjectStore('products', { keyPath: 'id' });
+    productsStore.createIndex('userId', 'userId', { unique: false });
+    productsStore.createIndex('category', 'category', { unique: false });
+    productsStore.createIndex('name', 'name', { unique: false });
+
+    // Customers store with camelCase fields
+    const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
+    customersStore.createIndex('userId', 'userId', { unique: false });
+    customersStore.createIndex('name', 'name', { unique: false });
+    customersStore.createIndex('phone', 'phone', { unique: false });
+
+    // Enhanced sync queue
+    const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+    syncStore.createIndex('type', 'type', { unique: false });
+    syncStore.createIndex('priority', 'priority', { unique: false });
+    syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+    syncStore.createIndex('synced', 'synced', { unique: false });
+
+    console.log('Enhanced IndexedDB stores created successfully');
+  }
+
+  // Field name transformation utility
+  transformFieldNames(obj: any, format: 'camelCase' | 'snake_case'): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    const transformed: any = {};
+    
+    for (const [key, value] of Object.entries(obj)) {
+      let newKey = key;
+      
+      if (format === 'camelCase') {
+        // Convert snake_case to camelCase
+        newKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      } else {
+        // Convert camelCase to snake_case
+        newKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      }
+      
+      transformed[newKey] = value;
+    }
+    
+    return transformed;
+  }
+
+  async storeData(storeName: string, data: any): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    // Transform to camelCase for local storage
+    const transformedData = this.transformFieldNames(data, 'camelCase');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      const request = store.put(transformedData);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getData(storeName: string, id?: string): Promise<any> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readonly');
+      const store = transaction.objectStore(storeName);
+      
+      const request = id ? store.get(id) : store.getAll();
+      
+      request.onsuccess = () => {
+        const result = request.result;
+        // Transform back to camelCase for consistency
+        if (Array.isArray(result)) {
+          resolve(result.map(item => this.transformFieldNames(item, 'camelCase')));
+        } else {
+          resolve(this.transformFieldNames(result, 'camelCase'));
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async addToSyncQueue(operation: OfflineOperation): Promise<void> {
+    return this.storeData('syncQueue', operation);
+  }
+
+  async getSyncQueue(): Promise<OfflineOperation[]> {
+    const operations = await this.getData('syncQueue');
+    return Array.isArray(operations) ? operations : [];
+  }
+
+  async removeFromSyncQueue(id: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
+      const store = transaction.objectStore('syncQueue');
+      
+      const request = store.delete(id);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async clearStore(storeName: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      const request = store.clear();
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+}
+
+const enhancedOfflineDB = new EnhancedOfflineDB();
 
 export const useEnhancedOfflineManager = () => {
-  const { 
-    isOnline, 
-    isInitialized, 
-    syncInProgress, 
-    queuedOperations,
-    stats,
-    forceSync,
-    clearOfflineData,
-    updateStats
-  } = useOfflineFirst();
-  
+  const { user } = useAuth();
   const { toast } = useToast();
   
-  const [metrics, setMetrics] = useState<OfflineMetrics>({
-    cacheHits: 0,
-    cacheMisses: 0,
-    syncSuccess: 0,
-    syncFailures: 0,
-    queueSize: 0,
-    avgResponseTime: 0
+  const [offlineState, setOfflineState] = useState<OfflineState>({
+    isOnline: navigator.onLine,
+    isInitialized: false,
+    isSyncing: false,
+    pendingOperations: 0,
+    syncProgress: 0,
+    lastSyncTime: localStorage.getItem('lastSyncTime'),
+    errors: []
   });
-  
-  const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
-  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
-  // Test enhanced offline functionality
-  const testEnhancedOffline = useCallback(async () => {
-    console.log('[EnhancedOfflineManager] Starting comprehensive offline test...');
+  // Initialize enhanced offline system
+  useEffect(() => {
+    initializeEnhancedOfflineSystem();
     
+    const handleOnline = () => {
+      console.log('[EnhancedOfflineManager] Online detected');
+      setOfflineState(prev => ({ ...prev, isOnline: true }));
+      if (user) {
+        setTimeout(() => syncPendingOperations(), 1000);
+      }
+    };
+
+    const handleOffline = () => {
+      console.log('[EnhancedOfflineManager] Offline detected');
+      setOfflineState(prev => ({ ...prev, isOnline: false }));
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [user]);
+
+  const initializeEnhancedOfflineSystem = async () => {
     try {
-      // Test 1: IndexedDB functionality
-      const dbTest = await offlineDB.testOfflineCapabilities();
-      console.log('[EnhancedOfflineManager] IndexedDB test:', dbTest.success ? '✅' : '❌');
+      console.log('[EnhancedOfflineManager] Initializing enhanced offline system...');
       
-      // Test 2: Service Worker status
-      const swTest = await testServiceWorkerStatus();
-      console.log('[EnhancedOfflineManager] Service Worker test:', swTest.success ? '✅' : '❌');
+      // Initialize enhanced IndexedDB
+      await enhancedOfflineDB.init();
       
-      // Test 3: Cache performance
-      const cacheTest = await testCachePerformance();
-      console.log('[EnhancedOfflineManager] Cache performance test:', cacheTest.success ? '✅' : '❌');
+      // Register single enhanced service worker
+      if ('serviceWorker' in navigator) {
+        try {
+          // Unregister all existing service workers first
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+          
+          const registration = await navigator.serviceWorker.register('/enhanced-sw.js', {
+            scope: '/'
+          });
+          console.log('[EnhancedOfflineManager] Enhanced Service Worker registered:', registration.scope);
+          
+          // Handle updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  toast({
+                    title: "App Updated",
+                    description: "New version available. Restart to apply updates.",
+                    duration: 5000,
+                  });
+                }
+              });
+            }
+          });
+          
+        } catch (error) {
+          console.error('[EnhancedOfflineManager] Service Worker registration failed:', error);
+        }
+      }
       
-      // Test 4: Sync queue operations
-      const syncTest = await testSyncQueue();
-      console.log('[EnhancedOfflineManager] Sync queue test:', syncTest.success ? '✅' : '❌');
+      // Load pending operations
+      await loadPendingOperationsCount();
       
-      const allTests = [dbTest, swTest, cacheTest, syncTest];
-      const allPassed = allTests.every(test => test.success);
-      
-      return {
-        success: allPassed,
-        message: allPassed ? 'All enhanced offline tests passed' : 'Some tests failed',
-        details: allTests
-      };
+      setOfflineState(prev => ({ ...prev, isInitialized: true }));
+      console.log('[EnhancedOfflineManager] Enhanced offline system initialized successfully');
       
     } catch (error) {
-      console.error('[EnhancedOfflineManager] Test failed:', error);
-      return {
-        success: false,
-        message: 'Enhanced offline test failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      console.error('[EnhancedOfflineManager] Failed to initialize enhanced offline system:', error);
+      setOfflineState(prev => ({ 
+        ...prev, 
+        isInitialized: true,
+        errors: [...prev.errors, `Enhanced initialization failed: ${error.message}`]
+      }));
+    }
+  };
+
+  const loadPendingOperationsCount = async () => {
+    try {
+      const queue = await enhancedOfflineDB.getSyncQueue();
+      setOfflineState(prev => ({ 
+        ...prev, 
+        pendingOperations: queue?.length || 0 
+      }));
+    } catch (error) {
+      console.error('[EnhancedOfflineManager] Failed to load pending operations:', error);
+    }
+  };
+
+  // Enhanced offline operation handling
+  const addOfflineOperation = useCallback(async (
+    type: 'sale' | 'product' | 'customer' | 'transaction',
+    operation: 'create' | 'update' | 'delete',
+    data: any,
+    priority: 'high' | 'medium' | 'low' = 'medium'
+  ): Promise<string> => {
+    const operationId = `${type}_${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const offlineOperation: OfflineOperation = {
+      id: operationId,
+      type,
+      operation,
+      data: { ...data, userId: user?.id },
+      timestamp: new Date().toISOString(),
+      priority,
+      attempts: 0,
+      synced: false
+    };
+
+    try {
+      // Store in enhanced IndexedDB
+      await enhancedOfflineDB.addToSyncQueue(offlineOperation);
+      
+      // Update local storage with proper field mapping
+      await updateLocalStorage(type, operation, data);
+      
+      // Update pending count
+      await loadPendingOperationsCount();
+      
+      // Try immediate sync if online
+      if (offlineState.isOnline && user) {
+        setTimeout(() => syncPendingOperations(), 500);
+      }
+      
+      console.log(`[EnhancedOfflineManager] Added ${type} ${operation} to enhanced offline queue:`, operationId);
+      return operationId;
+      
+    } catch (error) {
+      console.error('[EnhancedOfflineManager] Failed to add enhanced offline operation:', error);
+      throw error;
+    }
+  }, [user, offlineState.isOnline]);
+
+  // Enhanced local storage with proper field mapping
+  const updateLocalStorage = async (type: string, operation: string, data: any) => {
+    try {
+      switch (type) {
+        case 'sale':
+          if (operation === 'create') {
+            await enhancedOfflineDB.storeData('sales', data);
+            // Update product stock locally
+            if (data.productId && data.quantity) {
+              const product = await enhancedOfflineDB.getData('products', data.productId);
+              if (product) {
+                product.currentStock = Math.max(0, product.currentStock - data.quantity);
+                await enhancedOfflineDB.storeData('products', product);
+              }
+            }
+          }
+          break;
+          
+        case 'product':
+          await enhancedOfflineDB.storeData('products', data);
+          break;
+          
+        case 'customer':
+          await enhancedOfflineDB.storeData('customers', data);
+          break;
+      }
+    } catch (error) {
+      console.error('[EnhancedOfflineManager] Failed to update enhanced local storage:', error);
+    }
+  };
+
+  // Enhanced sync operations
+  const syncPendingOperations = useCallback(async () => {
+    if (!offlineState.isOnline || offlineState.isSyncing || !user) {
+      return;
+    }
+
+    setOfflineState(prev => ({ 
+      ...prev, 
+      isSyncing: true, 
+      syncProgress: 0,
+      errors: []
+    }));
+
+    try {
+      const operations = await enhancedOfflineDB.getSyncQueue();
+      const totalOperations = operations?.length || 0;
+
+      if (totalOperations === 0) {
+        setOfflineState(prev => ({ 
+          ...prev, 
+          isSyncing: false,
+          lastSyncTime: new Date().toISOString()
+        }));
+        localStorage.setItem('lastSyncTime', new Date().toISOString());
+        return;
+      }
+
+      console.log(`[EnhancedOfflineManager] Starting enhanced sync of ${totalOperations} operations`);
+
+      // Sort by priority and timestamp
+      const sortedOperations = operations.sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      });
+
+      let completed = 0;
+      const errors: string[] = [];
+
+      for (const operation of sortedOperations) {
+        try {
+          const success = await syncSingleOperation(operation);
+          if (success) {
+            await enhancedOfflineDB.removeFromSyncQueue(operation.id);
+            completed++;
+          } else {
+            // Increment attempts
+            operation.attempts++;
+            if (operation.attempts >= 3) {
+              await enhancedOfflineDB.removeFromSyncQueue(operation.id);
+              errors.push(`Max attempts reached for ${operation.type} ${operation.operation}`);
+            } else {
+              await enhancedOfflineDB.addToSyncQueue(operation);
+            }
+          }
+        } catch (error) {
+          console.error(`[EnhancedOfflineManager] Failed to sync operation ${operation.id}:`, error);
+          errors.push(`Failed to sync ${operation.type}: ${error.message}`);
+        }
+
+        // Update progress
+        const progress = Math.round(((completed + errors.length) / totalOperations) * 100);
+        setOfflineState(prev => ({ ...prev, syncProgress: progress }));
+      }
+
+      const finalPendingCount = totalOperations - completed;
+      const syncTime = new Date().toISOString();
+      
+      setOfflineState(prev => ({ 
+        ...prev, 
+        isSyncing: false,
+        pendingOperations: finalPendingCount,
+        lastSyncTime: syncTime,
+        errors: errors
+      }));
+
+      localStorage.setItem('lastSyncTime', syncTime);
+      
+      if (completed > 0) {
+        toast({
+          title: "Enhanced Sync Complete",
+          description: `${completed} operations synced successfully`,
+          duration: 3000,
+        });
+      }
+
+      if (errors.length > 0) {
+        toast({
+          title: "Sync Issues",
+          description: `${errors.length} operations failed to sync`,
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+
+      console.log(`[EnhancedOfflineManager] Enhanced sync completed: ${completed} synced, ${errors.length} errors, ${finalPendingCount} pending`);
+
+    } catch (error) {
+      console.error('[EnhancedOfflineManager] Enhanced sync process failed:', error);
+      setOfflineState(prev => ({ 
+        ...prev, 
+        isSyncing: false,
+        errors: [...prev.errors, `Enhanced sync failed: ${error.message}`]
+      }));
+    }
+  }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
+
+  const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
+    try {
+      // Transform data to snake_case for database
+      const dbData = enhancedOfflineDB.transformFieldNames(operation.data, 'snake_case');
+      
+      switch (operation.type) {
+        case 'sale':
+          return await syncSale(operation, dbData);
+        case 'product':
+          return await syncProduct(operation, dbData);
+        case 'customer':
+          return await syncCustomer(operation, dbData);
+        default:
+          console.warn(`[EnhancedOfflineManager] Unknown operation type: ${operation.type}`);
+          return false;
+      }
+    } catch (error) {
+      console.error(`[EnhancedOfflineManager] Error syncing ${operation.type}:`, error);
+      return false;
+    }
+  };
+
+  const syncSale = async (operation: OfflineOperation, dbData: any): Promise<boolean> => {
+    try {
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('sales')
+          .insert([{
+            user_id: user?.id,
+            product_id: dbData.product_id,
+            product_name: dbData.product_name,
+            quantity: dbData.quantity,
+            selling_price: dbData.selling_price,
+            cost_price: dbData.cost_price,
+            profit: dbData.profit,
+            total_amount: dbData.total_amount,
+            payment_method: dbData.payment_method,
+            customer_id: dbData.customer_id,
+            customer_name: dbData.customer_name,
+            payment_details: dbData.payment_details || {},
+            timestamp: dbData.timestamp || new Date().toISOString(),
+            synced: true
+          }]);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[EnhancedOfflineManager] Sale sync error:', error);
+      return false;
+    }
+  };
+
+  const syncProduct = async (operation: OfflineOperation, dbData: any): Promise<boolean> => {
+    try {
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('products')
+          .insert([{
+            user_id: user?.id,
+            name: dbData.name,
+            category: dbData.category,
+            cost_price: dbData.cost_price,
+            selling_price: dbData.selling_price,
+            current_stock: dbData.current_stock || 0,
+            low_stock_threshold: dbData.low_stock_threshold || 10
+          }]);
+        
+        return !error;
+      } else if (operation.operation === 'update') {
+        const { error } = await supabase
+          .from('products')
+          .update(dbData.updates)
+          .eq('id', dbData.id)
+          .eq('user_id', user?.id);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[EnhancedOfflineManager] Product sync error:', error);
+      return false;
+    }
+  };
+
+  const syncCustomer = async (operation: OfflineOperation, dbData: any): Promise<boolean> => {
+    try {
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('customers')
+          .insert([{
+            user_id: user?.id,
+            name: dbData.name,
+            phone: dbData.phone,
+            email: dbData.email,
+            address: dbData.address,
+            credit_limit: dbData.credit_limit || 1000,
+            outstanding_debt: dbData.outstanding_debt || 0
+          }]);
+        
+        return !error;
+      } else if (operation.operation === 'update') {
+        const { error } = await supabase
+          .from('customers')
+          .update(dbData.updates)
+          .eq('id', dbData.id)
+          .eq('user_id', user?.id);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[EnhancedOfflineManager] Customer sync error:', error);
+      return false;
+    }
+  };
+
+  // Force sync now
+  const forceSyncNow = useCallback(async () => {
+    if (offlineState.isOnline && !offlineState.isSyncing) {
+      await syncPendingOperations();
+    } else if (!offlineState.isOnline) {
+      toast({
+        title: "Offline Mode",
+        description: "Cannot sync while offline. Data will sync when connection is restored.",
+        variant: "default",
+      });
+    }
+  }, [offlineState.isOnline, offlineState.isSyncing, syncPendingOperations, toast]);
+
+  // Clear sync errors
+  const clearSyncErrors = useCallback(() => {
+    setOfflineState(prev => ({ ...prev, errors: [] }));
+  }, []);
+
+  // Get offline data with proper field transformation
+  const getOfflineData = useCallback(async (type: string, id?: string) => {
+    try {
+      return await enhancedOfflineDB.getData(type, id);
+    } catch (error) {
+      console.error(`[EnhancedOfflineManager] Failed to get enhanced offline data for ${type}:`, error);
+      return null;
     }
   }, []);
 
-  // Test service worker status
-  const testServiceWorkerStatus = async () => {
+  // Test enhanced offline functionality
+  const testEnhancedOffline = useCallback(async () => {
+    console.log('[EnhancedOfflineManager] Testing enhanced offline functionality...');
+    
     try {
-      if (!('serviceWorker' in navigator)) {
-        return { success: false, message: 'Service Worker not supported' };
-      }
-      
-      const registration = await navigator.serviceWorker.getRegistration();
-      const hasActiveWorker = registration && registration.active;
-      
-      return {
-        success: !!hasActiveWorker,
-        message: hasActiveWorker ? 'Service Worker active' : 'No active Service Worker',
-        details: {
-          registration: !!registration,
-          active: !!registration?.active,
-          installing: !!registration?.installing,
-          waiting: !!registration?.waiting
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Service Worker test failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  };
-
-  // Test cache performance
-  const testCachePerformance = async () => {
-    try {
-      const startTime = performance.now();
-      
-      // Test cache read performance
-      const products = await offlineDB.getOfflineData('products');
-      const customers = await offlineDB.getOfflineData('customers');
-      const sales = await offlineDB.getOfflineData('sales');
-      
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      // Performance benchmark: should be under 100ms for typical datasets
-      const isPerformant = duration < 100;
-      
-      return {
-        success: isPerformant,
-        message: `Cache read took ${Math.round(duration)}ms`,
-        details: {
-          duration,
-          recordCounts: {
-            products: products?.length || 0,
-            customers: customers?.length || 0,
-            sales: sales?.length || 0
-          }
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Cache performance test failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  };
-
-  // Test sync queue operations
-  const testSyncQueue = async () => {
-    try {
-      // Create test sync operation
-      const testOp = {
-        id: 'test_sync_' + Date.now(),
-        type: 'product',
-        operation: 'create',
-        data: { name: 'Test Product', category: 'Test' },
+      // Test data creation with proper field mapping
+      const testSale = {
+        id: 'test_sale_' + Date.now(),
+        productId: 'test_product_123',
+        productName: 'Test Product',
+        quantity: 2,
+        sellingPrice: 100,
+        costPrice: 50,
+        profit: 50,
+        totalAmount: 200,
+        paymentMethod: 'cash',
         timestamp: new Date().toISOString(),
-        priority: 'medium' as const,
-        attempts: 0,
         synced: false
       };
-      
-      // Add to queue
-      await offlineDB.addToSyncQueue(testOp);
-      
-      // Verify it's in queue
-      const queue = await offlineDB.getSyncQueue();
-      const foundOp = queue.find(op => op.id === testOp.id);
-      
-      if (!foundOp) {
-        throw new Error('Operation not found in sync queue');
-      }
-      
-      // Clean up
-      await offlineDB.removeFromSyncQueue(testOp.id);
-      
+
+      // Test storing enhanced offline operation
+      await addOfflineOperation('sale', 'create', testSale, 'high');
+      console.log('[EnhancedOfflineManager] ✅ Enhanced offline operation test passed');
+
+      // Test sync queue
+      const queue = await enhancedOfflineDB.getSyncQueue();
+      console.log('[EnhancedOfflineManager] ✅ Enhanced sync queue test passed, items:', queue.length);
+
       return {
         success: true,
-        message: 'Sync queue operations working correctly',
-        details: { queueSize: queue.length }
+        message: 'Enhanced offline functionality working correctly',
+        pendingOperations: queue.length
       };
+
     } catch (error) {
+      console.error('[EnhancedOfflineManager] ❌ Enhanced offline test failed:', error);
       return {
         success: false,
-        message: 'Sync queue test failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        message: 'Enhanced offline test failed',
+        error: error.message
       };
     }
-  };
-
-  // Run diagnostics
-  const runDiagnostics = useCallback(async () => {
-    setIsRunningDiagnostics(true);
-    
-    try {
-      console.log('[EnhancedOfflineManager] Running comprehensive diagnostics...');
-      
-      // Update metrics
-      const stats = await offlineDB.getDataStats();
-      const queue = await offlineDB.getSyncQueue();
-      
-      setMetrics(prev => ({
-        ...prev,
-        queueSize: queue.length,
-        lastSyncTime: new Date()
-      }));
-      
-      // Test all functionality
-      const testResult = await testEnhancedOffline();
-      
-      toast({
-        title: testResult.success ? "✅ Diagnostics Passed" : "⚠️ Issues Detected",
-        description: testResult.message,
-        variant: testResult.success ? "default" : "destructive"
-      });
-      
-      return testResult;
-      
-    } catch (error) {
-      console.error('[EnhancedOfflineManager] Diagnostics failed:', error);
-      toast({
-        title: "Diagnostics Failed",
-        description: "Failed to run offline diagnostics",
-        variant: "destructive"
-      });
-      
-      return {
-        success: false,
-        message: 'Diagnostics failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    } finally {
-      setIsRunningDiagnostics(false);
-    }
-  }, [testEnhancedOffline, toast]);
-
-  // Force sync with enhanced monitoring
-  const forceSyncNow = useCallback(async () => {
-    const startTime = performance.now();
-    
-    try {
-      await forceSync();
-      
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      setMetrics(prev => ({
-        ...prev,
-        syncSuccess: prev.syncSuccess + 1,
-        avgResponseTime: (prev.avgResponseTime + duration) / 2,
-        lastSyncTime: new Date()
-      }));
-      
-      await updateStats();
-      
-      toast({
-        title: "Sync Complete",
-        description: `Synced in ${Math.round(duration)}ms`,
-      });
-      
-    } catch (error) {
-      setMetrics(prev => ({
-        ...prev,
-        syncFailures: prev.syncFailures + 1
-      }));
-      
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync offline data",
-        variant: "destructive"
-      });
-    }
-  }, [forceSync, updateStats, toast]);
-
-  // Clear all offline data with confirmation
-  const clearAllOfflineData = useCallback(async () => {
-    try {
-      await clearOfflineData();
-      
-      setMetrics({
-        cacheHits: 0,
-        cacheMisses: 0,
-        syncSuccess: 0,
-        syncFailures: 0,
-        queueSize: 0,
-        avgResponseTime: 0
-      });
-      
-      setConflicts([]);
-      
-      toast({
-        title: "Data Cleared",
-        description: "All offline data has been cleared",
-      });
-      
-    } catch (error) {
-      toast({
-        title: "Clear Failed",
-        description: "Failed to clear offline data",
-        variant: "destructive"
-      });
-    }
-  }, [clearOfflineData, toast]);
-
-  // Monitor performance
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (isInitialized) {
-        try {
-          const stats = await offlineDB.getDataStats();
-          const queue = await offlineDB.getSyncQueue();
-          
-          setMetrics(prev => ({
-            ...prev,
-            queueSize: queue.length
-          }));
-        } catch (error) {
-          console.error('[EnhancedOfflineManager] Failed to update metrics:', error);
-        }
-      }
-    }, 10000); // Update every 10 seconds
-    
-    return () => clearInterval(interval);
-  }, [isInitialized]);
+  }, [addOfflineOperation]);
 
   return {
-    // Status
-    isOnline,
-    isInitialized,
-    isSyncing: syncInProgress,
-    isRunningDiagnostics,
-    
-    // Data
-    pendingOperations: queuedOperations,
-    metrics,
-    conflicts,
-    stats,
-    
-    // Actions
-    testEnhancedOffline,
-    runDiagnostics,
+    ...offlineState,
+    addOfflineOperation,
+    syncPendingOperations,
     forceSyncNow,
-    clearAllOfflineData,
-    
-    // Utils
-    updateStats
+    clearSyncErrors,
+    getOfflineData,
+    testEnhancedOffline,
+    enhancedOfflineDB
   };
 };

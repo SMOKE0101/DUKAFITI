@@ -1,19 +1,18 @@
 
 import React, { useState } from 'react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { X, CreditCard } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '../../hooks/use-toast';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
-import { supabase } from '../../integrations/supabase/client';
-import { useAuth } from '../../hooks/useAuth';
+import { DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
 
 interface NewRepaymentDrawerProps {
   isOpen: boolean;
@@ -21,21 +20,47 @@ interface NewRepaymentDrawerProps {
   customer: Customer | null;
 }
 
-const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose, customer }) => {
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('cash');
-  const [reference, setReference] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isMobile = useIsMobile();
+const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
+  isOpen,
+  onClose,
+  customer
+}) => {
   const { toast } = useToast();
   const { updateCustomer } = useSupabaseCustomers();
-  const { user } = useAuth();
+  
+  const [formData, setFormData] = useState({
+    amount: '',
+    paymentMethod: '',
+    notes: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSavePayment = async () => {
-    if (!customer || !amount || parseFloat(amount) <= 0 || !user) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!customer || !formData.amount || parseFloat(formData.amount) <= 0) {
       toast({
-        title: "Error",
-        description: "Please enter a valid payment amount.",
+        title: "Invalid Input",
+        description: "Please enter a valid payment amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.paymentMethod) {
+      toast({
+        title: "Payment Method Required",
+        description: "Please select a payment method",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const paymentAmount = parseFloat(formData.amount);
+    if (paymentAmount > customer.outstandingDebt) {
+      toast({
+        title: "Amount Too High",
+        description: "Payment amount cannot exceed outstanding debt",
         variant: "destructive",
       });
       return;
@@ -43,60 +68,32 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
 
     setIsSubmitting(true);
     try {
-      const paymentAmount = parseFloat(amount);
-      const newBalance = Math.max(0, customer.outstanding_debt - paymentAmount);
+      // Update customer's outstanding debt
+      const newOutstandingDebt = Math.max(0, customer.outstandingDebt - paymentAmount);
       
-      // Create payment record using a dummy product ID for payments
-      const { error: salesError } = await supabase
-        .from('sales')
-        .insert({
-          user_id: user.id,
-          customer_id: customer.id,
-          customer_name: customer.name,
-          product_id: '00000000-0000-0000-0000-000000000001',
-          product_name: 'Payment Received',
-          quantity: 1,
-          selling_price: -paymentAmount,
-          cost_price: 0,
-          total_amount: -paymentAmount,
-          profit: 0,
-          payment_method: method,
-          payment_details: reference ? { reference } : {},
-          timestamp: new Date().toISOString()
-        });
-
-      if (salesError) {
-        console.error('Error creating payment record:', salesError);
-        throw new Error(`Failed to record payment: ${salesError.message}`);
-      }
-
-      // Update customer balance
-      const updateResult = await updateCustomer(customer.id, {
-        outstanding_debt: newBalance,
-        last_purchase_date: new Date().toISOString()
+      await updateCustomer(customer.id, {
+        outstandingDebt: newOutstandingDebt,
+        lastPurchaseDate: new Date().toISOString()
       });
 
-      if (updateResult && 'error' in updateResult && updateResult.error) {
-        console.error('Error updating customer balance:', updateResult.error);
-        throw new Error('Failed to update customer balance.');
-      }
-
-      // Reset form
-      setAmount('');
-      setMethod('cash');
-      setReference('');
-      
       toast({
         title: "Payment Recorded",
-        description: `Payment of ${formatCurrency(paymentAmount)} recorded for ${customer.name}`,
+        description: `Payment of ${formatCurrency(paymentAmount)} recorded successfully`,
       });
 
+      // Reset form
+      setFormData({
+        amount: '',
+        paymentMethod: '',
+        notes: ''
+      });
+      
       onClose();
     } catch (error) {
       console.error('Failed to record payment:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to record payment. Please try again.",
+        description: "Failed to record payment. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -105,139 +102,167 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({ isOpen, onClose
   };
 
   const handleClose = () => {
-    setAmount('');
-    setMethod('cash');
-    setReference('');
+    if (isSubmitting) return;
+    
+    setFormData({
+      amount: '',
+      paymentMethod: '',
+      notes: ''
+    });
     onClose();
   };
 
-  const content = (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CreditCard className="w-8 h-8 text-green-600" />
-        </div>
-        <h3 className="text-lg font-display font-semibold">Record Payment</h3>
-        {customer && (
-          <div className="space-y-1 mt-2">
-            <p className="text-muted-foreground">{customer.name}</p>
-            <p className="text-sm text-muted-foreground">
-              Outstanding: <span className="font-medium text-red-600">{formatCurrency(customer.outstanding_debt)}</span>
-            </p>
-          </div>
-        )}
-      </div>
+  if (!customer) return null;
 
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="amount">Payment Amount (KES)</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-              KES
-            </span>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="pl-12"
-              placeholder="0.00"
-              max={customer?.outstanding_debt || 0}
-            />
-          </div>
-          {customer && parseFloat(amount) > customer.outstanding_debt && (
-            <p className="text-sm text-yellow-600 mt-1">
-              Amount exceeds outstanding debt. Excess will be credited.
-            </p>
-          )}
-        </div>
-
-        <div>
-          <Label htmlFor="method">Payment Method</Label>
-          <Select value={method} onValueChange={setMethod}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="cash">Cash</SelectItem>
-              <SelectItem value="mpesa">M-Pesa</SelectItem>
-              <SelectItem value="bank">Bank Transfer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="reference">Reference (Optional)</Label>
-          <Input
-            id="reference"
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            placeholder={method === 'mpesa' ? 'M-Pesa code' : 'Payment reference'}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 pt-4">
-        <Button
-          variant="ghost"
-          onClick={handleClose}
-          className="flex-1"
-          disabled={isSubmitting}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSavePayment}
-          disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-        >
-          {isSubmitting ? 'Recording...' : 'Save Payment'}
-        </Button>
-      </div>
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Drawer open={isOpen} onOpenChange={handleClose}>
-        <DrawerContent className="px-6 pb-6">
-          <DrawerHeader className="text-center pb-0">
-            <DrawerClose asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-4 top-4 p-2"
-                onClick={handleClose}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </DrawerClose>
-            <DrawerTitle className="sr-only">Record Payment</DrawerTitle>
-          </DrawerHeader>
-          {content}
-        </DrawerContent>
-      </Drawer>
-    );
-  }
+  const remainingAfterPayment = customer.outstandingDebt - parseFloat(formData.amount || '0');
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl p-6">
-        <DialogHeader>
-          <DialogTitle className="sr-only">Record Payment</DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="absolute right-4 top-4 p-2"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <Sheet open={isOpen} onOpenChange={handleClose}>
+      <SheetContent className="w-full sm:max-w-md flex flex-col h-full">
+        <SheetHeader className="border-b border-gray-200 dark:border-gray-700 pb-6 flex-shrink-0">
+          <SheetTitle className="font-mono text-xl font-black uppercase tracking-wider text-gray-900 dark:text-white">
+            RECORD PAYMENT
+          </SheetTitle>
+        </SheetHeader>
+
+        <ScrollArea className="flex-1 overflow-hidden">
+          <div className="py-6 space-y-6 px-1">
+          {/* Customer Info */}
+          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+            <h3 className="font-mono text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-white mb-3">
+              CUSTOMER DETAILS
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Name:</span>
+                <span className="font-medium text-gray-900 dark:text-white">{customer.name}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Outstanding:</span>
+                <Badge variant="destructive" className="rounded-full">
+                  {formatCurrency(customer.outstandingDebt)}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Payment Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="amount" className="font-mono text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-white">
+                PAYMENT AMOUNT (KES) *
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={customer.outstandingDebt}
+                  value={formData.amount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                  className="pl-10 h-12 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                  placeholder="0.00"
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-2">
+              <Label htmlFor="paymentMethod" className="font-mono text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-white">
+                PAYMENT METHOD *
+              </Label>
+              <Select 
+                value={formData.paymentMethod} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger className="h-12 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent focus:border-green-500">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-gray-400" />
+                    <SelectValue placeholder="Select payment method" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 z-50">
+                  <SelectItem value="cash" className="rounded-lg">Cash</SelectItem>
+                  <SelectItem value="mpesa" className="rounded-lg">M-Pesa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="font-mono text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-white">
+                NOTES (OPTIONAL)
+              </Label>
+              <div className="relative">
+                <FileText className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="pl-10 min-h-[80px] border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent focus:border-green-500 focus:ring-2 focus:ring-green-200 resize-none"
+                  placeholder="Add any additional notes about this payment..."
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            {/* Payment Summary */}
+            {formData.amount && parseFloat(formData.amount) > 0 && (
+              <div className="border-2 border-green-300 dark:border-green-700 rounded-xl p-4 bg-green-50/50 dark:bg-green-900/10">
+                <h4 className="font-mono text-sm font-bold uppercase tracking-wide text-green-800 dark:text-green-300 mb-3">
+                  PAYMENT SUMMARY
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Payment Amount:</span>
+                    <span className="font-medium text-green-700 dark:text-green-300">
+                      {formatCurrency(parseFloat(formData.amount))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Remaining Debt:</span>
+                    <span className={`font-medium ${
+                      remainingAfterPayment > 0 
+                        ? 'text-red-600 dark:text-red-400' 
+                        : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      {formatCurrency(Math.max(0, remainingAfterPayment))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="flex-1 h-12 border-2 border-gray-300 dark:border-gray-600 rounded-full font-mono font-bold uppercase tracking-wide"
+              >
+                CANCEL
+              </Button>
+              <Button
+                type="submit"
+                disabled={!formData.amount || !formData.paymentMethod || isSubmitting}
+                className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white rounded-full font-mono font-bold uppercase tracking-wide"
+              >
+                {isSubmitting ? 'RECORDING...' : 'RECORD PAYMENT'}
+              </Button>
+            </div>
+          </form>
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   );
 };
 

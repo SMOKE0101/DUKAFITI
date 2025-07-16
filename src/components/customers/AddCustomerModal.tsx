@@ -10,7 +10,7 @@ import { Customer } from '../../types';
 interface AddCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (customerData: Omit<Customer, 'id' | 'created_date' | 'updated_at'>) => Promise<void>;
+  onSave: (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
 }
 
 const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, onSave }) => {
@@ -19,7 +19,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     phone: '',
     email: '',
     address: '',
-    credit_limit: '',
+    creditLimit: '',
     initialDebt: ''
   });
   const [loading, setLoading] = useState(false);
@@ -44,11 +44,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
           delete newErrors.phone;
         }
         break;
-      case 'credit_limit':
+      case 'creditLimit':
         if (value && parseFloat(value) < 0) {
-          newErrors.credit_limit = 'Credit limit must be positive';
+          newErrors.creditLimit = 'Credit limit must be positive';
         } else {
-          delete newErrors.credit_limit;
+          delete newErrors.creditLimit;
         }
         break;
       case 'initialDebt':
@@ -72,13 +72,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     e.preventDefault();
 
     // Validate required fields
-    const fieldsToValidate = ['name', 'phone', 'credit_limit', 'initialDebt'];
+    const fieldsToValidate = ['name', 'phone', 'creditLimit', 'initialDebt'];
     fieldsToValidate.forEach(field => {
       validateField(field, formData[field as keyof typeof formData]);
     });
 
     const hasErrors = !formData.name.trim() || !formData.phone.trim() || 
-                     (formData.credit_limit && parseFloat(formData.credit_limit) < 0) ||
+                     (formData.creditLimit && parseFloat(formData.creditLimit) < 0) ||
                      (formData.initialDebt && parseFloat(formData.initialDebt) < 0);
 
     if (hasErrors) {
@@ -94,17 +94,16 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
 
     try {
       const customerData = {
-        user_id: '',
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         email: formData.email.trim() || undefined,
         address: formData.address.trim() || undefined,
-        credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : 1000,
-        outstanding_debt: formData.initialDebt ? parseFloat(formData.initialDebt) : 0,
-        total_purchases: 0,
-        last_purchase_date: null,
-        risk_rating: 'low' as const,
-        created_date: new Date().toISOString()
+        creditLimit: formData.creditLimit ? parseFloat(formData.creditLimit) : 1000,
+        outstandingDebt: formData.initialDebt ? parseFloat(formData.initialDebt) : 0,
+        totalPurchases: 0,
+        lastPurchaseDate: null,
+        riskRating: 'low' as const,
+        createdDate: new Date().toISOString()
       };
 
       await onSave(customerData);
@@ -135,7 +134,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       phone: '',
       email: '',
       address: '',
-      credit_limit: '',
+      creditLimit: '',
       initialDebt: ''
     });
     setErrors({});
@@ -145,7 +144,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   const isFormValid = () => {
     return formData.name.trim() && 
            formData.phone.trim() && 
-           (!formData.credit_limit || parseFloat(formData.credit_limit) >= 0) &&
+           (!formData.creditLimit || parseFloat(formData.creditLimit) >= 0) &&
            (!formData.initialDebt || parseFloat(formData.initialDebt) >= 0) &&
            Object.keys(errors).length === 0;
   };
@@ -186,15 +185,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="credit_limit">Credit Limit (optional)</Label>
+              <Label htmlFor="creditLimit">Credit Limit (optional)</Label>
               <div className="relative">
                 <Input
-                  id="credit_limit"
+                  id="creditLimit"
                   type="number"
                   step="0.01"
-                  value={formData.credit_limit}
-                  onChange={(e) => handleInputChange('credit_limit', e.target.value)}
-                  className={`pl-12 ${errors.credit_limit ? 'border-red-500' : ''}`}
+                  value={formData.creditLimit}
+                  onChange={(e) => handleInputChange('creditLimit', e.target.value)}
+                  className={`pl-12 ${errors.creditLimit ? 'border-red-500' : ''}`}
                   placeholder="1000"
                   disabled={loading}
                 />
@@ -202,7 +201,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                   KES
                 </span>
               </div>
-              {errors.credit_limit && <p className="text-red-500 text-xs">{errors.credit_limit}</p>}
+              {errors.creditLimit && <p className="text-red-500 text-xs">{errors.creditLimit}</p>}
             </div>
 
             <div className="space-y-2">

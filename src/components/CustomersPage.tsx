@@ -46,8 +46,8 @@ const CustomersPage = () => {
   // Calculate metrics
   const metrics = useMemo(() => {
     const totalCustomers = customers.length;
-    const customersWithDebt = customers.filter(c => c.outstanding_debt > 0);
-    const totalDebt = customers.reduce((sum, c) => sum + c.outstanding_debt, 0);
+    const customersWithDebt = customers.filter(c => c.outstandingDebt > 0);
+    const totalDebt = customers.reduce((sum, c) => sum + c.outstandingDebt, 0);
     const customersWithDebtCount = customersWithDebt.length;
 
     return {
@@ -66,8 +66,8 @@ const CustomersPage = () => {
                            (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesFilter = filterBy === 'all' || 
-                           (filterBy === 'debt' && customer.outstanding_debt > 0) ||
-                           (filterBy === 'no-debt' && customer.outstanding_debt === 0);
+                           (filterBy === 'debt' && customer.outstandingDebt > 0) ||
+                           (filterBy === 'no-debt' && customer.outstandingDebt === 0);
       
       return matchesSearch && matchesFilter;
     });
@@ -78,9 +78,9 @@ const CustomersPage = () => {
         case 'name':
           return a.name.localeCompare(b.name);
         case 'debt':
-          return b.outstanding_debt - a.outstanding_debt;
+          return b.outstandingDebt - a.outstandingDebt;
         case 'recent':
-          return new Date(b.created_date || 0).getTime() - new Date(a.created_date || 0).getTime();
+          return new Date(b.createdDate || 0).getTime() - new Date(a.createdDate || 0).getTime();
         default:
           return 0;
       }
@@ -89,7 +89,7 @@ const CustomersPage = () => {
     return filtered;
   }, [customers, searchTerm, filterBy, sortBy]);
 
-  const handleAddCustomer = async (customerData: Omit<Customer, 'id' | 'created_date' | 'updated_at'>) => {
+  const handleAddCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await createCustomer(customerData);
       setShowNewCustomerDrawer(false);
@@ -333,9 +333,9 @@ const CustomersPage = () => {
                         </div>
                       )}
                     </div>
-                    {customer.outstanding_debt > 0 && (
+                    {customer.outstandingDebt > 0 && (
                       <Badge variant="destructive" className="rounded-full text-xs">
-                        {formatCurrency(customer.outstanding_debt)}
+                        {formatCurrency(customer.outstandingDebt)}
                       </Badge>
                     )}
                   </div>
@@ -345,20 +345,20 @@ const CustomersPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleViewCustomer(customer)}
-                      className="flex-1 border-2 border-gray-300 dark:border-gray-600 hover:border-primary/50 transition-all duration-200"
+                      className="flex-1 border-2 border-blue-300 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-mono text-xs font-bold uppercase"
                     >
                       <Eye className="w-3 h-3 mr-1" />
-                      View
+                      VIEW
                     </Button>
-                    {customer.outstanding_debt > 0 && (
+                    {customer.outstandingDebt > 0 && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleRecordPayment(customer)}
-                        className="flex-1 border-2 border-green-300 dark:border-green-600 text-green-600 hover:border-green-500 transition-all duration-200"
+                        className="flex-1 border-2 border-green-300 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg font-mono text-xs font-bold uppercase"
                       >
                         <CreditCard className="w-3 h-3 mr-1" />
-                        Pay
+                        PAY
                       </Button>
                     )}
                   </div>
@@ -376,29 +376,19 @@ const CustomersPage = () => {
         onSave={handleAddCustomer}
       />
 
-      {selectedCustomer && (
-        <>
-          <CustomerDetailsDrawer
-            isOpen={showDetailsDrawer}
-            onClose={() => {
-              setShowDetailsDrawer(false);
-              setSelectedCustomer(null);
-            }}
-            customer={selectedCustomer}
-            onEdit={handleEditCustomer}
-            onDelete={handleDeleteCustomer}
-          />
+      <CustomerDetailsDrawer
+        isOpen={showDetailsDrawer}
+        onClose={() => setShowDetailsDrawer(false)}
+        customer={selectedCustomer}
+        onEdit={handleEditCustomer}
+        onDelete={handleDeleteCustomer}
+      />
 
-          <NewRepaymentDrawer
-            isOpen={showRepaymentDrawer}
-            onClose={() => {
-              setShowRepaymentDrawer(false);
-              setSelectedCustomer(null);
-            }}
-            customer={selectedCustomer}
-          />
-        </>
-      )}
+      <NewRepaymentDrawer
+        isOpen={showRepaymentDrawer}
+        onClose={() => setShowRepaymentDrawer(false)}
+        customer={selectedCustomer}
+      />
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
@@ -9,11 +8,13 @@ import { useOfflineManager } from '../hooks/useOfflineManager';
 import { formatCurrency } from '../utils/currency';
 import { Product, Customer } from '../types';
 import { CartItem } from '../types/cart';
-import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus, Wifi, WifiOff, Clock } from 'lucide-react';
+import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
+
+import { Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -46,14 +47,14 @@ const ModernSalesPage = () => {
     const productsChannel = supabase
       .channel('products-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-        console.log('Products updated:', payload);
+        // Products updated
       })
       .subscribe();
 
     const customersChannel = supabase
       .channel('customers-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
-        console.log('Customers updated:', payload);
+        // Customers updated
       })
       .subscribe();
 
@@ -64,7 +65,7 @@ const ModernSalesPage = () => {
   }, []);
 
   const total = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.selling_price * item.quantity, 0);
+    return cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   }, [cart]);
 
   const filteredProducts = useMemo(() => {
@@ -76,7 +77,8 @@ const ModernSalesPage = () => {
   }, [products, searchTerm]);
 
   const addToCart = (product: Product) => {
-    if (product.current_stock === 0) {
+    // Only show confirmation for products with exactly 0 stock, not unspecified/negative stock
+    if (product.currentStock === 0) {
       const shouldAdd = window.confirm('This product is out of stock. Do you want to add it anyway?');
       if (!shouldAdd) return;
     }
@@ -115,42 +117,62 @@ const ModernSalesPage = () => {
   };
 
   const handleCheckout = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      toast({
+        title: "Error",
+        description: "Your cart is empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if payment method is debt/credit and customer is required
     if (paymentMethod === 'debt' && !selectedCustomerId) {
       toast({
         title: "Customer Required",
-        description: "Please select a customer for debt transactions.",
+        description: "Please select a customer for credit sales.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to complete a sale.",
         variant: "destructive",
       });
       return;
     }
 
     setIsProcessingCheckout(true);
-
+    
     try {
-      const customer = selectedCustomerId 
-        ? customers.find(c => c.id === selectedCustomerId) || null 
-        : null;
+      const customerId = selectedCustomerId === '' ? null : selectedCustomerId;
+      const customer = customers.find(c => c.id === customerId);
 
       if (isOnline) {
-        await processOnlineSale(selectedCustomerId, customer);
+        // Online sales - direct to Supabase
+        await processOnlineSale(customerId, customer);
       } else {
-        await processOfflineSale(selectedCustomerId, customer);
+        // Offline sales - store locally and queue for sync
+        await processOfflineSale(customerId, customer);
       }
 
+      // Success - clear cart and switch to search panel
       toast({
-        title: "Sale Completed!",
-        description: `Transaction processed successfully${!isOnline ? ' (offline)' : ''}.`,
+        title: "Success!",
+        description: `Sale completed ${isOnline ? 'online' : 'offline'}! Total: ${formatCurrency(total)}`,
       });
-
+      
       clearCart();
       setSelectedCustomerId(null);
-      setPaymentMethod('cash');
+      setActivePanel('search');
+
     } catch (error) {
-      console.error('Checkout error:', error);
       toast({
         title: "Error",
-        description: "Failed to process sale. Please try again.",
+        description: `Failed to complete sale: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -159,75 +181,96 @@ const ModernSalesPage = () => {
   };
 
   const processOnlineSale = async (customerId: string | null, customer: Customer | null) => {
-    if (!user) throw new Error('User not authenticated');
+    
+    // Prepare sales data for batch insert
+    const salesData = cart.map(item => ({
+      user_id: user.id,
+      product_id: item.id,
+      product_name: item.name,
+      quantity: item.quantity,
+      selling_price: item.sellingPrice,
+      cost_price: item.costPrice,
+      profit: (item.sellingPrice - item.costPrice) * item.quantity,
+      total_amount: item.sellingPrice * item.quantity,
+      customer_id: customerId,
+      customer_name: customer ? customer.name : null,
+      payment_method: paymentMethod,
+      payment_details: {
+        cashAmount: paymentMethod === 'cash' ? total : 0,
+        mpesaAmount: paymentMethod === 'mpesa' ? total : 0,
+        debtAmount: paymentMethod === 'debt' ? total : 0,
+      },
+      timestamp: new Date().toISOString(),
+    }));
 
+    // Insert sales records
+    const { error: saleError } = await supabase
+      .from('sales')
+      .insert(salesData);
+
+    if (saleError) {
+      throw new Error('Failed to record sales.');
+    }
+
+    // Update customer debt if this is a credit sale
+    if (paymentMethod === 'debt' && customer) {
+      const debtAmount = total;
+      const updatedDebt = customer.outstandingDebt + debtAmount;
+      const updatedPurchases = customer.totalPurchases + total;
+      
+      await updateCustomer(customer.id, {
+        outstandingDebt: updatedDebt,
+        totalPurchases: updatedPurchases,
+        lastPurchaseDate: new Date().toISOString(),
+      });
+    } else if (customer && paymentMethod !== 'debt') {
+      // Update total purchases for non-debt sales
+      const updatedPurchases = customer.totalPurchases + total;
+      
+      await updateCustomer(customer.id, {
+        totalPurchases: updatedPurchases,
+        lastPurchaseDate: new Date().toISOString(),
+      });
+    }
+
+    // Update stock for each item
     for (const item of cart) {
-      const saleData = {
-        user_id: user.id,
-        product_id: item.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        selling_price: item.selling_price,
-        cost_price: item.cost_price,
-        profit: (item.selling_price - item.cost_price) * item.quantity,
-        total_amount: item.selling_price * item.quantity,
-        customer_id: customerId,
-        customer_name: customer?.name || null,
-        payment_method: paymentMethod,
-        payment_details: {},
-        timestamp: new Date().toISOString(),
-        synced: true,
-      };
+      if (item.currentStock > 0) {
+        const newStock = Math.max(0, item.currentStock - item.quantity);
+        const { error: productError } = await supabase
+          .from('products')
+          .update({ current_stock: newStock })
+          .eq('id', item.id);
 
-      const { error: saleError } = await supabase
-        .from('sales')
-        .insert(saleData);
-
-      if (saleError) {
-        throw new Error(`Failed to create sale for ${item.name}: ${saleError.message}`);
-      }
-
-      if (paymentMethod === 'debt' && customer) {
-        const currentDebt = customer.outstanding_debt || 0;
-        await updateCustomer(customer.id, {
-          outstanding_debt: currentDebt + (item.selling_price * item.quantity),
-          total_purchases: (customer.total_purchases || 0) + (item.selling_price * item.quantity),
-          last_purchase_date: new Date().toISOString(),
-        });
-      }
-
-      const { error: stockError } = await supabase
-        .from('products')
-        .update({
-          current_stock: Math.max(0, item.current_stock - item.quantity)
-        })
-        .eq('id', item.id);
-
-      if (stockError) {
-        console.warn(`Failed to update stock for ${item.name}:`, stockError);
+        if (productError) {
+          // Don't throw error here - sale should still complete
+        }
       }
     }
   };
 
   const processOfflineSale = async (customerId: string | null, customer: Customer | null) => {
-    if (!user) throw new Error('User not authenticated');
-
+    
+    // Create offline sales for each cart item
     for (const item of cart) {
       const saleData = {
         user_id: user.id,
         product_id: item.id,
         product_name: item.name,
         quantity: item.quantity,
-        selling_price: item.selling_price,
-        cost_price: item.cost_price,
-        profit: (item.selling_price - item.cost_price) * item.quantity,
-        total_amount: item.selling_price * item.quantity,
+        selling_price: item.sellingPrice,
+        cost_price: item.costPrice,
+        profit: (item.sellingPrice - item.costPrice) * item.quantity,
+        total_amount: item.sellingPrice * item.quantity,
         customer_id: customerId,
-        customer_name: customer?.name || null,
+        customer_name: customer ? customer.name : null,
         payment_method: paymentMethod,
-        payment_details: {},
+        payment_details: {
+          cashAmount: paymentMethod === 'cash' ? item.sellingPrice * item.quantity : 0,
+          mpesaAmount: paymentMethod === 'mpesa' ? item.sellingPrice * item.quantity : 0,
+          debtAmount: paymentMethod === 'debt' ? item.sellingPrice * item.quantity : 0,
+        },
         timestamp: new Date().toISOString(),
-        synced: false,
       };
 
       await createOfflineSale(saleData);
@@ -241,382 +284,704 @@ const ModernSalesPage = () => {
   };
 
   const getStockColorClass = (stock: number, lowStockThreshold: number = 10) => {
-    if (stock < 0) return 'text-gray-500 dark:text-gray-400';
-    if (stock === 0) return 'text-orange-500 dark:text-orange-400';
-    if (stock <= lowStockThreshold) return 'text-yellow-500 dark:text-yellow-400';
-    return 'text-purple-500 dark:text-purple-400';
+    if (stock < 0) return 'text-gray-500 dark:text-gray-400'; // Unspecified
+    if (stock === 0) return 'text-orange-500 dark:text-orange-400'; // Out of stock
+    if (stock <= lowStockThreshold) return 'text-yellow-500 dark:text-yellow-400'; // Low stock
+    return 'text-purple-500 dark:text-purple-400'; // Normal stock
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Mobile-Optimized Header */}
-      <header className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-40 shadow-lg">
-        <div className="mx-auto px-3 sm:px-4 py-3 sm:py-4">
+  // Mobile two-panel layout
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
+        {/* Header */}
+        <div className="p-3 relative z-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-                🛒 SALES
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 border-2 border-purple-400 rounded-xl bg-transparent flex items-center justify-center hover:border-purple-500 transition-colors">
+                <ShoppingCart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h1 className="font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white text-lg">
+                SALES POINT
               </h1>
-              
-              {/* Connection Status - Compact on mobile */}
-              <div className="flex items-center gap-1 sm:gap-2">
+              {/* Connection Status */}
+              <div className={`
+                flex items-center gap-2 px-2 py-1 rounded-full border-2
+                ${isOnline 
+                  ? 'border-green-400 bg-green-50 dark:bg-green-900/20' 
+                  : 'border-orange-400 bg-orange-50 dark:bg-orange-900/20'
+                }
+              `}>
                 {isOnline ? (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
-                    <Wifi className="h-3 w-3" />
-                    {!isMobile && "Online"}
-                  </div>
+                  <Wifi className="w-3 h-3 text-green-600 dark:text-green-400" />
                 ) : (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-bold">
-                    <WifiOff className="h-3 w-3" />
-                    {!isMobile && "Offline"}
-                  </div>
+                  <WifiOff className="w-3 h-3 text-orange-600 dark:text-orange-400" />
                 )}
-                
-                {pendingOperations > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
-                    <Clock className="h-3 w-3" />
-                    {!isMobile ? `${pendingOperations} pending` : pendingOperations}
-                  </div>
+                <span className={`
+                  font-mono font-bold uppercase text-xs
+                  ${isOnline 
+                    ? 'text-green-700 dark:text-green-300' 
+                    : 'text-orange-700 dark:text-orange-300'
+                  }
+                `}>
+                  {isOnline ? 'ON' : 'OFF'}
+                </span>
+                {!isOnline && pendingOperations > 0 && (
+                  <span className="bg-orange-600 text-white text-xs px-1 py-0.5 rounded-full font-bold">
+                    {pendingOperations}
+                  </span>
                 )}
               </div>
             </div>
-            
-            {/* Mobile Panel Toggle - Enhanced Touch Targets */}
-            {isMobile && (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setActivePanel('search')}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all touch-target ${
-                    activePanel === 'search'
-                      ? 'bg-purple-600 text-white shadow-lg scale-105'
-                      : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-                  }`}
-                >
-                  Products
-                </button>
-                <button
-                  onClick={() => setActivePanel('cart')}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 touch-target ${
-                    activePanel === 'cart'
-                      ? 'bg-purple-600 text-white shadow-lg scale-105'
-                      : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-                  }`}
-                >
-                  <ShoppingCart className="h-3 w-3" />
-                  Cart {cart.length > 0 && `(${cart.length})`}
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 font-mono text-xs">
+              <Clock className="w-4 h-4" />
+              <span className="font-bold">{formatCurrency(total)}</span>
+            </div>
           </div>
         </div>
-      </header>
 
-      <main className="flex-1 flex">
-        {/* Left Panel - Product Search & Quick Picks - Mobile Optimized */}
-        <div className={`${
-          isMobile 
-            ? activePanel === 'search' ? 'flex' : 'hidden'
-            : 'flex'
-        } flex-col ${isMobile ? 'w-full' : 'w-2/3 border-r border-gray-200/60 dark:border-slate-700/60'}`}>
-          
-          {/* Search Section - Enhanced Mobile */}
-          <div className="p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 border-b border-gray-200/60 dark:border-slate-700/60">
+        {/* Panel A: Search & Quick-Select */}
+        <div className={`
+          absolute inset-0 top-20 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 
+          transition-transform duration-200 ease-in-out overflow-y-auto
+          ${activePanel === 'search' ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          <div className="p-3 space-y-4">
+            {/* Search Bar */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-500 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="SEARCH PRODUCTS..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-700 border-2 border-purple-200 dark:border-purple-600/30 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
-                style={{ fontSize: '16px' }} // Prevent zoom on iOS
+                className="w-full pl-12 pr-4 py-4 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-transparent font-mono font-bold text-gray-900 dark:text-white placeholder-purple-400 focus:outline-none focus:border-purple-500 focus:ring-0 transition-colors uppercase tracking-wide text-sm"
               />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 touch-target flex items-center justify-center"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
             </div>
-          </div>
 
-          {/* Quick Select Section - Touch-Optimized */}
-          <div className="p-3 sm:p-4 bg-white/30 dark:bg-slate-800/30 border-b border-gray-200/40 dark:border-slate-700/40">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">⚡ Quick Picks</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-              {products.slice(0, 6).map((product) => (
-                <button
+            {/* Product Grid */}
+            <div className="grid grid-cols-2 gap-4 pb-20">
+              {/* Add Debt Button - Always visible on mobile */}
+              <div
+                onClick={() => {
+                  setShowAddDebt(true);
+                }}
+                className="
+                  border-2 border-red-400 dark:border-red-500 rounded-xl bg-red-50 dark:bg-red-900/20 
+                  cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
+                  hover:border-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 group p-4
+                "
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-mono font-black uppercase tracking-wide text-red-700 dark:text-red-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors text-xs">
+                        RECORD DEBT
+                      </h3>
+                      <p className="text-red-600 dark:text-red-400 uppercase font-mono font-bold text-xs">
+                        CASH LENDING
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 border-2 border-red-400 dark:border-red-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-red-500 transition-colors">
+                      <UserPlus className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-mono font-black text-red-700 dark:text-red-300 text-sm">
+                        Cash Lending
+                      </p>
+                      <p className="font-mono font-bold uppercase text-xs text-red-600 dark:text-red-400">
+                        Record Debt
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {filteredProducts.map((product) => (
+                <div
                   key={product.id}
                   onClick={() => addToCart(product)}
-                  className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group min-h-[80px] active:scale-95"
+                  className={`
+                    border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-white/50 dark:bg-gray-800/50 
+                    cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
+                    hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 group p-4
+                    ${product.currentStock === 0 ? 'border-orange-300 bg-orange-50/50 dark:bg-orange-900/20' : ''}
+                    ${product.currentStock < 0 ? 'border-gray-300 bg-gray-50/50 dark:bg-gray-800/30' : ''}
+                  `}
                 >
-                  <div className="font-bold text-gray-900 dark:text-white text-sm mb-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
-                    {product.name}
-                  </div>
-                  <div className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                    {formatCurrency(product.selling_price)}
-                  </div>
-                  <div className={`text-xs mt-1 ${getStockColorClass(product.current_stock, product.low_stock_threshold || 10)}`}>
-                    {getStockDisplayText(product.current_stock)}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Product Grid - Mobile Optimized */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-20">
-              {filteredProducts.length === 0 ? (
-                <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-8">
-                  <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="font-bold">No products found</p>
-                  <p className="text-sm">Try adjusting your search</p>
-                </div>
-              ) : (
-                filteredProducts.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-4 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group text-left active:scale-95"
-                  >
-                    <div className="flex justify-between items-start mb-2">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
+                        <h3 className="font-mono font-black uppercase tracking-wide text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors text-xs">
                           {product.name}
                         </h3>
-                        <p className="text-gray-500 dark:text-gray-400 text-xs">
+                        <p className="text-purple-600 dark:text-purple-400 uppercase font-mono font-bold text-xs">
                           {product.category}
                         </p>
                       </div>
-                      <div className="ml-2">
-                        <Package className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <div className="w-8 h-8 border-2 border-purple-300 dark:border-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-purple-500 transition-colors">
+                        <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       </div>
                     </div>
-                    <div className="flex justify-between items-end">
+                    
+                    <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-purple-600 dark:text-purple-400 font-bold text-lg">
-                          {formatCurrency(product.selling_price)}
-                        </div>
-                        <div className={`text-xs ${getStockColorClass(product.current_stock, product.low_stock_threshold || 10)}`}>
-                          Stock: {getStockDisplayText(product.current_stock)}
-                        </div>
+                        <p className="font-mono font-black text-gray-900 dark:text-white text-sm">
+                          {formatCurrency(product.sellingPrice)}
+                        </p>
+                        <p className={`font-mono font-bold uppercase text-xs ${getStockColorClass(product.currentStock, product.lowStockThreshold)}`}>
+                          Stock: {getStockDisplayText(product.currentStock)}
+                        </p>
                       </div>
                     </div>
-                  </button>
-                ))
-              )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Right Panel - Cart & Checkout - Mobile Optimized */}
-        <div className={`${
-          isMobile 
-            ? activePanel === 'cart' ? 'flex' : 'hidden'
-            : 'flex'
-        } flex-col ${isMobile ? 'w-full' : 'w-1/3'} bg-white/60 dark:bg-slate-800/60`}>
-          
-          {/* Cart Header - Compact on Mobile */}
-          <div className="p-3 sm:p-4 border-b border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
-                Cart ({cart.length})
+        {/* Panel B: Cart & Checkout */}
+        <div className={`
+          absolute inset-0 top-20 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 
+          transition-transform duration-200 ease-in-out overflow-y-auto
+          ${activePanel === 'cart' ? 'translate-x-0' : 'translate-x-full'}
+        `}>
+          <div className="p-3 space-y-4 pb-20">
+            {/* Cart Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white text-sm">
+                CART ({cart.length})
               </h2>
               {cart.length > 0 && (
                 <button
                   onClick={clearCart}
-                  className="text-red-500 hover:text-red-700 text-sm font-bold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target"
+                  className="border-2 border-red-400 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl font-mono font-black uppercase tracking-wide transition-colors px-3 py-2 text-xs"
                 >
-                  Clear All
+                  CLEAR
                 </button>
               )}
             </div>
-            <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
-              Total: {formatCurrency(total)}
-            </div>
-          </div>
 
-          {/* Cart Items - Touch-Optimized */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-            {cart.length === 0 ? (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="font-bold">Your cart is empty</p>
-                <p className="text-sm">Add products to get started</p>
-              </div>
-            ) : (
-              cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white dark:bg-slate-700 rounded-xl p-3 sm:p-4 border-2 border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md transition-all"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1 pr-2">
-                      <h3 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2">
+            {/* Cart Items */}
+            <div className="space-y-3">
+              {cart.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 border-2 border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <ShoppingCart className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 font-mono font-bold uppercase text-sm">Cart Empty</p>
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="border-2 border-purple-200 dark:border-purple-700 rounded-xl p-3 bg-white/50 dark:bg-gray-800/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-mono font-bold uppercase text-gray-900 dark:text-white text-sm">
                         {item.name}
-                      </h3>
-                      <p className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                        {formatCurrency(item.selling_price)}
+                      </h4>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="w-7 h-7 border-2 border-purple-300 rounded-lg flex items-center justify-center hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="font-mono font-black text-sm min-w-[20px] text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="w-7 h-7 border-2 border-purple-300 rounded-lg flex items-center justify-center hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="font-mono font-black text-gray-900 dark:text-white text-sm">
+                        {formatCurrency(item.sellingPrice * item.quantity)}
                       </p>
                     </div>
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target flex items-center justify-center"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
-                        disabled={item.quantity <= 1}
-                      >
-                        <Minus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                      </button>
-                      <span className="font-bold text-lg text-gray-900 dark:text-white min-w-[2.5rem] text-center">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
-                      >
-                        <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                      </button>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Subtotal</div>
-                      <div className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                        {formatCurrency(item.selling_price * item.quantity)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                ))
+              )}
+            </div>
 
-          {/* Checkout Section - Mobile Optimized */}
-          {cart.length > 0 && (
-            <div className="p-3 sm:p-4 border-t border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 space-y-4 pb-safe">
-              
-              {/* Customer Selection - Touch-Friendly */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                  Customer (Optional)
-                </label>
-                <div className="flex gap-2">
+            {/* Customer Selection */}
+            {cart.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
                   <select
                     value={selectedCustomerId || ''}
                     onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                    className="flex-1 px-3 py-3 bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white"
-                    style={{ fontSize: '16px' }} // Prevent zoom on iOS
+                    className="flex-1 p-3 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-background text-foreground font-mono font-bold focus:outline-none focus:border-purple-500 transition-colors uppercase"
                   >
-                    <option value="">Select customer...</option>
+                    <option value="">WALK-IN CUSTOMER</option>
                     {customers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name} - {customer.phone}
+                        {customer.name.toUpperCase()} - {customer.phone}
                       </option>
                     ))}
                   </select>
                   <button
                     onClick={() => setShowAddCustomer(true)}
-                    className="px-3 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors flex items-center justify-center min-w-[44px] active:scale-95"
-                    title="Add new customer"
+                    className="border-2 border-blue-400 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl font-mono font-black uppercase tracking-wide transition-colors flex items-center gap-2 px-3 py-3 text-xs"
                   >
-                    <UserPlus className="h-4 w-4" />
+                    <UserPlus className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
 
-              {/* Payment Method Selection - Touch-Optimized */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                  Payment Method
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['cash', 'mpesa', 'debt'] as PaymentMethod[]).map((method) => (
-                    <button
-                      key={method}
-                      onClick={() => setPaymentMethod(method)}
-                      className={`px-3 py-3 rounded-xl text-sm font-bold transition-all touch-target active:scale-95 ${
-                        paymentMethod === method
-                          ? 'bg-purple-600 text-white shadow-lg scale-105'
-                          : 'bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-500'
-                      }`}
-                    >
-                      {method.charAt(0).toUpperCase() + method.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Debt-specific validation */}
-              {paymentMethod === 'debt' && !selectedCustomerId && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3">
-                  <p className="text-yellow-700 dark:text-yellow-300 text-sm font-bold">
-                    ⚠️ Please select a customer for debt transactions
-                  </p>
-                </div>
-              )}
-
-              {/* Quick Action Buttons - Mobile Stack */}
-              <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
-                <button
-                  onClick={() => setShowAddCustomer(true)}
-                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Add Customer
-                </button>
-                <button
-                  onClick={() => setShowAddDebt(true)}
-                  className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
-                >
-                  <Package className="h-4 w-4" />
-                  Record Debt
-                </button>
-              </div>
-
-              {/* Checkout Button - Enhanced for Mobile */}
-              <button
-                onClick={handleCheckout}
-                disabled={
-                  isProcessingCheckout ||
-                  cart.length === 0 ||
-                  (paymentMethod === 'debt' && !selectedCustomerId)
-                }
-                className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:transform-none active:scale-95 min-h-[56px]"
-              >
-                {isProcessingCheckout ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processing...
+                {/* Payment Method Selection */}
+                <div className="space-y-3">
+                  <h3 className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white text-sm">
+                    PAYMENT METHOD
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['cash', 'mpesa', 'debt'] as PaymentMethod[]).map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => setPaymentMethod(method)}
+                        className={`
+                          p-3 rounded-xl font-mono font-black uppercase text-xs transition-all
+                          ${paymentMethod === method
+                            ? 'border-2 border-purple-500 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                            : 'border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-purple-400'
+                          }
+                        `}
+                      >
+                        {method === 'mpesa' ? 'M-PESA' : method === 'debt' ? 'CREDIT' : method.toUpperCase()}
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  `💳 Complete Sale - ${formatCurrency(total)}`
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      </main>
+                  
+                  {/* Warning for credit sales without customer */}
+                  {paymentMethod === 'debt' && !selectedCustomerId && (
+                    <div className="p-3 bg-orange-100 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-600 rounded-xl">
+                      <p className="text-orange-700 dark:text-orange-400 font-mono font-bold text-xs uppercase">
+                        ⚠️ Customer required for credit sales
+                      </p>
+                    </div>
+                  )}
+                </div>
 
-      {/* Modals */}
+                {/* Total and Checkout */}
+                <div className="space-y-4 pt-4 border-t-2 border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                      TOTAL:
+                    </span>
+                    <span className="font-mono font-black text-xl text-purple-600 dark:text-purple-400">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={handleCheckout}
+                    disabled={isProcessingCheckout || isCreatingOfflineSale || (paymentMethod === 'debt' && !selectedCustomerId)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-mono font-black uppercase tracking-wider rounded-xl transition-all duration-300 hover:from-purple-700 hover:to-blue-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 py-4 text-sm"
+                  >
+                    {isProcessingCheckout || isCreatingOfflineSale ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        PROCESSING...
+                      </>
+                    ) : (
+                      <>
+                        {isOnline ? (
+                          <Wifi className="w-4 h-4" />
+                        ) : (
+                          <WifiOff className="w-4 h-4" />
+                        )}
+                        COMPLETE SALE {!isOnline && '(OFFLINE)'}
+                      </>
+                    )}
+                  </button>
+                  
+                  {!isOnline && (
+                    <p className="text-center text-xs text-orange-600 dark:text-orange-400 font-mono">
+                      ⚠️ OFFLINE MODE - Sale will sync when connection is restored
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Floating Toggle Button */}
+        <button
+          onClick={() => setActivePanel(activePanel === 'search' ? 'cart' : 'search')}
+          className={`
+            fixed top-1/2 -translate-y-1/2 w-14 h-14 bg-green-600 text-white rounded-full shadow-lg 
+            z-50 transition-all duration-200 ease-in-out hover:bg-green-700 active:scale-95
+            flex items-center justify-center
+            ${activePanel === 'search' ? 'right-4' : 'left-4'}
+          `}
+          aria-label={activePanel === 'search' ? 'Go to Cart' : 'Go to Search'}
+        >
+          {activePanel === 'search' ? (
+            <ShoppingCart className="w-6 h-6" />
+          ) : (
+            <Search className="w-6 h-6" />
+          )}
+        </button>
+
+        {/* Add Customer Modal */}
+        {showAddCustomer && (
+          <AddCustomerModal
+            open={showAddCustomer}
+            onOpenChange={setShowAddCustomer}
+            onCustomerAdded={(customer) => {
+              setSelectedCustomerId(customer.id);
+              setShowAddCustomer(false);
+            }}
+          />
+        )}
+
+        {/* Add Debt Modal - CRITICAL: Added for mobile view */}
+        <AddDebtModal
+          isOpen={showAddDebt}
+          onClose={() => setShowAddDebt(false)}
+        />
+      </div>
+    );
+  }
+
+  // Desktop/Tablet layout (unchanged)
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Header with Connection Status */}
+      <div className={`
+        space-y-6 max-w-7xl mx-auto
+        ${isTablet ? 'p-4' : 'p-6'}
+      `}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 border-2 border-purple-400 rounded-xl bg-transparent flex items-center justify-center hover:border-purple-500 transition-colors">
+              <ShoppingCart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h1 className={`
+              font-mono font-black uppercase tracking-widest text-gray-900 dark:text-white
+              ${isTablet ? 'text-xl' : 'text-2xl'}
+            `}>
+              SALES POINT
+            </h1>
+            {/* Connection Status */}
+            <div className={`
+              flex items-center gap-2 px-3 py-1 rounded-full border-2
+              ${isOnline 
+                ? 'border-green-400 bg-green-50 dark:bg-green-900/20' 
+                : 'border-orange-400 bg-orange-50 dark:bg-orange-900/20'
+              }
+            `}>
+              {isOnline ? (
+                <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+              )}
+              <span className={`
+                font-mono font-bold uppercase text-xs
+                ${isOnline 
+                  ? 'text-green-700 dark:text-green-300' 
+                  : 'text-orange-700 dark:text-orange-300'
+                }
+              `}>
+                {isOnline ? 'ONLINE' : 'OFFLINE'}
+              </span>
+              {!isOnline && pendingOperations > 0 && (
+                <span className="bg-orange-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                  {pendingOperations}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 font-mono text-sm">
+            <Clock className="w-4 h-4" />
+            <span className="font-bold">TOTAL: {formatCurrency(total)}</span>
+          </div>
+        </div>
+
+        {/* Search Bar - Blocky Style */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-500 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="SEARCH PRODUCTS..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-4 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-transparent font-mono font-bold text-gray-900 dark:text-white placeholder-purple-400 focus:outline-none focus:border-purple-500 focus:ring-0 transition-colors uppercase tracking-wide text-base"
+          />
+        </div>
+
+
+        {/* Product Grid and Cart Layout */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+          {/* Product Grid */}
+          <div className="lg:col-span-2">
+            <div className={`
+              grid gap-4
+              ${isTablet ? 'grid-cols-3' : 'grid-cols-2 xl:grid-cols-3'}
+            `}>
+              {/* Add Debt Card */}
+              <div
+                onClick={() => setShowAddDebt(true)}
+                className="border-2 border-red-400 rounded-xl bg-red-50 dark:bg-red-900/20 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 group p-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-mono font-black uppercase tracking-wide text-red-600 dark:text-red-400 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors text-sm">
+                        ADD DEBT
+                      </h3>
+                      <p className="text-red-500 dark:text-red-400 uppercase font-mono font-bold text-sm">
+                        CREDIT SALE
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 border-2 border-red-400 dark:border-red-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-red-500 dark:group-hover:border-red-400 transition-colors bg-red-100 dark:bg-red-800/50">
+                      <span className="text-red-600 dark:text-red-400 font-black text-lg">₹</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-mono font-black text-red-600 dark:text-red-400 text-base">
+                        RECORD DEBT
+                      </p>
+                      <p className="font-mono font-bold uppercase text-sm text-red-500 dark:text-red-400">
+                        CUSTOMER CREDIT
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className={`
+                    border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-white/50 dark:bg-gray-800/50 
+                    cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl 
+                    hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 group p-4
+                    ${product.currentStock === 0 ? 'border-orange-300 bg-orange-50/50 dark:bg-orange-900/20' : ''}
+                    ${product.currentStock < 0 ? 'border-gray-300 bg-gray-50/50 dark:bg-gray-800/30' : ''}
+                  `}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-mono font-black uppercase tracking-wide text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors text-sm">
+                          {product.name}
+                        </h3>
+                        <p className="text-purple-600 dark:text-purple-400 uppercase font-mono font-bold text-sm">
+                          {product.category}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 border-2 border-purple-300 dark:border-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-purple-500 transition-colors">
+                        <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-mono font-black text-gray-900 dark:text-white text-base">
+                          {formatCurrency(product.sellingPrice)}
+                        </p>
+                        <p className={`font-mono font-bold uppercase text-sm ${getStockColorClass(product.currentStock, product.lowStockThreshold)}`}>
+                          Stock: {getStockDisplayText(product.currentStock)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cart Section - Blocky Style */}
+          <div className="space-y-6">
+            {/* Cart Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white text-base">
+                CART ({cart.length})
+              </h2>
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="border-2 border-red-400 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl font-mono font-black uppercase tracking-wide transition-colors px-4 py-2 text-sm"
+                >
+                  CLEAR
+                </button>
+              )}
+            </div>
+
+            {/* Cart Items */}
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {cart.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 border-2 border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <ShoppingCart className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 font-mono font-bold uppercase text-sm">Cart Empty</p>
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="border-2 border-purple-200 dark:border-purple-700 rounded-xl p-3 bg-white/50 dark:bg-gray-800/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-mono font-bold uppercase text-gray-900 dark:text-white text-base">
+                        {item.name}
+                      </h4>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="w-7 h-7 border-2 border-purple-300 rounded-lg flex items-center justify-center hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="font-mono font-black text-sm min-w-[20px] text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="w-7 h-7 border-2 border-purple-300 rounded-lg flex items-center justify-center hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="font-mono font-black text-gray-900 dark:text-white text-sm">
+                        {formatCurrency(item.sellingPrice * item.quantity)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Customer Selection */}
+            {cart.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedCustomerId || ''}
+                    onChange={(e) => setSelectedCustomerId(e.target.value || null)}
+                    className="flex-1 p-3 border-2 border-purple-300 dark:border-purple-600 rounded-xl bg-background text-foreground font-mono font-bold focus:outline-none focus:border-purple-500 transition-colors uppercase"
+                  >
+                    <option value="">WALK-IN CUSTOMER</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name.toUpperCase()} - {customer.phone}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowAddCustomer(true)}
+                    className="border-2 border-blue-400 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl font-mono font-black uppercase tracking-wide transition-colors flex items-center gap-2 px-4 py-3 text-sm"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    ADD
+                  </button>
+                </div>
+
+                {/* Payment Method Selection */}
+                <div className="space-y-3">
+                  <h3 className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white text-sm">
+                    PAYMENT METHOD
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['cash', 'mpesa', 'debt'] as PaymentMethod[]).map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => setPaymentMethod(method)}
+                        className={`
+                          p-3 rounded-xl font-mono font-black uppercase text-xs transition-all
+                          ${paymentMethod === method
+                            ? 'border-2 border-purple-500 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                            : 'border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-purple-400'
+                          }
+                        `}
+                      >
+                        {method === 'mpesa' ? 'M-PESA' : method === 'debt' ? 'CREDIT' : method.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Warning for credit sales without customer */}
+                  {paymentMethod === 'debt' && !selectedCustomerId && (
+                    <div className="p-3 bg-orange-100 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-600 rounded-xl">
+                      <p className="text-orange-700 dark:text-orange-400 font-mono font-bold text-xs uppercase">
+                        ⚠️ Customer required for credit sales
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Total and Checkout */}
+                <div className="space-y-4 pt-4 border-t-2 border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                      TOTAL:
+                    </span>
+                    <span className="font-mono font-black text-xl text-purple-600 dark:text-purple-400">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={handleCheckout}
+                    disabled={isProcessingCheckout || isCreatingOfflineSale || (paymentMethod === 'debt' && !selectedCustomerId)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-mono font-black uppercase tracking-wider rounded-xl transition-all duration-300 hover:from-purple-700 hover:to-blue-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 py-4 text-base"
+                  >
+                    {isProcessingCheckout || isCreatingOfflineSale ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        PROCESSING...
+                      </>
+                    ) : (
+                      <>
+                        {isOnline ? (
+                          <Wifi className="w-4 h-4" />
+                        ) : (
+                          <WifiOff className="w-4 h-4" />
+                        )}
+                        COMPLETE SALE {!isOnline && '(OFFLINE)'}
+                      </>
+                    )}
+                  </button>
+                  
+                  {!isOnline && (
+                    <p className="text-center text-xs text-orange-600 dark:text-orange-400 font-mono">
+                      ⚠️ OFFLINE MODE - Sale will sync when connection is restored
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Add Customer Modal */}
       {showAddCustomer && (
         <AddCustomerModal
           open={showAddCustomer}
@@ -628,12 +993,11 @@ const ModernSalesPage = () => {
         />
       )}
 
-      {showAddDebt && (
-        <AddDebtModal
-          isOpen={showAddDebt}
-          onClose={() => setShowAddDebt(false)}
-        />
-      )}
+      {/* Add Debt Modal */}
+      <AddDebtModal
+        isOpen={showAddDebt}
+        onClose={() => setShowAddDebt(false)}
+      />
     </div>
   );
 };

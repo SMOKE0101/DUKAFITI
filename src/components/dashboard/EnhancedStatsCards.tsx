@@ -1,10 +1,16 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, DollarSign, Package, Users, ShoppingCart, AlertTriangle } from 'lucide-react';
-import { Sale, Product, Customer } from '../../types';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent } from '@/components/ui/card';
+import { 
+  DollarSign, 
+  ShoppingCart, 
+  Users, 
+  Package,
+  AlertTriangle
+} from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
+import { Sale, Product, Customer } from '../../types';
 
 interface EnhancedStatsCardsProps {
   sales: Sale[];
@@ -13,104 +19,88 @@ interface EnhancedStatsCardsProps {
 }
 
 const EnhancedStatsCards: React.FC<EnhancedStatsCardsProps> = ({ sales, products, customers }) => {
-  // Calculate metrics
-  const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
-  const totalProfit = sales.reduce((sum, sale) => sum + sale.profit, 0);
-  const totalProducts = products.length;
-  const totalCustomers = customers.length;
-  const lowStockProducts = products.filter(p => p.current_stock <= (p.low_stock_threshold || 10));
-  
-  // Calculate today's sales
-  const today = new Date().toISOString().split('T')[0];
-  const todaySales = sales.filter(sale => sale.timestamp?.startsWith(today));
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
-  
-  // Calculate yesterday's sales for comparison
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const yesterdaySales = sales.filter(sale => sale.timestamp?.startsWith(yesterdayStr));
-  const yesterdayRevenue = yesterdaySales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
-  
-  const revenueChange = yesterdayRevenue > 0 ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 : 0;
-  const isRevenueUp = revenueChange > 0;
+  const navigate = useNavigate();
 
-  const statsCards = [
+  // Calculate stats from the data
+  const today = new Date().toDateString();
+  const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today);
+  
+  const totalSalesToday = todaySales.reduce((sum, s) => sum + s.total, 0);
+  const totalOrdersToday = todaySales.length;
+  const activeCustomers = customers.length;
+  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
+
+  const cards = [
     {
-      title: "Today's Revenue",
-      value: formatCurrency(todayRevenue),
+      title: 'Total Sales Today',
+      value: formatCurrency(totalSalesToday),
       icon: DollarSign,
-      change: revenueChange,
-      isPositive: isRevenueUp,
-      subtitle: `${todaySales.length} sales today`
+      color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      textColor: 'text-purple-50',
+      route: '/sales',
+      hoverColor: 'hover:shadow-purple-200 dark:hover:shadow-purple-800/20'
     },
     {
-      title: "Total Revenue",
-      value: formatCurrency(totalRevenue),
-      icon: TrendingUp,
-      subtitle: `From ${sales.length} total sales`
-    },
-    {
-      title: "Total Profit",
-      value: formatCurrency(totalProfit),
-      icon: TrendingUp,
-      subtitle: `${((totalProfit / Math.max(totalRevenue, 1)) * 100).toFixed(1)}% margin`
-    },
-    {
-      title: "Products",
-      value: totalProducts.toString(),
-      icon: Package,
-      subtitle: lowStockProducts.length > 0 ? `${lowStockProducts.length} low stock` : "All well stocked",
-      hasAlert: lowStockProducts.length > 0
-    },
-    {
-      title: "Customers",
-      value: totalCustomers.toString(),
-      icon: Users,
-      subtitle: `${customers.filter(c => c.outstanding_debt > 0).length} with debt`
-    },
-    {
-      title: "Orders",
-      value: sales.length.toString(),
+      title: 'Orders Today',
+      value: totalOrdersToday.toString(),
       icon: ShoppingCart,
-      subtitle: `${sales.filter(s => s.timestamp?.startsWith(today)).length} today`
+      color: 'bg-gradient-to-br from-blue-500 to-blue-600',
+      textColor: 'text-blue-50',
+      route: '/sales',
+      hoverColor: 'hover:shadow-blue-200 dark:hover:shadow-blue-800/20'
+    },
+    {
+      title: 'Active Customers',
+      value: activeCustomers.toString(),
+      icon: Users,
+      color: 'bg-gradient-to-br from-green-500 to-green-600',
+      textColor: 'text-green-50',
+      route: '/customers',
+      hoverColor: 'hover:shadow-green-200 dark:hover:shadow-green-800/20'
+    },
+    {
+      title: 'Low Stock Products',
+      value: lowStockProducts.toString(),
+      icon: lowStockProducts > 0 ? AlertTriangle : Package,
+      color: lowStockProducts > 0 
+        ? 'bg-gradient-to-br from-orange-500 to-red-500' 
+        : 'bg-gradient-to-br from-gray-500 to-gray-600',
+      textColor: lowStockProducts > 0 ? 'text-orange-50' : 'text-gray-50',
+      route: '/inventory',
+      hoverColor: lowStockProducts > 0 
+        ? 'hover:shadow-orange-200 dark:hover:shadow-orange-800/20' 
+        : 'hover:shadow-gray-200 dark:hover:shadow-gray-800/20'
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {statsCards.map((stat, index) => (
-        <Card key={index} className="relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {stat.title}
-            </CardTitle>
-            <div className="relative">
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-              {stat.hasAlert && (
-                <AlertTriangle className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{stat.value}</div>
-              {stat.change !== undefined && (
-                <Badge 
-                  variant={stat.isPositive ? "default" : "destructive"}
-                  className="text-xs"
-                >
-                  {stat.isPositive ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                  {Math.abs(stat.change).toFixed(1)}%
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stat.subtitle}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {cards.map((card, index) => {
+        const Icon = card.icon;
+        return (
+          <Card 
+            key={index}
+            className={`relative overflow-hidden border-0 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md hover:shadow-xl ${card.hoverColor} transition-all duration-300 cursor-pointer group hover:-translate-y-1`}
+            onClick={() => navigate(card.route)}
+          >
+            <CardContent className="p-0">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {card.title}
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {card.value}
+                  </p>
+                </div>
+                <div className={`p-3 ${card.color} rounded-full group-hover:scale-110 transition-transform backdrop-blur-sm bg-opacity-90`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

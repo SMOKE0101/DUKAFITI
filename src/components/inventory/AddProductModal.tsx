@@ -1,57 +1,83 @@
-
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
-import { PRODUCT_CATEGORIES } from '../../constants/categories';
+import { Shuffle } from 'lucide-react';
+import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  existingProduct?: Product | null;
+  onSave: (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  editingProduct?: Product | null;
 }
 
-const AddProductModal: React.FC<AddProductModalProps> = ({
-  isOpen,
-  onClose,
+const AddProductModal: React.FC<AddProductModalProps> = ({ 
+  isOpen, 
+  onClose, 
   onSave,
-  existingProduct
+  editingProduct 
 }) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: existingProduct?.name || '',
-    category: existingProduct?.category || '',
-    cost_price: existingProduct?.cost_price || 0,
-    selling_price: existingProduct?.selling_price || 0,
-    current_stock: existingProduct ? existingProduct.current_stock : 0,
-    low_stock_threshold: existingProduct?.low_stock_threshold || 10
+    name: '',
+    sku: '',
+    category: '',
+    costPrice: 0,
+    sellingPrice: 0,
+    currentStock: 0,
+    lowStockThreshold: 10,
   });
+  const [unspecifiedStock, setUnspecifiedStock] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      category: '',
-      cost_price: 0,
-      selling_price: 0,
-      current_stock: 0,
-      low_stock_threshold: 10
-    });
-  };
-
-  const handleClose = () => {
-    if (!loading) {
-      resetForm();
-      onClose();
+  useEffect(() => {
+    if (editingProduct) {
+      const isCustom = !PRODUCT_CATEGORIES.includes(editingProduct.category as any);
+      setFormData({
+        name: editingProduct.name,
+        sku: editingProduct.sku || '',
+        category: isCustom ? 'Other / Custom' : editingProduct.category,
+        costPrice: editingProduct.costPrice,
+        sellingPrice: editingProduct.sellingPrice,
+        currentStock: editingProduct.currentStock === -1 ? 0 : editingProduct.currentStock,
+        lowStockThreshold: editingProduct.lowStockThreshold,
+      });
+      setUnspecifiedStock(editingProduct.currentStock === -1);
+      setCustomCategory(isCustom ? editingProduct.category : '');
+      setShowCustomInput(isCustom);
+    } else {
+      setFormData({
+        name: '',
+        sku: '',
+        category: '',
+        costPrice: 0,
+        sellingPrice: 0,
+        currentStock: 0,
+        lowStockThreshold: 10,
+      });
+      setUnspecifiedStock(false);
+      setCustomCategory('');
+      setShowCustomInput(false);
     }
+  }, [editingProduct, isOpen]);
+
+  const generateSKU = () => {
+    const prefix = formData.category ? formData.category.substring(0, 3).toUpperCase() : 'PRD';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    const generatedSKU = `${prefix}-${timestamp}-${random}`;
+    setFormData(prev => ({ ...prev, sku: generatedSKU }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim()) {
@@ -63,189 +89,332 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
 
-    if (!formData.category) {
-      toast({
-        title: "Validation Error", 
-        description: "Please select a category",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.cost_price <= 0 || formData.selling_price <= 0) {
+    if (!formData.category.trim()) {
       toast({
         title: "Validation Error",
-        description: "Prices must be greater than 0",
+        description: "Category is required",
         variant: "destructive",
       });
       return;
     }
 
-    if (formData.selling_price <= formData.cost_price) {
+    if (isCustomCategory(formData.category) && !validateCustomCategory(customCategory)) {
       toast({
-        title: "Validation Warning",
-        description: "Selling price should be higher than cost price for profit",
+        title: "Validation Error",
+        description: "Custom category is required and must be 50 characters or less",
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const productData = {
-        user_id: '',
-        name: formData.name.trim(),
-        category: formData.category,
-        cost_price: formData.cost_price,
-        selling_price: formData.selling_price,
-        current_stock: formData.current_stock,
-        low_stock_threshold: formData.low_stock_threshold
-      };
-
-      await onSave(productData);
-      
+    if (formData.sellingPrice < 0) {
       toast({
-        title: "Success",
-        description: existingProduct ? "Product updated successfully" : "Product added successfully",
-      });
-      
-      handleClose();
-    } catch (error) {
-      console.error('Failed to save product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save product. Please try again.",
+        title: "Validation Error",
+        description: "Selling price cannot be negative",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      return;
+    }
+
+    if (!unspecifiedStock) {
+      if (formData.costPrice < 0) {
+        toast({
+          title: "Validation Error",
+          description: "Cost price cannot be negative",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (formData.currentStock < 0) {
+        toast({
+          title: "Validation Error",
+          description: "Stock cannot be negative",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    const finalFormData = {
+      ...formData,
+      category: isCustomCategory(formData.category) ? customCategory : formData.category,
+      currentStock: unspecifiedStock ? -1 : formData.currentStock,
+      costPrice: unspecifiedStock ? 0 : formData.costPrice,
+      lowStockThreshold: unspecifiedStock ? 0 : formData.lowStockThreshold
+    };
+    
+    onSave(finalFormData);
+  };
+
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleCategoryChange = (value: string) => {
+    handleInputChange('category', value);
+    if (isCustomCategory(value)) {
+      setShowCustomInput(true);
+    } else {
+      setShowCustomInput(false);
+      setCustomCategory('');
     }
   };
 
+  const showProfitCalculation = !unspecifiedStock && formData.costPrice > 0 && formData.sellingPrice > 0;
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {existingProduct ? 'Edit Product' : 'Add New Product'}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Product Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter product name"
-              disabled={loading}
-              required
-            />
+    <TooltipProvider>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
+          {/* Modern Header */}
+          <div className="border-b-4 border-green-600 bg-white dark:bg-gray-900 p-6 text-center flex-shrink-0">
+            <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              {editingProduct ? 'EDIT PRODUCT' : 'ADD PRODUCT'}
+            </DialogTitle>
+            <DialogDescription className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2 uppercase tracking-wider">
+              {editingProduct ? 'Update product details' : 'Create new inventory item'}
+            </DialogDescription>
           </div>
+          
+          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Product Name */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product Name *
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter product name"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                  required
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">Category *</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {PRODUCT_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {/* Product SKU */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="sku" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product SKU
+                </Label>
+                <div className="flex gap-3">
+                  <Input
+                    id="sku"
+                    value={formData.sku}
+                    onChange={(e) => handleInputChange('sku', e.target.value)}
+                    placeholder="Enter or generate SKU"
+                    className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={generateSKU}
+                    className="h-12 px-4 border-2 border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200"
+                  >
+                    <Shuffle className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Category */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="category" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Category *
+                </Label>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={handleCategoryChange}
+                >
+                  <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
+                    {PRODUCT_CATEGORIES.map(category => (
+                      <SelectItem key={category} value={category} className="font-mono">
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {showCustomInput && (
+                  <div className="mt-3">
+                    <Input
+                      placeholder="Enter custom category"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                      maxLength={50}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              {/* Pricing Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Cost Price (KES) *
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
+                          KES
+                        </span>
+                        <Input
+                          id="costPrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={unspecifiedStock ? '' : formData.costPrice}
+                          onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
+                          placeholder="0.00"
+                          className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                            unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          disabled={unspecifiedStock}
+                          required={!unspecifiedStock}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    {unspecifiedStock && (
+                      <TooltipContent>
+                        <p>Disabled for unspecified-quantity items</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+                
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="sellingPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Selling Price (KES) *
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
+                      KES
+                    </span>
+                    <Input
+                      id="sellingPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.sellingPrice}
+                      onChange={(e) => handleInputChange('sellingPrice', parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                      className="h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Stock Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="currentStock" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Current Stock *
+                  </Label>
+                  <Input
+                    id="currentStock"
+                    type="number"
+                    min="0"
+                    value={unspecifiedStock ? '' : formData.currentStock}
+                    onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
+                    placeholder={unspecifiedStock ? "Unspecified quantity" : "0"}
+                    className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                      unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={unspecifiedStock}
+                    required={!unspecifiedStock}
+                  />
+                  <div className="flex items-center space-x-2 mt-3">
+                    <Checkbox 
+                      id="unspecifiedStock"
+                      checked={unspecifiedStock}
+                      onCheckedChange={(checked) => setUnspecifiedStock(checked as boolean)}
+                      className="border-2 border-gray-300 dark:border-gray-600"
+                    />
+                    <Label htmlFor="unspecifiedStock" className="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                      Unspecified quantity (sacks, cups, etc.)
+                    </Label>
+                  </div>
+                </div>
+                
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="lowStockThreshold" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Low Stock Alert
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Input
+                        id="lowStockThreshold"
+                        type="number"
+                        min="0"
+                        value={unspecifiedStock ? '' : formData.lowStockThreshold}
+                        onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 10)}
+                        placeholder="10"
+                        className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                          unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={unspecifiedStock}
+                      />
+                    </TooltipTrigger>
+                    {unspecifiedStock && (
+                      <TooltipContent>
+                        <p>Disabled for unspecified-quantity items</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              </div>
+
+              {showProfitCalculation && (
+                <div className="border-2 border-blue-300 dark:border-blue-600 rounded-xl p-4 bg-blue-50/50 dark:bg-blue-900/20">
+                  <h3 className="font-mono font-bold uppercase tracking-wider text-blue-900 dark:text-blue-100 mb-3">
+                    Profit Summary
+                  </h3>
+                  <div className="space-y-2 font-mono text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit per unit:</span>
+                      <span className="font-bold text-green-600">
+                        KES {(formData.sellingPrice - formData.costPrice).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit margin:</span>
+                      <span className="font-bold text-green-600">
+                        {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 pt-6">
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200"
+                >
+                  {editingProduct ? 'UPDATE PRODUCT' : 'ADD PRODUCT'}
+                </Button>
+                <Button 
+                  type="button" 
+                  onClick={onClose} 
+                  className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200"
+                >
+                  CANCEL
+                </Button>
+              </div>
+            </form>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="cost_price">Cost Price (KES) *</Label>
-              <Input
-                id="cost_price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.cost_price}
-                onChange={(e) => setFormData({ ...formData, cost_price: Number(e.target.value) })}
-                placeholder="0.00"
-                disabled={loading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="selling_price">Selling Price (KES) *</Label>
-              <Input
-                id="selling_price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.selling_price}
-                onChange={(e) => setFormData({ ...formData, selling_price: Number(e.target.value) })}
-                placeholder="0.00"
-                disabled={loading}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="current_stock">Initial Stock</Label>
-              <Input
-                id="current_stock"
-                type="number"
-                min="0"
-                value={formData.current_stock}
-                onChange={(e) => setFormData({ ...formData, current_stock: Number(e.target.value) })}
-                placeholder="0"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="low_stock_threshold">Low Stock Alert</Label>
-              <Input
-                id="low_stock_threshold"
-                type="number"
-                min="0"
-                value={formData.low_stock_threshold}
-                onChange={(e) => setFormData({ ...formData, low_stock_threshold: Number(e.target.value) })}
-                placeholder="10"
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 pt-4">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? 'Saving...' : existingProduct ? 'Update Product' : 'Add Product'}
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleClose} 
-              className="w-full"
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 };
 
