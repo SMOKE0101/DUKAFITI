@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -45,6 +46,7 @@ const queryClient = new QueryClient({
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const { offlineState } = useRobustOfflineManager();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading || !offlineState.isInitialized) {
     return (
@@ -63,9 +65,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <Navigate to="/signin" replace />;
   }
 
+  const handleSidebarToggle = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
     <div className="flex h-screen bg-background">
-      <AppSidebar />
+      <AppSidebar isOpen={sidebarOpen} onToggle={handleSidebarToggle} />
       <main className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <OfflineFirstRouter>
