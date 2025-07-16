@@ -1,24 +1,22 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from './contexts/AuthContext';
-import { useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useRobustOfflineManager } from './hooks/useRobustOfflineManager';
 
 // Components
-import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import InventoryPage from './pages/InventoryPage';
-import SalesPage from './pages/SalesPage';
-import CustomersPage from './pages/CustomersPage';
-import ReportsPage from './pages/ReportsPage';
-import SettingsPage from './pages/SettingsPage';
+import { AppSidebar } from './components/layout/AppSidebar';
+import Dashboard from './components/Dashboard';
+import InventoryPage from './components/InventoryPage';
+import ModernSalesPage from './components/ModernSalesPage';
+import CustomersPage from './components/CustomersPage';
+import ReportsPage from './components/ReportsPage';
+import SettingsPage from './components/SettingsPage';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
-import LandingPage from './pages/LandingPage';
-import ModernLandingPage from './pages/ModernLandingPage';
+import LandingPage from './pages/Landing';
+import ModernLandingPage from './pages/ModernLanding';
 import OfflineFirstRouter from './components/OfflineFirstRouter';
 import RobustOfflineStatus from './components/RobustOfflineStatus';
 
@@ -67,7 +65,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar />
+      <AppSidebar />
       <main className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <OfflineFirstRouter>
@@ -159,7 +157,7 @@ const App: React.FC = () => {
               } />
               <Route path="/app/sales" element={
                 <ProtectedRoute>
-                  <SalesPage />
+                  <ModernSalesPage />
                 </ProtectedRoute>
               } />
               <Route path="/app/customers" element={

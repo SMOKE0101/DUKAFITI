@@ -20,6 +20,7 @@ const OfflineFirstRouter: React.FC<OfflineFirstRouterProps> = ({ children }) => 
   const [routeData, setRouteData] = useState<any>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [isLoadingRoute, setIsLoadingRoute] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Offline-supported routes
   const offlineRoutes = [
@@ -33,7 +34,35 @@ const OfflineFirstRouter: React.FC<OfflineFirstRouterProps> = ({ children }) => 
 
   useEffect(() => {
     handleRouteChange();
+    
+    // Set timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (isLoadingRoute && !offlineState.isOnline) {
+        console.log('[OfflineFirstRouter] Loading timeout reached, handling gracefully');
+        handleLoadingTimeout();
+      }
+    }, 10000); // 10 second timeout
+
+    setLoadingTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [location.pathname, offlineState.isOnline, offlineState.isInitialized]);
+
+  const handleLoadingTimeout = () => {
+    setIsLoadingRoute(false);
+    const currentPath = location.pathname;
+    
+    if (currentPath !== '/app/dashboard') {
+      setRouteError(`Loading timeout. This page may not be fully available offline. Redirecting to dashboard.`);
+      setTimeout(() => {
+        navigate('/app/dashboard', { replace: true });
+      }, 3000);
+    } else {
+      setRouteError('Loading timeout. Some features may be limited offline.');
+    }
+  };
 
   const handleRouteChange = async () => {
     if (!offlineState.isInitialized) {
@@ -48,6 +77,7 @@ const OfflineFirstRouter: React.FC<OfflineFirstRouterProps> = ({ children }) => 
       if (offlineState.isOnline) {
         setRouteData(null);
         setIsLoadingRoute(false);
+        if (loadingTimeout) clearTimeout(loadingTimeout);
         return;
       }
 
@@ -76,10 +106,13 @@ const OfflineFirstRouter: React.FC<OfflineFirstRouterProps> = ({ children }) => 
       
       // Fallback to dashboard
       if (location.pathname !== '/app/dashboard') {
-        navigate('/app/dashboard', { replace: true });
+        setTimeout(() => {
+          navigate('/app/dashboard', { replace: true });
+        }, 3000);
       }
     } finally {
       setIsLoadingRoute(false);
+      if (loadingTimeout) clearTimeout(loadingTimeout);
     }
   };
 
@@ -126,7 +159,12 @@ const OfflineFirstRouter: React.FC<OfflineFirstRouterProps> = ({ children }) => 
     setRouteError(null);
   };
 
-  // Show loading state
+  const goToDashboard = () => {
+    navigate('/app/dashboard', { replace: true });
+    dismissError();
+  };
+
+  // Show loading state with timeout protection
   if (!offlineState.isInitialized || isLoadingRoute) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -135,6 +173,25 @@ const OfflineFirstRouter: React.FC<OfflineFirstRouterProps> = ({ children }) => 
           <p className="text-muted-foreground">
             {!offlineState.isInitialized ? 'Initializing app...' : 'Loading page...'}
           </p>
+          
+          {/* Show timeout warning after 5 seconds */}
+          {isLoadingRoute && !offlineState.isOnline && (
+            <div className="mt-4">
+              <p className="text-sm text-orange-600">
+                Taking longer than expected. 
+                {location.pathname !== '/app/dashboard' && (
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    onClick={goToDashboard}
+                    className="p-0 h-auto ml-1 text-orange-600 underline"
+                  >
+                    Go to Dashboard
+                  </Button>
+                )}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -148,16 +205,29 @@ const OfflineFirstRouter: React.FC<OfflineFirstRouterProps> = ({ children }) => 
           <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
             <WifiOff className="h-4 w-4" />
             <AlertDescription>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <span className="flex-1 pr-2">{routeError}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={dismissError}
-                  className="h-auto p-1 text-xs"
-                >
-                  ✕
-                </Button>
+                <div className="flex gap-1">
+                  {location.pathname !== '/app/dashboard' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToDashboard}
+                      className="h-auto p-1 text-xs"
+                    >
+                      <ArrowLeft className="h-3 w-3 mr-1" />
+                      Dashboard
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={dismissError}
+                    className="h-auto p-1 text-xs"
+                  >
+                    ✕
+                  </Button>
+                </div>
               </div>
             </AlertDescription>
           </Alert>

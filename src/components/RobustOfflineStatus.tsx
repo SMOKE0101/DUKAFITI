@@ -12,7 +12,7 @@ import {
   AlertCircle, 
   CheckCircle,
   Database,
-  Queue
+  List
 } from 'lucide-react';
 import { useRobustOfflineManager } from '../hooks/useRobustOfflineManager';
 
@@ -91,7 +91,7 @@ const RobustOfflineStatus = () => {
           {hasPendingActions && !offlineState.isSyncing && (
             <div className="mb-3">
               <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                <Queue className="h-3 w-3" />
+                <List className="h-3 w-3" />
                 <span>Queued actions:</span>
               </div>
               <div className="space-y-1 max-h-20 overflow-y-auto">
