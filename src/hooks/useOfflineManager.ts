@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -105,44 +106,7 @@ export const useOfflineManager = () => {
     }
   };
 
-  // Add offline operation
-  const addOfflineOperation = useCallback(async (
-    type: 'sale' | 'product' | 'customer' | 'inventory',
-    operation: 'create' | 'update' | 'delete',
-    data: any,
-    priority: 'high' | 'medium' | 'low' = 'medium'
-  ): Promise<string> => {
-    const operationId = `${type}_${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    const offlineOperation: OfflineOperation = {
-      id: operationId,
-      type,
-      operation,
-      data: { ...data, user_id: user?.id },
-      timestamp: new Date().toISOString(),
-      priority,
-      attempts: 0,
-      synced: false
-    };
-
-    try {
-      await offlineDB.addToSyncQueue(offlineOperation);
-      await loadPendingOperationsCount();
-      
-      if (offlineState.isOnline && user) {
-        setTimeout(() => syncPendingOperations(), 500);
-      }
-      
-      console.log(`[OfflineManager] Added ${type} ${operation} to queue:`, operationId);
-      return operationId;
-      
-    } catch (error) {
-      console.error('[OfflineManager] Failed to add offline operation:', error);
-      throw error;
-    }
-  }, [user, offlineState.isOnline]);
-
-  // Enhanced sync with better error handling and retry logic
+  // Enhanced sync with deduplication and aggregation
   const syncPendingOperations = useCallback(async () => {
     if (!offlineState.isOnline || offlineState.isSyncing || !user) {
       return;
@@ -171,8 +135,12 @@ export const useOfflineManager = () => {
 
       console.log(`[OfflineManager] Starting sync of ${operations.length} operations`);
 
+      // Deduplicate operations by unique ID before processing
+      const uniqueOperations = deduplicateOperations(operations);
+      console.log(`[OfflineManager] After deduplication: ${uniqueOperations.length} operations`);
+
       // Sort operations by priority and type
-      const sortedOperations = operations.sort((a, b) => {
+      const sortedOperations = uniqueOperations.sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
         if (priorityDiff !== 0) return priorityDiff;
@@ -336,6 +304,60 @@ export const useOfflineManager = () => {
     }
   }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
 
+  // Deduplication function to prevent duplicate sync operations
+  const deduplicateOperations = (operations: OfflineOperation[]): OfflineOperation[] => {
+    const seen = new Set<string>();
+    const unique: OfflineOperation[] = [];
+    
+    for (const operation of operations) {
+      // Create a unique key based on operation type, entity ID, and data hash
+      const key = `${operation.type}_${operation.operation}_${operation.data?.id || JSON.stringify(operation.data)}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(operation);
+      } else {
+        console.log(`[OfflineManager] Deduplicating operation: ${key}`);
+      }
+    }
+    
+    return unique;
+  };
+
+  // Enhanced aggregated sale sync
+  const syncAggregatedSale = async (aggregatedSale: AggregatedSaleData): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .insert([{
+          user_id: user?.id,
+          product_id: aggregatedSale.product_id,
+          product_name: aggregatedSale.product_name,
+          quantity: aggregatedSale.total_quantity,
+          selling_price: aggregatedSale.selling_price,
+          cost_price: aggregatedSale.cost_price,
+          profit: aggregatedSale.total_profit,
+          total_amount: aggregatedSale.total_amount,
+          payment_method: aggregatedSale.payment_method,
+          customer_id: aggregatedSale.customer_id,
+          customer_name: aggregatedSale.customer_name,
+          payment_details: aggregatedSale.payment_details || {},
+          timestamp: aggregatedSale.timestamp
+        }]);
+      
+      if (error) {
+        console.error('[OfflineManager] Aggregated sale sync error:', error);
+        return false;
+      }
+      
+      console.log(`[OfflineManager] Successfully synced aggregated sale: ${aggregatedSale.product_name} (qty: ${aggregatedSale.total_quantity})`);
+      return true;
+    } catch (error) {
+      console.error('[OfflineManager] Aggregated sale sync error:', error);
+      return false;
+    }
+  };
+
   // Enhanced single operation sync with better error handling
   const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
     try {
@@ -495,7 +517,7 @@ export const useOfflineManager = () => {
     }
   }, []);
 
-  // Enhanced operation management
+  // Enhanced operation management with deduplication
   const addOfflineOperation = useCallback(async (
     type: 'sale' | 'product' | 'customer' | 'inventory',
     operation: 'create' | 'update' | 'delete',

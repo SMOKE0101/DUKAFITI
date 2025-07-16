@@ -34,6 +34,12 @@ interface CustomerFormData {
   creditLimit: number;
 }
 
+interface ExtendedCustomer extends Customer {
+  synced: boolean;
+  offline?: boolean;
+  pendingOperation?: string;
+}
+
 const CustomerCRUDManager: React.FC = () => {
   const { customers: serverCustomers, loading: serverLoading, createCustomer, updateCustomer, deleteCustomer } = useSupabaseCustomers();
   const { toast } = useToast();
@@ -50,7 +56,7 @@ const CustomerCRUDManager: React.FC = () => {
     refresh,
     isOnline,
     getUnsyncedItems,
-  } = useOfflineCRUD<Customer & { offline?: boolean; pendingOperation?: string }>('customer', serverCustomers);
+  } = useOfflineCRUD<ExtendedCustomer>('customer', serverCustomers?.map(c => ({ ...c, synced: true })) || []);
 
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -65,7 +71,7 @@ const CustomerCRUDManager: React.FC = () => {
   // Sync server data when it changes
   useEffect(() => {
     if (serverCustomers) {
-      refresh(serverCustomers);
+      refresh(serverCustomers.map(c => ({ ...c, synced: true })));
     }
   }, [serverCustomers, refresh]);
 
@@ -103,7 +109,7 @@ const CustomerCRUDManager: React.FC = () => {
           address: formData.address,
           creditLimit: formData.creditLimit,
           updatedAt: new Date().toISOString(),
-        });
+        } as Partial<ExtendedCustomer>);
 
         // If online, also update on server
         if (isOnline) {
@@ -130,7 +136,8 @@ const CustomerCRUDManager: React.FC = () => {
           outstandingDebt: 0,
           riskRating: 'low',
           createdDate: new Date().toISOString(),
-        } as Omit<Customer, 'id'>);
+          lastPurchaseDate: null,
+        } as Omit<ExtendedCustomer, 'id'>);
 
         // If online, also create on server
         if (isOnline) {
@@ -334,7 +341,7 @@ const CustomerCRUDManager: React.FC = () => {
                     </Badge>
                   )}
                   {!customer.synced && (
-                    <Clock className="w-4 h-4 text-orange-500" title="Pending sync" />
+                    <Clock className="w-4 h-4 text-orange-500" />
                   )}
                 </div>
               </div>

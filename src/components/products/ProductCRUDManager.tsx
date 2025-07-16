@@ -32,6 +32,12 @@ interface ProductFormData {
   lowStockThreshold: number;
 }
 
+interface ExtendedProduct extends Product {
+  synced: boolean;
+  offline?: boolean;
+  pendingOperation?: string;
+}
+
 const ProductCRUDManager: React.FC = () => {
   const { products: serverProducts, loading: serverLoading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
   const { toast } = useToast();
@@ -48,7 +54,7 @@ const ProductCRUDManager: React.FC = () => {
     refresh,
     isOnline,
     getUnsyncedItems,
-  } = useOfflineCRUD<Product & { offline?: boolean; pendingOperation?: string }>('product', serverProducts);
+  } = useOfflineCRUD<ExtendedProduct>('product', serverProducts?.map(p => ({ ...p, synced: true })) || []);
 
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -64,7 +70,7 @@ const ProductCRUDManager: React.FC = () => {
   // Sync server data when it changes
   useEffect(() => {
     if (serverProducts) {
-      refresh(serverProducts);
+      refresh(serverProducts.map(p => ({ ...p, synced: true })));
     }
   }, [serverProducts, refresh]);
 
@@ -104,7 +110,7 @@ const ProductCRUDManager: React.FC = () => {
           currentStock: formData.currentStock,
           lowStockThreshold: formData.lowStockThreshold,
           updatedAt: new Date().toISOString(),
-        });
+        } as Partial<ExtendedProduct>);
 
         // If online, also update on server
         if (isOnline) {
@@ -130,7 +136,7 @@ const ProductCRUDManager: React.FC = () => {
           lowStockThreshold: formData.lowStockThreshold,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        } as Omit<Product, 'id'>);
+        } as Omit<ExtendedProduct, 'id'>);
 
         // If online, also create on server
         if (isOnline) {
@@ -335,7 +341,7 @@ const ProductCRUDManager: React.FC = () => {
                     </Badge>
                   )}
                   {!product.synced && (
-                    <Clock className="w-4 h-4 text-orange-500" title="Pending sync" />
+                    <Clock className="w-4 h-4 text-orange-500" />
                   )}
                 </div>
               </div>

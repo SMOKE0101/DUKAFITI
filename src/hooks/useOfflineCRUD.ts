@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useOfflineManager } from './useOfflineManager';
 import { useToast } from './use-toast';
@@ -17,6 +18,8 @@ interface OfflineItem {
   synced: boolean;
   offline?: boolean;
   pendingOperation?: 'create' | 'update' | 'delete';
+  lastPurchaseDate?: string;
+  updatedAt?: string;
 }
 
 export const useOfflineCRUD = <T extends OfflineItem>(
