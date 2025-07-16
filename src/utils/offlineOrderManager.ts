@@ -243,12 +243,12 @@ class OfflineOrderManager {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['orders'], 'readwrite');
       const store = transaction.objectStore('orders');
-      const index = store.index('synced');
       
-      const request = index.getAll(true); // Get synced orders
+      const getAllRequest = store.getAll();
       
-      request.onsuccess = () => {
-        const syncedOrders = request.result || [];
+      getAllRequest.onsuccess = () => {
+        const allOrders = getAllRequest.result || [];
+        const syncedOrders = allOrders.filter(order => order.synced);
         
         const deletePromises = syncedOrders.map(order => {
           return new Promise<void>((resolveDelete, rejectDelete) => {
@@ -266,7 +266,7 @@ class OfflineOrderManager {
           .catch(reject);
       };
       
-      request.onerror = () => reject(request.error);
+      getAllRequest.onerror = () => reject(getAllRequest.error);
     });
   }
 }

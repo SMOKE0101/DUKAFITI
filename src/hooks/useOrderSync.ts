@@ -148,13 +148,13 @@ export const useOrderSync = () => {
           console.log(`[OrderSync] Syncing order ${order.offlineId}`);
 
           // Check if this offline ID already exists in the database
-          const { data: existingOrder } = await supabase
-            .from('orders')
+          const { data: existingSales } = await supabase
+            .from('sales')
             .select('id')
             .eq('offline_id', order.offlineId)
-            .maybeSingle();
+            .limit(1);
 
-          if (existingOrder) {
+          if (existingSales && existingSales.length > 0) {
             console.log(`[OrderSync] Order ${order.offlineId} already exists, marking as synced`);
             await offlineOrderManager.markOrderAsSynced(order.offlineId);
             successCount++;
@@ -199,7 +199,7 @@ export const useOrderSync = () => {
         } catch (error) {
           console.error(`[OrderSync] Error syncing order ${order.offlineId}:`, error);
           await offlineOrderManager.incrementSyncAttempts(order.offlineId);
-          errors.push(`Order ${order.offlineId.slice(-8)}: ${error.message}`);
+          errors.push(`Order ${order.offlineId.slice(-8)}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 
@@ -243,7 +243,7 @@ export const useOrderSync = () => {
       setSyncState(prev => ({ 
         ...prev, 
         isSyncing: false,
-        syncErrors: [`Sync failed: ${error.message}`]
+        syncErrors: [`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
       }));
       
       toast({

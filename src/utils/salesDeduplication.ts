@@ -30,12 +30,9 @@ export class SalesDeduplication {
    */
   static async findDuplicateSales(): Promise<any[]> {
     try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('offline_id, COUNT(*) as count')
-        .not('offline_id', 'is', null)
-        .group('offline_id')
-        .having('COUNT(*) > 1');
+      // Since PostgreSQL doesn't support .group() method in Supabase client,
+      // we'll use a raw SQL query to find duplicates
+      const { data, error } = await supabase.rpc('find_duplicate_sales', {});
 
       if (error) {
         console.error('[SalesDeduplication] Error finding duplicates:', error);
