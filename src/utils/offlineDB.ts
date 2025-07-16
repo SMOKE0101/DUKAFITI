@@ -1,4 +1,3 @@
-
 // Define interfaces for offline data types
 export interface OfflineProduct {
   id: string;
@@ -63,7 +62,7 @@ class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private initPromise: Promise<void> | null = null;
   private readonly dbName = 'DukaSmartOffline';
-  private readonly dbVersion = 2; // Increased version for better error handling
+  private readonly dbVersion = 3; // Increased version for enhanced robustness
   private isInitializing = false;
 
   async init(): Promise<void> {
@@ -98,7 +97,7 @@ class OfflineDatabase {
       request.onsuccess = () => {
         this.db = request.result;
         this.isInitializing = false;
-        console.log('[OfflineDB] Database initialized successfully');
+        console.log('[OfflineDB] ✅ Database initialized successfully');
         
         // Add error handler for database
         this.db.onerror = (event) => {
@@ -143,11 +142,12 @@ class OfflineDatabase {
               if (storeName === 'sales') {
                 store.createIndex('product_id', 'product_id', { unique: false });
                 store.createIndex('customer_id', 'customer_id', { unique: false });
+                store.createIndex('synced', 'synced', { unique: false });
               }
               
-              console.log(`[OfflineDB] Created store: ${storeName}`);
+              console.log(`[OfflineDB] ✅ Created store: ${storeName}`);
             } catch (error) {
-              console.error(`[OfflineDB] Failed to create store ${storeName}:`, error);
+              console.error(`[OfflineDB] ❌ Failed to create store ${storeName}:`, error);
             }
           }
         });
@@ -184,14 +184,14 @@ class OfflineDatabase {
       await this.delete('settings', testData.id);
       
       if (retrieved && retrieved.id === testData.id) {
-        console.log('[OfflineDB] Database test passed');
+        console.log('[OfflineDB] ✅ Database test passed');
         return true;
       } else {
-        console.error('[OfflineDB] Database test failed: data mismatch');
+        console.error('[OfflineDB] ❌ Database test failed: data mismatch');
         return false;
       }
     } catch (error) {
-      console.error('[OfflineDB] Database test failed:', error);
+      console.error('[OfflineDB] ❌ Database test failed:', error);
       return false;
     }
   }
@@ -216,21 +216,21 @@ class OfflineDatabase {
         const request = store.put(data);
         
         request.onsuccess = () => {
-          console.log(`[OfflineDB] Stored data in ${storeName}:`, data.id);
+          console.log(`[OfflineDB] ✅ Stored data in ${storeName}:`, data.id);
           resolve();
         };
         
         request.onerror = () => {
-          console.error(`[OfflineDB] Failed to store data in ${storeName}:`, request.error);
+          console.error(`[OfflineDB] ❌ Failed to store data in ${storeName}:`, request.error);
           reject(new Error(`Failed to store data: ${request.error?.message || 'Unknown error'}`));
         };
         
         transaction.onerror = () => {
-          console.error(`[OfflineDB] Transaction failed for ${storeName}:`, transaction.error);
+          console.error(`[OfflineDB] ❌ Transaction failed for ${storeName}:`, transaction.error);
           reject(new Error(`Transaction failed: ${transaction.error?.message || 'Unknown error'}`));
         };
       } catch (error) {
-        console.error(`[OfflineDB] Error in storeOfflineData for ${storeName}:`, error);
+        console.error(`[OfflineDB] ❌ Error in storeOfflineData for ${storeName}:`, error);
         reject(error);
       }
     });
@@ -255,11 +255,11 @@ class OfflineDatabase {
         }
         
         transaction.onerror = () => {
-          console.error(`[OfflineDB] Transaction failed for ${storeName}:`, transaction.error);
+          console.error(`[OfflineDB] ❌ Transaction failed for ${storeName}:`, transaction.error);
           reject(transaction.error);
         };
       } catch (error) {
-        console.error(`[OfflineDB] Error in getOfflineData for ${storeName}:`, error);
+        console.error(`[OfflineDB] ❌ Error in getOfflineData for ${storeName}:`, error);
         reject(error);
       }
     });
@@ -286,10 +286,51 @@ class OfflineDatabase {
         
         transaction.onerror = () => reject(transaction.error);
       } catch (error) {
-        console.error(`[OfflineDB] Error in getAllOfflineData for ${storeName}:`, error);
+        console.error(`[OfflineDB] ❌ Error in getAllOfflineData for ${storeName}:`, error);
         reject(error);
       }
     });
+  }
+
+  // Enhanced sale operations with proper error handling and no corruption
+  async storeSale(sale: OfflineSale): Promise<void> {
+    try {
+      console.log('[OfflineDB] 💾 Storing sale offline:', sale.id);
+      
+      // Validate sale data before storing
+      if (!sale.id || !sale.user_id || !sale.product_id) {
+        throw new Error('Invalid sale data: missing required fields');
+      }
+      
+      // Store the sale with enhanced transaction safety
+      const saleData = {
+        ...sale,
+        synced: false,
+        timestamp: sale.timestamp || new Date().toISOString()
+      };
+      
+      await this.store('sales', saleData);
+      
+      // Update product stock if product exists (with proper error isolation)
+      if (sale.product_id && sale.quantity > 0) {
+        try {
+          const product = await this.getProduct(sale.product_id);
+          if (product && typeof product.current_stock === 'number' && product.current_stock >= 0) {
+            const newStock = Math.max(0, product.current_stock - sale.quantity);
+            await this.updateProductStock(sale.product_id, newStock);
+            console.log(`[OfflineDB] ✅ Updated product stock for ${sale.product_id}: ${product.current_stock} -> ${newStock}`);
+          }
+        } catch (stockError) {
+          console.warn('[OfflineDB] ⚠️ Failed to update product stock (sale still stored):', stockError);
+          // Don't fail the sale if stock update fails - sale is still valid
+        }
+      }
+      
+      console.log('[OfflineDB] ✅ Sale stored successfully offline');
+    } catch (error) {
+      console.error('[OfflineDB] ❌ Failed to store sale:', error);
+      throw new Error(`Failed to store sale: ${error.message}`);
+    }
   }
 
   // Enhanced methods for specific data types
@@ -307,47 +348,17 @@ class OfflineDatabase {
         
         const request = store.delete(id);
         request.onsuccess = () => {
-          console.log(`[OfflineDB] Deleted from ${storeName}:`, id);
+          console.log(`[OfflineDB] ✅ Deleted from ${storeName}:`, id);
           resolve();
         };
         request.onerror = () => reject(request.error);
         
         transaction.onerror = () => reject(transaction.error);
       } catch (error) {
-        console.error(`[OfflineDB] Error in delete for ${storeName}:`, error);
+        console.error(`[OfflineDB] ❌ Error in delete for ${storeName}:`, error);
         reject(error);
       }
     });
-  }
-
-  // Enhanced sale operations with proper error handling
-  async storeSale(sale: OfflineSale): Promise<void> {
-    try {
-      console.log('[OfflineDB] Storing sale:', sale.id);
-      
-      // Store the sale
-      await this.store('sales', { ...sale, synced: false });
-      
-      // Update product stock if product exists
-      if (sale.product_id && sale.quantity > 0) {
-        try {
-          const product = await this.getProduct(sale.product_id);
-          if (product && product.current_stock !== -1) {
-            const newStock = Math.max(0, product.current_stock - sale.quantity);
-            await this.updateProductStock(sale.product_id, newStock);
-            console.log(`[OfflineDB] Updated product stock for ${sale.product_id}: ${product.current_stock} -> ${newStock}`);
-          }
-        } catch (stockError) {
-          console.warn('[OfflineDB] Failed to update product stock:', stockError);
-          // Don't fail the sale if stock update fails
-        }
-      }
-      
-      console.log('[OfflineDB] Sale stored successfully');
-    } catch (error) {
-      console.error('[OfflineDB] Failed to store sale:', error);
-      throw new Error(`Failed to store sale: ${error.message}`);
-    }
   }
 
   // Product methods
@@ -436,14 +447,6 @@ class OfflineDatabase {
     }
   }
 
-  async setLastSyncTime(key: string, timestamp: number): Promise<void> {
-    await this.store('settings', {
-      id: `lastSyncTime_${key}`,
-      value: timestamp,
-      updated_at: new Date().toISOString()
-    });
-  }
-
   async addToSyncQueue(operation: any): Promise<void> {
     await this.ensureInitialized();
     
@@ -462,17 +465,17 @@ class OfflineDatabase {
         
         const request = store.put(queueItem);
         request.onsuccess = () => {
-          console.log('[OfflineDB] Added to sync queue:', queueItem.id);
+          console.log('[OfflineDB] ✅ Added to sync queue:', queueItem.id);
           resolve();
         };
         request.onerror = () => {
-          console.error('[OfflineDB] Failed to add to sync queue:', request.error);
+          console.error('[OfflineDB] ❌ Failed to add to sync queue:', request.error);
           reject(request.error);
         };
         
         transaction.onerror = () => reject(transaction.error);
       } catch (error) {
-        console.error('[OfflineDB] Error in addToSyncQueue:', error);
+        console.error('[OfflineDB] ❌ Error in addToSyncQueue:', error);
         reject(error);
       }
     });
@@ -485,15 +488,18 @@ class OfflineDatabase {
       try {
         const transaction = this.db!.transaction(['syncQueue'], 'readonly');
         const store = transaction.objectStore('syncQueue');
-        const index = store.index('synced');
         
-        const request = index.getAll(IDBKeyRange.only(false));
-        request.onsuccess = () => resolve(request.result || []);
+        const request = store.getAll();
+        request.onsuccess = () => {
+          const results = request.result || [];
+          const unsynced = results.filter(item => !item.synced);
+          resolve(unsynced);
+        };
         request.onerror = () => reject(request.error);
         
         transaction.onerror = () => reject(transaction.error);
       } catch (error) {
-        console.error('[OfflineDB] Error in getSyncQueue:', error);
+        console.error('[OfflineDB] ❌ Error in getSyncQueue:', error);
         reject(error);
       }
     });
@@ -509,14 +515,14 @@ class OfflineDatabase {
         
         const request = store.delete(id);
         request.onsuccess = () => {
-          console.log('[OfflineDB] Removed from sync queue:', id);
+          console.log('[OfflineDB] ✅ Removed from sync queue:', id);
           resolve();
         };
         request.onerror = () => reject(request.error);
         
         transaction.onerror = () => reject(transaction.error);
       } catch (error) {
-        console.error('[OfflineDB] Error in removeFromSyncQueue:', error);
+        console.error('[OfflineDB] ❌ Error in removeFromSyncQueue:', error);
         reject(error);
       }
     });
@@ -532,14 +538,14 @@ class OfflineDatabase {
         
         const request = store.clear();
         request.onsuccess = () => {
-          console.log(`[OfflineDB] Cleared store: ${storeName}`);
+          console.log(`[OfflineDB] ✅ Cleared store: ${storeName}`);
           resolve();
         };
         request.onerror = () => reject(request.error);
         
         transaction.onerror = () => reject(transaction.error);
       } catch (error) {
-        console.error(`[OfflineDB] Error in clearStore for ${storeName}:`, error);
+        console.error(`[OfflineDB] ❌ Error in clearStore for ${storeName}:`, error);
         reject(error);
       }
     });
@@ -566,7 +572,7 @@ class OfflineDatabase {
         const data = await this.getAllOfflineData(storeName);
         stats[storeName] = Array.isArray(data) ? data.length : 0;
       } catch (error) {
-        console.error(`[OfflineDB] Failed to get stats for ${storeName}:`, error);
+        console.error(`[OfflineDB] ❌ Failed to get stats for ${storeName}:`, error);
         stats[storeName] = 0;
       }
     }
@@ -581,16 +587,16 @@ export const offlineDB = new OfflineDatabase();
 // Auto-initialize on import with better error handling
 if (typeof window !== 'undefined') {
   offlineDB.init().then(async () => {
-    console.log('[OfflineDB] Auto-initialization successful');
+    console.log('[OfflineDB] ✅ Auto-initialization successful');
     
     // Test the database after initialization
     const testResult = await offlineDB.testDatabase();
     if (testResult) {
-      console.log('[OfflineDB] Database test passed after initialization');
+      console.log('[OfflineDB] ✅ Database test passed after initialization');
     } else {
-      console.warn('[OfflineDB] Database test failed after initialization');
+      console.warn('[OfflineDB] ⚠️ Database test failed after initialization');
     }
   }).catch(error => {
-    console.error('[OfflineDB] Auto-initialization failed:', error);
+    console.error('[OfflineDB] ❌ Auto-initialization failed:', error);
   });
 }

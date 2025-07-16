@@ -1,7 +1,6 @@
-
-const CACHE_NAME = 'dukasmart-v3.2.2';
-const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.2';
-const API_CACHE = 'dukasmart-api-v3.2.2';
+const CACHE_NAME = 'dukasmart-v3.2.3';
+const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.3';
+const API_CACHE = 'dukasmart-api-v3.2.3';
 
 // Enhanced core app shell resources for full offline support
 const CORE_ASSETS = [
@@ -37,7 +36,7 @@ const SPA_ROUTES = [
 
 // Install event - cache core assets and app shell
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3.2.2');
+  console.log('[SW] Installing service worker v3.2.3');
   
   event.waitUntil(
     Promise.all([
@@ -58,7 +57,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3.2.2');
+  console.log('[SW] Activating service worker v3.2.3');
   
   event.waitUntil(
     Promise.all([
@@ -98,59 +97,55 @@ self.addEventListener('fetch', (event) => {
   } else if (isAPIRequest(request)) {
     event.respondWith(handleAPIRequest(request));
   } else if (isNavigationRequest(request) || isSPARoute(url.pathname)) {
-    // CRITICAL: Always serve app shell for navigation requests
+    // CRITICAL: Always serve app shell for navigation requests - NEVER static offline page
     event.respondWith(handleNavigationToAppShell(request));
   } else {
     event.respondWith(handleGenericRequest(request));
   }
 });
 
-// ENHANCED: Always serve the React app shell for navigation requests
+// ENHANCED: Always serve the React app shell for navigation requests - NEVER a static offline page
 async function handleNavigationToAppShell(request) {
   const url = new URL(request.url);
   
   console.log('[SW] Navigation request for:', url.pathname);
   
-  // CRITICAL: For ALL navigation requests, serve app shell from cache first
+  // CRITICAL: For ALL navigation requests, ALWAYS serve app shell from cache
+  // This ensures React can bootstrap and load from IndexedDB
   try {
-    const appShell = await serveAppShell();
+    const appShell = await getAppShellFromCache();
     
     if (appShell) {
-      console.log('[SW] Successfully served app shell for:', url.pathname);
+      console.log('[SW] ✅ Successfully served React app shell for:', url.pathname);
       return appShell;
     }
   } catch (error) {
-    console.error('[SW] Failed to serve app shell:', error);
+    console.error('[SW] Failed to serve app shell from cache:', error);
   }
   
-  // If app shell failed, try network with immediate cache fallback
+  // Try network as fallback but prioritize app shell
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
-      // Cache successful responses
+      // Cache successful responses for future use
       const cache = await caches.open(RUNTIME_CACHE);
       cache.put(request, networkResponse.clone());
       return networkResponse;
     }
   } catch (error) {
-    console.log('[SW] Network failed for navigation request');
+    console.log('[SW] Network failed for navigation request, falling back to minimal app shell');
   }
   
-  // Final fallback: always serve app shell or minimal shell
-  const fallbackShell = await serveAppShell();
-  if (fallbackShell) {
-    return fallbackShell;
-  }
-  
-  // Last resort: minimal app shell that will bootstrap React
-  return new Response(generateMinimalAppShell(), {
+  // Final fallback: generate minimal React app shell that will bootstrap
+  console.log('[SW] ⚠️ Serving minimal app shell as last resort for:', url.pathname);
+  return new Response(generateReactAppShell(), {
     status: 200,
     headers: { 'Content-Type': 'text/html' }
   });
 }
 
-// ENHANCED: Always serve the React app shell, never a static offline page
-async function serveAppShell() {
+// ENHANCED: Get React app shell from cache (never return static offline page)
+async function getAppShellFromCache() {
   const cache = await caches.open(CACHE_NAME);
   
   // Try to get the main app shell in order of preference
@@ -160,12 +155,11 @@ async function serveAppShell() {
   }
   
   if (appShell) {
-    console.log('[SW] Serving cached app shell');
-    // Clone the response to ensure it's always fresh
+    console.log('[SW] ✅ Found cached React app shell');
     return appShell.clone();
   }
   
-  console.log('[SW] No cached app shell found');
+  console.log('[SW] ❌ No cached React app shell found');
   return null;
 }
 
@@ -400,15 +394,15 @@ async function updateCacheInBackground(request, cache) {
   }
 }
 
-// Enhanced minimal app shell that will bootstrap the React app
-function generateMinimalAppShell() {
+// CRITICAL: Generate React app shell that will bootstrap from IndexedDB (NEVER static offline message)
+function generateReactAppShell() {
   return `
     <!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DukaSmart - Loading...</title>
+        <title>DukaSmart - Offline Mode</title>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
