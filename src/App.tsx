@@ -1,270 +1,200 @@
-import { Toaster } from "@/components/ui/toaster";
-import { ProductionToaster } from "@/components/ui/production-toast";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
-import { ThemeProvider } from "next-themes";
-import { useEffect, useState } from "react";
-import Index from "./pages/Index";
-import Landing from "./pages/Landing";
-import ModernLanding from "./pages/ModernLanding";
-import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
-import NotFound from "./pages/NotFound";
-import Settings from "./pages/Settings";
-import Offline from "./pages/Offline";
-import ProtectedRoute from "./components/ProtectedRoute";
-import PremiumAppLayout from "./components/layout/PremiumAppLayout";
-import Dashboard from "./components/Dashboard";
-import ModernSalesPage from "./components/ModernSalesPage";
-import InventoryPage from "./components/InventoryPage";
-import CustomersPage from "./components/CustomersPage";
-import ReportsPage from "./components/ReportsPage";
-import ErrorBoundary from "./components/ErrorBoundary";
-import EnhancedOfflineStatus from "@/components/EnhancedOfflineStatus";
 
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
+import { useRobustOfflineManager } from './hooks/useRobustOfflineManager';
+
+// Components
+import Sidebar from './components/Sidebar';
+import Dashboard from './pages/Dashboard';
+import InventoryPage from './pages/InventoryPage';
+import SalesPage from './pages/SalesPage';
+import CustomersPage from './pages/CustomersPage';
+import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
+import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
+import LandingPage from './pages/LandingPage';
+import ModernLandingPage from './pages/ModernLandingPage';
+import OfflineFirstRouter from './components/OfflineFirstRouter';
+import RobustOfflineStatus from './components/RobustOfflineStatus';
+
+// Create a stable QueryClient instance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: (failureCount, error: any) => {
+      retry: (failureCount, error) => {
+        // Don't retry if we're offline
         if (!navigator.onLine) return false;
         return failureCount < 3;
       },
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
-      retry: (failureCount, error: any) => {
+      retry: (failureCount, error) => {
+        // Don't retry mutations if we're offline
         if (!navigator.onLine) return false;
-        return failureCount < 2;
+        return failureCount < 1;
       },
     },
   },
 });
 
-// Component to handle root route logic
-const RootHandler = () => {
+// App Layout Component
+const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
+  const { offlineState } = useRobustOfflineManager();
 
-  if (loading) {
+  if (loading || !offlineState.isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing app...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">
+            {loading ? 'Loading user session...' : 'Initializing offline support...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  // If user is authenticated, redirect to dashboard
-  if (user) {
-    return <Navigate to="/app/dashboard" replace />;
-  }
-
-  // If not authenticated, show the modern landing page
-  return <ModernLanding />;
-};
-
-function App() {
-  const [isOfflineReady, setIsOfflineReady] = useState(false);
-
-  useEffect(() => {
-    // Enhanced initialization with better error handling
-    const initializeApp = async () => {
-      try {
-        // Initialize service worker with better error handling
-        if ('serviceWorker' in navigator) {
-          try {
-            // Unregister old service workers first
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const registration of registrations) {
-              if (registration.scope.includes('offline-sw') || 
-                  registration.scope.includes('enhanced')) {
-                await registration.unregister();
-                console.log('[App] Unregistered old service worker');
-              }
-            }
-
-            const registration = await navigator.serviceWorker.register('/sw.js', {
-              scope: '/',
-              updateViaCache: 'none'
-            });
-            
-            console.log('[App] Service Worker registered:', registration.scope);
-            
-            // Handle updates - immediate activation
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed') {
-                    console.log('[App] New service worker installed, activating...');
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    // Reload immediately to use new SW
-                    if (navigator.serviceWorker.controller) {
-                      setTimeout(() => window.location.reload(), 100);
-                    }
-                  }
-                });
-              }
-            });
-
-            // Handle activation
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-              console.log('[App] Service worker controller changed');
-              window.location.reload();
-            });
-
-            // Wait for service worker to be ready
-            await navigator.serviceWorker.ready;
-            console.log('[App] Service worker is ready');
-            
-          } catch (swError) {
-            console.error('[App] Service Worker registration failed:', swError);
-            // Continue without SW
-          }
-        }
-
-        // Initialize IndexedDB early
-        try {
-          const { offlineDB } = await import('./utils/offlineDB');
-          await offlineDB.init();
-          
-          // Test database functionality
-          const isDbWorking = await offlineDB.testDatabase();
-          if (isDbWorking) {
-            console.log('[App] IndexedDB initialized and tested successfully');
-          } else {
-            console.warn('[App] IndexedDB test failed, some offline features may not work');
-          }
-        } catch (dbError) {
-          console.error('[App] IndexedDB initialization failed:', dbError);
-          // Continue with degraded functionality
-        }
-
-        setIsOfflineReady(true);
-        
-      } catch (error) {
-        console.error('[App] App initialization failed:', error);
-        setIsOfflineReady(true); // Continue anyway
-      }
-    };
-
-    initializeApp();
-
-    // Enhanced PWA install prompt
-    let deferredPrompt: any;
-    
-    window.addEventListener('beforeinstallprompt', (e) => {
-      console.log('[App] PWA install prompt available');
-      e.preventDefault();
-      deferredPrompt = e;
-      
-      // Show custom install prompt after a delay
-      setTimeout(() => {
-        if (deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
-          // Could show a custom install banner here
-          console.log('[App] PWA can be installed');
-        }
-      }, 5000);
-    });
-
-    window.addEventListener('appinstalled', () => {
-      console.log('[App] PWA was installed');
-      deferredPrompt = null;
-    });
-
-    // Enhanced online/offline handling
-    const handleOnline = () => {
-      console.log('[App] Application came online');
-      if (navigator.serviceWorker?.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'SYNC_NOW' });
-      }
-    };
-
-    const handleOffline = () => {
-      console.log('[App] Application went offline - offline mode enabled');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // Don't show loading state for too long
-  if (!isOfflineReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing app...</p>
-        </div>
-      </div>
-    );
+  if (!user) {
+    return <Navigate to="/signin" replace />;
   }
 
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-            <AuthProvider>
-              <TooltipProvider>
-                <div className="min-h-screen w-full bg-background text-foreground">
-                  <EnhancedOfflineStatus />
-                  
-                  <Routes>
-                    {/* Root route - shows landing for unauthenticated users, redirects to dashboard for authenticated users */}
-                    <Route path="/" element={<RootHandler />} />
-                    
-                    {/* Public routes */}
-                    <Route path="/modern-landing" element={<ModernLanding />} />
-                    <Route path="/landing" element={<Landing />} />
-                    <Route path="/signin" element={<SignIn />} />
-                    <Route path="/signup" element={<SignUp />} />
-                    <Route path="/auth" element={<Navigate to="/signin" replace />} />
-                    <Route path="/offline" element={<Offline />} />
-                    
-                    {/* Legacy dashboard compatibility route */}
-                    <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-                    
-                    {/* Protected routes with enhanced offline support */}
-                    <Route path="/app" element={
-                      <ProtectedRoute>
-                        <PremiumAppLayout />
-                      </ProtectedRoute>
-                    }>
-                      <Route index element={<Navigate to="/app/dashboard" replace />} />
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="sales" element={<ModernSalesPage />} />
-                      <Route path="inventory" element={<InventoryPage />} />
-                      <Route path="customers" element={<CustomersPage />} />
-                      <Route path="reports" element={<ReportsPage />} />
-                      <Route path="settings" element={<Settings />} />
-                    </Route>
-                    
-                    {/* Legacy route redirect */}
-                    <Route path="/index" element={<Index />} />
-                    
-                    {/* 404 */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                  <Toaster />
-                  <ProductionToaster />
-                </div>
-              </TooltipProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto">
+          <OfflineFirstRouter>
+            {children}
+          </OfflineFirstRouter>
+        </div>
+      </main>
+      <RobustOfflineStatus />
+    </div>
   );
-}
+};
+
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <AppLayout>
+      {children}
+    </AppLayout>
+  );
+};
+
+// Main App Component
+const App: React.FC = () => {
+  // Register service worker on app start
+  useEffect(() => {
+    const registerServiceWorker = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          // Unregister any existing service workers
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+          
+          // Register the robust service worker
+          const registration = await navigator.serviceWorker.register('/robust-sw.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          });
+          
+          console.log('[App] Robust Service Worker registered successfully:', registration.scope);
+          
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker available
+                  console.log('[App] New service worker available');
+                  // You could show a toast here to inform the user
+                }
+              });
+            }
+          });
+          
+        } catch (error) {
+          console.error('[App] Service Worker registration failed:', error);
+        }
+      }
+    };
+
+    // Register service worker after a short delay to ensure app is loaded
+    setTimeout(registerServiceWorker, 1000);
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-background">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/modern-landing" element={<ModernLandingPage />} />
+              <Route path="/signin" element={<SignIn />} />
+              <Route path="/signup" element={<SignUp />} />
+              
+              {/* Protected App Routes */}
+              <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
+              <Route path="/app/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/app/inventory" element={
+                <ProtectedRoute>
+                  <InventoryPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/app/sales" element={
+                <ProtectedRoute>
+                  <SalesPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/app/customers" element={
+                <ProtectedRoute>
+                  <CustomersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/app/reports" element={
+                <ProtectedRoute>
+                  <ReportsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/app/settings" element={
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
+              } />
+              
+              {/* Redirect legacy routes */}
+              <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+              <Route path="/inventory" element={<Navigate to="/app/inventory" replace />} />
+              <Route path="/sales" element={<Navigate to="/app/sales" replace />} />
+              <Route path="/customers" element={<Navigate to="/app/customers" replace />} />
+              <Route path="/reports" element={<Navigate to="/app/reports" replace />} />
+              <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+              
+              {/* Catch all route */}
+              <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+            </Routes>
+          </div>
+        </Router>
+        <Toaster />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
