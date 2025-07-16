@@ -1,6 +1,7 @@
-const CACHE_NAME = 'dukasmart-v3.2.1';
-const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.1';
-const API_CACHE = 'dukasmart-api-v3.2.1';
+
+const CACHE_NAME = 'dukasmart-v3.2.2';
+const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.2';
+const API_CACHE = 'dukasmart-api-v3.2.2';
 
 // Enhanced core app shell resources for full offline support
 const CORE_ASSETS = [
@@ -36,7 +37,7 @@ const SPA_ROUTES = [
 
 // Install event - cache core assets and app shell
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3.2.1');
+  console.log('[SW] Installing service worker v3.2.2');
   
   event.waitUntil(
     Promise.all([
@@ -57,7 +58,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3.2.1');
+  console.log('[SW] Activating service worker v3.2.2');
   
   event.waitUntil(
     Promise.all([
@@ -104,30 +105,25 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// FIXED: Always serve the React app shell for navigation requests
+// ENHANCED: Always serve the React app shell for navigation requests
 async function handleNavigationToAppShell(request) {
   const url = new URL(request.url);
   
   console.log('[SW] Navigation request for:', url.pathname);
   
-  // For all SPA routes, ALWAYS serve the cached app shell first
-  if (isSPARoute(url.pathname)) {
-    console.log('[SW] SPA route detected, serving app shell from cache');
+  // CRITICAL: For ALL navigation requests, serve app shell from cache first
+  try {
+    const appShell = await serveAppShell();
     
-    try {
-      // Try to serve the cached app shell
-      const appShell = await serveAppShell();
-      
-      if (appShell) {
-        console.log('[SW] Successfully served app shell for:', url.pathname);
-        return appShell;
-      }
-    } catch (error) {
-      console.error('[SW] Failed to serve app shell:', error);
+    if (appShell) {
+      console.log('[SW] Successfully served app shell for:', url.pathname);
+      return appShell;
     }
+  } catch (error) {
+    console.error('[SW] Failed to serve app shell:', error);
   }
   
-  // If not an SPA route or cache failed, try network with cache fallback
+  // If app shell failed, try network with immediate cache fallback
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
@@ -140,24 +136,24 @@ async function handleNavigationToAppShell(request) {
     console.log('[SW] Network failed for navigation request');
   }
   
-  // Final fallback: always serve app shell for navigation
+  // Final fallback: always serve app shell or minimal shell
   const fallbackShell = await serveAppShell();
   if (fallbackShell) {
     return fallbackShell;
   }
   
-  // Last resort: minimal app shell
+  // Last resort: minimal app shell that will bootstrap React
   return new Response(generateMinimalAppShell(), {
     status: 200,
     headers: { 'Content-Type': 'text/html' }
   });
 }
 
-// CRITICAL: Always serve the React app shell, never a static offline page
+// ENHANCED: Always serve the React app shell, never a static offline page
 async function serveAppShell() {
   const cache = await caches.open(CACHE_NAME);
   
-  // Try to get the main app shell
+  // Try to get the main app shell in order of preference
   let appShell = await cache.match('/');
   if (!appShell) {
     appShell = await cache.match('/index.html');
@@ -165,7 +161,8 @@ async function serveAppShell() {
   
   if (appShell) {
     console.log('[SW] Serving cached app shell');
-    return appShell;
+    // Clone the response to ensure it's always fresh
+    return appShell.clone();
   }
   
   console.log('[SW] No cached app shell found');
@@ -306,41 +303,59 @@ async function handleGenericRequest(request) {
   }
 }
 
-// Handle offline write requests
+// Enhanced offline write requests with better error handling
 async function handleOfflineWrite(request) {
   try {
     return await fetch(request);
   } catch (error) {
     console.log('[SW] Write request failed, queuing for sync:', request.url);
     
-    // Store request for later sync
-    const requestData = {
-      id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      url: request.url,
-      method: request.method,
-      headers: Object.fromEntries(request.headers.entries()),
-      body: await request.clone().text(),
-      timestamp: Date.now(),
-    };
-    
-    await storeOfflineRequest(requestData);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        queued: true,
-        offline: true,
-        message: 'Request queued for sync when online',
-        id: requestData.id
-      }),
-      { 
-        status: 202,
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-offline': 'true'
+    // Store request for later sync with enhanced error handling
+    try {
+      const requestData = {
+        id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        body: await request.clone().text(),
+        timestamp: Date.now(),
+      };
+      
+      await storeOfflineRequest(requestData);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          queued: true,
+          offline: true,
+          message: 'Request queued for sync when online',
+          id: requestData.id
+        }),
+        { 
+          status: 202,
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-offline': 'true'
+          }
         }
-      }
-    );
+      );
+    } catch (storeError) {
+      console.error('[SW] Failed to store offline request:', storeError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to queue request for sync',
+          offline: true
+        }),
+        { 
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-offline': 'true'
+          }
+        }
+      );
+    }
   }
 }
 
@@ -385,7 +400,7 @@ async function updateCacheInBackground(request, cache) {
   }
 }
 
-// Generate minimal app shell that will bootstrap the React app
+// Enhanced minimal app shell that will bootstrap the React app
 function generateMinimalAppShell() {
   return `
     <!DOCTYPE html>
@@ -430,6 +445,7 @@ function generateMinimalAppShell() {
           <div class="loading">
             <div class="spinner"></div>
             <p>Loading DukaSmart...</p>
+            <p style="font-size: 12px; color: #94a3b8;">Initializing offline mode...</p>
           </div>
         </div>
         <script type="module" src="/src/main.tsx"></script>
@@ -456,7 +472,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// IndexedDB operations for offline requests
+// Enhanced IndexedDB operations for offline requests
 async function storeOfflineRequest(requestData) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('DukaSmartOffline', 1);
@@ -470,6 +486,14 @@ async function storeOfflineRequest(requestData) {
     
     request.onsuccess = (event) => {
       const db = event.target.result;
+      
+      // Check if the object store exists
+      if (!db.objectStoreNames.contains('offlineRequests')) {
+        console.error('[SW] Object store offlineRequests does not exist');
+        reject(new Error('Object store not found'));
+        return;
+      }
+      
       const transaction = db.transaction(['offlineRequests'], 'readwrite');
       const store = transaction.objectStore('offlineRequests');
       

@@ -56,13 +56,15 @@ export interface OfflineAction {
   synced: boolean;
   attempts?: number;
   lastAttempt?: number;
+  errorMessage?: string;
 }
 
 class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private initPromise: Promise<void> | null = null;
   private readonly dbName = 'DukaSmartOffline';
-  private readonly dbVersion = 1;
+  private readonly dbVersion = 2; // Increased version for better error handling
+  private isInitializing = false;
 
   async init(): Promise<void> {
     // Return existing promise if already initializing
@@ -71,7 +73,7 @@ class OfflineDatabase {
     }
 
     // Return immediately if already initialized
-    if (this.db) {
+    if (this.db && !this.isInitializing) {
       return Promise.resolve();
     }
 
@@ -82,18 +84,27 @@ class OfflineDatabase {
   private async initializeDB(): Promise<void> {
     return new Promise((resolve, reject) => {
       console.log('[OfflineDB] Initializing database...');
+      this.isInitializing = true;
       
       const request = indexedDB.open(this.dbName, this.dbVersion);
 
       request.onerror = () => {
         console.error('[OfflineDB] Failed to open database:', request.error);
         this.initPromise = null;
+        this.isInitializing = false;
         reject(new Error(`Failed to open database: ${request.error?.message || 'Unknown error'}`));
       };
 
       request.onsuccess = () => {
         this.db = request.result;
+        this.isInitializing = false;
         console.log('[OfflineDB] Database initialized successfully');
+        
+        // Add error handler for database
+        this.db.onerror = (event) => {
+          console.error('[OfflineDB] Database error:', event);
+        };
+        
         resolve();
       };
 
@@ -101,7 +112,7 @@ class OfflineDatabase {
         const db = (event.target as IDBOpenDBRequest).result;
         console.log('[OfflineDB] Upgrading database schema...');
 
-        // Create object stores
+        // Create object stores with enhanced error handling
         const stores = [
           'settings',
           'products', 
@@ -113,20 +124,31 @@ class OfflineDatabase {
 
         stores.forEach(storeName => {
           if (!db.objectStoreNames.contains(storeName)) {
-            const store = db.createObjectStore(storeName, { keyPath: 'id' });
-            
-            // Add indexes for better querying
-            if (['products', 'customers', 'sales', 'transactions'].includes(storeName)) {
-              store.createIndex('user_id', 'user_id', { unique: false });
+            try {
+              const store = db.createObjectStore(storeName, { keyPath: 'id' });
+              
+              // Add indexes for better querying
+              if (['products', 'customers', 'sales', 'transactions'].includes(storeName)) {
+                store.createIndex('user_id', 'user_id', { unique: false });
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+              }
+              
+              if (storeName === 'syncQueue') {
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+                store.createIndex('synced', 'synced', { unique: false });
+                store.createIndex('type', 'type', { unique: false });
+                store.createIndex('user_id', 'user_id', { unique: false });
+              }
+              
+              if (storeName === 'sales') {
+                store.createIndex('product_id', 'product_id', { unique: false });
+                store.createIndex('customer_id', 'customer_id', { unique: false });
+              }
+              
+              console.log(`[OfflineDB] Created store: ${storeName}`);
+            } catch (error) {
+              console.error(`[OfflineDB] Failed to create store ${storeName}:`, error);
             }
-            
-            if (storeName === 'syncQueue') {
-              store.createIndex('timestamp', 'timestamp', { unique: false });
-              store.createIndex('synced', 'synced', { unique: false });
-              store.createIndex('type', 'type', { unique: false });
-            }
-            
-            console.log(`[OfflineDB] Created store: ${storeName}`);
           }
         });
       };
@@ -134,7 +156,7 @@ class OfflineDatabase {
   }
 
   private async ensureInitialized(): Promise<void> {
-    if (!this.db) {
+    if (!this.db || this.isInitializing) {
       await this.init();
     }
     
@@ -143,19 +165,23 @@ class OfflineDatabase {
     }
   }
 
-  // Test database functionality
+  // Enhanced test database functionality with transaction safety
   async testDatabase(): Promise<boolean> {
     try {
       await this.ensureInitialized();
       
-      // Try to perform a simple operation
+      // Try to perform a simple operation with transaction safety
       const testData = {
         id: 'test_' + Date.now(),
-        data: 'test'
+        data: 'test',
+        timestamp: new Date().toISOString()
       };
       
       await this.storeOfflineData('settings', testData);
       const retrieved = await this.getOfflineData('settings', testData.id);
+      
+      // Clean up test data
+      await this.delete('settings', testData.id);
       
       if (retrieved && retrieved.id === testData.id) {
         console.log('[OfflineDB] Database test passed');
@@ -174,25 +200,39 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      
-      // Ensure data has an ID
-      if (!data.id) {
-        data.id = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      try {
+        const transaction = this.db!.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        // Ensure data has an ID and timestamp
+        if (!data.id) {
+          data.id = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+        
+        if (!data.timestamp) {
+          data.timestamp = new Date().toISOString();
+        }
+        
+        const request = store.put(data);
+        
+        request.onsuccess = () => {
+          console.log(`[OfflineDB] Stored data in ${storeName}:`, data.id);
+          resolve();
+        };
+        
+        request.onerror = () => {
+          console.error(`[OfflineDB] Failed to store data in ${storeName}:`, request.error);
+          reject(new Error(`Failed to store data: ${request.error?.message || 'Unknown error'}`));
+        };
+        
+        transaction.onerror = () => {
+          console.error(`[OfflineDB] Transaction failed for ${storeName}:`, transaction.error);
+          reject(new Error(`Transaction failed: ${transaction.error?.message || 'Unknown error'}`));
+        };
+      } catch (error) {
+        console.error(`[OfflineDB] Error in storeOfflineData for ${storeName}:`, error);
+        reject(error);
       }
-      
-      const request = store.put(data);
-      
-      request.onsuccess = () => {
-        console.log(`[OfflineDB] Stored data in ${storeName}:`, data.id);
-        resolve();
-      };
-      
-      request.onerror = () => {
-        console.error(`[OfflineDB] Failed to store data in ${storeName}:`, request.error);
-        reject(new Error(`Failed to store data: ${request.error?.message || 'Unknown error'}`));
-      };
     });
   }
 
@@ -200,17 +240,27 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      
-      if (id) {
-        const request = store.get(id);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      } else {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction([storeName], 'readonly');
+        const store = transaction.objectStore(storeName);
+        
+        if (id) {
+          const request = store.get(id);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        } else {
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        }
+        
+        transaction.onerror = () => {
+          console.error(`[OfflineDB] Transaction failed for ${storeName}:`, transaction.error);
+          reject(transaction.error);
+        };
+      } catch (error) {
+        console.error(`[OfflineDB] Error in getOfflineData for ${storeName}:`, error);
+        reject(error);
       }
     });
   }
@@ -219,18 +269,25 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      
-      if (userFilter && store.indexNames.contains('user_id')) {
-        const index = store.index('user_id');
-        const request = index.getAll(userFilter);
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => reject(request.error);
-      } else {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction([storeName], 'readonly');
+        const store = transaction.objectStore(storeName);
+        
+        if (userFilter && store.indexNames.contains('user_id')) {
+          const index = store.index('user_id');
+          const request = index.getAll(userFilter);
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        } else {
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        }
+        
+        transaction.onerror = () => reject(transaction.error);
+      } catch (error) {
+        console.error(`[OfflineDB] Error in getAllOfflineData for ${storeName}:`, error);
+        reject(error);
       }
     });
   }
@@ -244,16 +301,53 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      
-      const request = store.delete(id);
-      request.onsuccess = () => {
-        console.log(`[OfflineDB] Deleted from ${storeName}:`, id);
-        resolve();
-      };
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        const request = store.delete(id);
+        request.onsuccess = () => {
+          console.log(`[OfflineDB] Deleted from ${storeName}:`, id);
+          resolve();
+        };
+        request.onerror = () => reject(request.error);
+        
+        transaction.onerror = () => reject(transaction.error);
+      } catch (error) {
+        console.error(`[OfflineDB] Error in delete for ${storeName}:`, error);
+        reject(error);
+      }
     });
+  }
+
+  // Enhanced sale operations with proper error handling
+  async storeSale(sale: OfflineSale): Promise<void> {
+    try {
+      console.log('[OfflineDB] Storing sale:', sale.id);
+      
+      // Store the sale
+      await this.store('sales', { ...sale, synced: false });
+      
+      // Update product stock if product exists
+      if (sale.product_id && sale.quantity > 0) {
+        try {
+          const product = await this.getProduct(sale.product_id);
+          if (product && product.current_stock !== -1) {
+            const newStock = Math.max(0, product.current_stock - sale.quantity);
+            await this.updateProductStock(sale.product_id, newStock);
+            console.log(`[OfflineDB] Updated product stock for ${sale.product_id}: ${product.current_stock} -> ${newStock}`);
+          }
+        } catch (stockError) {
+          console.warn('[OfflineDB] Failed to update product stock:', stockError);
+          // Don't fail the sale if stock update fails
+        }
+      }
+      
+      console.log('[OfflineDB] Sale stored successfully');
+    } catch (error) {
+      console.error('[OfflineDB] Failed to store sale:', error);
+      throw new Error(`Failed to store sale: ${error.message}`);
+    }
   }
 
   // Product methods
@@ -306,7 +400,7 @@ class OfflineDatabase {
     return this.getAllOfflineData('sales', userId);
   }
 
-  // Sync queue methods
+  // Enhanced sync queue methods with better error handling
   async queueAction(action: Omit<OfflineAction, 'id' | 'timestamp' | 'synced'>): Promise<void> {
     const queueItem: OfflineAction = {
       ...action,
@@ -354,24 +448,33 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
-      const store = transaction.objectStore('syncQueue');
-      
-      const queueItem = {
-        ...operation,
-        timestamp: Date.now(),
-        synced: false
-      };
-      
-      const request = store.put(queueItem);
-      request.onsuccess = () => {
-        console.log('[OfflineDB] Added to sync queue:', queueItem.id);
-        resolve();
-      };
-      request.onerror = () => {
-        console.error('[OfflineDB] Failed to add to sync queue:', request.error);
-        reject(request.error);
-      };
+      try {
+        const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
+        const store = transaction.objectStore('syncQueue');
+        
+        const queueItem = {
+          ...operation,
+          id: operation.id || `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now(),
+          synced: false,
+          attempts: 0
+        };
+        
+        const request = store.put(queueItem);
+        request.onsuccess = () => {
+          console.log('[OfflineDB] Added to sync queue:', queueItem.id);
+          resolve();
+        };
+        request.onerror = () => {
+          console.error('[OfflineDB] Failed to add to sync queue:', request.error);
+          reject(request.error);
+        };
+        
+        transaction.onerror = () => reject(transaction.error);
+      } catch (error) {
+        console.error('[OfflineDB] Error in addToSyncQueue:', error);
+        reject(error);
+      }
     });
   }
 
@@ -379,13 +482,20 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['syncQueue'], 'readonly');
-      const store = transaction.objectStore('syncQueue');
-      const index = store.index('synced');
-      
-      const request = index.getAll(IDBKeyRange.only(false));
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction(['syncQueue'], 'readonly');
+        const store = transaction.objectStore('syncQueue');
+        const index = store.index('synced');
+        
+        const request = index.getAll(IDBKeyRange.only(false));
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+        
+        transaction.onerror = () => reject(transaction.error);
+      } catch (error) {
+        console.error('[OfflineDB] Error in getSyncQueue:', error);
+        reject(error);
+      }
     });
   }
 
@@ -393,15 +503,22 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
-      const store = transaction.objectStore('syncQueue');
-      
-      const request = store.delete(id);
-      request.onsuccess = () => {
-        console.log('[OfflineDB] Removed from sync queue:', id);
-        resolve();
-      };
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
+        const store = transaction.objectStore('syncQueue');
+        
+        const request = store.delete(id);
+        request.onsuccess = () => {
+          console.log('[OfflineDB] Removed from sync queue:', id);
+          resolve();
+        };
+        request.onerror = () => reject(request.error);
+        
+        transaction.onerror = () => reject(transaction.error);
+      } catch (error) {
+        console.error('[OfflineDB] Error in removeFromSyncQueue:', error);
+        reject(error);
+      }
     });
   }
 
@@ -409,15 +526,22 @@ class OfflineDatabase {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      
-      const request = store.clear();
-      request.onsuccess = () => {
-        console.log(`[OfflineDB] Cleared store: ${storeName}`);
-        resolve();
-      };
-      request.onerror = () => reject(request.error);
+      try {
+        const transaction = this.db!.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        const request = store.clear();
+        request.onsuccess = () => {
+          console.log(`[OfflineDB] Cleared store: ${storeName}`);
+          resolve();
+        };
+        request.onerror = () => reject(request.error);
+        
+        transaction.onerror = () => reject(transaction.error);
+      } catch (error) {
+        console.error(`[OfflineDB] Error in clearStore for ${storeName}:`, error);
+        reject(error);
+      }
     });
   }
 
@@ -428,16 +552,45 @@ class OfflineDatabase {
       this.db = null;
     }
     this.initPromise = null;
+    this.isInitializing = false;
     await this.init();
+  }
+
+  // Get database stats for debugging
+  async getStats(): Promise<{ [key: string]: number }> {
+    const stats: { [key: string]: number } = {};
+    const stores = ['sales', 'products', 'customers', 'transactions', 'syncQueue'];
+    
+    for (const storeName of stores) {
+      try {
+        const data = await this.getAllOfflineData(storeName);
+        stats[storeName] = Array.isArray(data) ? data.length : 0;
+      } catch (error) {
+        console.error(`[OfflineDB] Failed to get stats for ${storeName}:`, error);
+        stats[storeName] = 0;
+      }
+    }
+    
+    return stats;
   }
 }
 
 // Export singleton instance
 export const offlineDB = new OfflineDatabase();
 
-// Auto-initialize on import
+// Auto-initialize on import with better error handling
 if (typeof window !== 'undefined') {
-  offlineDB.init().catch(error => {
+  offlineDB.init().then(async () => {
+    console.log('[OfflineDB] Auto-initialization successful');
+    
+    // Test the database after initialization
+    const testResult = await offlineDB.testDatabase();
+    if (testResult) {
+      console.log('[OfflineDB] Database test passed after initialization');
+    } else {
+      console.warn('[OfflineDB] Database test failed after initialization');
+    }
+  }).catch(error => {
     console.error('[OfflineDB] Auto-initialization failed:', error);
   });
 }
