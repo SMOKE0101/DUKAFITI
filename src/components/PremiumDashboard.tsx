@@ -1,242 +1,184 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  TrendingUp, 
-  ShoppingCart, 
-  Users, 
-  Package,
-  AlertTriangle,
-  DollarSign,
-  Activity,
-  BarChart3
-} from 'lucide-react';
+import { TrendingUp, Package, Users, AlertTriangle, DollarSign } from 'lucide-react';
+import EnhancedCharts from './dashboard/EnhancedCharts';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { formatCurrency } from '../utils/currency';
-import { useNavigate } from 'react-router-dom';
-import EnhancedStatsCards from './dashboard/EnhancedStatsCards';
-import EnhancedCharts from './dashboard/EnhancedCharts';
 
-const PremiumDashboard = () => {
-  const navigate = useNavigate();
+const PremiumDashboard: React.FC = () => {
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { sales, loading: salesLoading } = useSupabaseSales();
 
-  // Calculate enhanced low stock items
-  const lowStockItems = products.filter(product => {
-    const currentStock = product.current_stock ?? 0;
-    const threshold = product.low_stock_threshold ?? 10;
-    
-    // Only consider items with specified stock (not -1 which means unspecified)
-    return currentStock !== -1 && currentStock <= threshold;
+  const loading = productsLoading || customersLoading || salesLoading;
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate metrics
+  const totalProducts = products.length;
+  const lowStockProducts = products.filter(p => p.current_stock <= (p.low_stock_threshold || 10));
+  const outOfStockProducts = products.filter(p => p.current_stock === 0);
+  const totalCustomers = customers.length;
+  const totalRevenue = sales.reduce((sum, sale) => sum + sale.total_amount, 0);
+  const totalProfit = sales.reduce((sum, sale) => sum + sale.profit, 0);
+
+  // Recent sales for trending calculations
+  const recentSales = sales.slice(0, 30);
+  const todaySales = sales.filter(sale => {
+    const saleDate = new Date(sale.timestamp || sale.created_at || '');
+    const today = new Date();
+    return saleDate.toDateString() === today.toDateString();
   });
 
-  // Recent sales (last 5)
-  const recentSales = sales
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 5);
+  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
 
   return (
-    <div className="space-y-8 p-6 bg-gradient-to-br from-background via-background to-muted/10 min-h-screen">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
-          Dashboard Overview
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Complete view of your business performance
-        </p>
+    <div className="p-6 space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Revenue Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">
+              Today: {formatCurrency(todayRevenue)}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Products Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Products</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalProducts}</div>
+            <div className="flex gap-2 mt-2">
+              {lowStockProducts.length > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {lowStockProducts.length} Low Stock
+                </Badge>
+              )}
+              {outOfStockProducts.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {outOfStockProducts.length} Out of Stock
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Customers Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Customers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCustomers}</div>
+            <p className="text-xs text-muted-foreground">
+              Active customers
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Profit Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Profit</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalProfit)}</div>
+            <p className="text-xs text-muted-foreground">
+              Profit margin: {totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0}%
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Enhanced Stats Cards */}
-      <EnhancedStatsCards 
-        sales={sales}
-        products={products}
-        customers={customers}
-      />
+      {/* Charts */}
+      <EnhancedCharts sales={sales} products={products} />
 
-      {/* Enhanced Charts */}
-      <EnhancedCharts sales={sales} />
-
-      {/* Low Stock Alert Section */}
-      <Card className="border-2 border-dashed border-destructive/20 bg-destructive/5 dark:bg-destructive/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            Low Stock Alert
-            {lowStockItems.length > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {lowStockItems.length}
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {lowStockItems.length > 0 ? (
-            <div className="space-y-3">
-              <p className="text-destructive text-sm">
-                {lowStockItems.length} product{lowStockItems.length !== 1 ? 's' : ''} running low on stock:
-              </p>
-              <div className="grid gap-2">
-                {lowStockItems.slice(0, 5).map((product) => {
-                  const currentStock = product.current_stock ?? 0;
-                  const threshold = product.low_stock_threshold ?? 10;
-                  
-                  return (
-                    <div key={product.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-destructive/20">
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Stock: {currentStock === -1 ? 'Unspecified' : currentStock} 
-                          {threshold && ` (Threshold: ${threshold})`}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={currentStock <= 0 ? "destructive" : "secondary"}
-                        className="ml-2"
-                      >
-                        {currentStock <= 0 ? 'Out of Stock' : 'Low Stock'}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
-              {lowStockItems.length > 5 && (
-                <p className="text-sm text-muted-foreground">
-                  And {lowStockItems.length - 5} more items...
+      {/* Low Stock Alert */}
+      {lowStockProducts.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="text-orange-800 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Low Stock Alert
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {lowStockProducts.slice(0, 5).map(product => (
+                <div key={product.id} className="flex justify-between items-center">
+                  <span className="text-sm font-medium">{product.name}</span>
+                  <Badge variant="outline" className="text-orange-700 border-orange-300">
+                    {product.current_stock} left
+                  </Badge>
+                </div>
+              ))}
+              {lowStockProducts.length > 5 && (
+                <p className="text-sm text-orange-600">
+                  And {lowStockProducts.length - 5} more products...
                 </p>
               )}
-              <Button 
-                onClick={() => navigate('/app/inventory')} 
-                className="w-full mt-4"
-                variant="destructive"
-              >
-                <Package className="w-4 h-4 mr-2" />
-                Manage Inventory
-              </Button>
             </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-green-600 dark:text-green-400 font-medium">
-                ✅ All products are well stocked!
-              </p>
-              <Button 
-                onClick={() => navigate('/app/inventory')} 
-                variant="outline" 
-                className="mt-2"
-              >
-                <Package className="w-4 h-4 mr-2" />
-                View Inventory
-              </Button>
-            </div>
-          )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Sales */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Sales</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentSales.slice(0, 5).map(sale => (
+              <div key={sale.id} className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{sale.product_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Qty: {sale.quantity} • {sale.payment_method}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">{formatCurrency(sale.total_amount)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(sale.timestamp || sale.created_at || '').toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
-
-      {/* Recent Activity and Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Sales */}
-        <Card className="border-0 shadow-lg bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Activity className="h-5 w-5" />
-              Recent Sales
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentSales.length > 0 ? (
-              <div className="space-y-3">
-                {recentSales.map((sale) => (
-                  <div key={sale.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{sale.product_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Qty: {sale.quantity} • {sale.payment_method}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-foreground">{formatCurrency(sale.total_amount)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(sale.timestamp).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                <Button 
-                  onClick={() => navigate('/app/sales')} 
-                  variant="outline" 
-                  className="w-full mt-4"
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  View All Sales
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No recent sales</p>
-                <Button 
-                  onClick={() => navigate('/app/sales')} 
-                  className="mt-4"
-                >
-                  Make First Sale
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card className="border-0 shadow-lg bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <BarChart3 className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                onClick={() => navigate('/app/sales')} 
-                className="h-20 flex flex-col items-center justify-center gap-2"
-                variant="outline"
-              >
-                <ShoppingCart className="h-6 w-6" />
-                <span className="text-sm">New Sale</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/app/inventory')} 
-                className="h-20 flex flex-col items-center justify-center gap-2"
-                variant="outline"
-              >
-                <Package className="h-6 w-6" />
-                <span className="text-sm">Add Product</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/app/customers')} 
-                className="h-20 flex flex-col items-center justify-center gap-2"
-                variant="outline"
-              >
-                <Users className="h-6 w-6" />
-                <span className="text-sm">Add Customer</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/app/reports')} 
-                className="h-20 flex flex-col items-center justify-center gap-2"
-                variant="outline"
-              >
-                <BarChart3 className="h-6 w-6" />
-                <span className="text-sm">View Reports</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };

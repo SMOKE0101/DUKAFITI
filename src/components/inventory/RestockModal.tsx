@@ -4,191 +4,174 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Package, Loader2 } from 'lucide-react';
-import { formatCurrency } from '../../utils/currency';
+import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
+import { formatCurrency } from '../../utils/currency';
+import { Package } from 'lucide-react';
 
 interface RestockModalProps {
   isOpen: boolean;
   onClose: () => void;
+  product: Product;
   onSave: (quantity: number, buyingPrice: number) => Promise<void>;
-  product: Product | null;
-  isLoading?: boolean;
 }
 
-const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, product, isLoading = false }) => {
-  const [quantity, setQuantity] = useState('1');
-  const [buyingPrice, setBuyingPrice] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!quantity || parseInt(quantity) <= 0) {
-      newErrors.quantity = 'Valid quantity is required';
-    }
-    if (!buyingPrice || parseFloat(buyingPrice) < 0) {
-      newErrors.buyingPrice = 'Valid buying price is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+const RestockModal: React.FC<RestockModalProps> = ({
+  isOpen,
+  onClose,
+  product,
+  onSave
+}) => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    quantity: 10,
+    buyingPrice: product.cost_price || 0
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (formData.quantity <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Quantity must be greater than 0",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    if (formData.buyingPrice < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Buying price cannot be negative",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      await onSave(parseInt(quantity), parseFloat(buyingPrice));
+      await onSave(formData.quantity, formData.buyingPrice);
       
-      // Reset form
-      setQuantity('1');
-      setBuyingPrice('');
-      setErrors({});
+      toast({
+        title: "Stock Added",
+        description: `Added ${formData.quantity} units to ${product.name}`,
+      });
+      
+      onClose();
     } catch (error) {
-      console.error('Error restocking product:', error);
+      console.error('Failed to add stock:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add stock. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setQuantity('1');
-    setBuyingPrice('');
-    setErrors({});
-    onClose();
-  };
-
-  // Handle escape key
-  React.useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        handleClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
-
-  const isFormValid = quantity && buyingPrice && parseInt(quantity) > 0 && parseFloat(buyingPrice) >= 0;
-  const newTotal = product ? product.currentStock + (parseInt(quantity) || 0) : 0;
-  const totalCost = parseFloat(buyingPrice) * parseInt(quantity) || 0;
-
-  if (!product) return null;
+  const newStockLevel = product.current_stock + formData.quantity;
+  const totalCost = formData.quantity * formData.buyingPrice;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md rounded-2xl p-6 bg-white dark:bg-gray-800 shadow-xl animate-in fade-in-0 zoom-in-95 duration-200">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-              <Package className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            Restock {product.name}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="text-center">
+          <div className="mx-auto mb-4 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+            <Package className="w-6 h-6 text-green-600" />
+          </div>
+          <DialogTitle className="text-xl font-bold text-gray-900">
+            Restock Product
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Product Info */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border-l-4 border-green-500">
-            <h3 className="font-medium text-foreground">{product.name}</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Current Stock: <span className="font-semibold">{product.currentStock} units</span>
-            </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-800 mb-2">Product Information</h3>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Name:</span>
+                <span className="font-medium">{product.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Current Stock:</span>
+                <span className="font-medium">{product.current_stock} units</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Last Cost Price:</span>
+                <span className="font-medium">{formatCurrency(product.cost_price)}</span>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Quantity */}
             <div className="space-y-2">
-              <Label htmlFor="quantity" className="text-sm font-medium flex items-center gap-2">
-                Quantity to Add <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="quantity">Quantity to Add *</Label>
               <Input
                 id="quantity"
                 type="number"
                 min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className={`focus-visible:ring-2 focus-visible:ring-green-500 ${
-                  errors.quantity ? 'border-red-500 focus-visible:ring-red-500' : ''
-                }`}
-                placeholder="Enter quantity"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+                placeholder="10"
                 disabled={isLoading}
-                autoFocus
+                required
               />
-              {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
             </div>
 
-            {/* Buying Price */}
             <div className="space-y-2">
-              <Label htmlFor="buyingPrice" className="text-sm font-medium flex items-center gap-2">
-                Buying Price (KES) <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="buyingPrice">Buying Price per Unit *</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm font-medium">
-                  KES
-                </span>
                 <Input
                   id="buyingPrice"
                   type="number"
                   step="0.01"
                   min="0"
-                  value={buyingPrice}
-                  onChange={(e) => setBuyingPrice(e.target.value)}
-                  className={`pl-12 focus-visible:ring-2 focus-visible:ring-green-500 ${
-                    errors.buyingPrice ? 'border-red-500 focus-visible:ring-red-500' : ''
-                  }`}
+                  value={formData.buyingPrice}
+                  onChange={(e) => setFormData({ ...formData, buyingPrice: parseFloat(e.target.value) || 0 })}
+                  className="pl-12"
                   placeholder="0.00"
                   disabled={isLoading}
+                  required
                 />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  KES
+                </span>
               </div>
-              {errors.buyingPrice && <p className="text-red-500 text-sm">{errors.buyingPrice}</p>}
             </div>
 
-            {/* Summary */}
-            {quantity && buyingPrice && isFormValid && (
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 animate-in fade-in-0 slide-in-from-top-2 duration-200">
-                <h4 className="font-medium text-green-800 dark:text-green-300 mb-3">Restock Summary</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">New Total Stock:</span>
-                    <span className="font-semibold text-green-700 dark:text-green-300">{newTotal} units</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total Cost:</span>
-                    <span className="font-semibold text-green-600 dark:text-green-400">
-                      {formatCurrency(totalCost)}
-                    </span>
-                  </div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="font-semibold text-green-800 mb-2">Summary</h3>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">New Stock Level:</span>
+                  <span className="font-medium text-green-700">{newStockLevel} units</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Cost:</span>
+                  <span className="font-medium text-green-700">{formatCurrency(totalCost)}</span>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleClose}
-                className="flex-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            <div className="flex flex-col gap-3">
+              <Button 
+                type="submit" 
+                disabled={isLoading || formData.quantity <= 0}
+                className="w-full"
+              >
+                {isLoading ? 'Adding Stock...' : 'Add Stock'}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                className="w-full"
                 disabled={isLoading}
               >
                 Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!isFormValid || isLoading}
-                className="flex-1 bg-green-600 text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Restocking...
-                  </>
-                ) : (
-                  'Restock'
-                )}
               </Button>
             </div>
           </form>
