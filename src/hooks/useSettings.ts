@@ -312,8 +312,16 @@ const loadFromCache = async (userId: string): Promise<ShopSettings | null> => {
       const db = await openDB();
       const transaction = db.transaction(['settings'], 'readonly');
       const store = transaction.objectStore('settings');
-      const result = await store.get(`settings_${userId}`);
-      return result?.data || null;
+      const request = store.get(`settings_${userId}`);
+      
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => {
+          resolve(request.result?.data || null);
+        };
+        request.onerror = () => {
+          reject(request.error);
+        };
+      });
     }
   } catch (error) {
     console.error('Error loading settings from cache:', error);
@@ -327,10 +335,14 @@ const cacheSettings = async (userId: string, settings: ShopSettings): Promise<vo
       const db = await openDB();
       const transaction = db.transaction(['settings'], 'readwrite');
       const store = transaction.objectStore('settings');
-      await store.put({
-        id: `settings_${userId}`,
-        data: settings,
-        timestamp: Date.now()
+      await new Promise((resolve, reject) => {
+        const request = store.put({
+          id: `settings_${userId}`,
+          data: settings,
+          timestamp: Date.now()
+        });
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
       });
     }
   } catch (error) {
@@ -344,12 +356,16 @@ const queueSettingsUpdate = async (userId: string, settings: Partial<ShopSetting
       const db = await openDB();
       const transaction = db.transaction(['syncQueue'], 'readwrite');
       const store = transaction.objectStore('syncQueue');
-      await store.add({
-        id: `settings_update_${Date.now()}`,
-        type: 'settings_update',
-        userId,
-        data: settings,
-        timestamp: Date.now()
+      await new Promise((resolve, reject) => {
+        const request = store.add({
+          id: `settings_update_${Date.now()}`,
+          type: 'settings_update',
+          userId,
+          data: settings,
+          timestamp: Date.now()
+        });
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
       });
     }
   } catch (error) {

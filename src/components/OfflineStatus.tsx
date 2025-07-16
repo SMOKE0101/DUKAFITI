@@ -35,10 +35,13 @@ const OfflineStatus: React.FC<OfflineStatusProps> = ({ className = '' }) => {
     const checkQueuedActions = async () => {
       try {
         const db = await openDB();
-        const transaction = db.transaction(['syncQueue'], 'readonly');
-        const store = transaction.objectStore('syncQueue');
-        const count = await store.count();
-        setQueuedActions(count);
+        const transaction = db.transaction(['actionQueue'], 'readonly');
+        const store = transaction.objectStore('actionQueue');
+        const countRequest = store.count();
+        
+        countRequest.onsuccess = () => {
+          setQueuedActions(countRequest.result);
+        };
       } catch (error) {
         console.error('Error checking queued actions:', error);
       }
@@ -124,8 +127,8 @@ const openDB = (): Promise<IDBDatabase> => {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       
-      if (!db.objectStoreNames.contains('syncQueue')) {
-        db.createObjectStore('syncQueue', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('actionQueue')) {
+        db.createObjectStore('actionQueue', { keyPath: 'id' });
       }
     };
   });

@@ -1,6 +1,7 @@
-const CACHE_NAME = 'dukasmart-v3.0.0';
-const RUNTIME_CACHE = 'dukasmart-runtime-v3.0.0';
-const API_CACHE = 'dukasmart-api-v3.0.0';
+
+const CACHE_NAME = 'dukasmart-v3.1.0';
+const RUNTIME_CACHE = 'dukasmart-runtime-v3.1.0';
+const API_CACHE = 'dukasmart-api-v3.1.0';
 
 // Enhanced core app shell resources for full offline support
 const CORE_ASSETS = [
@@ -11,9 +12,11 @@ const CORE_ASSETS = [
   '/favicon.ico'
 ];
 
-// SPA routes that should serve the app shell
+// All SPA routes that should serve the app shell
 const SPA_ROUTES = [
+  '/',
   '/app',
+  '/app/',
   '/app/dashboard',
   '/app/sales',
   '/app/inventory',
@@ -21,21 +24,29 @@ const SPA_ROUTES = [
   '/app/reports',
   '/app/settings',
   '/dashboard',
+  '/sales',
   '/inventory',
   '/customers',
   '/reports',
-  '/settings'
+  '/settings',
+  '/signin',
+  '/signup',
+  '/landing',
+  '/modern-landing'
 ];
 
 // Install event - cache core assets and app shell
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3.0.0');
+  console.log('[SW] Installing service worker v3.1.0');
   
   event.waitUntil(
     Promise.all([
       caches.open(CACHE_NAME).then(cache => {
         console.log('[SW] Caching core assets');
-        return cache.addAll(CORE_ASSETS);
+        return cache.addAll(CORE_ASSETS).catch(err => {
+          console.warn('[SW] Failed to cache some core assets:', err);
+          // Continue even if some assets fail to cache
+        });
       }),
       caches.open(RUNTIME_CACHE),
       caches.open(API_CACHE)
@@ -47,7 +58,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3.0.0');
+  console.log('[SW] Activating service worker v3.1.0');
   
   event.waitUntil(
     Promise.all([
@@ -121,16 +132,21 @@ async function handleStaticAsset(request) {
   }
 }
 
-// Handle API requests (cache-first with background update for settings)
+// Handle API requests (cache-first for settings/profile, network-first for others)
 async function handleAPIRequest(request) {
   try {
     const cache = await caches.open(API_CACHE);
-    const cachedResponse = await cache.match(request);
     
     // For settings and profile data, serve from cache first for instant loading
-    if (request.url.includes('/profiles') || request.url.includes('/shop_settings')) {
+    if (request.url.includes('/profiles') || 
+        request.url.includes('/shop_settings') ||
+        request.url.includes('/products') ||
+        request.url.includes('/customers') ||
+        request.url.includes('/sales')) {
+      
+      const cachedResponse = await cache.match(request);
       if (cachedResponse) {
-        // Serve cached response immediately
+        // Serve cached response immediately, update in background
         updateCacheInBackground(request, cache);
         return cachedResponse;
       }
@@ -145,6 +161,7 @@ async function handleAPIRequest(request) {
     }
     
     // Network failed, use cache if available
+    const cachedResponse = await cache.match(request);
     if (cachedResponse) {
       const response = cachedResponse.clone();
       response.headers.set('x-served-by', 'sw-cache');
@@ -185,10 +202,36 @@ async function handleAPIRequest(request) {
   }
 }
 
-// Handle navigation requests (serve app shell for SPA routes)
+// Handle navigation requests (CRITICAL: Always serve app shell for SPA routes)
 async function handleNavigation(request) {
+  const url = new URL(request.url);
+  
   try {
-    // Always try network first for navigation
+    // For SPA routes, always try to serve the app shell first when offline
+    if (isSPARoute(url.pathname)) {
+      console.log('[SW] Handling SPA route:', url.pathname);
+      
+      // Check if we're offline or network request would fail
+      if (!navigator.onLine) {
+        console.log('[SW] Offline detected, serving app shell for:', url.pathname);
+        return await serveAppShell();
+      }
+      
+      // Try network first when online
+      try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+          const cache = await caches.open(RUNTIME_CACHE);
+          cache.put(request, networkResponse.clone());
+          return networkResponse;
+        }
+      } catch (networkError) {
+        console.log('[SW] Network failed for SPA route, serving app shell:', url.pathname);
+        return await serveAppShell();
+      }
+    }
+    
+    // For non-SPA routes, try network first
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
@@ -201,21 +244,31 @@ async function handleNavigation(request) {
     
   } catch (error) {
     console.log('[SW] Navigation failed, serving app shell for:', request.url);
-    
-    // Serve cached app shell for SPA routes
-    const cache = await caches.open(CACHE_NAME);
-    const appShell = await cache.match('/') || await cache.match('/index.html');
-    
-    if (appShell) {
-      return appShell;
-    }
-    
-    // Fallback to enhanced offline page that preserves app functionality
-    return new Response(generateEnhancedOfflinePage(), {
-      status: 200,
-      headers: { 'Content-Type': 'text/html' }
-    });
+    return await serveAppShell();
   }
+}
+
+// CRITICAL: Always serve the React app shell, never a static offline page
+async function serveAppShell() {
+  const cache = await caches.open(CACHE_NAME);
+  
+  // Try to get the main app shell
+  let appShell = await cache.match('/');
+  if (!appShell) {
+    appShell = await cache.match('/index.html');
+  }
+  
+  if (appShell) {
+    console.log('[SW] Serving cached app shell');
+    return appShell;
+  }
+  
+  // Last resort: create a minimal app shell that will load the React app
+  console.log('[SW] Creating fallback app shell');
+  return new Response(generateMinimalAppShell(), {
+    status: 200,
+    headers: { 'Content-Type': 'text/html' }
+  });
 }
 
 // Handle generic requests
@@ -332,9 +385,16 @@ async function syncOfflineRequests() {
 
 // Enhanced helper functions
 function isSPARoute(pathname) {
-  return SPA_ROUTES.some(route => 
-    pathname === route || pathname.startsWith(route + '/')
-  );
+  // Normalize pathname
+  const normalizedPath = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  
+  return SPA_ROUTES.some(route => {
+    const normalizedRoute = route.endsWith('/') ? route.slice(0, -1) : route;
+    return normalizedPath === normalizedRoute || 
+           normalizedPath.startsWith(normalizedRoute + '/') ||
+           normalizedPath === '' || 
+           normalizedPath === '/';
+  });
 }
 
 function isStaticAsset(request) {
@@ -364,88 +424,58 @@ async function updateCacheInBackground(request, cache) {
   }
 }
 
-// Enhanced offline page that maintains app functionality
-function generateEnhancedOfflinePage() {
+// Generate minimal app shell that will bootstrap the React app
+function generateMinimalAppShell() {
   return `
     <!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DukaSmart - Working Offline</title>
+        <title>DukaSmart - Offline</title>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
             margin: 0; 
-            padding: 20px;
+            padding: 0;
             background: #f8fafc;
-            color: #1e293b;
           }
-          .container { 
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: center;
-            padding: 2rem;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          #root { min-height: 100vh; }
+          .loading { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            flex-direction: column;
+            color: #64748b;
           }
-          .offline-icon { 
-            font-size: 3rem; 
-            margin-bottom: 1rem;
+          .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
           }
-          .retry-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin: 0.5rem;
-            font-weight: 500;
-          }
-          .retry-btn:hover {
-            background: #2563eb;
-          }
-          .features {
-            text-align: left;
-            margin-top: 2rem;
-            padding: 1rem;
-            background: #f1f5f9;
-            border-radius: 8px;
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
           }
         </style>
       </head>
       <body>
-        <div class="container">
-          <div class="offline-icon">📱</div>
-          <h2>DukaSmart - Working Offline</h2>
-          <p>Your business app is running in offline mode. You can still:</p>
-          
-          <div class="features">
-            <ul>
-              <li>✅ Browse previously visited pages</li>
-              <li>✅ View cached data and settings</li>
-              <li>✅ Create new sales and customers (will sync later)</li>
-              <li>✅ Access offline dashboard and reports</li>
-            </ul>
+        <div id="root">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading DukaSmart...</p>
+            <p style="font-size: 14px; opacity: 0.7;">Working in offline mode</p>
           </div>
-          
-          <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
-          <button class="retry-btn" onclick="window.history.back()">Go Back</button>
         </div>
-        
         <script>
-          // Auto-refresh when back online
-          window.addEventListener('online', () => {
-            setTimeout(() => window.location.reload(), 1000);
-          });
-          
-          // Try to navigate to main app after a delay
+          // Try to load the main app
           setTimeout(() => {
-            if (window.location.pathname !== '/') {
-              window.location.href = '/';
-            }
+            window.location.reload();
           }, 2000);
         </script>
       </body>

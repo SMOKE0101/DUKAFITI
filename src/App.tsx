@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ThemeProvider } from "next-themes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import ModernLanding from "./pages/ModernLanding";
@@ -45,6 +45,8 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const [isOfflineReady, setIsOfflineReady] = useState(false);
+
   useEffect(() => {
     // Enhanced service worker registration for robust offline support
     if ('serviceWorker' in navigator) {
@@ -86,10 +88,15 @@ function App() {
             }
           });
 
+          setIsOfflineReady(true);
+
         } catch (error) {
           console.error('[App] Service Worker registration failed:', error);
+          setIsOfflineReady(true); // Continue without SW
         }
       });
+    } else {
+      setIsOfflineReady(true);
     }
 
     // Enhanced PWA install prompt
@@ -130,7 +137,7 @@ function App() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initialize offline database
+    // Initialize offline database with enhanced error handling
     const initOfflineDB = async () => {
       try {
         if (typeof window !== 'undefined' && 'indexedDB' in window) {
@@ -140,16 +147,36 @@ function App() {
             const db = (event.target as IDBOpenDBRequest).result;
             
             // Create required object stores
-            const stores = ['settings', 'products', 'customers', 'sales', 'syncQueue'];
+            const stores = ['settings', 'products', 'customers', 'sales', 'actionQueue'];
             stores.forEach(storeName => {
               if (!db.objectStoreNames.contains(storeName)) {
-                db.createObjectStore(storeName, { keyPath: 'id' });
+                const store = db.createObjectStore(storeName, { keyPath: 'id' });
+                
+                // Add indexes for better querying
+                if (storeName === 'products' || storeName === 'customers' || storeName === 'sales') {
+                  store.createIndex('user_id', 'user_id');
+                }
+                if (storeName === 'actionQueue') {
+                  store.createIndex('timestamp', 'timestamp');
+                  store.createIndex('synced', 'synced');
+                }
               }
             });
           };
           
-          request.onsuccess = () => {
+          request.onsuccess = (event) => {
             console.log('[App] Offline database initialized');
+            const db = (event.target as IDBOpenDBRequest).result;
+            
+            // Pre-warm the database connection
+            const transaction = db.transaction(['settings'], 'readonly');
+            transaction.oncomplete = () => {
+              console.log('[App] Database connection pre-warmed');
+            };
+          };
+
+          request.onerror = (event) => {
+            console.error('[App] Failed to initialize offline database:', event);
           };
         }
       } catch (error) {
@@ -164,6 +191,18 @@ function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Show loading state while offline infrastructure is setting up
+  if (!isOfflineReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Initializing offline capabilities...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>
