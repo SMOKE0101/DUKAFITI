@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { offlineDB } from '../utils/indexedDB';
+import { offlineDB } from '../utils/offlineDB';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -39,7 +39,7 @@ export const useOfflineManager = () => {
     errors: []
   });
 
-  // Initialize offline capabilities
+  // Initialize offline capabilities with better error handling
   useEffect(() => {
     initializeOfflineSystem();
     
@@ -69,44 +69,18 @@ export const useOfflineManager = () => {
     try {
       console.log('[OfflineManager] Initializing offline system...');
       
-      // Register service worker with better error handling
-      if ('serviceWorker' in navigator) {
-        try {
-          // Only register offline-sw.js to avoid conflicts
-          const registration = await navigator.serviceWorker.register('/offline-sw.js', {
-            scope: '/'
-          });
-          console.log('[OfflineManager] Service Worker registered successfully:', registration.scope);
-          
-          // Handle service worker updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  toast({
-                    title: "App Updated",
-                    description: "New version available. Restart to apply updates.",
-                    duration: 5000,
-                  });
-                }
-              });
-            }
-          });
-          
-          // Test service worker functionality
-          if (navigator.serviceWorker.controller) {
-            console.log('[OfflineManager] Service Worker is active and controlling');
-          }
-          
-        } catch (error) {
-          console.error('[OfflineManager] Service Worker registration failed:', error);
-          // Don't throw - continue with degraded functionality
-        }
-      }
-
-      // Initialize IndexedDB
+      // Initialize IndexedDB with better error handling
       await offlineDB.init();
+      console.log('[OfflineManager] IndexedDB initialized successfully');
+      
+      // Test database functionality
+      try {
+        await offlineDB.getAllOfflineData('settings');
+        console.log('[OfflineManager] Database test successful');
+      } catch (testError) {
+        console.warn('[OfflineManager] Database test failed, reinitializing:', testError);
+        await offlineDB.forceReinitialize();
+      }
       
       // Load pending operations count
       await loadPendingOperationsCount();
@@ -116,9 +90,18 @@ export const useOfflineManager = () => {
       
     } catch (error) {
       console.error('[OfflineManager] Failed to initialize offline system:', error);
+      
+      // Show user-friendly error
+      toast({
+        title: "Initialization Warning",
+        description: "Some offline features may not work properly. Please refresh the page.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      
       setOfflineState(prev => ({ 
         ...prev, 
-        isInitialized: true, // Still mark as initialized to prevent infinite loops
+        isInitialized: true, // Still mark as initialized to prevent loops
         errors: [...prev.errors, `Initialization failed: ${error.message}`]
       }));
     }
@@ -136,7 +119,7 @@ export const useOfflineManager = () => {
     }
   };
 
-  // Add operation to offline queue
+  // Add operation to offline queue with better error handling
   const addOfflineOperation = useCallback(async (
     type: 'sale' | 'product' | 'customer' | 'transaction',
     operation: 'create' | 'update' | 'delete',
@@ -145,7 +128,7 @@ export const useOfflineManager = () => {
   ): Promise<string> => {
     const operationId = `${type}_${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const offlineOperation: OfflineOperation = {
+    const offlineOperation = {
       id: operationId,
       type,
       operation,
@@ -157,6 +140,11 @@ export const useOfflineManager = () => {
     };
 
     try {
+      // Ensure database is initialized
+      if (!offlineState.isInitialized) {
+        await initializeOfflineSystem();
+      }
+      
       // Store in IndexedDB
       await offlineDB.addToSyncQueue(offlineOperation);
       
@@ -176,9 +164,18 @@ export const useOfflineManager = () => {
       
     } catch (error) {
       console.error('[OfflineManager] Failed to add offline operation:', error);
-      throw error;
+      
+      // Show user-friendly error
+      toast({
+        title: "Offline Storage Error",
+        description: "Failed to save data offline. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      
+      throw new Error(`Database not initialized: ${error.message}`);
     }
-  }, [user, offlineState.isOnline]);
+  }, [user, offlineState.isOnline, offlineState.isInitialized, toast]);
 
   // Update local storage for immediate UI feedback
   const updateLocalStorage = async (type: string, operation: string, data: any) => {

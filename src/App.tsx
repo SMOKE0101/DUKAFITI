@@ -22,7 +22,7 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
-import OfflineStatus from "./components/OfflineStatus";
+import OfflineStatus from "@/components/OfflineStatus";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,90 +47,62 @@ function App() {
   const [isOfflineReady, setIsOfflineReady] = useState(false);
 
   useEffect(() => {
-    // Enhanced service worker registration for consistent reload behavior
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', async () => {
-        try {
-          // Unregister any existing service workers to prevent conflicts
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map(registration => registration.unregister()));
-          
-          console.log('[App] Cleared existing service workers');
-          
-          // Register the enhanced service worker with immediate activation
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/',
-            updateViaCache: 'none' // Always check for updates
-          });
-          
-          console.log('[App] Enhanced Service Worker registered:', registration.scope);
-          
-          // Handle service worker updates with immediate activation
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    console.log('[App] New service worker available - activating immediately');
-                    // Auto-update immediately for consistent reload behavior
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    
-                    // Reload after a short delay to ensure SW is active
-                    setTimeout(() => {
-                      console.log('[App] Reloading to activate new service worker');
-                      window.location.reload();
-                    }, 100);
-                  } else {
-                    console.log('[App] Service worker activated for the first time');
-                  }
-                }
-              });
-            }
-          });
-
-          // Listen for service worker control changes
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[App] Service worker controller changed');
-            // Don't auto-reload here to prevent loops
-          });
-
-          // Listen for service worker messages
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'SW_UPDATED') {
-              console.log('[App] Service worker updated');
-              // Handle updates gracefully without forced reload
-            }
-          });
-
-          // Ensure service worker is ready before marking as offline-ready
-          if (registration.active) {
-            setIsOfflineReady(true);
-          } else {
-            // Wait for service worker to become active
+    // Enhanced initialization with better error handling
+    const initializeApp = async () => {
+      try {
+        // Initialize service worker with better error handling
+        if ('serviceWorker' in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.register('/sw.js', {
+              scope: '/',
+              updateViaCache: 'none'
+            });
+            
+            console.log('[App] Service Worker registered:', registration.scope);
+            
+            // Handle updates
             registration.addEventListener('updatefound', () => {
-              const worker = registration.installing;
-              if (worker) {
-                worker.addEventListener('statechange', () => {
-                  if (worker.state === 'activated') {
-                    setIsOfflineReady(true);
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[App] New service worker available');
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    setTimeout(() => window.location.reload(), 100);
                   }
                 });
               }
             });
-            
-            // Fallback timeout
-            setTimeout(() => setIsOfflineReady(true), 2000);
-          }
 
-        } catch (error) {
-          console.error('[App] Service Worker registration failed:', error);
-          setIsOfflineReady(true); // Continue without SW
+            // Wait for service worker to be ready
+            await navigator.serviceWorker.ready;
+            console.log('[App] Service worker is ready');
+            
+          } catch (swError) {
+            console.error('[App] Service Worker registration failed:', swError);
+            // Continue without SW
+          }
         }
-      });
-    } else {
-      setIsOfflineReady(true);
-    }
+
+        // Initialize IndexedDB early
+        try {
+          const { offlineDB } = await import('./utils/offlineDB');
+          await offlineDB.init();
+          console.log('[App] IndexedDB initialized');
+        } catch (dbError) {
+          console.error('[App] IndexedDB initialization failed:', dbError);
+          // Continue with degraded functionality
+        }
+
+        setIsOfflineReady(true);
+        
+      } catch (error) {
+        console.error('[App] App initialization failed:', error);
+        setIsOfflineReady(true); // Continue anyway
+      }
+    };
+
+    initializeApp();
 
     // Enhanced PWA install prompt
     let deferredPrompt: any;
@@ -157,7 +129,6 @@ function App() {
     // Enhanced online/offline handling
     const handleOnline = () => {
       console.log('[App] Application came online');
-      // Trigger background sync
       if (navigator.serviceWorker?.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'SYNC_NOW' });
       }
@@ -170,68 +141,19 @@ function App() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initialize offline database with enhanced error handling
-    const initOfflineDB = async () => {
-      try {
-        if (typeof window !== 'undefined' && 'indexedDB' in window) {
-          const request = indexedDB.open('DukaSmartOffline', 1);
-          
-          request.onupgradeneeded = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result;
-            
-            // Create required object stores
-            const stores = ['settings', 'products', 'customers', 'sales', 'actionQueue'];
-            stores.forEach(storeName => {
-              if (!db.objectStoreNames.contains(storeName)) {
-                const store = db.createObjectStore(storeName, { keyPath: 'id' });
-                
-                // Add indexes for better querying
-                if (storeName === 'products' || storeName === 'customers' || storeName === 'sales') {
-                  store.createIndex('user_id', 'user_id');
-                }
-                if (storeName === 'actionQueue') {
-                  store.createIndex('timestamp', 'timestamp');
-                  store.createIndex('synced', 'synced');
-                }
-              }
-            });
-          };
-          
-          request.onsuccess = (event) => {
-            console.log('[App] Offline database initialized');
-            const db = (event.target as IDBOpenDBRequest).result;
-            
-            // Pre-warm the database connection
-            const transaction = db.transaction(['settings'], 'readonly');
-            transaction.oncomplete = () => {
-              console.log('[App] Database connection pre-warmed');
-            };
-          };
-
-          request.onerror = (event) => {
-            console.error('[App] Failed to initialize offline database:', event);
-          };
-        }
-      } catch (error) {
-        console.error('[App] Failed to initialize offline database:', error);
-      }
-    };
-
-    initOfflineDB();
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // CRITICAL: Don't show loading state for too long to prevent blank screens
+  // Don't show loading state for too long
   if (!isOfflineReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Preparing offline capabilities...</p>
+          <p className="text-muted-foreground">Initializing app...</p>
         </div>
       </div>
     );
@@ -245,7 +167,6 @@ function App() {
             <AuthProvider>
               <TooltipProvider>
                 <div className="min-h-screen w-full bg-background text-foreground">
-                  {/* Global offline status indicator */}
                   <OfflineStatus />
                   
                   <Routes>

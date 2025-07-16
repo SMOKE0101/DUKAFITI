@@ -1,6 +1,6 @@
-const CACHE_NAME = 'dukasmart-v3.2.0';
-const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.0';
-const API_CACHE = 'dukasmart-api-v3.2.0';
+const CACHE_NAME = 'dukasmart-v3.2.1';
+const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.1';
+const API_CACHE = 'dukasmart-api-v3.2.1';
 
 // Enhanced core app shell resources for full offline support
 const CORE_ASSETS = [
@@ -18,7 +18,7 @@ const SPA_ROUTES = [
   '/app/',
   '/app/dashboard',
   '/app/sales',
-  '/app/inventory',
+  '/app/inventory', 
   '/app/customers',
   '/app/reports',
   '/app/settings',
@@ -36,7 +36,7 @@ const SPA_ROUTES = [
 
 // Install event - cache core assets and app shell
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3.2.0');
+  console.log('[SW] Installing service worker v3.2.1');
   
   event.waitUntil(
     Promise.all([
@@ -57,7 +57,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3.2.0');
+  console.log('[SW] Activating service worker v3.2.1');
   
   event.waitUntil(
     Promise.all([
@@ -78,7 +78,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Enhanced fetch event handling with consistent navigation logic
+// CRITICAL: Enhanced fetch event handling for consistent navigation
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -91,98 +91,85 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle different request types
+  // Handle different request types with proper navigation detection
   if (isStaticAsset(request)) {
     event.respondWith(handleStaticAsset(request));
   } else if (isAPIRequest(request)) {
     event.respondWith(handleAPIRequest(request));
   } else if (isNavigationRequest(request) || isSPARoute(url.pathname)) {
-    // CRITICAL FIX: Always serve app shell for navigation, regardless of online state
-    event.respondWith(handleNavigationConsistent(request));
+    // CRITICAL: Always serve app shell for navigation requests
+    event.respondWith(handleNavigationToAppShell(request));
   } else {
     event.respondWith(handleGenericRequest(request));
   }
 });
 
-// FIXED: Consistent navigation handling for both online and offline
-async function handleNavigationConsistent(request) {
+// FIXED: Always serve the React app shell for navigation requests
+async function handleNavigationToAppShell(request) {
   const url = new URL(request.url);
   
-  console.log('[SW] Handling navigation consistently for:', url.pathname);
+  console.log('[SW] Navigation request for:', url.pathname);
   
-  // For SPA routes, ALWAYS serve from cache first for consistency
+  // For all SPA routes, ALWAYS serve the cached app shell first
   if (isSPARoute(url.pathname)) {
-    console.log('[SW] SPA route detected, serving app shell from cache:', url.pathname);
+    console.log('[SW] SPA route detected, serving app shell from cache');
     
     try {
-      // First, try to serve the cached app shell
+      // Try to serve the cached app shell
       const appShell = await serveAppShell();
       
       if (appShell) {
-        console.log('[SW] Served cached app shell for:', url.pathname);
-        
-        // Update cache in background if online (don't wait for it)
-        if (navigator.onLine) {
-          updateNavigationCacheInBackground(request);
-        }
-        
+        console.log('[SW] Successfully served app shell for:', url.pathname);
         return appShell;
       }
-    } catch (cacheError) {
-      console.warn('[SW] Cache failed for navigation, trying network:', cacheError);
+    } catch (error) {
+      console.error('[SW] Failed to serve app shell:', error);
     }
-    
-    // Only if cache completely fails, try network as fallback
-    try {
-      const networkResponse = await fetch(request);
-      if (networkResponse.ok) {
-        const cache = await caches.open(RUNTIME_CACHE);
-        cache.put(request, networkResponse.clone());
-        return networkResponse;
-      }
-    } catch (networkError) {
-      console.log('[SW] Network also failed, serving minimal app shell');
-    }
-    
-    // Last resort: serve minimal app shell
-    return await serveAppShell();
   }
   
-  // For non-SPA routes, try network first but fallback to cache
+  // If not an SPA route or cache failed, try network with cache fallback
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
+      // Cache successful responses
       const cache = await caches.open(RUNTIME_CACHE);
       cache.put(request, networkResponse.clone());
       return networkResponse;
     }
   } catch (error) {
-    console.log('[SW] Network failed for non-SPA route, checking cache');
+    console.log('[SW] Network failed for navigation request');
   }
   
-  // Fallback to cache for non-SPA routes
-  const cache = await caches.open(RUNTIME_CACHE);
-  const cachedResponse = await cache.match(request);
-  if (cachedResponse) {
-    return cachedResponse;
+  // Final fallback: always serve app shell for navigation
+  const fallbackShell = await serveAppShell();
+  if (fallbackShell) {
+    return fallbackShell;
   }
   
-  // Ultimate fallback: serve app shell
-  return await serveAppShell();
+  // Last resort: minimal app shell
+  return new Response(generateMinimalAppShell(), {
+    status: 200,
+    headers: { 'Content-Type': 'text/html' }
+  });
 }
 
-// Background cache update (don't block response)
-async function updateNavigationCacheInBackground(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, response);
-      console.log('[SW] Updated navigation cache in background for:', request.url);
-    }
-  } catch (error) {
-    console.log('[SW] Background cache update failed:', error);
+// CRITICAL: Always serve the React app shell, never a static offline page
+async function serveAppShell() {
+  const cache = await caches.open(CACHE_NAME);
+  
+  // Try to get the main app shell
+  let appShell = await cache.match('/');
+  if (!appShell) {
+    appShell = await cache.match('/index.html');
   }
+  
+  if (appShell) {
+    console.log('[SW] Serving cached app shell');
+    return appShell;
+  }
+  
+  console.log('[SW] No cached app shell found');
+  return null;
 }
 
 // Handle static assets (cache-first strategy)
@@ -213,12 +200,12 @@ async function handleStaticAsset(request) {
   }
 }
 
-// Handle API requests (cache-first for settings/profile, network-first for others)
+// Handle API requests (cache-first for critical data, network-first for others)
 async function handleAPIRequest(request) {
   try {
     const cache = await caches.open(API_CACHE);
     
-    // For settings and profile data, serve from cache first for instant loading
+    // For critical data, serve from cache first for instant loading
     if (request.url.includes('/profiles') || 
         request.url.includes('/shop_settings') ||
         request.url.includes('/products') ||
@@ -283,34 +270,10 @@ async function handleAPIRequest(request) {
   }
 }
 
-// CRITICAL: Always serve the React app shell, never a static offline page
-async function serveAppShell() {
-  const cache = await caches.open(CACHE_NAME);
-  
-  // Try to get the main app shell
-  let appShell = await cache.match('/');
-  if (!appShell) {
-    appShell = await cache.match('/index.html');
-  }
-  
-  if (appShell) {
-    console.log('[SW] Serving cached app shell');
-    return appShell;
-  }
-  
-  // Last resort: create a minimal app shell that will load the React app
-  console.log('[SW] Creating fallback app shell');
-  return new Response(generateMinimalAppShell(), {
-    status: 200,
-    headers: { 'Content-Type': 'text/html' }
-  });
-}
-
 // Handle generic requests
 async function handleGenericRequest(request) {
   try {
     const cache = await caches.open(RUNTIME_CACHE);
-    const cachedResponse = await cache.match(request);
     
     // Try network first
     const networkResponse = await fetch(request);
@@ -321,6 +284,7 @@ async function handleGenericRequest(request) {
     }
     
     // Network failed, use cache
+    const cachedResponse = await cache.match(request);
     if (cachedResponse) {
       return cachedResponse;
     }
@@ -377,44 +341,6 @@ async function handleOfflineWrite(request) {
         }
       }
     );
-  }
-}
-
-// Background sync event
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync triggered:', event.tag);
-  
-  if (event.tag === 'offline-sync') {
-    event.waitUntil(syncOfflineRequests());
-  }
-});
-
-// Sync offline requests when back online
-async function syncOfflineRequests() {
-  try {
-    const requests = await getStoredOfflineRequests();
-    console.log(`[SW] Syncing ${requests.length} offline requests`);
-    
-    for (const requestData of requests) {
-      try {
-        const response = await fetch(requestData.url, {
-          method: requestData.method,
-          headers: requestData.headers,
-          body: requestData.body,
-        });
-        
-        if (response.ok) {
-          await removeStoredOfflineRequest(requestData.id);
-          console.log('[SW] Synced offline request:', requestData.url);
-        } else {
-          console.warn('[SW] Sync failed for request:', requestData.url, response.status);
-        }
-      } catch (error) {
-        console.error('[SW] Failed to sync request:', requestData.url, error);
-      }
-    }
-  } catch (error) {
-    console.error('[SW] Sync process failed:', error);
   }
 }
 
@@ -512,6 +438,15 @@ function generateMinimalAppShell() {
   `;
 }
 
+// Background sync event
+self.addEventListener('sync', (event) => {
+  console.log('[SW] Background sync triggered:', event.tag);
+  
+  if (event.tag === 'offline-sync') {
+    event.waitUntil(syncOfflineRequests());
+  }
+});
+
 // Message handling
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -586,4 +521,32 @@ async function removeStoredOfflineRequest(id) {
     
     request.onerror = () => reject(request.error);
   });
+}
+
+async function syncOfflineRequests() {
+  try {
+    const requests = await getStoredOfflineRequests();
+    console.log(`[SW] Syncing ${requests.length} offline requests`);
+    
+    for (const requestData of requests) {
+      try {
+        const response = await fetch(requestData.url, {
+          method: requestData.method,
+          headers: requestData.headers,
+          body: requestData.body,
+        });
+        
+        if (response.ok) {
+          await removeStoredOfflineRequest(requestData.id);
+          console.log('[SW] Synced offline request:', requestData.url);
+        } else {
+          console.warn('[SW] Sync failed for request:', requestData.url, response.status);
+        }
+      } catch (error) {
+        console.error('[SW] Failed to sync request:', requestData.url, error);
+      }
+    }
+  } catch (error) {
+    console.error('[SW] Sync process failed:', error);
+  }
 }
