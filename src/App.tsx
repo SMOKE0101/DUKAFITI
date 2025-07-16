@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ThemeProvider } from "next-themes";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import ModernLanding from "./pages/ModernLanding";
@@ -22,22 +23,99 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
-import OfflineHandler from './components/OfflineHandler';
-import { useServiceWorker } from './hooks/useServiceWorker';
-
+import OfflineStatus from './components/OfflineStatus';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 3,
+      retry: (failureCount, error: any) => {
+        // Don't retry if offline
+        if (!navigator.onLine) return false;
+        return failureCount < 3;
+      },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+    mutations: {
+      retry: (failureCount, error: any) => {
+        // Don't retry mutations if offline - let offline queue handle it
+        if (!navigator.onLine) return false;
+        return failureCount < 2;
+      },
     },
   },
 });
 
 function App() {
-  // Initialize service worker
-  useServiceWorker();
+  useEffect(() => {
+    // Register service worker for offline functionality
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+          });
+          
+          console.log('[App] Service Worker registered successfully:', registration.scope);
+          
+          // Listen for service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[App] New service worker installed');
+                  // Show update notification
+                  if (window.confirm('New version available! Reload to update?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            }
+          });
+
+        } catch (error) {
+          console.error('[App] Service Worker registration failed:', error);
+        }
+      });
+    }
+
+    // Add PWA install prompt handling
+    let deferredPrompt: any;
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('[App] PWA install prompt available');
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // Show custom install button or notification
+      // You can implement a custom UI here
+    });
+
+    window.addEventListener('appinstalled', () => {
+      console.log('[App] PWA was installed');
+      deferredPrompt = null;
+    });
+
+    // Handle online/offline events
+    const handleOnline = () => {
+      console.log('[App] Application came online');
+      // Trigger sync if needed
+    };
+
+    const handleOffline = () => {
+      console.log('[App] Application went offline');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -59,7 +137,7 @@ function App() {
                     {/* Dashboard compatibility route */}
                     <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                     
-                    {/* Protected routes with layout */}
+                    {/* Protected routes with layout and offline support */}
                     <Route path="/app" element={
                       <ProtectedRoute>
                         <PremiumAppLayout />
@@ -80,7 +158,6 @@ function App() {
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                  <OfflineHandler />
                   <Toaster />
                   <ProductionToaster />
                 </div>

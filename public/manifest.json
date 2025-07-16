@@ -1,92 +1,89 @@
 
 {
-  "name": "DukaFiti - Dukafiti Ni Dukabora",
-  "short_name": "DukaFiti",
-  "description": "Kenya's most advanced shop management system with M-Pesa integration and offline support",
+  "name": "DukaSmart - Offline Business Manager",
+  "short_name": "DukaSmart",
+  "description": "Complete offline-first business management solution for modern entrepreneurs",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "theme_color": "#667eea",
   "orientation": "portrait-primary",
   "scope": "/",
+  "categories": ["business", "finance", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
   "icons": [
     {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
+      "src": "/vite.svg",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
+      "src": "/vite.svg", 
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity", "finance"],
-  "lang": "sw",
-  "dir": "ltr",
-  "prefer_related_applications": false,
   "shortcuts": [
     {
-      "name": "Rekodi Mauzo",
-      "short_name": "Mauzo",
-      "description": "Rekodi mauzo mapya haraka",
-      "url": "/app?action=sale",
+      "name": "New Sale",
+      "short_name": "Sale",
+      "description": "Create a new sale",
+      "url": "/app/sales",
       "icons": [
         {
-          "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
+          "src": "/vite.svg",
           "sizes": "96x96"
         }
       ]
     },
     {
-      "name": "Angalia Hisa",
-      "short_name": "Hisa",
-      "description": "Ona viwango vya hisa vya sasa",
-      "url": "/app?action=inventory",
+      "name": "Inventory",
+      "short_name": "Inventory",
+      "description": "Manage inventory",
+      "url": "/app/inventory",
       "icons": [
         {
-          "src": "/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png",
+          "src": "/vite.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "short_name": "Reports",
+      "description": "View business reports",
+      "url": "/app/reports",
+      "icons": [
+        {
+          "src": "/vite.svg",
           "sizes": "96x96"
         }
       ]
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/vite.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "DukaSmart Dashboard"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "750x1334",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "DukaSmart Mobile"
+    }
+  ],
+  "features": [
+    "offline",
+    "cross-platform",
+    "background-sync"
+  ],
+  "prefer_related_applications": false
 }

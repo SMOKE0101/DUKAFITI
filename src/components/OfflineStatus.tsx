@@ -1,166 +1,147 @@
 
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Wifi, 
-  WifiOff, 
-  RefreshCw, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock,
-  Database,
-  Zap
-} from 'lucide-react';
-import { useOfflineManager } from '../hooks/useOfflineManager';
+import { Button } from '@/components/ui/button';
+import { WifiOff, Wifi, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 const OfflineStatus: React.FC = () => {
-  const { 
-    isOnline, 
-    isSyncing, 
-    pendingOperations, 
-    syncProgress, 
-    lastSyncTime, 
-    errors,
-    forceSyncNow,
-    clearSyncErrors
-  } = useOfflineManager();
-
-  // Don't show if online and no pending operations or errors
-  if (isOnline && pendingOperations === 0 && errors.length === 0) {
-    return null;
-  }
+  const { syncStatus, conflicts, forceSyncNow, resolveConflict } = useOfflineSync();
 
   const getStatusColor = () => {
-    if (!isOnline) return 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800';
-    if (isSyncing) return 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800';
-    if (errors.length > 0) return 'bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800';
-    if (pendingOperations > 0) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800';
-    return 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800';
+    if (!syncStatus.isOnline) return 'bg-orange-100 border-orange-200 text-orange-800';
+    if (syncStatus.isSyncing) return 'bg-blue-100 border-blue-200 text-blue-800';
+    if (syncStatus.queuedActions > 0) return 'bg-yellow-100 border-yellow-200 text-yellow-800';
+    return 'bg-green-100 border-green-200 text-green-800';
   };
 
   const getStatusIcon = () => {
-    if (!isOnline) return <WifiOff className="w-4 h-4 text-red-600 dark:text-red-400" />;
-    if (isSyncing) return <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />;
-    if (errors.length > 0) return <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
-    if (pendingOperations > 0) return <Clock className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />;
-    return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />;
+    if (!syncStatus.isOnline) return <WifiOff className="w-4 h-4" />;
+    if (syncStatus.isSyncing) return <RefreshCw className="w-4 h-4 animate-spin" />;
+    if (syncStatus.queuedActions > 0) return <Clock className="w-4 h-4" />;
+    return <Wifi className="w-4 h-4" />;
   };
 
-  const getStatusMessage = () => {
-    if (!isOnline) {
-      return 'Offline Mode Active - All changes saved locally and will sync automatically when connection returns.';
+  const getStatusText = () => {
+    if (!syncStatus.isOnline) {
+      return syncStatus.queuedActions > 0 
+        ? `Offline Mode - ${syncStatus.queuedActions} actions queued`
+        : 'Offline Mode - All changes saved locally';
     }
-    if (isSyncing) {
-      return `Syncing data... ${syncProgress}% complete`;
+    if (syncStatus.isSyncing) {
+      return `Syncing... ${syncStatus.syncProgress}%`;
     }
-    if (errors.length > 0) {
-      return `Sync completed with ${errors.length} issue(s) that need attention.`;
+    if (syncStatus.queuedActions > 0) {
+      return `${syncStatus.queuedActions} actions pending sync`;
     }
-    if (pendingOperations > 0) {
-      return `${pendingOperations} operation(s) waiting to sync.`;
-    }
-    return 'All data synchronized successfully.';
+    return 'Online - All data synchronized';
   };
 
   return (
     <div className="space-y-2">
-      <Alert className={`${getStatusColor()} transition-all duration-300 shadow-sm`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
-            {getStatusIcon()}
-            <div className="flex-1">
-              <AlertDescription className="text-sm font-medium">
-                {getStatusMessage()}
-              </AlertDescription>
-              
-              {lastSyncTime && !isSyncing && (
-                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                  <Database className="w-3 h-3" />
-                  Last sync: {new Date(lastSyncTime).toLocaleString()}
-                </div>
-              )}
-
-              {!isOnline && (
-                <div className="flex items-center gap-2 mt-2 text-xs">
-                  <Zap className="w-3 h-3 text-green-600 dark:text-green-400" />
-                  <span className="text-green-700 dark:text-green-300 font-medium">
-                    Offline-first technology active - Your work continues seamlessly
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
+      {/* Main Status Banner */}
+      <Alert className={getStatusColor()}>
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
-            {pendingOperations > 0 && (
-              <Badge variant="secondary" className="text-xs px-2 py-1">
-                {pendingOperations} pending
-              </Badge>
-            )}
-
-            {errors.length > 0 && (
-              <Badge variant="destructive" className="text-xs px-2 py-1">
-                {errors.length} error{errors.length > 1 ? 's' : ''}
-              </Badge>
-            )}
-
-            {isOnline && !isSyncing && pendingOperations > 0 && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={forceSyncNow}
-                className="h-7 px-3 text-xs font-medium"
-              >
-                <RefreshCw className="w-3 h-3 mr-1" />
-                Sync Now
-              </Button>
-            )}
-
-            {errors.length > 0 && (
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={clearSyncErrors}
-                className="h-7 px-3 text-xs"
-              >
-                Clear Errors
-              </Button>
-            )}
+            {getStatusIcon()}
+            <AlertDescription className="font-medium">
+              {getStatusText()}
+            </AlertDescription>
           </div>
+          
+          {syncStatus.isOnline && syncStatus.queuedActions > 0 && !syncStatus.isSyncing && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={forceSyncNow}
+              className="ml-2"
+            >
+              <RefreshCw className="w-3 h-3 mr-1" />
+              Sync Now
+            </Button>
+          )}
         </div>
 
-        {isSyncing && (
-          <div className="mt-3 space-y-2">
-            <Progress value={syncProgress} className="h-2" />
-            <div className="text-xs text-muted-foreground">
-              Synchronizing operations... {syncProgress}% complete
-            </div>
-          </div>
-        )}
-
-        {errors.length > 0 && !isSyncing && (
-          <div className="mt-3 space-y-2">
-            <div className="text-xs font-medium text-orange-800 dark:text-orange-200">
-              Recent Sync Issues:
-            </div>
-            <div className="space-y-1 max-h-20 overflow-y-auto">
-              {errors.slice(0, 3).map((error, index) => (
-                <div key={index} className="text-xs text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded text-wrap">
-                  {error}
-                </div>
-              ))}
-              {errors.length > 3 && (
-                <div className="text-xs text-orange-600 dark:text-orange-400 italic">
-                  +{errors.length - 3} more error{errors.length - 3 > 1 ? 's' : ''}...
-                </div>
-              )}
-            </div>
+        {/* Sync Progress Bar */}
+        {syncStatus.isSyncing && (
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${syncStatus.syncProgress}%` }}
+            />
           </div>
         )}
       </Alert>
+
+      {/* Sync Errors */}
+      {syncStatus.errors.length > 0 && (
+        <Alert className="bg-red-50 border-red-200">
+          <AlertTriangle className="w-4 h-4 text-red-600" />
+          <AlertDescription>
+            <div className="text-red-800">
+              <strong>Sync Issues:</strong>
+              <ul className="mt-1 text-sm">
+                {syncStatus.errors.slice(0, 3).map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+                {syncStatus.errors.length > 3 && (
+                  <li>• And {syncStatus.errors.length - 3} more...</li>
+                )}
+              </ul>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Conflicts */}
+      {conflicts.length > 0 && (
+        <Alert className="bg-yellow-50 border-yellow-200">
+          <AlertTriangle className="w-4 h-4 text-yellow-600" />
+          <AlertDescription>
+            <div className="text-yellow-800">
+              <strong>Data Conflicts Detected:</strong>
+              <div className="mt-2 space-y-2">
+                {conflicts.slice(0, 2).map((conflict) => (
+                  <div key={conflict.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                    <span className="text-sm">
+                      {conflict.type}: Changes made both locally and on server
+                    </span>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resolveConflict(conflict.id, 'local')}
+                      >
+                        Keep Local
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resolveConflict(conflict.id, 'server')}
+                      >
+                        Use Server
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {conflicts.length > 2 && (
+                  <div className="text-sm text-yellow-700">
+                    And {conflicts.length - 2} more conflicts...
+                  </div>
+                )}
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Last Sync Time */}
+      {syncStatus.lastSyncTime && (
+        <div className="text-xs text-muted-foreground text-center">
+          Last synchronized: {syncStatus.lastSyncTime.toLocaleString()}
+        </div>
+      )}
     </div>
   );
 };
