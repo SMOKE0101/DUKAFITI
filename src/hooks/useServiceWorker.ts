@@ -1,23 +1,32 @@
+
 import { useEffect, useState } from 'react';
 
 export const useServiceWorker = () => {
   const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    // Register service worker after React app has fully loaded
+    // Register service worker
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          console.log('[SW] Registering service worker...');
-          const registration = await navigator.serviceWorker.register('/offline-sw.js', {
+          console.log('[SW] Registering robust service worker...');
+          setIsInstalling(true);
+          
+          // Unregister any existing service workers first
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+          
+          const registration = await navigator.serviceWorker.register('/robust-sw.js', {
             scope: '/',
             updateViaCache: 'none'
           });
 
-          console.log('[SW] Service worker registered successfully');
+          console.log('[SW] Robust service worker registered successfully');
           setSwRegistration(registration);
+          setIsInstalling(false);
 
           // Check for updates
           registration.addEventListener('updatefound', () => {
@@ -37,32 +46,29 @@ export const useServiceWorker = () => {
             setUpdateAvailable(true);
           }
 
+          // Setup background sync
+          if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+            registration.sync.register('background-sync').catch(console.error);
+          }
+
         } catch (error) {
           console.error('[SW] Service worker registration failed:', error);
+          setIsInstalling(false);
         }
       }
     };
 
-    // Register SW only after React has rendered
-    const timer = setTimeout(registerSW, 1000);
+    // Register SW immediately
+    registerSW();
 
     // Online/offline detection
     const handleOnline = () => {
       console.log('[SW] App is online');
       setIsOnline(true);
+      
       // Trigger sync when back online
-      try {
-        if (swRegistration && 'serviceWorker' in navigator) {
-          navigator.serviceWorker.ready.then(registration => {
-            // Type assertion for background sync
-            const reg = registration as any;
-            if (reg.sync) {
-              return reg.sync.register('offline-sync');
-            }
-          }).catch(console.error);
-        }
-      } catch (e) {
-        console.log('[SW] Background sync not supported');
+      if (swRegistration?.active) {
+        swRegistration.active.postMessage({ type: 'FORCE_SYNC' });
       }
     };
 
@@ -75,7 +81,6 @@ export const useServiceWorker = () => {
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      clearTimeout(timer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -85,20 +90,29 @@ export const useServiceWorker = () => {
     if (swRegistration?.waiting) {
       swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
       setUpdateAvailable(false);
+      window.location.reload();
     }
   };
 
   const triggerSync = () => {
     if (swRegistration?.active) {
-      swRegistration.active.postMessage({ type: 'SYNC_NOW' });
+      swRegistration.active.postMessage({ type: 'FORCE_SYNC' });
+    }
+  };
+
+  const clearCache = () => {
+    if (swRegistration?.active) {
+      swRegistration.active.postMessage({ type: 'CLEAR_CACHE' });
     }
   };
 
   return {
     isOnline,
     updateAvailable,
+    isInstalling,
     skipWaiting,
     triggerSync,
+    clearCache,
     swRegistration
   };
 };

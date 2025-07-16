@@ -2,7 +2,6 @@
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
   Wifi, 
@@ -21,22 +20,21 @@ const OfflineStatus: React.FC = () => {
     isOnline, 
     isSyncing, 
     pendingOperations, 
-    syncProgress, 
     lastSyncTime, 
-    errors,
+    syncErrors,
     forceSyncNow,
     clearSyncErrors
   } = useOfflineManager();
 
   // Don't show if online and no pending operations or errors
-  if (isOnline && pendingOperations === 0 && errors.length === 0) {
+  if (isOnline && pendingOperations === 0 && syncErrors.length === 0) {
     return null;
   }
 
   const getStatusColor = () => {
     if (!isOnline) return 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800';
     if (isSyncing) return 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800';
-    if (errors.length > 0) return 'bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800';
+    if (syncErrors.length > 0) return 'bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800';
     if (pendingOperations > 0) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800';
     return 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800';
   };
@@ -44,7 +42,7 @@ const OfflineStatus: React.FC = () => {
   const getStatusIcon = () => {
     if (!isOnline) return <WifiOff className="w-4 h-4 text-red-600 dark:text-red-400" />;
     if (isSyncing) return <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />;
-    if (errors.length > 0) return <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
+    if (syncErrors.length > 0) return <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
     if (pendingOperations > 0) return <Clock className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />;
     return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />;
   };
@@ -54,10 +52,10 @@ const OfflineStatus: React.FC = () => {
       return 'Offline Mode Active - All changes saved locally and will sync automatically when connection returns.';
     }
     if (isSyncing) {
-      return `Syncing data... ${syncProgress}% complete`;
+      return 'Syncing data...';
     }
-    if (errors.length > 0) {
-      return `Sync completed with ${errors.length} issue(s) that need attention.`;
+    if (syncErrors.length > 0) {
+      return `Sync completed with ${syncErrors.length} issue(s) that need attention.`;
     }
     if (pendingOperations > 0) {
       return `${pendingOperations} operation(s) waiting to sync.`;
@@ -101,9 +99,9 @@ const OfflineStatus: React.FC = () => {
               </Badge>
             )}
 
-            {errors.length > 0 && (
+            {syncErrors.length > 0 && (
               <Badge variant="destructive" className="text-xs px-2 py-1">
-                {errors.length} error{errors.length > 1 ? 's' : ''}
+                {syncErrors.length} error{syncErrors.length > 1 ? 's' : ''}
               </Badge>
             )}
 
@@ -119,7 +117,7 @@ const OfflineStatus: React.FC = () => {
               </Button>
             )}
 
-            {errors.length > 0 && (
+            {syncErrors.length > 0 && (
               <Button 
                 size="sm" 
                 variant="ghost" 
@@ -132,29 +130,20 @@ const OfflineStatus: React.FC = () => {
           </div>
         </div>
 
-        {isSyncing && (
-          <div className="mt-3 space-y-2">
-            <Progress value={syncProgress} className="h-2" />
-            <div className="text-xs text-muted-foreground">
-              Synchronizing operations... {syncProgress}% complete
-            </div>
-          </div>
-        )}
-
-        {errors.length > 0 && !isSyncing && (
+        {syncErrors.length > 0 && !isSyncing && (
           <div className="mt-3 space-y-2">
             <div className="text-xs font-medium text-orange-800 dark:text-orange-200">
               Recent Sync Issues:
             </div>
             <div className="space-y-1 max-h-20 overflow-y-auto">
-              {errors.slice(0, 3).map((error, index) => (
+              {syncErrors.slice(0, 3).map((error, index) => (
                 <div key={index} className="text-xs text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded text-wrap">
                   {error}
                 </div>
               ))}
-              {errors.length > 3 && (
+              {syncErrors.length > 3 && (
                 <div className="text-xs text-orange-600 dark:text-orange-400 italic">
-                  +{errors.length - 3} more error{errors.length - 3 > 1 ? 's' : ''}...
+                  +{syncErrors.length - 3} more error{syncErrors.length - 3 > 1 ? 's' : ''}...
                 </div>
               )}
             </div>
