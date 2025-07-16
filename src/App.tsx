@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { ProductionToaster } from "@/components/ui/production-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,7 +22,7 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
-import OfflineStatus from "@/components/OfflineStatus";
+import EnhancedOfflineStatus from "@/components/EnhancedOfflineStatus";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,6 +77,16 @@ function App() {
         // Initialize service worker with better error handling
         if ('serviceWorker' in navigator) {
           try {
+            // Unregister old service workers first
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              if (registration.scope.includes('offline-sw') || 
+                  registration.scope.includes('enhanced')) {
+                await registration.unregister();
+                console.log('[App] Unregistered old service worker');
+              }
+            }
+
             const registration = await navigator.serviceWorker.register('/sw.js', {
               scope: '/',
               updateViaCache: 'none'
@@ -208,7 +217,7 @@ function App() {
             <AuthProvider>
               <TooltipProvider>
                 <div className="min-h-screen w-full bg-background text-foreground">
-                  <OfflineStatus />
+                  <EnhancedOfflineStatus />
                   
                   <Routes>
                     {/* Root route - shows landing for unauthenticated users, redirects to dashboard for authenticated users */}

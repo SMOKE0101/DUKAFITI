@@ -1,6 +1,7 @@
-const CACHE_NAME = 'dukasmart-v3.2.3';
-const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.3';
-const API_CACHE = 'dukasmart-api-v3.2.3';
+
+const CACHE_NAME = 'dukasmart-v3.3.0';
+const RUNTIME_CACHE = 'dukasmart-runtime-v3.3.0';
+const API_CACHE = 'dukasmart-api-v3.3.0';
 
 // Enhanced core app shell resources for full offline support
 const CORE_ASSETS = [
@@ -36,7 +37,7 @@ const SPA_ROUTES = [
 
 // Install event - cache core assets and app shell
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3.2.3');
+  console.log('[SW] Installing service worker v3.3.0');
   
   event.waitUntil(
     Promise.all([
@@ -57,7 +58,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3.2.3');
+  console.log('[SW] Activating service worker v3.3.0');
   
   event.waitUntil(
     Promise.all([
@@ -78,7 +79,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// CRITICAL: Enhanced fetch event handling for consistent navigation
+// CRITICAL: Enhanced fetch event handling for ALL SPA routes
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -97,43 +98,39 @@ self.addEventListener('fetch', (event) => {
   } else if (isAPIRequest(request)) {
     event.respondWith(handleAPIRequest(request));
   } else if (isNavigationRequest(request) || isSPARoute(url.pathname)) {
-    // CRITICAL: Always serve app shell for navigation requests - NEVER static offline page
+    // CRITICAL: Always serve app shell for ALL SPA routes - NEVER static offline page
     event.respondWith(handleNavigationToAppShell(request));
   } else {
     event.respondWith(handleGenericRequest(request));
   }
 });
 
-// ENHANCED: Always serve the React app shell for navigation requests - NEVER a static offline page
+// ENHANCED: Always serve the React app shell for navigation requests to ANY SPA route
 async function handleNavigationToAppShell(request) {
   const url = new URL(request.url);
   
   console.log('[SW] Navigation request for:', url.pathname);
   
-  // CRITICAL: For ALL navigation requests, ALWAYS serve app shell from cache
-  // This ensures React can bootstrap and load from IndexedDB
   try {
-    const appShell = await getAppShellFromCache();
-    
-    if (appShell) {
-      console.log('[SW] ✅ Successfully served React app shell for:', url.pathname);
-      return appShell;
-    }
-  } catch (error) {
-    console.error('[SW] Failed to serve app shell from cache:', error);
-  }
-  
-  // Try network as fallback but prioritize app shell
-  try {
-    const networkResponse = await fetch(request);
+    // First try network for fresh content
+    const networkResponse = await fetch(request, { timeout: 2000 });
     if (networkResponse.ok) {
-      // Cache successful responses for future use
+      // Cache successful responses
       const cache = await caches.open(RUNTIME_CACHE);
       cache.put(request, networkResponse.clone());
+      console.log('[SW] ✅ Served fresh content for:', url.pathname);
       return networkResponse;
     }
   } catch (error) {
-    console.log('[SW] Network failed for navigation request, falling back to minimal app shell');
+    console.log('[SW] Network failed for navigation, serving cached app shell');
+  }
+  
+  // Network failed or slow - serve cached app shell
+  const appShell = await getAppShellFromCache();
+  
+  if (appShell) {
+    console.log('[SW] ✅ Successfully served React app shell for:', url.pathname);
+    return appShell;
   }
   
   // Final fallback: generate minimal React app shell that will bootstrap
@@ -144,7 +141,7 @@ async function handleNavigationToAppShell(request) {
   });
 }
 
-// ENHANCED: Get React app shell from cache (never return static offline page)
+// ENHANCED: Get React app shell from cache (prioritizes app shell over static offline page)
 async function getAppShellFromCache() {
   const cache = await caches.open(CACHE_NAME);
   
@@ -191,44 +188,21 @@ async function handleStaticAsset(request) {
   }
 }
 
-// Handle API requests (cache-first for critical data, network-first for others)
+// Handle API requests (network-first with extensive caching)
 async function handleAPIRequest(request) {
   try {
     const cache = await caches.open(API_CACHE);
     
-    // For critical data, serve from cache first for instant loading
-    if (request.url.includes('/profiles') || 
-        request.url.includes('/shop_settings') ||
-        request.url.includes('/products') ||
-        request.url.includes('/customers') ||
-        request.url.includes('/sales')) {
-      
-      const cachedResponse = await cache.match(request);
-      if (cachedResponse) {
-        // Serve cached response immediately, update in background
-        updateCacheInBackground(request, cache);
-        return cachedResponse;
-      }
-    }
-    
     // Try network first for fresh data
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetch(request, { timeout: 5000 });
     
     if (networkResponse.ok) {
+      // Cache successful responses
       cache.put(request, networkResponse.clone());
       return networkResponse;
     }
     
-    // Network failed, use cache if available
-    const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      const response = cachedResponse.clone();
-      response.headers.set('x-served-by', 'sw-cache');
-      response.headers.set('x-offline', 'true');
-      return response;
-    }
-    
-    throw new Error('No cache available');
+    throw new Error('Network response not ok');
     
   } catch (error) {
     console.log('[SW] API request failed, trying cache:', request.url);
