@@ -1,9 +1,10 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { ProductionToaster } from "@/components/ui/production-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { ThemeProvider } from "next-themes";
 import { useEffect, useState } from "react";
 import Index from "./pages/Index";
@@ -43,6 +44,30 @@ const queryClient = new QueryClient({
   },
 });
 
+// Component to handle root route logic
+const RootHandler = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Initializing app...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, redirect to dashboard
+  if (user) {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+
+  // If not authenticated, show the modern landing page
+  return <ModernLanding />;
+};
+
 function App() {
   const [isOfflineReady, setIsOfflineReady] = useState(false);
 
@@ -60,18 +85,27 @@ function App() {
             
             console.log('[App] Service Worker registered:', registration.scope);
             
-            // Handle updates
+            // Handle updates - immediate activation
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('[App] New service worker available');
+                  if (newWorker.state === 'installed') {
+                    console.log('[App] New service worker installed, activating...');
                     newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    setTimeout(() => window.location.reload(), 100);
+                    // Reload immediately to use new SW
+                    if (navigator.serviceWorker.controller) {
+                      setTimeout(() => window.location.reload(), 100);
+                    }
                   }
                 });
               }
+            });
+
+            // Handle activation
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              console.log('[App] Service worker controller changed');
+              window.location.reload();
             });
 
             // Wait for service worker to be ready
@@ -88,7 +122,14 @@ function App() {
         try {
           const { offlineDB } = await import('./utils/offlineDB');
           await offlineDB.init();
-          console.log('[App] IndexedDB initialized');
+          
+          // Test database functionality
+          const isDbWorking = await offlineDB.testDatabase();
+          if (isDbWorking) {
+            console.log('[App] IndexedDB initialized and tested successfully');
+          } else {
+            console.warn('[App] IndexedDB test failed, some offline features may not work');
+          }
         } catch (dbError) {
           console.error('[App] IndexedDB initialization failed:', dbError);
           // Continue with degraded functionality
@@ -170,8 +211,10 @@ function App() {
                   <OfflineStatus />
                   
                   <Routes>
+                    {/* Root route - shows landing for unauthenticated users, redirects to dashboard for authenticated users */}
+                    <Route path="/" element={<RootHandler />} />
+                    
                     {/* Public routes */}
-                    <Route path="/" element={<ModernLanding />} />
                     <Route path="/modern-landing" element={<ModernLanding />} />
                     <Route path="/landing" element={<Landing />} />
                     <Route path="/signin" element={<SignIn />} />
@@ -179,7 +222,7 @@ function App() {
                     <Route path="/auth" element={<Navigate to="/signin" replace />} />
                     <Route path="/offline" element={<Offline />} />
                     
-                    {/* Dashboard compatibility route */}
+                    {/* Legacy dashboard compatibility route */}
                     <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                     
                     {/* Protected routes with enhanced offline support */}

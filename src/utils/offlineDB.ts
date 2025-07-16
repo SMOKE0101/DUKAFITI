@@ -1,4 +1,63 @@
 
+// Define interfaces for offline data types
+export interface OfflineProduct {
+  id: string;
+  name: string;
+  category: string;
+  cost_price: number;
+  selling_price: number;
+  current_stock: number;
+  low_stock_threshold: number | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string | null;
+  synced?: boolean;
+}
+
+export interface OfflineCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  credit_limit: number | null;
+  outstanding_debt: number | null;
+  user_id: string;
+  created_date: string;
+  updated_at?: string;
+  synced?: boolean;
+}
+
+export interface OfflineSale {
+  id: string;
+  product_id: string;
+  product_name: string;
+  customer_id: string | null;
+  customer_name: string | null;
+  quantity: number;
+  selling_price: number;
+  cost_price: number;
+  total_amount: number;
+  profit: number;
+  payment_method: string;
+  payment_details: any | null;
+  user_id: string;
+  timestamp: string;
+  synced?: boolean;
+}
+
+export interface OfflineAction {
+  id: string;
+  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  table: string;
+  data: any;
+  user_id: string;
+  timestamp: number;
+  synced: boolean;
+  attempts?: number;
+  lastAttempt?: number;
+}
+
 class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private initPromise: Promise<void> | null = null;
@@ -84,6 +143,33 @@ class OfflineDatabase {
     }
   }
 
+  // Test database functionality
+  async testDatabase(): Promise<boolean> {
+    try {
+      await this.ensureInitialized();
+      
+      // Try to perform a simple operation
+      const testData = {
+        id: 'test_' + Date.now(),
+        data: 'test'
+      };
+      
+      await this.storeOfflineData('settings', testData);
+      const retrieved = await this.getOfflineData('settings', testData.id);
+      
+      if (retrieved && retrieved.id === testData.id) {
+        console.log('[OfflineDB] Database test passed');
+        return true;
+      } else {
+        console.error('[OfflineDB] Database test failed: data mismatch');
+        return false;
+      }
+    } catch (error) {
+      console.error('[OfflineDB] Database test failed:', error);
+      return false;
+    }
+  }
+
   async storeOfflineData(storeName: string, data: any): Promise<void> {
     await this.ensureInitialized();
     
@@ -149,12 +235,127 @@ class OfflineDatabase {
     });
   }
 
+  // Enhanced methods for specific data types
+  async store(storeName: string, data: any): Promise<void> {
+    return this.storeOfflineData(storeName, data);
+  }
+
+  async delete(storeName: string, id: string): Promise<void> {
+    await this.ensureInitialized();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      const request = store.delete(id);
+      request.onsuccess = () => {
+        console.log(`[OfflineDB] Deleted from ${storeName}:`, id);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Product methods
+  async storeProducts(products: OfflineProduct[]): Promise<void> {
+    for (const product of products) {
+      await this.store('products', { ...product, synced: true });
+    }
+  }
+
+  async getProducts(userId: string): Promise<OfflineProduct[]> {
+    return this.getAllOfflineData('products', userId);
+  }
+
+  async getProduct(id: string): Promise<OfflineProduct | undefined> {
+    return this.getOfflineData('products', id);
+  }
+
+  async updateProductStock(productId: string, newStock: number): Promise<void> {
+    const product = await this.getProduct(productId);
+    if (product) {
+      product.current_stock = newStock;
+      product.updated_at = new Date().toISOString();
+      await this.store('products', product);
+    }
+  }
+
+  // Customer methods
+  async storeCustomers(customers: OfflineCustomer[]): Promise<void> {
+    for (const customer of customers) {
+      await this.store('customers', { ...customer, synced: true });
+    }
+  }
+
+  async getCustomers(userId: string): Promise<OfflineCustomer[]> {
+    return this.getAllOfflineData('customers', userId);
+  }
+
+  async getCustomer(id: string): Promise<OfflineCustomer | undefined> {
+    return this.getOfflineData('customers', id);
+  }
+
+  // Sales methods
+  async storeSales(sales: OfflineSale[]): Promise<void> {
+    for (const sale of sales) {
+      await this.store('sales', { ...sale, synced: true });
+    }
+  }
+
+  async getSales(userId: string): Promise<OfflineSale[]> {
+    return this.getAllOfflineData('sales', userId);
+  }
+
+  // Sync queue methods
+  async queueAction(action: Omit<OfflineAction, 'id' | 'timestamp' | 'synced'>): Promise<void> {
+    const queueItem: OfflineAction = {
+      ...action,
+      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      synced: false,
+      attempts: 0
+    };
+    
+    await this.store('syncQueue', queueItem);
+  }
+
+  async getQueuedActions(): Promise<OfflineAction[]> {
+    return this.getAllOfflineData('syncQueue').then(actions => 
+      actions.filter(action => !action.synced)
+    );
+  }
+
+  async markActionSynced(actionId: string): Promise<void> {
+    const action = await this.getOfflineData('syncQueue', actionId);
+    if (action) {
+      action.synced = true;
+      await this.store('syncQueue', action);
+    }
+  }
+
+  async markActionFailed(actionId: string): Promise<void> {
+    const action = await this.getOfflineData('syncQueue', actionId);
+    if (action) {
+      action.attempts = (action.attempts || 0) + 1;
+      action.lastAttempt = Date.now();
+      await this.store('syncQueue', action);
+    }
+  }
+
+  async setLastSyncTime(timestamp: number): Promise<void> {
+    await this.store('settings', {
+      id: 'lastSyncTime',
+      value: timestamp,
+      updated_at: new Date().toISOString()
+    });
+  }
+
   async addToSyncQueue(operation: any): Promise<void> {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
-      const store = transaction.objectStore('syncQueue');
+      const store = transaction.objectStore(storeName);
       
       const queueItem = {
         ...operation,
@@ -182,7 +383,7 @@ class OfflineDatabase {
       const store = transaction.objectStore('syncQueue');
       const index = store.index('synced');
       
-      const request = index.getAll(false);
+      const request = index.getAll(IDBKeyRange.only(false));
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
