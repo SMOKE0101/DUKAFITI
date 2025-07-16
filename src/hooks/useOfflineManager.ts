@@ -1,9 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { offlineDB } from '../utils/indexedDB';
 import { supabase } from '../integrations/supabase/client';
+import { OfflineAggregator, AggregatedSaleData } from '../utils/offlineAggregator';
 
 interface OfflineState {
   isOnline: boolean;
@@ -107,7 +107,7 @@ export const useOfflineManager = () => {
 
   // Add offline operation
   const addOfflineOperation = useCallback(async (
-    type: 'sale' | 'product' | 'customer',
+    type: 'sale' | 'product' | 'customer' | 'inventory',
     operation: 'create' | 'update' | 'delete',
     data: any,
     priority: 'high' | 'medium' | 'low' = 'medium'
@@ -142,7 +142,7 @@ export const useOfflineManager = () => {
     }
   }, [user, offlineState.isOnline]);
 
-  // Sync pending operations
+  // Sync pending operations with aggregation
   const syncPendingOperations = useCallback(async () => {
     if (!offlineState.isOnline || offlineState.isSyncing || !user) {
       return;
@@ -157,9 +157,8 @@ export const useOfflineManager = () => {
 
     try {
       const operations = await offlineDB.getSyncQueue();
-      const totalOperations = operations?.length || 0;
-
-      if (totalOperations === 0) {
+      
+      if (!operations || operations.length === 0) {
         setOfflineState(prev => ({ 
           ...prev, 
           isSyncing: false,
@@ -170,25 +169,75 @@ export const useOfflineManager = () => {
         return;
       }
 
-      console.log(`[OfflineManager] Starting sync of ${totalOperations} operations`);
+      console.log(`[OfflineManager] Starting aggregated sync of ${operations.length} operations`);
 
-      const sortedOperations = operations.sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-        if (priorityDiff !== 0) return priorityDiff;
-        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-      });
+      // Aggregate sale operations
+      const { aggregated: aggregatedSales, nonSaleOperations } = OfflineAggregator.aggregateSaleOperations(operations);
+      
+      // Aggregate inventory operations
+      const { aggregated: aggregatedInventory, processed: processedInventoryIds } = OfflineAggregator.aggregateInventoryOperations(operations);
 
+      // Combine all operations for processing
+      const totalOperations = aggregatedSales.length + aggregatedInventory.length + nonSaleOperations.length;
       let completed = 0;
       const errors: string[] = [];
 
-      for (let i = 0; i < sortedOperations.length; i++) {
-        const operation = sortedOperations[i];
-        const progress = Math.round(((i + 1) / totalOperations) * 100);
-        
+      // Process aggregated sales
+      for (const aggregatedSale of aggregatedSales) {
         setOfflineState(prev => ({ 
           ...prev, 
-          syncProgress: progress 
+          syncProgress: Math.round(((completed + 1) / totalOperations) * 100)
+        }));
+
+        try {
+          const success = await syncAggregatedSale(aggregatedSale);
+          if (success) {
+            // Remove all original operations that were aggregated
+            for (const operationId of aggregatedSale.original_operations) {
+              await offlineDB.removeFromSyncQueue(operationId);
+            }
+            completed++;
+          } else {
+            errors.push(`Failed to sync aggregated sale for ${aggregatedSale.product_name}`);
+          }
+        } catch (error) {
+          console.error(`[OfflineManager] Failed to sync aggregated sale:`, error);
+          errors.push(`Failed to sync sale: ${error.message}`);
+        }
+      }
+
+      // Process aggregated inventory operations
+      for (const inventoryOp of aggregatedInventory) {
+        setOfflineState(prev => ({ 
+          ...prev, 
+          syncProgress: Math.round(((completed + 1) / totalOperations) * 100)
+        }));
+
+        try {
+          const success = await syncSingleOperation(inventoryOp);
+          if (success) {
+            await offlineDB.removeFromSyncQueue(inventoryOp.id);
+            completed++;
+          }
+        } catch (error) {
+          errors.push(`Failed to sync inventory: ${error.message}`);
+        }
+      }
+
+      // Remove processed inventory operations
+      for (const processedId of processedInventoryIds) {
+        try {
+          await offlineDB.removeFromSyncQueue(processedId);
+        } catch (error) {
+          console.warn(`Failed to remove processed inventory operation ${processedId}:`, error);
+        }
+      }
+
+      // Process remaining non-sale operations normally
+      for (const operation of nonSaleOperations) {
+        setOfflineState(prev => ({ 
+          ...prev, 
+          syncProgress: Math.round(((completed + 1) / totalOperations) * 100)
         }));
 
         try {
@@ -211,7 +260,7 @@ export const useOfflineManager = () => {
         }
       }
 
-      const finalPendingCount = totalOperations - completed;
+      const finalPendingCount = Math.max(0, totalOperations - completed);
       const syncTime = new Date().toISOString();
       
       setOfflineState(prev => ({ 
@@ -229,7 +278,7 @@ export const useOfflineManager = () => {
       if (completed > 0) {
         toast({
           title: "Sync Complete",
-          description: `${completed} operations synced successfully`,
+          description: `${completed} operations synced successfully${aggregatedSales.length > 0 ? ` (${aggregatedSales.length} sales aggregated)` : ''}`,
           duration: 3000,
         });
       }
@@ -243,7 +292,7 @@ export const useOfflineManager = () => {
         });
       }
 
-      console.log(`[OfflineManager] Sync completed: ${completed} synced, ${errors.length} errors, ${finalPendingCount} pending`);
+      console.log(`[OfflineManager] Aggregated sync completed: ${completed} synced, ${errors.length} errors, ${finalPendingCount} pending`);
 
     } catch (error) {
       console.error('[OfflineManager] Sync process failed:', error);
@@ -256,6 +305,39 @@ export const useOfflineManager = () => {
       }));
     }
   }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
+
+  const syncAggregatedSale = async (aggregatedSale: AggregatedSaleData): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .insert([{
+          user_id: user?.id,
+          product_id: aggregatedSale.product_id,
+          product_name: aggregatedSale.product_name,
+          quantity: aggregatedSale.total_quantity,
+          selling_price: aggregatedSale.selling_price,
+          cost_price: aggregatedSale.cost_price,
+          profit: aggregatedSale.total_profit,
+          total_amount: aggregatedSale.total_amount,
+          payment_method: aggregatedSale.payment_method,
+          customer_id: aggregatedSale.customer_id,
+          customer_name: aggregatedSale.customer_name,
+          payment_details: aggregatedSale.payment_details,
+          timestamp: aggregatedSale.timestamp
+        }]);
+      
+      if (error) {
+        console.error('[OfflineManager] Error syncing aggregated sale:', error);
+        return false;
+      }
+      
+      console.log('[OfflineManager] Successfully synced aggregated sale:', aggregatedSale);
+      return true;
+    } catch (error) {
+      console.error('[OfflineManager] Aggregated sale sync error:', error);
+      return false;
+    }
+  };
 
   const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
     try {
