@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useOfflineSales } from '../hooks/useOfflineSales';
 import { offlineDB } from '../utils/offlineDB';
 import PremiumDashboard from './PremiumDashboard';

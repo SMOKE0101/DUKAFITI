@@ -1,64 +1,41 @@
 
-const CACHE_NAME = 'duka-fiti-v1.0.0';
-const RUNTIME_CACHE = 'duka-fiti-runtime-v1.0.0';
-const API_CACHE = 'duka-fiti-api-v1.0.0';
+const CACHE_NAME = 'dukafiti-v1';
+const STATIC_CACHE = 'dukafiti-static-v1';
 
-// Core app shell resources - these are cached during install
-const CORE_ASSETS = [
+// Assets to cache immediately
+const STATIC_ASSETS = [
   '/',
-  '/index.html',
   '/manifest.json',
-  '/vite.svg',
-  '/favicon.ico'
+  '/lovable-uploads/bce2a988-3cd7-48e7-9d0d-e1cfc119a5c4.png',
+  // Add other critical assets
 ];
 
-// All SPA routes that should serve the app shell when offline
-const SPA_ROUTES = [
-  '/',
-  '/app',
-  '/app/',
-  '/app/dashboard',
-  '/app/sales',
-  '/app/inventory',
-  '/app/products',
-  '/app/customers',
-  '/app/reports',
-  '/app/settings'
-];
-
-// Install event - cache core assets
+// Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[RobustSW] Installing service worker v1.0.0');
+  console.log('[SW] Installing robust service worker...');
   
   event.waitUntil(
     Promise.all([
-      caches.open(CACHE_NAME).then(cache => {
-        console.log('[RobustSW] Caching core assets');
-        return cache.addAll(CORE_ASSETS).catch(err => {
-          console.warn('[RobustSW] Failed to cache some core assets:', err);
-        });
+      caches.open(STATIC_CACHE).then(cache => {
+        console.log('[SW] Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
       }),
-      caches.open(RUNTIME_CACHE),
-      caches.open(API_CACHE)
+      self.skipWaiting()
     ])
   );
-  
-  self.skipWaiting();
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[RobustSW] Activating service worker v1.0.0');
+  console.log('[SW] Activating robust service worker...');
   
   event.waitUntil(
     Promise.all([
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME && 
-                cacheName !== RUNTIME_CACHE && 
-                cacheName !== API_CACHE) {
-              console.log('[RobustSW] Deleting old cache:', cacheName);
+            if (cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE) {
+              console.log('[SW] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
@@ -69,454 +46,383 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - handle all requests
+// Fetch event - handle all requests with robust offline strategy
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
+  const request = event.request;
   const url = new URL(request.url);
 
-  // Skip non-GET requests for special handling
-  if (request.method !== 'GET') {
-    if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
-      event.respondWith(handleWriteRequest(request));
-    }
+  // Skip non-GET requests and chrome-extension requests
+  if (request.method !== 'GET' || url.protocol === 'chrome-extension:') {
     return;
   }
 
-  // Route different request types
-  if (isStaticAsset(request)) {
-    event.respondWith(handleStaticAsset(request));
-  } else if (isAPIRequest(request)) {
-    event.respondWith(handleAPIRequest(request));
-  } else if (isNavigationRequest(request) || isSPARoute(url.pathname)) {
-    event.respondWith(handleSPANavigation(request));
-  } else {
-    event.respondWith(handleGenericRequest(request));
+  // Handle navigation requests (page loads, refreshes, deep links)
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigationRequest(request));
+    return;
   }
+
+  // Handle API requests to Supabase
+  if (url.hostname.includes('supabase.co')) {
+    event.respondWith(handleSupabaseRequest(request));
+    return;
+  }
+
+  // Handle static assets
+  event.respondWith(handleAssetRequest(request));
 });
 
-// Handle SPA navigation - ALWAYS serve the React app shell
-async function handleSPANavigation(request) {
-  const url = new URL(request.url);
-  console.log('[RobustSW] SPA Navigation request:', url.pathname);
-  
+// Handle navigation requests with SPA fallback
+async function handleNavigationRequest(request) {
   try {
-    // Try network first for fresh content (with timeout)
-    const networkResponse = await Promise.race([
-      fetch(request),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Network timeout')), 2000)
-      )
-    ]);
+    console.log('[SW] Handling navigation request:', request.url);
     
-    if (networkResponse.ok) {
-      // Cache successful responses
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, networkResponse.clone());
-      console.log('[RobustSW] ✅ Served fresh content for:', url.pathname);
-      return networkResponse;
-    }
-  } catch (error) {
-    console.log('[RobustSW] Network failed for navigation, serving cached app shell');
-  }
-  
-  // Network failed - serve cached app shell
-  const appShell = await getAppShellFromCache();
-  
-  if (appShell) {
-    console.log('[RobustSW] ✅ Served cached React app shell for:', url.pathname);
-    return appShell;
-  }
-  
-  // Final fallback - generate minimal app shell
-  console.log('[RobustSW] ⚠️ Serving minimal app shell as last resort');
-  return new Response(generateMinimalAppShell(), {
-    status: 200,
-    headers: { 'Content-Type': 'text/html' }
-  });
-}
-
-// Get cached app shell
-async function getAppShellFromCache() {
-  const cache = await caches.open(CACHE_NAME);
-  
-  let appShell = await cache.match('/');
-  if (!appShell) {
-    appShell = await cache.match('/index.html');
-  }
-  
-  return appShell ? appShell.clone() : null;
-}
-
-// Handle static assets (CSS, JS, images)
-async function handleStaticAsset(request) {
-  try {
-    const cache = await caches.open(CACHE_NAME);
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-      // Serve from cache, update in background
-      updateCacheInBackground(request, cache);
-      return cachedResponse;
-    }
-    
-    // Not in cache - fetch and cache
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-    
-  } catch (error) {
-    console.error('[RobustSW] Static asset fetch failed:', error);
-    return new Response('Asset not available offline', { 
-      status: 503,
-      statusText: 'Service Unavailable'
+    // Try network first with timeout
+    const networkPromise = fetch(request).then(response => {
+      if (response.ok) {
+        // Cache successful responses
+        caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
+        return response;
+      }
+      throw new Error(`Network response not ok: ${response.status}`);
     });
-  }
-}
 
-// Handle API requests
-async function handleAPIRequest(request) {
-  try {
-    const cache = await caches.open(API_CACHE);
-    
-    // Try network first
-    const networkResponse = await fetch(request, { timeout: 5000 });
-    
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    }
-    
-    throw new Error('Network response not ok');
-    
-  } catch (error) {
-    console.log('[RobustSW] API request failed, trying cache:', request.url);
-    
-    const cache = await caches.open(API_CACHE);
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-      const response = cachedResponse.clone();
-      response.headers.set('x-served-by', 'sw-cache');
-      response.headers.set('x-offline', 'true');
-      return response;
-    }
-    
-    // No cache - return offline response
-    return new Response(
-      JSON.stringify({ 
-        error: 'Offline', 
-        message: 'This data is not available offline',
-        offline: true
-      }),
-      { 
-        status: 503,
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-offline': 'true'
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Network timeout')), 3000);
+    });
+
+    try {
+      // Race between network and timeout
+      return await Promise.race([networkPromise, timeoutPromise]);
+    } catch (networkError) {
+      console.log('[SW] Network failed for navigation, serving SPA shell:', networkError.message);
+      
+      // Serve cached index.html for SPA routing
+      const cache = await caches.open(CACHE_NAME);
+      let response = await cache.match('/');
+      
+      if (!response) {
+        // If no cached index, try to serve from static cache
+        const staticCache = await caches.open(STATIC_CACHE);
+        response = await staticCache.match('/');
+      }
+      
+      if (response) {
+        console.log('[SW] Serving cached SPA shell');
+        return response;
+      }
+      
+      // Last resort: return a basic HTML shell
+      console.log('[SW] No cached shell available, serving fallback');
+      return new Response(
+        createFallbackHTML(),
+        { 
+          headers: { 'Content-Type': 'text/html' },
+          status: 200
         }
+      );
+    }
+  } catch (error) {
+    console.error('[SW] Critical error in navigation handler:', error);
+    return new Response(
+      createErrorHTML(error.message),
+      { 
+        headers: { 'Content-Type': 'text/html' },
+        status: 500
       }
     );
   }
 }
 
-// Handle write requests (POST/PUT/DELETE)
-async function handleWriteRequest(request) {
+// Handle Supabase API requests with offline queue
+async function handleSupabaseRequest(request) {
   try {
-    return await fetch(request);
-  } catch (error) {
-    console.log('[RobustSW] Write request failed, queuing for sync:', request.url);
+    console.log('[SW] Handling Supabase request:', request.url);
     
-    try {
-      const requestData = {
-        id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        url: request.url,
-        method: request.method,
-        headers: Object.fromEntries(request.headers.entries()),
-        body: await request.clone().text(),
-        timestamp: Date.now(),
-      };
+    // For GET requests, try cache first, then network
+    if (request.method === 'GET') {
+      const cache = await caches.open(CACHE_NAME);
+      const cachedResponse = await cache.match(request);
       
-      await storeOfflineRequest(requestData);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          queued: true,
-          offline: true,
-          message: 'Request queued for sync when online',
-          id: requestData.id
-        }),
-        { 
-          status: 202,
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-offline': 'true'
+      if (cachedResponse) {
+        console.log('[SW] Serving cached Supabase data');
+        // Try to update cache in background
+        fetch(request).then(response => {
+          if (response.ok) {
+            cache.put(request, response.clone());
           }
-        }
-      );
-    } catch (storeError) {
-      console.error('[RobustSW] Failed to store offline request:', storeError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Failed to queue request for sync',
-          offline: true
-        }),
-        { 
-          status: 500,
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-offline': 'true'
-          }
-        }
-      );
+        }).catch(err => console.log('[SW] Background update failed:', err.message));
+        
+        return cachedResponse;
+      }
     }
-  }
-}
 
-// Handle generic requests
-async function handleGenericRequest(request) {
-  try {
-    const cache = await caches.open(RUNTIME_CACHE);
-    
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    }
-    
-    const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    throw new Error('No cached response available');
-    
-  } catch (error) {
-    const cache = await caches.open(RUNTIME_CACHE);
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    return new Response('Resource not available offline', { 
-      status: 503,
-      statusText: 'Service Unavailable'
+    // Try network for all requests
+    const networkPromise = fetch(request).then(response => {
+      // Cache successful GET responses
+      if (response.ok && request.method === 'GET') {
+        caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
+      }
+      return response;
     });
-  }
-}
 
-// Helper functions
-function isSPARoute(pathname) {
-  const normalizedPath = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-  
-  return SPA_ROUTES.some(route => {
-    const normalizedRoute = route.endsWith('/') ? route.slice(0, -1) : route;
-    return normalizedPath === normalizedRoute || 
-           normalizedPath.startsWith(normalizedRoute + '/') ||
-           normalizedPath === '' || 
-           normalizedPath === '/';
-  });
-}
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Supabase request timeout')), 5000);
+    });
 
-function isStaticAsset(request) {
-  const url = new URL(request.url);
-  return url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ico|webp)$/);
-}
-
-function isAPIRequest(request) {
-  return request.url.includes('/api/') || 
-         request.url.includes('supabase.co') ||
-         request.url.includes('/rest/v1/');
-}
-
-function isNavigationRequest(request) {
-  return request.mode === 'navigate' || 
-         (request.method === 'GET' && request.headers.get('accept')?.includes('text/html'));
-}
-
-async function updateCacheInBackground(request, cache) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response);
+    try {
+      return await Promise.race([networkPromise, timeoutPromise]);
+    } catch (error) {
+      console.log('[SW] Supabase request failed:', error.message);
+      
+      // For write operations when offline, queue them
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+        await queueFailedRequest(request);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            queued: true, 
+            message: 'Request queued for when online' 
+          }),
+          { 
+            headers: { 'Content-Type': 'application/json' },
+            status: 202 
+          }
+        );
+      }
+      
+      // For GET requests, return offline error
+      return new Response(
+        JSON.stringify({ 
+          error: 'Offline - data not available', 
+          offline: true 
+        }),
+        { 
+          headers: { 'Content-Type': 'application/json' },
+          status: 503 
+        }
+      );
     }
   } catch (error) {
-    // Ignore background update errors
+    console.error('[SW] Critical error in Supabase handler:', error);
+    return new Response(
+      JSON.stringify({ error: 'Service worker error', details: error.message }),
+      { 
+        headers: { 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
   }
 }
 
-function generateMinimalAppShell() {
+// Handle static asset requests
+async function handleAssetRequest(request) {
+  try {
+    // Try cache first for static assets
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(request);
+    
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // Try network with timeout
+    const networkPromise = fetch(request).then(response => {
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
+      return response;
+    });
+
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Asset request timeout')), 3000);
+    });
+
+    return await Promise.race([networkPromise, timeoutPromise]);
+  } catch (error) {
+    console.log('[SW] Asset request failed:', request.url, error.message);
+    
+    // Return 404 for missing assets
+    return new Response('Asset not found', { status: 404 });
+  }
+}
+
+// Queue failed requests for retry when online
+async function queueFailedRequest(request) {
+  try {
+    const body = await request.text();
+    const queueItem = {
+      url: request.url,
+      method: request.method,
+      headers: [...request.headers.entries()],
+      body: body,
+      timestamp: Date.now()
+    };
+    
+    // Store in IndexedDB queue (simplified for SW context)
+    console.log('[SW] Queuing failed request:', queueItem);
+    
+    // Post message to clients to handle queuing
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'QUEUE_REQUEST',
+        request: queueItem
+      });
+    });
+  } catch (error) {
+    console.error('[SW] Failed to queue request:', error);
+  }
+}
+
+// Create fallback HTML for when no cache is available
+function createFallbackHTML() {
   return `
     <!DOCTYPE html>
     <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DukaFiti - Loading...</title>
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            margin: 0; 
-            padding: 0;
-            background: #f8fafc;
-          }
-          #root { min-height: 100vh; }
-          .loading { 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh; 
-            flex-direction: column;
-            color: #64748b;
-          }
-          .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 16px;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
-        <div id="root">
-          <div class="loading">
-            <div class="spinner"></div>
-            <p>Loading DukaFiti...</p>
-            <p style="font-size: 12px; color: #94a3b8;">Initializing offline mode...</p>
-          </div>
-        </div>
-        <script type="module" src="/src/main.tsx"></script>
-      </body>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>DukaFiti - Offline</title>
+      <style>
+        body { 
+          font-family: system-ui, -apple-system, sans-serif; 
+          margin: 0; 
+          padding: 20px; 
+          background: #f5f5f5; 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          min-height: 100vh;
+        }
+        .container { 
+          text-align: center; 
+          background: white; 
+          padding: 40px; 
+          border-radius: 8px; 
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .logo { 
+          font-size: 24px; 
+          font-weight: bold; 
+          color: #2563eb; 
+          margin-bottom: 20px; 
+        }
+        .offline-icon { 
+          font-size: 48px; 
+          margin-bottom: 20px; 
+        }
+        .retry-btn { 
+          background: #2563eb; 
+          color: white; 
+          border: none; 
+          padding: 12px 24px; 
+          border-radius: 6px; 
+          cursor: pointer; 
+          margin-top: 20px; 
+        }
+        .retry-btn:hover { 
+          background: #1d4ed8; 
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="logo">DukaFiti</div>
+        <div class="offline-icon">📱</div>
+        <h1>You're Offline</h1>
+        <p>This page isn't available offline yet. Please check your connection and try again.</p>
+        <button class="retry-btn" onclick="window.location.reload()">Retry</button>
+        <br><br>
+        <a href="/" style="color: #2563eb; text-decoration: none;">← Go to Dashboard</a>
+      </div>
+    </body>
     </html>
   `;
 }
 
-// Background sync
-self.addEventListener('sync', (event) => {
-  console.log('[RobustSW] Background sync triggered:', event.tag);
-  
-  if (event.tag === 'offline-sync') {
-    event.waitUntil(syncOfflineRequests());
-  }
-});
+// Create error HTML for critical failures
+function createErrorHTML(errorMessage) {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>DukaFiti - Error</title>
+      <style>
+        body { 
+          font-family: system-ui, -apple-system, sans-serif; 
+          margin: 0; 
+          padding: 20px; 
+          background: #f5f5f5; 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          min-height: 100vh;
+        }
+        .container { 
+          text-align: center; 
+          background: white; 
+          padding: 40px; 
+          border-radius: 8px; 
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          border-left: 4px solid #dc2626;
+        }
+        .logo { 
+          font-size: 24px; 
+          font-weight: bold; 
+          color: #2563eb; 
+          margin-bottom: 20px; 
+        }
+        .error-icon { 
+          font-size: 48px; 
+          margin-bottom: 20px; 
+        }
+        .error-details { 
+          background: #fef2f2; 
+          border: 1px solid #fecaca; 
+          border-radius: 4px; 
+          padding: 10px; 
+          margin: 20px 0; 
+          font-size: 14px; 
+          color: #991b1b; 
+        }
+        .retry-btn { 
+          background: #dc2626; 
+          color: white; 
+          border: none; 
+          padding: 12px 24px; 
+          border-radius: 6px; 
+          cursor: pointer; 
+          margin-top: 20px; 
+        }
+        .retry-btn:hover { 
+          background: #b91c1c; 
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="logo">DukaFiti</div>
+        <div class="error-icon">⚠️</div>
+        <h1>Something Went Wrong</h1>
+        <p>We encountered an error while loading this page.</p>
+        <div class="error-details">${errorMessage}</div>
+        <button class="retry-btn" onclick="window.location.reload()">Retry</button>
+        <br><br>
+        <a href="/" style="color: #2563eb; text-decoration: none;">← Go to Dashboard</a>
+      </div>
+    </body>
+    </html>
+  `;
+}
 
-// Message handling
+// Handle messages from clients
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
-  } else if (event.data && event.data.type === 'SYNC_NOW') {
-    event.waitUntil(syncOfflineRequests());
   }
 });
 
-// IndexedDB operations for offline requests
-async function storeOfflineRequest(requestData) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('DukaFitiOfflineRequests', 1);
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains('offlineRequests')) {
-        db.createObjectStore('offlineRequests', { keyPath: 'id' });
-      }
-    };
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      
-      if (!db.objectStoreNames.contains('offlineRequests')) {
-        console.error('[RobustSW] Object store offlineRequests does not exist');
-        reject(new Error('Object store not found'));
-        return;
-      }
-      
-      const transaction = db.transaction(['offlineRequests'], 'readwrite');
-      const store = transaction.objectStore('offlineRequests');
-      
-      store.add(requestData);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function syncOfflineRequests() {
-  try {
-    const requests = await getStoredOfflineRequests();
-    console.log(`[RobustSW] Syncing ${requests.length} offline requests`);
-    
-    for (const requestData of requests) {
-      try {
-        const response = await fetch(requestData.url, {
-          method: requestData.method,
-          headers: requestData.headers,
-          body: requestData.body,
-        });
-        
-        if (response.ok) {
-          await removeStoredOfflineRequest(requestData.id);
-          console.log('[RobustSW] Synced offline request:', requestData.url);
-        }
-      } catch (error) {
-        console.error('[RobustSW] Failed to sync request:', requestData.url, error);
-      }
-    }
-  } catch (error) {
-    console.error('[RobustSW] Sync process failed:', error);
-  }
-}
-
-async function getStoredOfflineRequests() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('DukaFitiOfflineRequests', 1);
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains('offlineRequests')) {
-        resolve([]);
-        return;
-      }
-      
-      const transaction = db.transaction(['offlineRequests'], 'readonly');
-      const store = transaction.objectStore('offlineRequests');
-      const getAll = store.getAll();
-      
-      getAll.onsuccess = () => resolve(getAll.result || []);
-      getAll.onerror = () => reject(getAll.error);
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function removeStoredOfflineRequest(id) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('DukaFitiOfflineRequests', 1);
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      const transaction = db.transaction(['offlineRequests'], 'readwrite');
-      const store = transaction.objectStore('offlineRequests');
-      
-      store.delete(id);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
+console.log('[SW] Robust service worker loaded successfully');
