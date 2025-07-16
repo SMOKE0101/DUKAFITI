@@ -10,10 +10,10 @@ const OfflineStatus: React.FC = () => {
   const { syncStatus, conflicts, forceSyncNow, resolveConflict } = useOfflineSync();
 
   const getStatusColor = () => {
-    if (!syncStatus.isOnline) return 'bg-orange-100 border-orange-200 text-orange-800';
-    if (syncStatus.isSyncing) return 'bg-blue-100 border-blue-200 text-blue-800';
-    if (syncStatus.queuedActions > 0) return 'bg-yellow-100 border-yellow-200 text-yellow-800';
-    return 'bg-green-100 border-green-200 text-green-800';
+    if (!syncStatus.isOnline) return 'bg-orange-100 border-orange-200 text-orange-800 dark:bg-orange-950/20 dark:border-orange-800 dark:text-orange-200';
+    if (syncStatus.isSyncing) return 'bg-blue-100 border-blue-200 text-blue-800 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-200';
+    if (syncStatus.queuedActions > 0) return 'bg-yellow-100 border-yellow-200 text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-800 dark:text-yellow-200';
+    return 'bg-green-100 border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-200';
   };
 
   const getStatusIcon = () => {
@@ -76,10 +76,10 @@ const OfflineStatus: React.FC = () => {
 
       {/* Sync Errors */}
       {syncStatus.errors.length > 0 && (
-        <Alert className="bg-red-50 border-red-200">
+        <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
           <AlertTriangle className="w-4 h-4 text-red-600" />
           <AlertDescription>
-            <div className="text-red-800">
+            <div className="text-red-800 dark:text-red-200">
               <strong>Sync Issues:</strong>
               <ul className="mt-1 text-sm">
                 {syncStatus.errors.slice(0, 3).map((error, index) => (
@@ -96,14 +96,14 @@ const OfflineStatus: React.FC = () => {
 
       {/* Conflicts */}
       {conflicts.length > 0 && (
-        <Alert className="bg-yellow-50 border-yellow-200">
+        <Alert className="bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
           <AlertTriangle className="w-4 h-4 text-yellow-600" />
           <AlertDescription>
-            <div className="text-yellow-800">
+            <div className="text-yellow-800 dark:text-yellow-200">
               <strong>Data Conflicts Detected:</strong>
               <div className="mt-2 space-y-2">
                 {conflicts.slice(0, 2).map((conflict) => (
-                  <div key={conflict.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div key={conflict.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
                     <span className="text-sm">
                       {conflict.type}: Changes made both locally and on server
                     </span>
@@ -126,7 +126,7 @@ const OfflineStatus: React.FC = () => {
                   </div>
                 ))}
                 {conflicts.length > 2 && (
-                  <div className="text-sm text-yellow-700">
+                  <div className="text-sm text-yellow-700 dark:text-yellow-300">
                     And {conflicts.length - 2} more conflicts...
                   </div>
                 )}

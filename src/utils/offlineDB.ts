@@ -1,5 +1,5 @@
 
-import { openDB, IDBPDatabase } from 'idb';
+import { openDB, IDBPDatabase, deleteDB } from 'idb';
 
 export interface OfflineProduct {
   id: string;
@@ -62,7 +62,7 @@ export interface OfflineAction {
 class OfflineDBManager {
   private db: IDBPDatabase | null = null;
   private dbName = 'DukaSmartOffline';
-  private version = 2;
+  private version = 3;
 
   async init(): Promise<void> {
     try {
@@ -70,7 +70,7 @@ class OfflineDBManager {
         upgrade(db, oldVersion) {
           console.log('[OfflineDB] Upgrading database from version', oldVersion);
 
-          // Products store
+          // Create stores if they don't exist
           if (!db.objectStoreNames.contains('products')) {
             const productsStore = db.createObjectStore('products', { keyPath: 'id' });
             productsStore.createIndex('user_id', 'user_id');
@@ -78,7 +78,6 @@ class OfflineDBManager {
             productsStore.createIndex('synced', 'synced');
           }
 
-          // Customers store
           if (!db.objectStoreNames.contains('customers')) {
             const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
             customersStore.createIndex('user_id', 'user_id');
@@ -86,7 +85,6 @@ class OfflineDBManager {
             customersStore.createIndex('synced', 'synced');
           }
 
-          // Sales store
           if (!db.objectStoreNames.contains('sales')) {
             const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
             salesStore.createIndex('user_id', 'user_id');
@@ -96,7 +94,6 @@ class OfflineDBManager {
             salesStore.createIndex('synced', 'synced');
           }
 
-          // Action queue store
           if (!db.objectStoreNames.contains('actionQueue')) {
             const queueStore = db.createObjectStore('actionQueue', { keyPath: 'id' });
             queueStore.createIndex('user_id', 'user_id');
@@ -106,7 +103,6 @@ class OfflineDBManager {
             queueStore.createIndex('table', 'table');
           }
 
-          // Sync metadata store
           if (!db.objectStoreNames.contains('syncMetadata')) {
             const metadataStore = db.createObjectStore('syncMetadata', { keyPath: 'key' });
           }
@@ -120,7 +116,6 @@ class OfflineDBManager {
     }
   }
 
-  // Generic CRUD operations
   async store<T>(storeName: string, data: T): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     
@@ -303,7 +298,6 @@ class OfflineDBManager {
     await this.store('syncMetadata', { key, timestamp });
   }
 
-  // Utility operations
   async getStorageStats(): Promise<{ [key: string]: number }> {
     if (!this.db) throw new Error('Database not initialized');
     
@@ -321,27 +315,6 @@ class OfflineDBManager {
 
   async isOnline(): Promise<boolean> {
     return navigator.onLine;
-  }
-
-  async executeOfflineAction(actionId: string, product?: OfflineProduct, customer?: OfflineCustomer, sale?: OfflineSale): Promise<void> {
-    // Execute the action locally for immediate UI feedback
-    if (product) {
-      await this.store('products', { ...product, synced: false });
-    }
-    if (customer) {
-      await this.store('customers', { ...customer, synced: false });
-    }
-    if (sale) {
-      await this.store('sales', { ...sale, synced: false });
-      
-      // Update product stock locally
-      if (sale.product_id && sale.quantity) {
-        const existingProduct = await this.getProduct(sale.product_id);
-        if (existingProduct) {
-          await this.updateProductStock(sale.product_id, existingProduct.current_stock - sale.quantity);
-        }
-      }
-    }
   }
 }
 

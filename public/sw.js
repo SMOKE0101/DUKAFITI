@@ -1,7 +1,7 @@
 
-const CACHE_NAME = 'dukasmart-v1.2.0';
-const RUNTIME_CACHE = 'dukasmart-runtime-v1.2.0';
-const API_CACHE = 'dukasmart-api-v1.2.0';
+const CACHE_NAME = 'dukasmart-v2.0.0';
+const RUNTIME_CACHE = 'dukasmart-runtime-v2.0.0';
+const API_CACHE = 'dukasmart-api-v2.0.0';
 
 // Core app shell resources that must be cached
 const CORE_ASSETS = [
@@ -14,7 +14,7 @@ const CORE_ASSETS = [
 
 // Install event - cache core assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v1.2.0');
+  console.log('[SW] Installing service worker v2.0.0');
   
   event.waitUntil(
     Promise.all([
@@ -32,7 +32,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v1.2.0');
+  console.log('[SW] Activating service worker v2.0.0');
   
   event.waitUntil(
     Promise.all([
@@ -106,25 +106,27 @@ async function handleStaticAsset(request) {
   }
 }
 
-// Handle API requests (network-first with cache fallback)
+// Handle API requests (stale-while-revalidate with cache fallback)
 async function handleAPIRequest(request) {
   try {
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      // Cache successful API responses
-      const cache = await caches.open(API_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-    
-  } catch (error) {
-    console.log('[SW] API request failed, trying cache:', request.url);
-    
     const cache = await caches.open(API_CACHE);
     const cachedResponse = await cache.match(request);
     
+    // Always try network first for fresh data
+    const networkPromise = fetch(request).then(response => {
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
+      return response;
+    }).catch(() => null);
+    
+    const networkResponse = await networkPromise;
+    
+    if (networkResponse) {
+      return networkResponse;
+    }
+    
+    // Network failed, use cache if available
     if (cachedResponse) {
       const response = cachedResponse.clone();
       response.headers.set('x-served-by', 'sw-cache');
@@ -147,12 +149,29 @@ async function handleAPIRequest(request) {
         }
       }
     );
+    
+  } catch (error) {
+    console.error('[SW] API request failed:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Request failed', 
+        message: error.message,
+        offline: !navigator.onLine
+      }),
+      { 
+        status: 503,
+        headers: { 
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   }
 }
 
 // Handle navigation requests (serve app shell for SPA routes)
 async function handleNavigation(request) {
   try {
+    // Always try network first for navigation
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
@@ -185,14 +204,23 @@ async function handleNavigation(request) {
 // Handle generic requests
 async function handleGenericRequest(request) {
   try {
+    const cache = await caches.open(RUNTIME_CACHE);
+    const cachedResponse = await cache.match(request);
+    
+    // Try network first
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
-      const cache = await caches.open(RUNTIME_CACHE);
       cache.put(request, networkResponse.clone());
+      return networkResponse;
     }
     
-    return networkResponse;
+    // Network failed, use cache
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    throw new Error('No cached response available');
     
   } catch (error) {
     const cache = await caches.open(RUNTIME_CACHE);

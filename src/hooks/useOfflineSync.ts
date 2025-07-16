@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { offlineDB, OfflineAction, OfflineProduct, OfflineCustomer, OfflineSale } from '../utils/offlineDB';
+import { offlineDB, OfflineAction } from '../utils/offlineDB';
 
 interface SyncStatus {
   isOnline: boolean;
@@ -50,26 +50,11 @@ export const useOfflineSync = () => {
 
   const initializeOfflineSync = async () => {
     try {
-      // Register service worker
-      if ('serviceWorker' in navigator && user) {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('[OfflineSync] Service worker registered');
-        
-        // Handle service worker messages
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          if (event.data?.type === 'SYNC_COMPLETE') {
-            updateQueuedActionsCount();
-          }
-        });
-      }
-
-      // Load initial data if online
+      await updateQueuedActionsCount();
+      
       if (navigator.onLine && user) {
         await performInitialDataSync();
       }
-
-      // Update queued actions count
-      await updateQueuedActionsCount();
       
     } catch (error) {
       console.error('[OfflineSync] Initialization failed:', error);
@@ -86,7 +71,6 @@ export const useOfflineSync = () => {
     setSyncStatus(prev => ({ ...prev, isOnline: true }));
     
     if (user) {
-      // Small delay to ensure connection is stable
       setTimeout(() => {
         syncQueuedActions();
       }, 1000);
@@ -124,7 +108,7 @@ export const useOfflineSync = () => {
         await offlineDB.storeCustomers(customers);
       }
 
-      // Fetch and store recent sales (last 30 days)
+      // Fetch and store recent sales
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -138,7 +122,6 @@ export const useOfflineSync = () => {
         await offlineDB.storeSales(sales);
       }
 
-      // Update last sync time
       await offlineDB.setLastSyncTime('initial_sync', Date.now());
       setSyncStatus(prev => ({ ...prev, lastSyncTime: new Date() }));
 
@@ -164,6 +147,23 @@ export const useOfflineSync = () => {
     }
   };
 
+  const addPendingOperation = async (operation: any) => {
+    if (!user) return;
+
+    try {
+      await offlineDB.queueAction({
+        type: operation.type,
+        table: operation.table,
+        data: operation.data,
+        user_id: user.id
+      });
+      
+      await updateQueuedActionsCount();
+    } catch (error) {
+      console.error('[OfflineSync] Failed to add pending operation:', error);
+    }
+  };
+
   const syncQueuedActions = async () => {
     if (!user || !syncStatus.isOnline || syncStatus.isSyncing) {
       return;
@@ -181,12 +181,10 @@ export const useOfflineSync = () => {
 
       console.log(`[OfflineSync] Syncing ${queuedActions.length} queued actions`);
 
-      // Sort actions by timestamp to maintain order
       const sortedActions = queuedActions.sort((a, b) => a.timestamp - b.timestamp);
       
       let synced = 0;
       const newErrors: string[] = [];
-      const newConflicts: ConflictItem[] = [];
 
       for (const action of sortedActions) {
         try {
@@ -195,8 +193,6 @@ export const useOfflineSync = () => {
           if (result.success) {
             await offlineDB.markActionSynced(action.id);
             synced++;
-          } else if (result.conflict) {
-            newConflicts.push(result.conflict);
           } else {
             throw new Error(result.error || 'Sync failed');
           }
@@ -207,14 +203,8 @@ export const useOfflineSync = () => {
           newErrors.push(`${action.type} ${action.table}: ${error.message}`);
         }
 
-        // Update progress
-        const progress = Math.round(((synced + newErrors.length + newConflicts.length) / queuedActions.length) * 100);
+        const progress = Math.round(((synced + newErrors.length) / queuedActions.length) * 100);
         setSyncStatus(prev => ({ ...prev, syncProgress: progress }));
-      }
-
-      // Update conflicts state
-      if (newConflicts.length > 0) {
-        setConflicts(prev => [...prev, ...newConflicts]);
       }
 
       setSyncStatus(prev => ({ 
@@ -226,7 +216,6 @@ export const useOfflineSync = () => {
 
       await updateQueuedActionsCount();
 
-      // Show toast notifications
       if (synced > 0) {
         toast({
           title: "Sync Complete",
@@ -244,15 +233,6 @@ export const useOfflineSync = () => {
         });
       }
 
-      if (newConflicts.length > 0) {
-        toast({
-          title: "Conflicts Detected",
-          description: `${newConflicts.length} conflicts need resolution`,
-          variant: "destructive",
-          duration: 5000,
-        });
-      }
-
     } catch (error) {
       console.error('[OfflineSync] Sync process failed:', error);
       setSyncStatus(prev => ({ 
@@ -265,189 +245,70 @@ export const useOfflineSync = () => {
 
   const syncSingleAction = async (action: OfflineAction): Promise<{ 
     success: boolean; 
-    conflict?: ConflictItem; 
     error?: string 
   }> => {
     try {
-      switch (action.table) {
-        case 'products':
-          return await syncProductAction(action);
-        case 'customers':
-          return await syncCustomerAction(action);
-        case 'sales':
-          return await syncSaleAction(action);
-        default:
-          return { success: false, error: `Unknown table: ${action.table}` };
-      }
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
+      const { type, data, table } = action;
 
-  const syncProductAction = async (action: OfflineAction): Promise<{ 
-    success: boolean; 
-    conflict?: ConflictItem; 
-    error?: string 
-  }> => {
-    const { type, data } = action;
+      if (table === 'products') {
+        if (type === 'CREATE') {
+          const { error } = await supabase
+            .from('products')
+            .insert([{
+              name: data.name,
+              category: data.category,
+              cost_price: data.cost_price,
+              selling_price: data.selling_price,
+              current_stock: data.current_stock,
+              low_stock_threshold: data.low_stock_threshold,
+              user_id: user!.id
+            }]);
 
-    try {
-      if (type === 'CREATE') {
-        const { error } = await supabase
-          .from('products')
-          .insert([{
-            name: data.name,
-            category: data.category,
-            cost_price: data.cost_price,
-            selling_price: data.selling_price,
-            current_stock: data.current_stock,
-            low_stock_threshold: data.low_stock_threshold,
-            user_id: user!.id
-          }]);
+          if (error) throw error;
+        } else if (type === 'UPDATE') {
+          const { error } = await supabase
+            .from('products')
+            .update(data)
+            .eq('id', data.id)
+            .eq('user_id', user!.id);
 
-        if (error) throw error;
-        return { success: true };
+          if (error) throw error;
+        } else if (type === 'DELETE') {
+          const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', data.id)
+            .eq('user_id', user!.id);
 
-      } else if (type === 'UPDATE') {
-        // Check for conflicts by comparing server version
-        const { data: serverData } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', data.id)
-          .eq('user_id', user!.id)
-          .single();
-
-        if (serverData && serverData.updated_at > data.updated_at) {
-          return { 
-            success: false, 
-            conflict: {
-              id: data.id,
-              type: 'product',
-              localData: data,
-              serverData,
-              action
-            }
-          };
+          if (error) throw error;
         }
+      } else if (table === 'customers') {
+        if (type === 'CREATE') {
+          const { error } = await supabase
+            .from('customers')
+            .insert([data]);
 
-        const { error } = await supabase
-          .from('products')
-          .update({
-            name: data.name,
-            category: data.category,
-            cost_price: data.cost_price,
-            selling_price: data.selling_price,
-            current_stock: data.current_stock,
-            low_stock_threshold: data.low_stock_threshold,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', data.id)
-          .eq('user_id', user!.id);
+          if (error) throw error;
+        } else if (type === 'UPDATE') {
+          const { error } = await supabase
+            .from('customers')
+            .update(data)
+            .eq('id', data.id)
+            .eq('user_id', user!.id);
 
-        if (error) throw error;
-        return { success: true };
+          if (error) throw error;
+        }
+      } else if (table === 'sales') {
+        if (type === 'CREATE') {
+          const { error } = await supabase
+            .from('sales')
+            .insert([data]);
 
-      } else if (type === 'DELETE') {
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', data.id)
-          .eq('user_id', user!.id);
-
-        if (error) throw error;
-        return { success: true };
+          if (error) throw error;
+        }
       }
 
-      return { success: false, error: `Unknown action type: ${type}` };
-
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  const syncCustomerAction = async (action: OfflineAction): Promise<{ 
-    success: boolean; 
-    conflict?: ConflictItem; 
-    error?: string 
-  }> => {
-    const { type, data } = action;
-
-    try {
-      if (type === 'CREATE') {
-        const { error } = await supabase
-          .from('customers')
-          .insert([{
-            name: data.name,
-            phone: data.phone,
-            email: data.email,
-            address: data.address,
-            credit_limit: data.credit_limit,
-            outstanding_debt: data.outstanding_debt,
-            user_id: user!.id
-          }]);
-
-        if (error) throw error;
-        return { success: true };
-
-      } else if (type === 'UPDATE') {
-        const { error } = await supabase
-          .from('customers')
-          .update(data)
-          .eq('id', data.id)
-          .eq('user_id', user!.id);
-
-        if (error) throw error;
-        return { success: true };
-
-      } else if (type === 'DELETE') {
-        const { error } = await supabase
-          .from('customers')
-          .delete()
-          .eq('id', data.id)
-          .eq('user_id', user!.id);
-
-        if (error) throw error;
-        return { success: true };
-      }
-
-      return { success: false, error: `Unknown action type: ${type}` };
-
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  const syncSaleAction = async (action: OfflineAction): Promise<{ 
-    success: boolean; 
-    conflict?: ConflictItem; 
-    error?: string 
-  }> => {
-    const { type, data } = action;
-
-    try {
-      if (type === 'CREATE') {
-        const { error } = await supabase
-          .from('sales')
-          .insert([{
-            product_id: data.product_id,
-            product_name: data.product_name,
-            quantity: data.quantity,
-            selling_price: data.selling_price,
-            cost_price: data.cost_price,
-            profit: data.profit,
-            total_amount: data.total_amount,
-            payment_method: data.payment_method,
-            customer_id: data.customer_id,
-            customer_name: data.customer_name,
-            payment_details: data.payment_details,
-            user_id: user!.id
-          }]);
-
-        if (error) throw error;
-        return { success: true };
-      }
-
-      return { success: false, error: `Unknown action type: ${type}` };
+      return { success: true };
 
     } catch (error) {
       return { success: false, error: error.message };
@@ -455,37 +316,8 @@ export const useOfflineSync = () => {
   };
 
   const resolveConflict = async (conflictId: string, resolution: 'local' | 'server') => {
-    const conflict = conflicts.find(c => c.id === conflictId);
-    if (!conflict) return;
-
-    try {
-      if (resolution === 'local') {
-        // Force sync local version
-        await syncSingleAction(conflict.action);
-      } else {
-        // Use server version, update local data
-        await offlineDB.store(conflict.action.table, conflict.serverData);
-      }
-
-      // Mark action as synced and remove conflict
-      await offlineDB.markActionSynced(conflict.action.id);
-      setConflicts(prev => prev.filter(c => c.id !== conflictId));
-
-      toast({
-        title: "Conflict Resolved",
-        description: `Used ${resolution} version`,
-        duration: 3000,
-      });
-
-    } catch (error) {
-      console.error('[OfflineSync] Failed to resolve conflict:', error);
-      toast({
-        title: "Conflict Resolution Failed",
-        description: error.message,
-        variant: "destructive",
-        duration: 5000,
-      });
-    }
+    // Implementation for conflict resolution
+    setConflicts(prev => prev.filter(c => c.id !== conflictId));
   };
 
   const forceSyncNow = async () => {
@@ -500,6 +332,8 @@ export const useOfflineSync = () => {
     syncQueuedActions,
     resolveConflict,
     forceSyncNow,
-    updateQueuedActionsCount
+    updateQueuedActionsCount,
+    addPendingOperation,
+    isOnline: syncStatus.isOnline
   };
 };

@@ -23,14 +23,12 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
-import OfflineStatus from './components/OfflineStatus';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: (failureCount, error: any) => {
-        // Don't retry if offline
         if (!navigator.onLine) return false;
         return failureCount < 3;
       },
@@ -38,7 +36,6 @@ const queryClient = new QueryClient({
     },
     mutations: {
       retry: (failureCount, error: any) => {
-        // Don't retry mutations if offline - let offline queue handle it
         if (!navigator.onLine) return false;
         return failureCount < 2;
       },
@@ -48,15 +45,22 @@ const queryClient = new QueryClient({
 
 function App() {
   useEffect(() => {
-    // Register service worker for offline functionality
+    // Register enhanced service worker for offline functionality
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
         try {
+          // Unregister any existing service workers first
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+          
+          console.log('[App] Cleared existing service workers');
+          
+          // Register the new service worker
           const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/'
           });
           
-          console.log('[App] Service Worker registered successfully:', registration.scope);
+          console.log('[App] Enhanced Service Worker registered successfully:', registration.scope);
           
           // Listen for service worker updates
           registration.addEventListener('updatefound', () => {
@@ -65,7 +69,6 @@ function App() {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   console.log('[App] New service worker installed');
-                  // Show update notification
                   if (window.confirm('New version available! Reload to update?')) {
                     window.location.reload();
                   }
@@ -80,16 +83,13 @@ function App() {
       });
     }
 
-    // Add PWA install prompt handling
+    // Enhanced PWA install prompt handling
     let deferredPrompt: any;
     
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('[App] PWA install prompt available');
       e.preventDefault();
       deferredPrompt = e;
-      
-      // Show custom install button or notification
-      // You can implement a custom UI here
     });
 
     window.addEventListener('appinstalled', () => {
@@ -97,10 +97,13 @@ function App() {
       deferredPrompt = null;
     });
 
-    // Handle online/offline events
+    // Enhanced online/offline event handling
     const handleOnline = () => {
       console.log('[App] Application came online');
-      // Trigger sync if needed
+      // Notify service worker to sync
+      if (navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SYNC_NOW' });
+      }
     };
 
     const handleOffline = () => {
