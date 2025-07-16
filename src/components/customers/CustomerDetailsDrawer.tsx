@@ -142,8 +142,8 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
                     <DollarSign className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-gray-600 dark:text-gray-400">Outstanding Debt:</span>
                   </div>
-                  <Badge variant={customer.outstandingDebt > 0 ? "destructive" : "default"} className="rounded-full">
-                    {formatCurrency(customer.outstandingDebt)}
+                  <Badge variant={customer.outstanding_debt > 0 ? "destructive" : "default"} className="rounded-full">
+                    {formatCurrency(customer.outstanding_debt)}
                   </Badge>
                 </div>
 
@@ -153,7 +153,7 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
                     <span className="text-sm text-gray-600 dark:text-gray-400">Credit Limit:</span>
                   </div>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {formatCurrency(customer.creditLimit || 0)}
+                    {formatCurrency(customer.credit_limit || 0)}
                   </span>
                 </div>
 
@@ -163,17 +163,17 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
                     <span className="text-sm text-gray-600 dark:text-gray-400">Total Purchases:</span>
                   </div>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {formatCurrency(customer.totalPurchases || 0)}
+                    {formatCurrency(customer.total_purchases || 0)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Risk Rating:</span>
                   <Badge variant={
-                    customer.riskRating === 'high' ? 'destructive' : 
-                    customer.riskRating === 'medium' ? 'secondary' : 'default'
+                    customer.risk_rating === 'high' ? 'destructive' : 
+                    customer.risk_rating === 'medium' ? 'secondary' : 'default'
                   } className="rounded-full">
-                    {customer.riskRating?.toUpperCase() || 'LOW'}
+                    {customer.risk_rating?.toUpperCase() || 'LOW'}
                   </Badge>
                 </div>
               </div>
@@ -190,18 +190,18 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
                   <div>
                     <span className="text-sm text-gray-600 dark:text-gray-400">Customer Since:</span>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {customer.createdDate ? new Date(customer.createdDate).toLocaleDateString() : 'N/A'}
+                      {customer.created_date ? new Date(customer.created_date).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
                 </div>
 
-                {customer.lastPurchaseDate && (
+                {customer.last_purchase_date && (
                   <div className="flex items-center gap-3">
                     <Calendar className="w-4 h-4 text-gray-400" />
                     <div>
                       <span className="text-sm text-gray-600 dark:text-gray-400">Last Purchase:</span>
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {new Date(customer.lastPurchaseDate).toLocaleDateString()}
+                        {new Date(customer.last_purchase_date).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

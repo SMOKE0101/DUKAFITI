@@ -1,189 +1,177 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { Sale, Product } from '../../types';
 import { formatCurrency } from '../../utils/currency';
-import { Sale } from '../../types';
 
 interface EnhancedChartsProps {
   sales: Sale[];
+  products: Product[];
 }
 
-const EnhancedCharts: React.FC<EnhancedChartsProps> = ({ sales }) => {
-  // Process sales data for trends
-  const salesTrendData = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
-      return date.toISOString().split('T')[0];
-    });
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-    return last7Days.map(date => {
-      const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
-      const daySales = sales
-        .filter(sale => sale.timestamp.startsWith(date))
-        .reduce((sum, sale) => sum + sale.total, 0);
+const EnhancedCharts: React.FC<EnhancedChartsProps> = ({ sales, products }) => {
+  // Process sales data for trend chart
+  const salesTrendData = React.useMemo(() => {
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
       
-      return {
-        day: dayName,
-        sales: daySales,
-        date
-      };
-    });
+      const daySales = sales.filter(sale => 
+        sale.timestamp?.startsWith(dateStr)
+      );
+      
+      const totalRevenue = daySales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+      const totalProfit = daySales.reduce((sum, sale) => sum + sale.profit, 0);
+      
+      last7Days.push({
+        date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        revenue: totalRevenue,
+        profit: totalProfit,
+        sales: daySales.length
+      });
+    }
+    return last7Days;
   }, [sales]);
 
-  // Process sales data for hourly orders
-  const hourlyOrdersData = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const todaySales = sales.filter(sale => sale.timestamp.startsWith(today));
+  // Process category data for pie chart
+  const categoryData = React.useMemo(() => {
+    const categoryMap = new Map();
     
-    const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
-      hour,
-      orders: 0,
-      displayHour: hour === 0 ? '12 AM' : hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`
-    }));
-
-    todaySales.forEach(sale => {
-      const saleHour = new Date(sale.timestamp).getHours();
-      hourlyData[saleHour].orders += 1;
+    products.forEach(product => {
+      const category = product.category || 'Uncategorized';
+      if (categoryMap.has(category)) {
+        categoryMap.set(category, categoryMap.get(category) + product.current_stock);
+      } else {
+        categoryMap.set(category, product.current_stock);
+      }
     });
 
-    return hourlyData;
+    return Array.from(categoryMap.entries()).map(([name, value]) => ({
+      name,
+      value
+    }));
+  }, [products]);
+
+  // Process top products data
+  const topProductsData = React.useMemo(() => {
+    const productSales = new Map();
+    
+    sales.forEach(sale => {
+      const productName = sale.product_name;
+      if (productSales.has(productName)) {
+        productSales.set(productName, {
+          ...productSales.get(productName),
+          quantity: productSales.get(productName).quantity + sale.quantity,
+          revenue: productSales.get(productName).revenue + sale.total_amount
+        });
+      } else {
+        productSales.set(productName, {
+          name: productName,
+          quantity: sale.quantity,
+          revenue: sale.total_amount
+        });
+      }
+    });
+
+    return Array.from(productSales.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
   }, [sales]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
       {/* Sales Trend Chart */}
-      <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-            Sales Trend
-          </CardTitle>
-          <select className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-            <option>Last 7 Days</option>
-            <option>Last 30 Days</option>
-            <option>Last 3 Months</option>
-          </select>
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Sales Trend (Last 7 Days)</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer
-            config={{
-              sales: {
-                label: "Sales",
-                color: "#10b981",
-              },
-            }}
-            className="h-64"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={salesTrendData}>
-                <XAxis 
-                  dataKey="day" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                  tickFormatter={(value) => formatCurrency(value)}
-                />
-                <ChartTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
-                          <p className="text-lg font-bold text-green-600">
-                            {formatCurrency(payload[0].value as number)}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="sales" 
-                  stroke="#10b981" 
-                  strokeWidth={3}
-                  dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: "#10b981", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={salesTrendData}>
+              <defs>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" />
+              <YAxis tickFormatter={(value) => `KES ${value}`} />
+              <CartesianGrid strokeDasharray="3 3" />
+              <Tooltip 
+                formatter={(value, name) => [`KES ${value}`, name === 'revenue' ? 'Revenue' : 'Profit']}
+                labelFormatter={(label) => `Day: ${label}`}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="revenue" 
+                stroke="#8884d8" 
+                fillOpacity={1} 
+                fill="url(#colorRevenue)" 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="profit" 
+                stroke="#82ca9d" 
+                fillOpacity={1} 
+                fill="url(#colorProfit)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {/* Orders Per Hour Chart */}
-      <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-            Orders by Hour
-          </CardTitle>
-          <select className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-            <option>Today</option>
-            <option>Yesterday</option>
-          </select>
+      {/* Top Products */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Products by Revenue</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer
-            config={{
-              orders: {
-                label: "Orders",
-                color: "#3b82f6",
-              },
-            }}
-            className="h-64"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlyOrdersData}>
-                <XAxis 
-                  dataKey="hour" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                  tickFormatter={(value) => {
-                    if (value % 4 === 0) {
-                      return value === 0 ? '12AM' : value === 12 ? '12PM' : value > 12 ? `${value - 12}PM` : `${value}AM`;
-                    }
-                    return '';
-                  }}
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                />
-                <ChartTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const hour = parseInt(label as string);
-                      const displayHour = hour === 0 ? '12 AM' : hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`;
-                      return (
-                        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{displayHour}</p>
-                          <p className="text-lg font-bold text-blue-600">
-                            {payload[0].value} orders
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar 
-                  dataKey="orders" 
-                  fill="#3b82f6" 
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={topProductsData} layout="horizontal">
+              <XAxis type="number" tickFormatter={(value) => `KES ${value}`} />
+              <YAxis dataKey="name" type="category" width={80} />
+              <CartesianGrid strokeDasharray="3 3" />
+              <Tooltip formatter={(value) => [`KES ${value}`, 'Revenue']} />
+              <Bar dataKey="revenue" fill="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Product Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Stock by Category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>

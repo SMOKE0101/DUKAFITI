@@ -32,9 +32,9 @@ const EnhancedCustomerCard: React.FC<EnhancedCustomerCardProps> = ({
   };
 
   const getBalanceStatus = () => {
-    if (customer.outstandingDebt === 0) {
+    if (customer.outstanding_debt === 0) {
       return { color: 'bg-green-100 text-green-800', avatarColor: 'bg-green-100 text-green-600' };
-    } else if (customer.outstandingDebt <= 1000) {
+    } else if (customer.outstanding_debt <= 1000) {
       return { color: 'bg-yellow-100 text-yellow-800', avatarColor: 'bg-yellow-100 text-yellow-600' };
     } else {
       return { color: 'bg-red-100 text-red-800', avatarColor: 'bg-red-100 text-red-600' };
@@ -62,7 +62,7 @@ const EnhancedCustomerCard: React.FC<EnhancedCustomerCardProps> = ({
 
           {/* Balance Badge */}
           <Badge className={`px-3 py-1 rounded-full text-sm ${balanceStatus.color}`}>
-            KES {customer.outstandingDebt.toLocaleString()}
+            KES {customer.outstanding_debt.toLocaleString()}
           </Badge>
         </div>
 
