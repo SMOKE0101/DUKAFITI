@@ -57,7 +57,7 @@ interface SyncQueueItem {
 class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private dbName = 'DukaFitiOffline';
-  private version = 5; // Increased version for fixes
+  private version = 6; // Increased version for fixes
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -192,6 +192,9 @@ class OfflineDatabase {
   async addToSyncQueue(operation: SyncQueueItem): Promise<void> {
     if (!operation.id) {
       operation.id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+    if (!operation.attempts) {
+      operation.attempts = 0;
     }
     return this.storeOfflineData('syncQueue', operation);
   }

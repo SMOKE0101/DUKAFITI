@@ -6,16 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useOfflineFirst } from "@/hooks/useOfflineFirst";
-import Layout from "@/components/Layout";
 import OfflineBanner from "@/components/OfflineBanner";
 import Dashboard from "@/components/Dashboard";
-import SignIn from "@/components/auth/SignIn";
-import SignUp from "@/components/auth/SignUp";
-import ProductManagement from "@/components/ProductManagement";
-import SalesComponent from "@/components/SalesComponent";
-import Customers from "@/components/Customers";
-import Reports from "@/components/Reports";
-import Settings from "@/components/Settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,27 +53,26 @@ function AppContent() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="*" element={<Navigate to="/signin" replace />} />
-      </Routes>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Welcome to DukaFiti</h1>
+          <p className="text-gray-600 mb-4">Please sign in to continue</p>
+          <button className="bg-blue-500 text-white px-4 py-2 rounded">
+            Sign In
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-gray-50">
       <OfflineBanner />
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/inventory" element={<ProductManagement />} />
-        <Route path="/sales" element={<SalesComponent />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Layout>
+    </div>
   );
 }
 
