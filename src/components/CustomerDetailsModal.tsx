@@ -1,102 +1,166 @@
 
-
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, Phone, MapPin, Mail, DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 import { Customer, Transaction, Sale } from '../types';
 import { formatCurrency } from '../utils/currency';
-import { useSupabaseTransactions } from '../hooks/useSupabaseTransactions';
-import { useSupabaseSales } from '../hooks/useSupabaseSales';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { useToast } from '../hooks/use-toast';
+import { supabase } from '../integrations/supabase/client';
+import { useAuth } from '../hooks/useAuth';
+import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Calendar, 
+  CreditCard, 
+  DollarSign, 
+  CheckCircle,
+  Clock,
+  X,
+  History,
+  TrendingUp,
+  AlertCircle
+} from 'lucide-react';
 
 interface CustomerDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: Customer | null;
-  onUpdateCustomer: (id: string, updates: Partial<Customer>) => Promise<Customer>;
 }
 
-const CustomerDetailsModal = ({ isOpen, onClose, customer, onUpdateCustomer }: CustomerDetailsModalProps) => {
-  const [customerTransactions, setCustomerTransactions] = useState<Transaction[]>([]);
-  const [customerSales, setCustomerSales] = useState<Sale[]>([]);
-  const { transactions, updateTransaction } = useSupabaseTransactions();
-  const { sales } = useSupabaseSales();
-  const { products } = useSupabaseProducts();
+const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  customer 
+}) => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { updateCustomer } = useSupabaseCustomers();
 
   useEffect(() => {
-    if (customer && isOpen) {
-      // Filter transactions for this customer
-      const filteredTransactions = transactions.filter(t => t.customerId === customer.id);
-      setCustomerTransactions(filteredTransactions);
-
-      // Filter sales for this customer
-      const filteredSales = sales.filter(s => s.customerId === customer.id);
-      setCustomerSales(filteredSales);
+    if (isOpen && customer && user) {
+      fetchCustomerTransactions();
+      fetchCustomerSales();
     }
-  }, [customer, transactions, sales, isOpen]);
+  }, [isOpen, customer, user]);
 
-  if (!customer) return null;
+  const fetchCustomerTransactions = async () => {
+    if (!customer || !user) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('customer_id', customer.id)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch customer transactions",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomerSales = async () => {
+    if (!customer || !user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('customer_id', customer.id)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      setSales(data || []);
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch customer sales",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleMarkTransactionPaid = async (transactionId: string) => {
+    if (!user) return;
+
     try {
-      await updateTransaction(transactionId, {
-        paid: true,
-        paidDate: new Date().toISOString()
-      });
-      
+      const transaction = transactions.find(t => t.id === transactionId);
+      if (!transaction) return;
+
+      const { error } = await supabase
+        .from('transactions')
+        .update({ 
+          paid: true,
+          paid_date: new Date().toISOString()
+        })
+        .eq('id', transactionId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update customer debt
+      if (customer) {
+        const unpaidTransactions = transactions.filter(t => !t.paid && t.id !== transactionId);
+        const totalUnpaidDebt = unpaidTransactions.reduce((sum, t) => sum + t.total_amount, 0);
+        
+        await updateCustomer(customer.id, {
+          outstanding_debt: totalUnpaidDebt,
+          last_purchase_date: new Date().toISOString()
+        });
+      }
+
+      await fetchCustomerTransactions();
       toast({
         title: "Success",
         description: "Transaction marked as paid",
       });
     } catch (error) {
-      console.error('Failed to mark transaction as paid:', error);
+      console.error('Error updating transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update transaction",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleClearAllDebt = async () => {
-    if (window.confirm(`Clear all debt for ${customer.name}? This will mark all unpaid transactions as paid.`)) {
-      try {
-        // Mark all unpaid transactions as paid
-        const unpaidTransactions = customerTransactions.filter(t => !t.paid);
-        for (const transaction of unpaidTransactions) {
-          await updateTransaction(transaction.id, {
-            paid: true,
-            paidDate: new Date().toISOString()
-          });
-        }
-
-        // Update customer outstanding debt
-        await onUpdateCustomer(customer.id, { outstandingDebt: 0 });
-
-        toast({
-          title: "Success",
-          description: "All debts cleared successfully",
-        });
-      } catch (error) {
-        console.error('Failed to clear debt:', error);
-      }
-    }
+  const getUnpaidDebtTotal = () => {
+    const unpaidTransactions = transactions.filter(t => !t.paid);
+    return unpaidTransactions.reduce((sum, t) => sum + t.total_amount, 0);
   };
 
-  const getProductName = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    return product?.name || 'Unknown Product';
+  const getPaidDebtTotal = () => {
+    const paidTransactions = transactions.filter(t => t.paid);
+    return paidTransactions.reduce((sum, t) => sum + t.total_amount, 0);
   };
 
-  // Calculate totals
-  const totalTransactions = customerTransactions.length;
-  const totalSales = customerSales.length;
-  const totalDebt = customerTransactions.filter(t => !t.paid).reduce((sum, t) => sum + t.totalAmount, 0);
-  const totalPaid = customerTransactions.filter(t => t.paid).reduce((sum, t) => sum + t.totalAmount, 0);
-  const totalRevenue = customerSales.reduce((sum, s) => sum + s.total, 0);
-  const totalProfit = customerSales.reduce((sum, s) => sum + s.profit, 0);
+  const getTotalSalesAmount = () => {
+    return sales.reduce((sum, s) => sum + s.total_amount, 0);
+  };
+
+  if (!customer) return null;
 
   const getRiskBadgeColor = (rating: string) => {
     switch (rating) {
@@ -107,336 +171,262 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer, onUpdateCustomer }: C
     }
   };
 
+  const getDebtStatusColor = () => {
+    if (customer.outstanding_debt === 0) {
+      return 'text-green-600';
+    } else if (customer.outstanding_debt <= 1000) {
+      return 'text-yellow-600';
+    } else {
+      return 'text-red-600';
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] flex flex-col bg-white dark:bg-gray-900 rounded-xl shadow-2xl border-2 border-gray-600 z-50">
-        <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b-4 border-blue-600 bg-white dark:bg-gray-900">
-          <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 border-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                <span className="text-xl font-bold text-blue-600 font-mono uppercase">{customer.name.charAt(0).toUpperCase()}</span>
-              </div>
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold font-mono uppercase tracking-wider text-gray-900 dark:text-white">{customer.name}</h2>
-                <p className="text-sm font-mono text-gray-600 dark:text-gray-400">{customer.phone}</p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Badge className={`border-2 rounded-lg px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider ${
-                customer.riskRating === 'low' ? 'border-green-600 bg-green-50 text-green-600' :
-                customer.riskRating === 'medium' ? 'border-yellow-600 bg-yellow-50 text-yellow-600' :
-                'border-red-600 bg-red-50 text-red-600'
-              }`}>
-                {customer.riskRating.toUpperCase()} RISK
-              </Badge>
-              {customer.outstandingDebt > 0 && (
-                <Badge className="border-2 border-red-600 bg-red-50 text-red-600 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider rounded-lg">
-                  DEBT: {formatCurrency(customer.outstandingDebt)}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-blue-600" />
+                </div>
+                {customer.name}
+              </DialogTitle>
+              <div className="flex items-center gap-3">
+                <Badge className={`${getRiskBadgeColor(customer.risk_rating)} border-0`}>
+                  {customer.risk_rating} risk
                 </Badge>
-              )}
+                <Badge variant={customer.outstanding_debt === 0 ? "default" : "destructive"}>
+                  Balance: {formatCurrency(customer.outstanding_debt)}
+                </Badge>
+              </div>
             </div>
-          </DialogTitle>
+            <DialogClose asChild>
+              <Button variant="ghost" size="sm" className="p-2">
+                <X className="w-4 h-4" />
+              </Button>
+            </DialogClose>
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 sm:p-6">
-          <div className="space-y-4 sm:space-y-6">
-            {/* Outstanding Debt Alert */}
-            {totalDebt > 0 && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-red-800">Outstanding Debt</h3>
-                      <p className="text-2xl font-bold text-red-600">{formatCurrency(totalDebt)}</p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleClearAllDebt}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 font-semibold"
-                  >
-                    Clear All Debt
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Customer Overview - Responsive Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <Card className="col-span-1 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-red-700">Current Debt</p>
-                      <p className="text-xl font-bold text-red-600">{formatCurrency(totalDebt)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="col-span-1 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-green-700">Total Revenue</p>
-                      <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="col-span-1 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <TrendingDown className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-blue-700">Total Profit</p>
-                      <p className="text-xl font-bold text-blue-600">{formatCurrency(totalProfit)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="col-span-1 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-purple-700">Transactions</p>
-                      <p className="text-xl font-bold text-purple-600">{totalTransactions}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Customer Details - Responsive Layout */}
+        <div className="space-y-6">
+          {/* Customer Info Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle className="text-base sm:text-lg">Customer Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                      <span className="text-sm font-medium">Phone:</span>
-                      <span className="text-sm truncate">{customer.phone}</span>
-                    </div>
-                    {customer.email && (
-                      <div className="flex items-center space-x-2">
-                        <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                        <span className="text-sm font-medium">Email:</span>
-                        <span className="text-sm truncate">{customer.email}</span>
-                      </div>
-                    )}
-                    {customer.address && (
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                        <span className="text-sm font-medium">Address:</span>
-                        <span className="text-sm truncate">{customer.address}</span>
-                      </div>
-                    )}
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Debt</p>
+                    <p className={`text-lg font-semibold ${getDebtStatusColor()}`}>
+                      {formatCurrency(customer.outstanding_debt)}
+                    </p>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                      <span className="text-sm font-medium">Since:</span>
-                      <span className="text-sm">{new Date(customer.createdDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <DollarSign className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                      <span className="text-sm font-medium">Credit Limit:</span>
-                      <span className="text-sm">{formatCurrency(customer.creditLimit)}</span>
-                    </div>
-                    {customer.lastPurchaseDate && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                        <span className="text-sm font-medium">Last Purchase:</span>
-                        <span className="text-sm">{new Date(customer.lastPurchaseDate).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                  </div>
+                  <DollarSign className="w-5 h-5 text-muted-foreground" />
                 </div>
-                
-                {totalDebt > 0 && (
-                  <div className="mt-4 pt-4 border-t">
-                    <Button 
-                      onClick={handleClearAllDebt}
-                      variant="outline"
-                      className="w-full sm:w-auto text-green-600 hover:text-green-700 text-sm"
-                      size="sm"
-                    >
-                      Clear All Debt ({formatCurrency(totalDebt)})
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Transactions and Sales - Mobile-Friendly Tabs */}
-            <Tabs defaultValue="transactions" className="space-y-4">
-              <TabsList className="w-full grid grid-cols-2">
-                <TabsTrigger value="transactions" className="text-xs sm:text-sm">
-                  Transactions ({totalTransactions})
-                </TabsTrigger>
-                <TabsTrigger value="sales" className="text-xs sm:text-sm">
-                  Sales ({totalSales})
-                </TabsTrigger>
-              </TabsList>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Sales</p>
+                    <p className="text-lg font-semibold text-green-600">
+                      {formatCurrency(getTotalSalesAmount())}
+                    </p>
+                  </div>
+                  <TrendingUp className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="transactions">
-                <Card>
-                  <CardHeader className="pb-3 sm:pb-4">
-                    <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <span className="text-base sm:text-lg">Transaction History</span>
-                      <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
-                        <span className="text-green-600">Paid: {formatCurrency(totalPaid)}</span>
-                        <span className="text-red-600">Outstanding: {formatCurrency(totalDebt)}</span>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {customerTransactions.length === 0 ? (
-                      <p className="text-center py-8 text-gray-500 text-sm sm:text-base">No transactions found</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Date</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[120px]">Product</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[50px]">Qty</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Price</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Total</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Status</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {customerTransactions.map((transaction) => (
-                              <TableRow key={transaction.id}>
-                                <TableCell className="text-xs sm:text-sm">
-                                  {new Date(transaction.date).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm">
-                                  <div className="max-w-[120px] truncate" title={getProductName(transaction.itemId)}>
-                                    {getProductName(transaction.itemId)}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm">{transaction.quantity}</TableCell>
-                                <TableCell className="text-xs sm:text-sm">{formatCurrency(transaction.unitPrice)}</TableCell>
-                                <TableCell className="text-xs sm:text-sm font-medium">
-                                  {formatCurrency(transaction.totalAmount)}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center space-x-1 sm:space-x-2">
-                                    {transaction.paid ? (
-                                      <>
-                                        <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-                                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                                          Paid
-                                        </Badge>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <XCircle className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
-                                        <Badge variant="destructive" className="text-xs">Outstanding</Badge>
-                                      </>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  {!transaction.paid && (
-                                    <Button
-                                      onClick={() => handleMarkTransactionPaid(transaction.id)}
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-green-600 hover:text-green-700 text-xs h-7"
-                                    >
-                                      Mark Paid
-                                    </Button>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="sales">
-                <Card>
-                  <CardHeader className="pb-3 sm:pb-4">
-                    <CardTitle className="text-base sm:text-lg">Sales History</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {customerSales.length === 0 ? (
-                      <p className="text-center py-8 text-gray-500 text-sm sm:text-base">No sales found</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Date</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[120px]">Product</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[50px]">Qty</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Price</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Total</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Profit</TableHead>
-                              <TableHead className="text-xs sm:text-sm min-w-[80px]">Payment</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {customerSales.map((sale) => (
-                              <TableRow key={sale.id}>
-                                <TableCell className="text-xs sm:text-sm">
-                                  {new Date(sale.timestamp).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm">
-                                  <div className="max-w-[120px] truncate" title={sale.productName}>
-                                    {sale.productName}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm">{sale.quantity}</TableCell>
-                                <TableCell className="text-xs sm:text-sm">{formatCurrency(sale.sellingPrice)}</TableCell>
-                                <TableCell className="text-xs sm:text-sm font-medium">
-                                  {formatCurrency(sale.total)}
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm text-green-600 font-medium">
-                                  {formatCurrency(sale.profit)}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className="capitalize text-xs">
-                                    {sale.paymentMethod}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Credit Limit</p>
+                    <p className="text-lg font-semibold">
+                      {formatCurrency(customer.credit_limit)}
+                    </p>
+                  </div>
+                  <CreditCard className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Contact Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span>{customer.phone}</span>
+                </div>
+                {customer.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span>{customer.email}</span>
+                  </div>
+                )}
+                {customer.address && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <span>{customer.address}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <span>
+                    Joined: {new Date(customer.created_date || '').toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Credit Limit: </span>
+                  <span className="font-medium">{formatCurrency(customer.credit_limit)}</span>
+                </div>
+                {customer.last_purchase_date && (
+                  <div>
+                    <span className="text-muted-foreground">Last Purchase: </span>
+                    <span className="font-medium">
+                      {new Date(customer.last_purchase_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Transactions and Sales Tabs */}
+          <Tabs defaultValue="transactions" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="transactions" className="flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Debt Transactions ({transactions.length})
+              </TabsTrigger>
+              <TabsTrigger value="sales" className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Sales History ({sales.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="transactions" className="space-y-4">
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : transactions.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Debt Transactions</h3>
+                    <p className="text-muted-foreground">
+                      This customer has no debt transactions recorded.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {transactions.map((transaction) => (
+                    <Card key={transaction.id} className={`${transaction.paid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {transaction.paid ? (
+                                <CheckCircle className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <Clock className="w-5 h-5 text-red-600" />
+                              )}
+                              <span className="font-medium">
+                                Item ID: {transaction.item_id || 'N/A'}
+                              </span>
+                              <Badge variant={transaction.paid ? "default" : "destructive"}>
+                                {transaction.paid ? 'Paid' : 'Unpaid'}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <p>Quantity: {transaction.quantity}</p>
+                              <p>Unit Price: {formatCurrency(transaction.unit_price)}</p>
+                              <p>Date: {new Date(transaction.date || '').toLocaleDateString()}</p>
+                              {transaction.notes && <p>Notes: {transaction.notes}</p>}
+                            </div>
+                          </div>
+                          <div className="text-right space-y-2">
+                            <div className="text-lg font-semibold">
+                              {formatCurrency(transaction.total_amount)}
+                            </div>
+                            {!transaction.paid && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleMarkTransactionPaid(transaction.id)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Mark as Paid
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="sales" className="space-y-4">
+              {sales.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Sales History</h3>
+                    <p className="text-muted-foreground">
+                      This customer has no sales recorded.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {sales.map((sale) => (
+                    <Card key={sale.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <TrendingUp className="w-5 h-5 text-green-600" />
+                              <span className="font-medium">
+                                {sale.product_name || 'Unknown Product'}
+                              </span>
+                            </div>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <p>Quantity: {sale.quantity}</p>
+                              <p>Unit Price: {formatCurrency(sale.selling_price)}</p>
+                              <p>Date: {new Date(sale.timestamp || '').toLocaleDateString()}</p>
+                              {sale.payment_method && (
+                                <p>Payment: {sale.payment_method}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold text-green-600">
+                              {formatCurrency(sale.total_amount)}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </DialogContent>
     </Dialog>

@@ -13,7 +13,7 @@ const DashboardTopbar = () => {
     products = [], 
     customers = [], 
     sales = [],
-    isLoading,
+    loading,
     error 
   } = useOfflineAwareData();
 
@@ -62,7 +62,7 @@ const DashboardTopbar = () => {
     );
   }
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(8)].map((_, i) => (

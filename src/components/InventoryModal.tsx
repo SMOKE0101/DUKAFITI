@@ -118,7 +118,7 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
                       <div className="flex justify-between items-center w-full">
                         <span>{product.name}</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                          Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
+                          Stock: {product.current_stock === -1 ? 'Unspecified' : product.current_stock}
                         </span>
                       </div>
                     </SelectItem>
@@ -197,15 +197,15 @@ const InventoryModal = ({ isOpen, onClose, products, onAddStock }: InventoryModa
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Current Stock:</span>
                     <span className="text-gray-900 dark:text-white">
-                      {selectedProduct.currentStock === -1 ? 'Unspecified' : `${selectedProduct.currentStock} units`}
+                      {selectedProduct.current_stock === -1 ? 'Unspecified' : `${selectedProduct.current_stock} units`}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">New Stock:</span>
                     <span className="font-bold text-gray-900 dark:text-white">
-                      {selectedProduct.currentStock === -1 
+                      {selectedProduct.current_stock === -1 
                         ? 'Unspecified' 
-                        : `${selectedProduct.currentStock + formData.quantity} units`
+                        : `${selectedProduct.current_stock + formData.quantity} units`
                       }
                     </span>
                   </div>

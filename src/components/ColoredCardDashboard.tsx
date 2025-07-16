@@ -19,49 +19,17 @@ import { useOfflineAwareData } from '../hooks/useOfflineAwareData';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
 
-// Define interfaces for type safety
-interface Sale {
-  id: string;
-  timestamp: string;
-  total_amount: number;
-  product_name: string;
-  quantity: number;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  current_stock: number;
-  low_stock_threshold: number;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  total_purchases: number;
-  outstanding_debt: number;
-  credit_limit: number;
-}
-
 const ColoredCardDashboard = () => {
   const navigate = useNavigate();
 
   // Use offline-aware data hooks
-  const { data: sales } = useOfflineAwareData<Sale>({
-    table: 'sales',
-    select: '*'
-  });
-
-  const { data: products } = useOfflineAwareData<Product>({
-    table: 'products',
-    select: '*'
-  });
-
-  const { data: customers } = useOfflineAwareData<Customer>({
-    table: 'customers',
-    select: '*'
-  });
+  const { 
+    sales, 
+    products, 
+    customers, 
+    loading, 
+    error 
+  } = useOfflineAwareData();
 
   // Calculate today's metrics
   const today = new Date().toDateString();
@@ -70,7 +38,7 @@ const ColoredCardDashboard = () => {
   );
   const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
   const ordersToday = todaySales.length;
-  const activeCustomers = customers.filter(c => c.total_purchases > 0).length;
+  const activeCustomers = customers.filter(c => (c.total_purchases || 0) > 0).length;
   
   // Low stock products (excluding unspecified stock)
   const lowStockProducts = products.filter(p => 
@@ -95,6 +63,39 @@ const ColoredCardDashboard = () => {
         break;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 md:px-6">
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h1 className="font-mono text-lg md:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              DASHBOARD
+            </h1>
+          </div>
+        </div>
+        <div className="p-6 space-y-8 max-w-7xl mx-auto">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="p-6 space-y-8 max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600">Error loading dashboard data: {error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
