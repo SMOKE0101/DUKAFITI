@@ -48,10 +48,6 @@ export const usePWAOffline = () => {
                 toast({
                   title: "App Update Available",
                   description: "A new version is ready. Refresh to update.",
-                  action: {
-                    label: "Refresh",
-                    onClick: () => window.location.reload()
-                  }
                 });
               }
             });
@@ -173,10 +169,6 @@ export const usePWAOffline = () => {
         toast({
           title: "Install DukaFiti",
           description: "Install this app for better offline experience",
-          action: {
-            label: "Install",
-            onClick: showInstallPrompt
-          }
         });
       }, 5000);
     };
@@ -186,7 +178,7 @@ export const usePWAOffline = () => {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, [showInstallPrompt, toast]);
+  }, [toast]);
 
   // Initialize
   useEffect(() => {

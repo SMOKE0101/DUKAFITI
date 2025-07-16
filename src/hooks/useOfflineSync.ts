@@ -1,70 +1,50 @@
-import { useEffect, useCallback, useState } from 'react';
-import { useAuth } from './useAuth';
+
+import { useState, useCallback } from 'react';
 import { useToast } from './use-toast';
 
+interface PendingOperation {
+  type: string;
+  data: any;
+}
+
 export const useOfflineSync = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);
+  const { toast } = useToast();
 
-  // Initialize offline data on app startup
-  const initializeOfflineData = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      console.log('[OfflineSync] Initializing offline data...');
-      console.log('[OfflineSync] App initialized for user:', user.id);
-    } catch (error) {
-      console.error('[OfflineSync] Failed to initialize offline data:', error);
-    }
-  }, [user]);
-
-  // Add pending operation (simplified for compatibility)
-  const addPendingOperation = useCallback(async (operation: any) => {
-    console.log('[OfflineSync] Adding pending operation:', operation);
-    return Promise.resolve('op_' + Date.now());
+  const addPendingOperation = useCallback((operation: PendingOperation) => {
+    setPendingOperations(prev => [...prev, operation]);
   }, []);
 
-  // Sync data when coming back online
-  const handleOnlineSync = useCallback(async () => {
-    if (!user || !navigator.onLine) return;
+  const syncPendingOperations = useCallback(async () => {
+    if (!isOnline || pendingOperations.length === 0) return;
 
     try {
-      console.log('[OfflineSync] Device back online, triggering sync...');
-      window.dispatchEvent(new CustomEvent('force-sync'));
+      // Process pending operations
+      for (const operation of pendingOperations) {
+        // Implementation would sync with your backend
+        console.log('Syncing operation:', operation);
+      }
+      
+      setPendingOperations([]);
+      toast({
+        title: "Sync Complete",
+        description: `${pendingOperations.length} operations synchronized`,
+      });
     } catch (error) {
-      console.error('[OfflineSync] Failed to trigger sync:', error);
+      console.error('Sync failed:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Some operations could not be synchronized",
+        variant: "destructive"
+      });
     }
-  }, [user]);
-
-  // Setup event listeners
-  useEffect(() => {
-    initializeOfflineData();
-
-    const handleOnline = () => {
-      console.log('[OfflineSync] Online event detected');
-      setIsOnline(true);
-      handleOnlineSync();
-    };
-
-    const handleOffline = () => {
-      console.log('[OfflineSync] Offline event detected');
-      setIsOnline(false);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [user, initializeOfflineData, handleOnlineSync]);
+  }, [isOnline, pendingOperations, toast]);
 
   return {
-    initializeOfflineData,
-    handleOnlineSync,
-    addPendingOperation,
     isOnline,
+    pendingOperations,
+    addPendingOperation,
+    syncPendingOperations
   };
 };

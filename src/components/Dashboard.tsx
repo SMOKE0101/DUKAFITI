@@ -17,7 +17,7 @@ import {
 import { useOfflineFirst } from '@/hooks/useOfflineFirst';
 import { usePWAOffline } from '@/hooks/usePWAOffline';
 import PWAOfflineBanner from './PWAOfflineBanner';
-import { OfflineValidator } from './OfflineValidator';
+import OfflineValidator from './OfflineValidator'; // Fixed default import
 
 const Dashboard: React.FC = () => {
   const { stats, isOnline: offlineFirstOnline, queuedOperations } = useOfflineFirst();

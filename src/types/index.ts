@@ -1,63 +1,55 @@
 
-export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  createdDate: string;
-  email?: string;
-  address?: string;
-  totalPurchases: number;
-  outstandingDebt: number;
-  creditLimit: number;
-  lastPurchaseDate: string | null;
-  riskRating: 'low' | 'medium' | 'high';
-}
-
-export interface Transaction {
-  id: string;
-  customerId: string;
-  itemId: string;
-  quantity: number;
-  unitPrice: number;
-  totalAmount: number;
-  notes: string;
-  date: string;
-  paid: boolean;
-  paidDate: string | null;
-}
-
 export interface Sale {
   id: string;
-  productId: string;
-  productName: string;
+  user_id: string;
+  product_id: string;
+  product_name: string;
   quantity: number;
-  sellingPrice: number;
-  costPrice: number;
+  selling_price: number;
+  cost_price: number;
   profit: number;
+  total_amount: number;
+  payment_method: string;
+  customer_id?: string;
+  customer_name?: string;
+  payment_details?: any;
   timestamp: string;
   synced: boolean;
-  customerId?: string;
-  customerName?: string;
-  paymentMethod: 'cash' | 'mpesa' | 'debt' | 'partial';
-  paymentDetails: {
-    cashAmount: number;
-    mpesaAmount: number;
-    debtAmount: number;
-    mpesaReference?: string;
-    tillNumber?: string;
-  };
-  total: number;
 }
 
 export interface Product {
   id: string;
+  user_id: string;
   name: string;
-  sku?: string;
   category: string;
-  costPrice: number;
-  sellingPrice: number;
-  currentStock: number;
-  lowStockThreshold: number;
-  createdAt: string;
-  updatedAt: string;
+  cost_price: number;
+  selling_price: number;
+  current_stock: number;
+  low_stock_threshold: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Customer {
+  id: string;
+  user_id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  credit_limit: number;
+  outstanding_debt: number;
+  created_date: string;
+  updated_at?: string;
+}
+
+export interface SyncQueueItem {
+  id: string;
+  type: 'sale' | 'product' | 'customer' | 'transaction';
+  operation: 'create' | 'update' | 'delete';
+  data: any;
+  timestamp: string;
+  priority: 'high' | 'medium' | 'low';
+  attempts: number;
+  synced: boolean;
 }

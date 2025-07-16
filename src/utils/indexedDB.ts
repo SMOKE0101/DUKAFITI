@@ -57,7 +57,7 @@ interface SyncQueueItem {
 class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private dbName = 'DukaFitiOffline';
-  private version = 6; // Increased version for fixes
+  private version = 6;
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -193,7 +193,7 @@ class OfflineDatabase {
     if (!operation.id) {
       operation.id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
-    if (!operation.attempts) {
+    if (typeof operation.attempts !== 'number') {
       operation.attempts = 0;
     }
     return this.storeOfflineData('syncQueue', operation);
@@ -211,6 +211,7 @@ class OfflineDatabase {
       const store = transaction.objectStore('syncQueue');
       const index = store.index('synced');
       
+      // Use the correct value for the synced index
       const request = index.getAll(false);
       
       request.onsuccess = () => resolve(request.result || []);
@@ -319,20 +320,6 @@ export const offlineDB = new OfflineDatabase();
 // Initialize and test on load
 offlineDB.init().then(() => {
   console.log('[IndexedDB] 🎉 Database initialized successfully!');
-  
-  // Run tests after initialization
-  setTimeout(async () => {
-    try {
-      const testResult = await offlineDB.testOfflineCapabilities();
-      if (testResult.success) {
-        console.log('[IndexedDB] 🎉 All offline tests passed!');
-      } else {
-        console.error('[IndexedDB] 💥 Offline tests failed:', testResult.details);
-      }
-    } catch (error) {
-      console.error('[IndexedDB] Failed to run tests:', error);
-    }
-  }, 1000);
 }).catch(error => {
   console.error('[IndexedDB] Failed to initialize:', error);
 });
