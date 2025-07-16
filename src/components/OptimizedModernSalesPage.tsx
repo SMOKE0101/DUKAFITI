@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,10 +14,11 @@ import { Sale } from '../types';
 const OptimizedModernSalesPage = () => {
   const { toast } = useToast();
   const { isOnline, pendingActions } = useOfflineManager();
-  const { createOfflineSale, getOfflineSales, isCreating } = useOfflineSales();
+  const { createOfflineSale, getOfflineSales } = useOfflineSales();
   
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
 
   const [productId, setProductId] = useState('');
   const [productName, setProductName] = useState('');
