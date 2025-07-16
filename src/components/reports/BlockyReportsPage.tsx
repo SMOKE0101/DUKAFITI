@@ -8,12 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, TrendingUp, Package, Users, DollarSign, BarChart3, PieChart, AlertTriangle, Download, RefreshCw } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
+import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
+import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useOfflineManager } from '../../hooks/useOfflineManager';
 import { formatCurrency } from '../../utils/currency';
 import AggregatedReportsTables from './AggregatedReportsTables';
 import ReportsCharts from './ReportsCharts';
 import ReportsSummaryCards from './ReportsSummaryCards';
-import AlertsPanel from './AlertsPanel';
+import ReportsAlertsPanel from './ReportsAlertsPanel';
 
 const BlockyReportsPage = () => {
   const [dateRange, setDateRange] = useState(() => {
@@ -27,8 +29,12 @@ const BlockyReportsPage = () => {
     };
   });
 
-  const { sales, isLoading, refetch } = useSupabaseSales();
+  const { sales, loading: salesLoading, refreshSales } = useSupabaseSales();
+  const { products, loading: productsLoading } = useSupabaseProducts();
+  const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { syncPendingOperations, pendingOperations, isSyncing, forceSyncNow } = useOfflineManager();
+
+  const isLoading = salesLoading || productsLoading || customersLoading;
 
   // Filter sales by date range
   const filteredSales = React.useMemo(() => {
@@ -43,7 +49,7 @@ const BlockyReportsPage = () => {
   // Force sync and refresh data
   const handleRefreshData = async () => {
     await forceSyncNow();
-    await refetch();
+    await refreshSales();
   };
 
   if (isLoading) {
@@ -121,7 +127,12 @@ const BlockyReportsPage = () => {
       </Card>
 
       {/* Summary Cards */}
-      <ReportsSummaryCards sales={filteredSales} />
+      <ReportsSummaryCards 
+        sales={filteredSales} 
+        products={products || []}
+        customers={customers || []}
+        dateRange={dateRange}
+      />
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="w-full">
@@ -146,8 +157,8 @@ const BlockyReportsPage = () => {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ReportsCharts sales={filteredSales} />
-            <AlertsPanel sales={filteredSales} />
+            <ReportsCharts sales={filteredSales} dateRange={dateRange} />
+            <ReportsAlertsPanel products={products || []} customers={customers || []} />
           </div>
         </TabsContent>
 
@@ -156,11 +167,11 @@ const BlockyReportsPage = () => {
         </TabsContent>
 
         <TabsContent value="charts" className="space-y-6">
-          <ReportsCharts sales={filteredSales} />
+          <ReportsCharts sales={filteredSales} dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="alerts" className="space-y-6">
-          <AlertsPanel sales={filteredSales} />
+          <ReportsAlertsPanel products={products || []} customers={customers || []} />
         </TabsContent>
       </Tabs>
     </div>
