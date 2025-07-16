@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useOfflineCRUD } from '../../hooks/useOfflineCRUD';
@@ -153,6 +152,7 @@ const CustomerCRUDManager: React.FC = () => {
               totalPurchases: 0,
               outstandingDebt: 0,
               riskRating: 'low',
+              lastPurchaseDate: null,
             });
           } catch (error) {
             console.warn('Server create failed, will retry on sync:', error);
