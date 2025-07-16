@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,12 +75,12 @@ const PremiumReportsPage = () => {
       const matchesFilters = activeFilters.every(filter => {
         switch (filter.type) {
           case 'salesType':
-            return sale.paymentMethod === filter.value;
+            return sale.payment_method === filter.value;
           case 'category':
-            const product = products.find(p => p.id === sale.productId);
+            const product = products.find(p => p.id === sale.product_id);
             return product?.category === filter.value;
           case 'customer':
-            return sale.customerId === filter.value;
+            return sale.customer_id === filter.value;
           default:
             return true;
         }
@@ -90,11 +91,11 @@ const PremiumReportsPage = () => {
   }, [sales, fromDate, toDate, activeFilters, products]);
 
   const metrics = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total_amount, 0);
     const totalOrders = filteredSales.length;
-    const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
+    const activeCustomers = new Set(filteredSales.map(sale => sale.customer_id).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
-      product.currentStock <= (product.lowStockThreshold || 10)
+      product.current_stock <= (product.low_stock_threshold || 10)
     ).length;
 
     return {
@@ -124,7 +125,7 @@ const PremiumReportsPage = () => {
           break;
       }
       
-      groupedData[key] = (groupedData[key] || 0) + sale.total;
+      groupedData[key] = (groupedData[key] || 0) + sale.total_amount;
     });
     
     return Object.entries(groupedData)
@@ -154,11 +155,11 @@ const PremiumReportsPage = () => {
   }, [filteredSales]);
 
   const lowStockAlerts = products
-    .filter(p => p.currentStock <= (p.lowStockThreshold || 10))
+    .filter(p => p.current_stock <= (p.low_stock_threshold || 10))
     .slice(0, 3);
 
   const overdueCustomers = customers
-    .filter(c => c.outstandingDebt > 0)
+    .filter(c => c.outstanding_debt > 0)
     .slice(0, 3);
 
   const removeFilter = (filterToRemove: Filter) => {
@@ -509,11 +510,11 @@ const PremiumReportsPage = () => {
                           {product.name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Only {product.currentStock} left
+                          Only {product.current_stock} left
                         </p>
                       </div>
-                      <Badge variant={product.currentStock <= 0 ? "destructive" : "secondary"} className="text-xs">
-                        {product.currentStock <= 0 ? 'Out' : 'Low'}
+                      <Badge variant={product.current_stock <= 0 ? "destructive" : "secondary"} className="text-xs">
+                        {product.current_stock <= 0 ? 'Out' : 'Low'}
                       </Badge>
                     </div>
                   ))}
@@ -546,7 +547,7 @@ const PremiumReportsPage = () => {
                           {customer.name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Owes {formatCurrency(customer.outstandingDebt)}
+                          Owes {formatCurrency(customer.outstanding_debt)}
                         </p>
                       </div>
                     </div>
