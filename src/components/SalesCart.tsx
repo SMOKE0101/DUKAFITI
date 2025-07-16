@@ -29,11 +29,11 @@ const SalesCart: React.FC<SalesCartProps> = ({
   onClearCart
 }) => {
   const subtotal = cartItems.reduce((sum, item) => 
-    sum + (item.customPrice || item.product.sellingPrice) * item.quantity, 0
+    sum + (item.customPrice || item.product.selling_price) * item.quantity, 0
   );
 
   const totalProfit = cartItems.reduce((sum, item) => 
-    sum + ((item.customPrice || item.product.sellingPrice) - item.product.costPrice) * item.quantity, 0
+    sum + ((item.customPrice || item.product.selling_price) - item.product.cost_price) * item.quantity, 0
   );
 
   if (cartItems.length === 0) {
@@ -68,7 +68,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
             <div className="flex-1">
               <h4 className="font-medium text-sm">{item.product.name}</h4>
               <p className="text-xs text-gray-500">
-                Stock: {item.product.currentStock} | Cost: {formatCurrency(item.product.costPrice)}
+                Stock: {item.product.current_stock} | Cost: {formatCurrency(item.product.cost_price)}
               </p>
             </div>
             
@@ -84,7 +84,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
               <Input
                 type="number"
                 min="1"
-                max={item.product.currentStock}
+                max={item.product.current_stock}
                 value={item.quantity}
                 onChange={(e) => onUpdateQuantity(item.product.id, parseInt(e.target.value) || 1)}
                 className="w-16 h-8 text-center text-sm"
@@ -93,7 +93,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0"
-                onClick={() => onUpdateQuantity(item.product.id, Math.min(item.product.currentStock, item.quantity + 1))}
+                onClick={() => onUpdateQuantity(item.product.id, Math.min(item.product.current_stock, item.quantity + 1))}
               >
                 <Plus size={14} />
               </Button>
@@ -104,12 +104,12 @@ const SalesCart: React.FC<SalesCartProps> = ({
                 type="number"
                 step="0.01"
                 min="0"
-                value={item.customPrice || item.product.sellingPrice}
-                onChange={(e) => onUpdatePrice(item.product.id, parseFloat(e.target.value) || item.product.sellingPrice)}
+                value={item.customPrice || item.product.selling_price}
+                onChange={(e) => onUpdatePrice(item.product.id, parseFloat(e.target.value) || item.product.selling_price)}
                 className="w-20 h-8 text-sm text-right"
               />
               <p className="text-xs text-gray-500 mt-1">
-                = {formatCurrency((item.customPrice || item.product.sellingPrice) * item.quantity)}
+                = {formatCurrency((item.customPrice || item.product.selling_price) * item.quantity)}
               </p>
             </div>
 

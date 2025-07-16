@@ -29,8 +29,8 @@ const PremiumDashboard = () => {
 
   // Calculate enhanced low stock items
   const lowStockItems = products.filter(product => {
-    const currentStock = product.currentStock ?? 0;
-    const threshold = product.lowStockThreshold ?? 10;
+    const currentStock = product.current_stock ?? 0;
+    const threshold = product.low_stock_threshold ?? 10;
     
     // Only consider items with specified stock (not -1 which means unspecified)
     return currentStock !== -1 && currentStock <= threshold;
@@ -84,8 +84,8 @@ const PremiumDashboard = () => {
               </p>
               <div className="grid gap-2">
                 {lowStockItems.slice(0, 5).map((product) => {
-                  const currentStock = product.currentStock ?? 0;
-                  const threshold = product.lowStockThreshold ?? 10;
+                  const currentStock = product.current_stock ?? 0;
+                  const threshold = product.low_stock_threshold ?? 10;
                   
                   return (
                     <div key={product.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-destructive/20">
@@ -154,13 +154,13 @@ const PremiumDashboard = () => {
                 {recentSales.map((sale) => (
                   <div key={sale.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex-1">
-                      <p className="font-medium text-foreground">{sale.productName}</p>
+                      <p className="font-medium text-foreground">{sale.product_name}</p>
                       <p className="text-sm text-muted-foreground">
-                        Qty: {sale.quantity} • {sale.paymentMethod}
+                        Qty: {sale.quantity} • {sale.payment_method}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-foreground">{formatCurrency(sale.total)}</p>
+                      <p className="font-semibold text-foreground">{formatCurrency(sale.total_amount)}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(sale.timestamp).toLocaleDateString()}
                       </p>

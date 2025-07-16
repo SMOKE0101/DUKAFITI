@@ -7,12 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useOfflineAwareData } from '@/hooks/useOfflineAwareData';
-import { useOfflineAwareMutation } from '@/hooks/useOfflineAwareMutation';
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import InventoryModal from './inventory/InventoryModal';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
 import { Product } from '../types';
-import { transformDatabaseProduct } from '@/utils/dataTransforms';
 import FeatureLimitModal from './trial/FeatureLimitModal';
 
 const ProductManagement: React.FC = () => {
@@ -27,106 +25,52 @@ const ProductManagement: React.FC = () => {
   const [showLowStock, setShowLowStock] = useState(false);
   const [isFeatureLimitModalOpen, setIsFeatureLimitModalOpen] = useState(false);
 
-  // Fetch products using offline-aware hook
+  // Fetch products using Supabase hook
   const { 
-    data: rawProducts = [], 
+    products, 
     loading, 
     error, 
-    refetch 
-  } = useOfflineAwareData({
-    table: 'products',
-    dependencies: [user?.id]
-  });
-
-  // Transform database products to UI format
-  const products: Product[] = rawProducts.map(transformDatabaseProduct);
-
-  // Product mutation hooks
-  const { mutate: createProduct, loading: creating } = useOfflineAwareMutation({
-    table: 'products',
-    operation: 'insert',
-    onSuccess: () => {
-      toast({
-        title: "Product Added",
-        description: "Product has been added successfully",
-      });
-      setIsModalOpen(false);
-      refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to add product",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const { mutate: updateProduct, loading: updating } = useOfflineAwareMutation({
-    table: 'products',
-    operation: 'update',
-    onSuccess: () => {
-      toast({
-        title: "Product Updated",
-        description: "Product has been updated successfully",
-      });
-      setIsModalOpen(false);
-      setEditingProduct(null);
-      refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update product",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const { mutate: deleteProduct, loading: deleting } = useOfflineAwareMutation({
-    table: 'products',
-    operation: 'delete',
-    onSuccess: () => {
-      toast({
-        title: "Product Deleted",
-        description: "Product has been deleted successfully",
-      });
-      refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to delete product",
-        variant: "destructive",
-      });
-    }
-  });
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    refreshProducts
+  } = useSupabaseProducts();
 
   // Product operations
-  const handleSaveProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSaveProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
 
     const dbProduct = {
       user_id: user.id,
       name: productData.name,
       category: productData.category,
-      cost_price: productData.costPrice,
-      selling_price: productData.sellingPrice,
-      current_stock: productData.currentStock,
-      low_stock_threshold: productData.lowStockThreshold || 10,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      cost_price: productData.cost_price,
+      selling_price: productData.selling_price,
+      current_stock: productData.current_stock,
+      low_stock_threshold: productData.low_stock_threshold || 10,
     };
 
-    if (editingProduct) {
-      updateProduct({
-        ...dbProduct,
-        id: editingProduct.id
-      }, { id: editingProduct.id });
-    } else {
-      createProduct({
-        ...dbProduct,
-        id: crypto.randomUUID()
+    try {
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, dbProduct);
+        toast({
+          title: "Product Updated",
+          description: "Product has been updated successfully",
+        });
+      } else {
+        await createProduct(dbProduct);
+        toast({
+          title: "Product Added",
+          description: "Product has been added successfully",
+        });
+      }
+      setIsModalOpen(false);
+      setEditingProduct(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: editingProduct ? "Failed to update product" : "Failed to add product",
+        variant: "destructive",
       });
     }
   };
@@ -136,32 +80,44 @@ const ProductManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteProduct = (product: Product) => {
+  const handleDeleteProduct = async (product: Product) => {
     if (window.confirm(`Are you sure you want to delete "${product.name}"?`)) {
-      deleteProduct({ id: product.id });
+      try {
+        await deleteProduct(product.id);
+        toast({
+          title: "Product Deleted",
+          description: "Product has been deleted successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete product",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
     const updatedProduct = {
-      ...product,
-      currentStock: product.currentStock + quantity,
-      costPrice: buyingPrice,
-      updatedAt: new Date().toISOString()
+      current_stock: product.current_stock + quantity,
+      cost_price: buyingPrice,
+      updated_at: new Date().toISOString()
     };
 
-    const dbProduct = {
-      user_id: user!.id,
-      name: updatedProduct.name,
-      category: updatedProduct.category,
-      cost_price: updatedProduct.costPrice,
-      selling_price: updatedProduct.sellingPrice,
-      current_stock: updatedProduct.currentStock,
-      low_stock_threshold: updatedProduct.lowStockThreshold,
-      updated_at: updatedProduct.updatedAt
-    };
-
-    updateProduct(dbProduct, { id: product.id });
+    try {
+      await updateProduct(product.id, updatedProduct);
+      toast({
+        title: "Stock Updated",
+        description: "Product stock has been updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update stock",
+        variant: "destructive",
+      });
+    }
   };
 
   // Filtering logic
@@ -169,7 +125,7 @@ const ProductManagement: React.FC = () => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !selectedCategory || product.category === selectedCategory;
-    const matchesLowStock = !showLowStock || product.currentStock <= (product.lowStockThreshold || 10);
+    const matchesLowStock = !showLowStock || product.current_stock <= (product.low_stock_threshold || 10);
     
     return matchesSearch && matchesCategory && matchesLowStock;
   });
@@ -179,9 +135,9 @@ const ProductManagement: React.FC = () => {
 
   // Calculate stats
   const totalProducts = products.length;
-  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
-  const totalValue = products.reduce((sum, p) => sum + (p.currentStock * p.costPrice), 0);
-  const totalProfit = products.reduce((sum, p) => sum + (p.currentStock * (p.sellingPrice - p.costPrice)), 0);
+  const lowStockProducts = products.filter(p => p.current_stock <= (p.low_stock_threshold || 10)).length;
+  const totalValue = products.reduce((sum, p) => sum + (p.current_stock * p.cost_price), 0);
+  const totalProfit = products.reduce((sum, p) => sum + (p.current_stock * (p.selling_price - p.cost_price)), 0);
 
   if (loading) {
     return (
@@ -212,7 +168,7 @@ const ProductManagement: React.FC = () => {
               <AlertTriangle className="h-5 w-5" />
               <span>Error loading products: {error}</span>
             </div>
-            <Button onClick={refetch} className="mt-4">Try Again</Button>
+            <Button onClick={refreshProducts} className="mt-4">Try Again</Button>
           </CardContent>
         </Card>
       </div>
@@ -233,7 +189,7 @@ const ProductManagement: React.FC = () => {
         <Button 
           onClick={() => setIsModalOpen(true)}
           className="bg-primary hover:bg-primary/90 text-white shadow-lg"
-          disabled={creating}
+          disabled={loading}
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Product
@@ -364,7 +320,7 @@ const ProductManagement: React.FC = () => {
         }}
         onSave={handleSaveProduct}
         product={editingProduct}
-        isLoading={creating || updating}
+        isLoading={loading}
       />
 
       <FeatureLimitModal

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { History, Search, Filter, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,8 +44,8 @@ const TransactionHistory = () => {
       ).map(p => p.id);
 
       filtered = filtered.filter(t => 
-        customerMatches.includes(t.customerId) ||
-        productMatches.includes(t.itemId) ||
+        customerMatches.includes(t.customer_id) ||
+        productMatches.includes(t.item_id) ||
         t.notes.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -58,7 +59,7 @@ const TransactionHistory = () => {
 
     // Customer filter
     if (filterCustomer !== 'all') {
-      filtered = filtered.filter(t => t.customerId === filterCustomer);
+      filtered = filtered.filter(t => t.customer_id === filterCustomer);
     }
 
     // Date range filter
@@ -88,7 +89,7 @@ const TransactionHistory = () => {
     try {
       await updateTransaction(transactionId, {
         paid: true,
-        paidDate: new Date().toISOString()
+        paid_date: new Date().toISOString()
       });
 
       toast({
@@ -104,7 +105,7 @@ const TransactionHistory = () => {
     try {
       await updateTransaction(transactionId, {
         paid: false,
-        paidDate: null
+        paid_date: null
       });
 
       toast({
@@ -127,8 +128,8 @@ const TransactionHistory = () => {
   };
 
   const getTotalStats = () => {
-    const total = filteredTransactions.reduce((sum, t) => sum + t.totalAmount, 0);
-    const paid = filteredTransactions.filter(t => t.paid).reduce((sum, t) => sum + t.totalAmount, 0);
+    const total = filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0);
+    const paid = filteredTransactions.filter(t => t.paid).reduce((sum, t) => sum + t.total_amount, 0);
     const outstanding = total - paid;
 
     return { total, paid, outstanding };
@@ -260,7 +261,7 @@ const TransactionHistory = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold text-gray-800">
-                          {getCustomerName(transaction.customerId)}
+                          {getCustomerName(transaction.customer_id)}
                         </span>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           transaction.paid
@@ -273,10 +274,10 @@ const TransactionHistory = () => {
                       
                       <div className="text-sm text-gray-600 space-y-1">
                         <div>
-                          <strong>Product:</strong> {getProductName(transaction.itemId)}
+                          <strong>Product:</strong> {getProductName(transaction.item_id)}
                         </div>
                         <div>
-                          <strong>Quantity:</strong> {transaction.quantity} × {formatCurrency(transaction.unitPrice)}
+                          <strong>Quantity:</strong> {transaction.quantity} × {formatCurrency(transaction.unit_price)}
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar size={14} />
@@ -291,9 +292,9 @@ const TransactionHistory = () => {
                             <strong>Notes:</strong> {transaction.notes}
                           </div>
                         )}
-                        {transaction.paid && transaction.paidDate && (
+                        {transaction.paid && transaction.paid_date && (
                           <div className="text-green-600">
-                            <strong>Paid on:</strong> {new Date(transaction.paidDate).toLocaleDateString('en-KE')}
+                            <strong>Paid on:</strong> {new Date(transaction.paid_date).toLocaleDateString('en-KE')}
                           </div>
                         )}
                       </div>
@@ -302,7 +303,7 @@ const TransactionHistory = () => {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <div className="text-xl font-bold text-gray-800">
-                          {formatCurrency(transaction.totalAmount)}
+                          {formatCurrency(transaction.total_amount)}
                         </div>
                       </div>
                       
