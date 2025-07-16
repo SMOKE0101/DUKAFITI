@@ -35,7 +35,7 @@ interface ProductFormData {
 interface ExtendedProduct extends Product {
   synced: boolean;
   offline?: boolean;
-  pendingOperation?: string;
+  pendingOperation?: 'create' | 'update' | 'delete';
 }
 
 const ProductCRUDManager: React.FC = () => {

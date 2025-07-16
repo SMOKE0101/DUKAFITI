@@ -37,7 +37,7 @@ interface CustomerFormData {
 interface ExtendedCustomer extends Customer {
   synced: boolean;
   offline?: boolean;
-  pendingOperation?: string;
+  pendingOperation?: 'create' | 'update' | 'delete';
 }
 
 const CustomerCRUDManager: React.FC = () => {
@@ -125,8 +125,8 @@ const CustomerCRUDManager: React.FC = () => {
           description: `${formData.name} has been updated.`,
         });
       } else {
-        // Create new customer
-        const newCustomer = await create({
+        // Create new customer with all required fields
+        const newCustomerData = {
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
@@ -134,10 +134,12 @@ const CustomerCRUDManager: React.FC = () => {
           creditLimit: formData.creditLimit,
           totalPurchases: 0,
           outstandingDebt: 0,
-          riskRating: 'low',
+          riskRating: 'low' as const,
           createdDate: new Date().toISOString(),
           lastPurchaseDate: null,
-        } as Omit<ExtendedCustomer, 'id'>);
+        };
+
+        const newCustomer = await create(newCustomerData as Omit<ExtendedCustomer, 'id'>);
 
         // If online, also create on server
         if (isOnline) {
