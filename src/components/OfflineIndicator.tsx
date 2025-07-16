@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useOfflineManager } from '../hooks/useOfflineManager';
 import { useServiceWorker } from '../hooks/useServiceWorker';
+import { offlineDB } from '../utils/indexedDB';
 
 const OfflineIndicator: React.FC = () => {
   const { 
@@ -43,11 +43,9 @@ const OfflineIndicator: React.FC = () => {
   const testOffline = async () => {
     console.log('[OfflineIndicator] Testing offline functionality...');
     try {
-      // Test IndexedDB
       const testResult = await offlineDB.testOfflineCapabilities();
       console.log('[OfflineIndicator] IndexedDB test result:', testResult);
       
-      // Test service worker
       triggerSync();
       
       console.log('[OfflineIndicator] Offline tests completed');

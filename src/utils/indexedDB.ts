@@ -1,4 +1,3 @@
-
 interface OfflineSale {
   id: string;
   user_id: string;
@@ -45,7 +44,7 @@ interface OfflineCustomer {
 
 interface SyncQueueItem {
   id: string;
-  type: 'sale' | 'product' | 'customer' | 'transaction';
+  type: 'sale' | 'product' | 'customer' | 'inventory';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp: string;
@@ -57,11 +56,10 @@ interface SyncQueueItem {
 class OfflineDatabase {
   private db: IDBDatabase | null = null;
   private dbName = 'DukaFitiOfflineV2';
-  private version = 7; // Increased version to fix the error
+  private version = 7;
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Clear existing databases to prevent version conflicts
       this.clearExistingDatabases().then(() => {
         const request = indexedDB.open(this.dbName, this.version);
 
@@ -86,14 +84,13 @@ class OfflineDatabase {
 
   private async clearExistingDatabases(): Promise<void> {
     try {
-      // Delete old database versions
       const oldDatabases = ['DukaFitiOffline', 'DukaFitiOfflineV1', 'DukaFitiRobustV2'];
       for (const dbName of oldDatabases) {
         try {
           await new Promise<void>((resolve, reject) => {
             const deleteReq = indexedDB.deleteDatabase(dbName);
             deleteReq.onsuccess = () => resolve();
-            deleteReq.onerror = () => resolve(); // Continue even if deletion fails
+            deleteReq.onerror = () => resolve();
             deleteReq.onblocked = () => resolve();
           });
         } catch (error) {
@@ -106,7 +103,6 @@ class OfflineDatabase {
   }
 
   private createStores(db: IDBDatabase): void {
-    // Sales store
     if (!db.objectStoreNames.contains('sales')) {
       const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
       salesStore.createIndex('user_id', 'user_id', { unique: false });
@@ -115,7 +111,6 @@ class OfflineDatabase {
       salesStore.createIndex('synced', 'synced', { unique: false });
     }
 
-    // Products store
     if (!db.objectStoreNames.contains('products')) {
       const productsStore = db.createObjectStore('products', { keyPath: 'id' });
       productsStore.createIndex('user_id', 'user_id', { unique: false });
@@ -123,7 +118,6 @@ class OfflineDatabase {
       productsStore.createIndex('name', 'name', { unique: false });
     }
 
-    // Customers store
     if (!db.objectStoreNames.contains('customers')) {
       const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
       customersStore.createIndex('user_id', 'user_id', { unique: false });
@@ -131,7 +125,6 @@ class OfflineDatabase {
       customersStore.createIndex('phone', 'phone', { unique: false });
     }
 
-    // Sync queue
     if (!db.objectStoreNames.contains('syncQueue')) {
       const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
       syncStore.createIndex('type', 'type', { unique: false });
@@ -140,13 +133,27 @@ class OfflineDatabase {
       syncStore.createIndex('synced', 'synced', { unique: false });
     }
 
-    // Cache metadata store
     if (!db.objectStoreNames.contains('cacheMetadata')) {
       const cacheStore = db.createObjectStore('cacheMetadata', { keyPath: 'key' });
       cacheStore.createIndex('lastUpdated', 'lastUpdated', { unique: false });
     }
 
     console.log('IndexedDB stores created successfully');
+  }
+
+  // New method: storeOfflineData
+  async storeOfflineData(storeName: string, data: any): Promise<void> {
+    return this.storeData(storeName, data);
+  }
+
+  // New method: getOfflineData
+  async getOfflineData(storeName: string, id?: string): Promise<any> {
+    return this.getData(storeName, id);
+  }
+
+  // New method: deleteOfflineData
+  async deleteOfflineData(storeName: string, id: string): Promise<void> {
+    return this.deleteData(storeName, id);
   }
 
   async storeData(storeName: string, data: any): Promise<void> {
@@ -205,7 +212,6 @@ class OfflineDatabase {
     });
   }
 
-  // Sync queue operations
   async addToSyncQueue(operation: SyncQueueItem): Promise<void> {
     return this.storeData('syncQueue', operation);
   }
@@ -227,7 +233,6 @@ class OfflineDatabase {
     }
   }
 
-  // Cache metadata operations
   async setCacheMetadata(key: string, metadata: any): Promise<void> {
     return this.storeData('cacheMetadata', {
       key,
@@ -240,10 +245,8 @@ class OfflineDatabase {
     return this.getData('cacheMetadata', key);
   }
 
-  // Test database functionality
   async testOfflineCapabilities(): Promise<{ success: boolean; details: any }> {
     try {
-      // Test data creation
       const testData = {
         id: 'test_' + Date.now(),
         name: 'Test Product',
@@ -252,16 +255,12 @@ class OfflineDatabase {
         timestamp: new Date().toISOString()
       };
 
-      // Test storing data
       await this.storeData('products', testData);
-      
-      // Test retrieving data
       const retrieved = await this.getData('products', testData.id);
       if (!retrieved || retrieved.id !== testData.id) {
         throw new Error('Data retrieval failed');
       }
 
-      // Test sync queue
       const syncItem: SyncQueueItem = {
         id: 'sync_test_' + Date.now(),
         type: 'product',
@@ -276,7 +275,6 @@ class OfflineDatabase {
       await this.addToSyncQueue(syncItem);
       const syncQueue = await this.getSyncQueue();
       
-      // Clean up test data
       await this.deleteData('products', testData.id);
       await this.removeFromSyncQueue(syncItem.id);
 
@@ -304,11 +302,9 @@ class OfflineDatabase {
 
 export const offlineDB = new OfflineDatabase();
 
-// Auto-initialize with error handling
 offlineDB.init().then(() => {
   console.log('✅ IndexedDB initialized successfully');
   
-  // Run tests after initialization
   setTimeout(async () => {
     const testResult = await offlineDB.testOfflineCapabilities();
     if (testResult.success) {

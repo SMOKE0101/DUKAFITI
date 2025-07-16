@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -12,6 +11,8 @@ interface OfflineState {
   pendingOperations: number;
   lastSyncTime: string | null;
   syncErrors: string[];
+  syncProgress: number;
+  errors: string[];
 }
 
 interface OfflineOperation {
@@ -35,7 +36,9 @@ export const useOfflineManager = () => {
     isSyncing: false,
     pendingOperations: 0,
     lastSyncTime: localStorage.getItem('lastSyncTime'),
-    syncErrors: []
+    syncErrors: [],
+    syncProgress: 0,
+    errors: []
   });
 
   // Initialize offline system
@@ -68,16 +71,12 @@ export const useOfflineManager = () => {
     try {
       console.log('[OfflineManager] Initializing offline system...');
       
-      // Wait for IndexedDB to be ready
       await offlineDB.init();
-      
-      // Load pending operations count
       await loadPendingOperationsCount();
       
       setOfflineState(prev => ({ ...prev, isInitialized: true }));
       console.log('[OfflineManager] Offline system initialized successfully');
       
-      // Initial sync if online
       if (navigator.onLine && user) {
         setTimeout(() => syncPendingOperations(), 2000);
       }
@@ -87,7 +86,8 @@ export const useOfflineManager = () => {
       setOfflineState(prev => ({ 
         ...prev, 
         isInitialized: true,
-        syncErrors: [`Initialization failed: ${error.message}`]
+        syncErrors: [`Initialization failed: ${error.message}`],
+        errors: [`Initialization failed: ${error.message}`]
       }));
     }
   };
@@ -125,13 +125,9 @@ export const useOfflineManager = () => {
     };
 
     try {
-      // Store in IndexedDB
       await offlineDB.addToSyncQueue(offlineOperation);
-      
-      // Update pending count
       await loadPendingOperationsCount();
       
-      // Try immediate sync if online
       if (offlineState.isOnline && user) {
         setTimeout(() => syncPendingOperations(), 500);
       }
@@ -154,7 +150,8 @@ export const useOfflineManager = () => {
     setOfflineState(prev => ({ 
       ...prev, 
       isSyncing: true,
-      syncErrors: []
+      syncErrors: [],
+      syncProgress: 0
     }));
 
     try {
@@ -165,6 +162,7 @@ export const useOfflineManager = () => {
         setOfflineState(prev => ({ 
           ...prev, 
           isSyncing: false,
+          syncProgress: 100,
           lastSyncTime: new Date().toISOString()
         }));
         localStorage.setItem('lastSyncTime', new Date().toISOString());
@@ -173,7 +171,6 @@ export const useOfflineManager = () => {
 
       console.log(`[OfflineManager] Starting sync of ${totalOperations} operations`);
 
-      // Sort by priority and timestamp
       const sortedOperations = operations.sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
@@ -184,7 +181,15 @@ export const useOfflineManager = () => {
       let completed = 0;
       const errors: string[] = [];
 
-      for (const operation of sortedOperations) {
+      for (let i = 0; i < sortedOperations.length; i++) {
+        const operation = sortedOperations[i];
+        const progress = Math.round(((i + 1) / totalOperations) * 100);
+        
+        setOfflineState(prev => ({ 
+          ...prev, 
+          syncProgress: progress 
+        }));
+
         try {
           const success = await syncSingleOperation(operation);
           if (success) {
@@ -211,9 +216,11 @@ export const useOfflineManager = () => {
       setOfflineState(prev => ({ 
         ...prev, 
         isSyncing: false,
+        syncProgress: 100,
         pendingOperations: finalPendingCount,
         lastSyncTime: syncTime,
-        syncErrors: errors
+        syncErrors: errors,
+        errors: errors
       }));
 
       localStorage.setItem('lastSyncTime', syncTime);
@@ -242,7 +249,9 @@ export const useOfflineManager = () => {
       setOfflineState(prev => ({ 
         ...prev, 
         isSyncing: false,
-        syncErrors: [`Sync failed: ${error.message}`]
+        syncProgress: 0,
+        syncErrors: [`Sync failed: ${error.message}`],
+        errors: [`Sync failed: ${error.message}`]
       }));
     }
   }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
@@ -363,7 +372,6 @@ export const useOfflineManager = () => {
     }
   };
 
-  // Force sync now
   const forceSyncNow = useCallback(async () => {
     if (offlineState.isOnline && !offlineState.isSyncing) {
       await syncPendingOperations();
@@ -376,12 +384,10 @@ export const useOfflineManager = () => {
     }
   }, [offlineState.isOnline, offlineState.isSyncing, syncPendingOperations, toast]);
 
-  // Clear sync errors
   const clearSyncErrors = useCallback(() => {
-    setOfflineState(prev => ({ ...prev, syncErrors: [] }));
+    setOfflineState(prev => ({ ...prev, syncErrors: [], errors: [] }));
   }, []);
 
-  // Get offline data
   const getOfflineData = useCallback(async (type: string, id?: string) => {
     try {
       return await offlineDB.getData(type, id);

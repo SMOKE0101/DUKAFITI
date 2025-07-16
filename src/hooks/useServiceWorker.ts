@@ -8,14 +8,12 @@ export const useServiceWorker = () => {
   const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    // Register service worker
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
           console.log('[SW] Registering robust service worker...');
           setIsInstalling(true);
           
-          // Unregister any existing service workers first
           const registrations = await navigator.serviceWorker.getRegistrations();
           await Promise.all(registrations.map(registration => registration.unregister()));
           
@@ -28,7 +26,6 @@ export const useServiceWorker = () => {
           setSwRegistration(registration);
           setIsInstalling(false);
 
-          // Check for updates
           registration.addEventListener('updatefound', () => {
             console.log('[SW] Update found');
             const newWorker = registration.installing;
@@ -41,14 +38,18 @@ export const useServiceWorker = () => {
             }
           });
 
-          // Handle waiting service worker
           if (registration.waiting) {
             setUpdateAvailable(true);
           }
 
-          // Setup background sync
-          if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-            registration.sync.register('background-sync').catch(console.error);
+          // Background sync registration (with fallback)
+          try {
+            if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+              // Only register if the browser supports background sync
+              await registration.sync?.register('background-sync');
+            }
+          } catch (error) {
+            console.warn('[SW] Background sync not supported:', error);
           }
 
         } catch (error) {
@@ -58,15 +59,12 @@ export const useServiceWorker = () => {
       }
     };
 
-    // Register SW immediately
     registerSW();
 
-    // Online/offline detection
     const handleOnline = () => {
       console.log('[SW] App is online');
       setIsOnline(true);
       
-      // Trigger sync when back online
       if (swRegistration?.active) {
         swRegistration.active.postMessage({ type: 'FORCE_SYNC' });
       }
