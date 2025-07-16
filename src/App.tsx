@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { ProductionToaster } from "@/components/ui/production-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -48,7 +47,7 @@ function App() {
   const [isOfflineReady, setIsOfflineReady] = useState(false);
 
   useEffect(() => {
-    // Enhanced service worker registration for robust offline support
+    // Enhanced service worker registration for consistent reload behavior
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
         try {
@@ -58,7 +57,7 @@ function App() {
           
           console.log('[App] Cleared existing service workers');
           
-          // Register the enhanced service worker
+          // Register the enhanced service worker with immediate activation
           const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
             updateViaCache: 'none' // Always check for updates
@@ -66,29 +65,63 @@ function App() {
           
           console.log('[App] Enhanced Service Worker registered:', registration.scope);
           
-          // Handle service worker updates
+          // Handle service worker updates with immediate activation
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[App] New service worker available');
-                  // Auto-update in background for seamless experience
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    console.log('[App] New service worker available - activating immediately');
+                    // Auto-update immediately for consistent reload behavior
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    
+                    // Reload after a short delay to ensure SW is active
+                    setTimeout(() => {
+                      console.log('[App] Reloading to activate new service worker');
+                      window.location.reload();
+                    }, 100);
+                  } else {
+                    console.log('[App] Service worker activated for the first time');
+                  }
                 }
               });
             }
           });
 
+          // Listen for service worker control changes
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('[App] Service worker controller changed');
+            // Don't auto-reload here to prevent loops
+          });
+
           // Listen for service worker messages
           navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'SW_UPDATED') {
-              console.log('[App] Service worker updated, reloading...');
-              window.location.reload();
+              console.log('[App] Service worker updated');
+              // Handle updates gracefully without forced reload
             }
           });
 
-          setIsOfflineReady(true);
+          // Ensure service worker is ready before marking as offline-ready
+          if (registration.active) {
+            setIsOfflineReady(true);
+          } else {
+            // Wait for service worker to become active
+            registration.addEventListener('updatefound', () => {
+              const worker = registration.installing;
+              if (worker) {
+                worker.addEventListener('statechange', () => {
+                  if (worker.state === 'activated') {
+                    setIsOfflineReady(true);
+                  }
+                });
+              }
+            });
+            
+            // Fallback timeout
+            setTimeout(() => setIsOfflineReady(true), 2000);
+          }
 
         } catch (error) {
           console.error('[App] Service Worker registration failed:', error);
@@ -192,13 +225,13 @@ function App() {
     };
   }, []);
 
-  // Show loading state while offline infrastructure is setting up
+  // CRITICAL: Don't show loading state for too long to prevent blank screens
   if (!isOfflineReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing offline capabilities...</p>
+          <p className="text-muted-foreground">Preparing offline capabilities...</p>
         </div>
       </div>
     );

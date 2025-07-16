@@ -1,7 +1,6 @@
-
-const CACHE_NAME = 'dukasmart-v3.1.0';
-const RUNTIME_CACHE = 'dukasmart-runtime-v3.1.0';
-const API_CACHE = 'dukasmart-api-v3.1.0';
+const CACHE_NAME = 'dukasmart-v3.2.0';
+const RUNTIME_CACHE = 'dukasmart-runtime-v3.2.0';
+const API_CACHE = 'dukasmart-api-v3.2.0';
 
 // Enhanced core app shell resources for full offline support
 const CORE_ASSETS = [
@@ -37,7 +36,7 @@ const SPA_ROUTES = [
 
 // Install event - cache core assets and app shell
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3.1.0');
+  console.log('[SW] Installing service worker v3.2.0');
   
   event.waitUntil(
     Promise.all([
@@ -56,9 +55,9 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3.1.0');
+  console.log('[SW] Activating service worker v3.2.0');
   
   event.waitUntil(
     Promise.all([
@@ -79,7 +78,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Enhanced fetch event handling
+// Enhanced fetch event handling with consistent navigation logic
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -98,11 +97,93 @@ self.addEventListener('fetch', (event) => {
   } else if (isAPIRequest(request)) {
     event.respondWith(handleAPIRequest(request));
   } else if (isNavigationRequest(request) || isSPARoute(url.pathname)) {
-    event.respondWith(handleNavigation(request));
+    // CRITICAL FIX: Always serve app shell for navigation, regardless of online state
+    event.respondWith(handleNavigationConsistent(request));
   } else {
     event.respondWith(handleGenericRequest(request));
   }
 });
+
+// FIXED: Consistent navigation handling for both online and offline
+async function handleNavigationConsistent(request) {
+  const url = new URL(request.url);
+  
+  console.log('[SW] Handling navigation consistently for:', url.pathname);
+  
+  // For SPA routes, ALWAYS serve from cache first for consistency
+  if (isSPARoute(url.pathname)) {
+    console.log('[SW] SPA route detected, serving app shell from cache:', url.pathname);
+    
+    try {
+      // First, try to serve the cached app shell
+      const appShell = await serveAppShell();
+      
+      if (appShell) {
+        console.log('[SW] Served cached app shell for:', url.pathname);
+        
+        // Update cache in background if online (don't wait for it)
+        if (navigator.onLine) {
+          updateNavigationCacheInBackground(request);
+        }
+        
+        return appShell;
+      }
+    } catch (cacheError) {
+      console.warn('[SW] Cache failed for navigation, trying network:', cacheError);
+    }
+    
+    // Only if cache completely fails, try network as fallback
+    try {
+      const networkResponse = await fetch(request);
+      if (networkResponse.ok) {
+        const cache = await caches.open(RUNTIME_CACHE);
+        cache.put(request, networkResponse.clone());
+        return networkResponse;
+      }
+    } catch (networkError) {
+      console.log('[SW] Network also failed, serving minimal app shell');
+    }
+    
+    // Last resort: serve minimal app shell
+    return await serveAppShell();
+  }
+  
+  // For non-SPA routes, try network first but fallback to cache
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+  } catch (error) {
+    console.log('[SW] Network failed for non-SPA route, checking cache');
+  }
+  
+  // Fallback to cache for non-SPA routes
+  const cache = await caches.open(RUNTIME_CACHE);
+  const cachedResponse = await cache.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  // Ultimate fallback: serve app shell
+  return await serveAppShell();
+}
+
+// Background cache update (don't block response)
+async function updateNavigationCacheInBackground(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response);
+      console.log('[SW] Updated navigation cache in background for:', request.url);
+    }
+  } catch (error) {
+    console.log('[SW] Background cache update failed:', error);
+  }
+}
 
 // Handle static assets (cache-first strategy)
 async function handleStaticAsset(request) {
@@ -199,52 +280,6 @@ async function handleAPIRequest(request) {
         }
       }
     );
-  }
-}
-
-// Handle navigation requests (CRITICAL: Always serve app shell for SPA routes)
-async function handleNavigation(request) {
-  const url = new URL(request.url);
-  
-  try {
-    // For SPA routes, always try to serve the app shell first when offline
-    if (isSPARoute(url.pathname)) {
-      console.log('[SW] Handling SPA route:', url.pathname);
-      
-      // Check if we're offline or network request would fail
-      if (!navigator.onLine) {
-        console.log('[SW] Offline detected, serving app shell for:', url.pathname);
-        return await serveAppShell();
-      }
-      
-      // Try network first when online
-      try {
-        const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
-          const cache = await caches.open(RUNTIME_CACHE);
-          cache.put(request, networkResponse.clone());
-          return networkResponse;
-        }
-      } catch (networkError) {
-        console.log('[SW] Network failed for SPA route, serving app shell:', url.pathname);
-        return await serveAppShell();
-      }
-    }
-    
-    // For non-SPA routes, try network first
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    }
-    
-    throw new Error('Network request failed');
-    
-  } catch (error) {
-    console.log('[SW] Navigation failed, serving app shell for:', request.url);
-    return await serveAppShell();
   }
 }
 
@@ -432,7 +467,7 @@ function generateMinimalAppShell() {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DukaSmart - Offline</title>
+        <title>DukaSmart - Loading...</title>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -469,15 +504,9 @@ function generateMinimalAppShell() {
           <div class="loading">
             <div class="spinner"></div>
             <p>Loading DukaSmart...</p>
-            <p style="font-size: 14px; opacity: 0.7;">Working in offline mode</p>
           </div>
         </div>
-        <script>
-          // Try to load the main app
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        </script>
+        <script type="module" src="/src/main.tsx"></script>
       </body>
     </html>
   `;
