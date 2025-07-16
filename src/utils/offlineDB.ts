@@ -319,10 +319,9 @@ class OfflineDatabase {
     await this.store('syncQueue', queueItem);
   }
 
-  async getQueuedActions(): Promise<OfflineAction[]> {
-    return this.getAllOfflineData('syncQueue').then(actions => 
-      actions.filter(action => !action.synced)
-    );
+  async getQueuedActions(userId?: string): Promise<OfflineAction[]> {
+    const allActions = await this.getAllOfflineData('syncQueue');
+    return allActions.filter(action => !action.synced && (!userId || action.user_id === userId));
   }
 
   async markActionSynced(actionId: string): Promise<void> {
@@ -333,18 +332,19 @@ class OfflineDatabase {
     }
   }
 
-  async markActionFailed(actionId: string): Promise<void> {
+  async markActionFailed(actionId: string, errorMessage: string): Promise<void> {
     const action = await this.getOfflineData('syncQueue', actionId);
     if (action) {
       action.attempts = (action.attempts || 0) + 1;
       action.lastAttempt = Date.now();
+      action.errorMessage = errorMessage;
       await this.store('syncQueue', action);
     }
   }
 
-  async setLastSyncTime(timestamp: number): Promise<void> {
+  async setLastSyncTime(key: string, timestamp: number): Promise<void> {
     await this.store('settings', {
-      id: 'lastSyncTime',
+      id: `lastSyncTime_${key}`,
       value: timestamp,
       updated_at: new Date().toISOString()
     });
@@ -355,7 +355,7 @@ class OfflineDatabase {
     
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['syncQueue'], 'readwrite');
-      const store = transaction.objectStore(storeName);
+      const store = transaction.objectStore('syncQueue');
       
       const queueItem = {
         ...operation,
