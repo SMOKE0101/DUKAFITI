@@ -11,6 +11,7 @@ import { offlineOrderManager, OfflineOrder } from '../../utils/offlineOrderManag
 import { SalesDeduplication } from '../../utils/salesDeduplication';
 import { useToast } from '../../hooks/use-toast';
 import { useSyncContext } from '../sync/SyncStatusProvider';
+import { AutoRefreshHandler } from '../sync/AutoRefreshHandler';
 
 const OrderManagement = () => {
   const { user } = useAuth();
@@ -49,42 +50,6 @@ const OrderManagement = () => {
       setIsLoading(false);
     }
   };
-
-  // Enhanced event listeners for automatic refresh
-  useEffect(() => {
-    const handleRefreshData = () => {
-      console.log('[OrderManagement] Refresh data event received');
-      loadOfflineOrders();
-    };
-
-    const handleOrdersUpdated = () => {
-      console.log('[OrderManagement] Orders updated event received');
-      loadOfflineOrders();
-    };
-
-    const handleSyncCompleted = () => {
-      console.log('[OrderManagement] Sync completed event received');
-      loadOfflineOrders();
-    };
-
-    const handleForceRefresh = () => {
-      console.log('[OrderManagement] Force refresh event received');
-      loadOfflineOrders();
-    };
-
-    // Listen to all relevant events
-    window.addEventListener('refresh-data', handleRefreshData);
-    window.addEventListener('orders-updated', handleOrdersUpdated);
-    window.addEventListener('sync-completed', handleSyncCompleted);
-    window.addEventListener('force-refresh', handleForceRefresh);
-
-    return () => {
-      window.removeEventListener('refresh-data', handleRefreshData);
-      window.removeEventListener('orders-updated', handleOrdersUpdated);
-      window.removeEventListener('sync-completed', handleSyncCompleted);
-      window.removeEventListener('force-refresh', handleForceRefresh);
-    };
-  }, []);
 
   // Auto-refresh when sync state changes
   useEffect(() => {
@@ -214,6 +179,9 @@ const OrderManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Auto-refresh handler for real-time updates */}
+      <AutoRefreshHandler onRefresh={loadOfflineOrders} component="OrderManagement" />
+
       {/* Enhanced Sync Status Header */}
       <Card>
         <CardHeader>
