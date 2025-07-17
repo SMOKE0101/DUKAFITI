@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import CustomerHistoryModal from './customers/CustomerHistoryModal';
 import RepaymentDrawer from './customers/RepaymentDrawer';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { supabase } from '../integrations/supabase/client';
+import { useSyncContext } from './sync/SyncStatusProvider';
 
 const CustomerManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +22,21 @@ const CustomerManagement: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
   const { customers, loading, createCustomer, updateCustomer } = useSupabaseCustomers();
+  const { isOnline, isSyncing } = useSyncContext();
+
+  // Refresh data when sync completes
+  useEffect(() => {
+    const handleRefreshData = () => {
+      // The useSupabaseCustomers hook will automatically refresh due to real-time subscriptions
+      console.log('[CustomerManagement] Refreshing customer data after sync');
+    };
+
+    window.addEventListener('refresh-data', handleRefreshData);
+
+    return () => {
+      window.removeEventListener('refresh-data', handleRefreshData);
+    };
+  }, []);
 
   // Set up real-time subscription for customer updates
   useEffect(() => {
@@ -104,16 +119,34 @@ const CustomerManagement: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading || isSyncing) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2 text-sm text-muted-foreground">
+          {isSyncing ? 'Syncing customer data...' : 'Loading customers...'}
+        </span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Offline warning */}
+      {!isOnline && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-orange-800">
+              <WifiOff className="w-5 h-5" />
+              <span className="font-medium">Offline Mode</span>
+            </div>
+            <p className="text-sm text-orange-700 mt-1">
+              Customer data is read-only while offline. Changes will be available when you reconnect.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header with prominent Add Customer button */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>

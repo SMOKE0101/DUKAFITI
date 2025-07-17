@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import { useOrderSync } from '../../hooks/useOrderSync';
 import { useAuth } from '../../hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -11,6 +9,7 @@ import { RefreshCw, Wifi, WifiOff, Clock, CheckCircle, AlertCircle } from 'lucid
 import { offlineOrderManager, OfflineOrder } from '../../utils/offlineOrderManager';
 import { SalesDeduplication } from '../../utils/salesDeduplication';
 import { useToast } from '../../hooks/use-toast';
+import { useSyncContext } from '../sync/SyncStatusProvider';
 
 const OrderManagement = () => {
   const { user } = useAuth();
@@ -18,12 +17,12 @@ const OrderManagement = () => {
   const {
     isOnline,
     isSyncing,
-    pendingOrdersCount,
+    pendingOperations,
     lastSyncTime,
-    syncErrors,
+    errors,
     forceSyncNow,
     clearSyncErrors
-  } = useOrderSync();
+  } = useSyncContext();
 
   const [offlineOrders, setOfflineOrders] = useState<OfflineOrder[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +43,19 @@ const OrderManagement = () => {
       setIsLoading(false);
     }
   };
+
+  // Refresh orders when sync completes
+  useEffect(() => {
+    const handleRefreshData = () => {
+      loadOfflineOrders();
+    };
+
+    window.addEventListener('refresh-data', handleRefreshData);
+
+    return () => {
+      window.removeEventListener('refresh-data', handleRefreshData);
+    };
+  }, []);
 
   const handleCleanupDuplicates = async () => {
     try {
@@ -144,17 +156,17 @@ const OrderManagement = () => {
             ) : (
               <WifiOff className="h-5 w-5 text-red-600" />
             )}
-            Order Sync Status
+            Unified Order Sync Status
           </CardTitle>
           <CardDescription>
-            {isOnline ? 'Connected - Orders will sync automatically' : 'Offline - Orders will sync when connection is restored'}
+            {isOnline ? 'Connected - Orders sync automatically with validation' : 'Offline - Orders will sync when connection is restored'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-orange-600" />
-              <span className="text-sm">Pending: {pendingOrdersCount}</span>
+              <span className="text-sm">Pending: {pendingOperations}</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -168,7 +180,7 @@ const OrderManagement = () => {
 
           {lastSyncTime && (
             <p className="text-sm text-muted-foreground">
-              Last sync: {formatTimestamp(lastSyncTime)}
+              Last sync: {new Date(lastSyncTime).toLocaleString()}
             </p>
           )}
 
@@ -201,15 +213,18 @@ const OrderManagement = () => {
             </Button>
           </div>
 
-          {syncErrors.length > 0 && (
+          {errors.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-md p-3">
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="text-sm font-medium text-red-800">Sync Errors</h4>
                   <ul className="mt-1 text-sm text-red-700 list-disc list-inside">
-                    {syncErrors.map((error, index) => (
+                    {errors.slice(0, 3).map((error, index) => (
                       <li key={index}>{error}</li>
                     ))}
+                    {errors.length > 3 && (
+                      <li>+{errors.length - 3} more errors</li>
+                    )}
                   </ul>
                 </div>
                 <Button onClick={clearSyncErrors} variant="ghost" size="sm">
