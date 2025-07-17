@@ -14,6 +14,7 @@ interface SyncContextType {
   createOfflineOrder: (orderData: any) => Promise<string>;
   forceSyncNow: () => Promise<void>;
   clearSyncErrors: () => void;
+  triggerUIRefresh: () => void;
 }
 
 const SyncContext = createContext<SyncContextType | null>(null);
@@ -36,10 +37,10 @@ export const SyncStatusProvider: React.FC<SyncStatusProviderProps> = ({ children
   const navigate = useNavigate();
   const [lastRoute, setLastRoute] = useState(location.pathname);
 
-  // Handle sync completion and ensure UI consistency
+  // Enhanced sync completion handler with automatic UI refresh
   useEffect(() => {
     const handleSyncCompleted = (event: CustomEvent) => {
-      console.log('[SyncStatusProvider] Sync completed, refreshing UI state');
+      console.log('[SyncStatusProvider] Sync completed, triggering comprehensive UI refresh');
       
       // Ensure we stay on the current route unless it's invalid
       const currentPath = location.pathname;
@@ -50,14 +51,41 @@ export const SyncStatusProvider: React.FC<SyncStatusProviderProps> = ({ children
         navigate('/app', { replace: true });
       }
 
-      // Dispatch custom event to refresh data in components
+      // Trigger comprehensive data refresh
       window.dispatchEvent(new CustomEvent('refresh-data'));
+      window.dispatchEvent(new CustomEvent('orders-updated'));
+      window.dispatchEvent(new CustomEvent('sales-updated'));
+      
+      // Force component re-renders
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('force-refresh'));
+      }, 200);
     };
 
+    const handleOrdersUpdated = () => {
+      console.log('[SyncStatusProvider] Orders updated, refreshing order components');
+    };
+
+    const handleSalesUpdated = () => {
+      console.log('[SyncStatusProvider] Sales updated, refreshing sales components');
+    };
+
+    const handleForceRefresh = () => {
+      console.log('[SyncStatusProvider] Force refresh triggered');
+      // Additional refresh logic if needed
+    };
+
+    // Listen to all sync-related events
     window.addEventListener('sync-completed', handleSyncCompleted as EventListener);
+    window.addEventListener('orders-updated', handleOrdersUpdated as EventListener);
+    window.addEventListener('sales-updated', handleSalesUpdated as EventListener);
+    window.addEventListener('force-refresh', handleForceRefresh as EventListener);
 
     return () => {
       window.removeEventListener('sync-completed', handleSyncCompleted as EventListener);
+      window.removeEventListener('orders-updated', handleOrdersUpdated as EventListener);
+      window.removeEventListener('sales-updated', handleSalesUpdated as EventListener);
+      window.removeEventListener('force-refresh', handleForceRefresh as EventListener);
     };
   }, [location.pathname, navigate]);
 
@@ -66,12 +94,24 @@ export const SyncStatusProvider: React.FC<SyncStatusProviderProps> = ({ children
     setLastRoute(location.pathname);
   }, [location.pathname]);
 
-  // Prevent navigation during sync to avoid UI corruption
+  // Enhanced online status monitoring
   useEffect(() => {
-    if (syncManager.isSyncing) {
-      console.log('[SyncStatusProvider] Sync in progress, locking navigation');
-    }
-  }, [syncManager.isSyncing]);
+    const handleOnlineStatus = () => {
+      if (navigator.onLine && syncManager.pendingOperations > 0) {
+        console.log('[SyncStatusProvider] Device online with pending operations, triggering sync');
+        setTimeout(() => {
+          syncManager.forceSyncNow();
+        }, 1000);
+      }
+    };
+
+    // Check online status periodically
+    const onlineCheckInterval = setInterval(handleOnlineStatus, 5000);
+
+    return () => {
+      clearInterval(onlineCheckInterval);
+    };
+  }, [syncManager]);
 
   const contextValue: SyncContextType = {
     isOnline: syncManager.isOnline,
@@ -83,7 +123,8 @@ export const SyncStatusProvider: React.FC<SyncStatusProviderProps> = ({ children
     completedOperations: syncManager.completedOperations,
     createOfflineOrder: syncManager.createOfflineOrder,
     forceSyncNow: syncManager.forceSyncNow,
-    clearSyncErrors: syncManager.clearSyncErrors
+    clearSyncErrors: syncManager.clearSyncErrors,
+    triggerUIRefresh: syncManager.triggerUIRefresh
   };
 
   return (

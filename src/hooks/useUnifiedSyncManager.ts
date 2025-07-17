@@ -35,6 +35,7 @@ export const useUnifiedSyncManager = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const syncInProgress = useRef(false);
+  const hasSyncedOnce = useRef(false);
   
   const [syncState, setSyncState] = useState<SyncState>({
     isOnline: navigator.onLine,
@@ -46,7 +47,7 @@ export const useUnifiedSyncManager = () => {
     completedOperations: 0
   });
 
-  // Data validation schemas
+  // Enhanced data validation with strict deduplication checks
   const validateSaleData = (data: any): ValidationResult => {
     const errors: string[] = [];
     
@@ -65,12 +66,15 @@ export const useUnifiedSyncManager = () => {
     if (!data.payment_method) {
       errors.push('Missing payment_method');
     }
+    if (!data.offline_id) {
+      errors.push('Missing offline_id for deduplication');
+    }
 
     if (errors.length > 0) {
       return { isValid: false, errors };
     }
 
-    // Sanitize and normalize data
+    // Sanitize and normalize data with guaranteed offline_id
     const sanitizedData = {
       user_id: user?.id,
       product_id: data.product_id,
@@ -84,81 +88,21 @@ export const useUnifiedSyncManager = () => {
       customer_id: data.customer_id || null,
       customer_name: data.customer_name || null,
       timestamp: data.timestamp || new Date().toISOString(),
-      offline_id: data.offline_id || null,
+      offline_id: data.offline_id, // Critical for deduplication
       synced: true
     };
 
     return { isValid: true, errors: [], sanitizedData };
   };
 
-  const validateProductData = (data: any): ValidationResult => {
-    const errors: string[] = [];
-    
-    if (!data.name || typeof data.name !== 'string') {
-      errors.push('Invalid product name');
-    }
-    if (!data.category || typeof data.category !== 'string') {
-      errors.push('Invalid category');
-    }
-    if (data.cost_price === undefined || data.cost_price < 0) {
-      errors.push('Invalid cost_price');
-    }
-    if (data.selling_price === undefined || data.selling_price < 0) {
-      errors.push('Invalid selling_price');
-    }
-
-    if (errors.length > 0) {
-      return { isValid: false, errors };
-    }
-
-    const sanitizedData = {
-      user_id: user?.id,
-      name: String(data.name).trim(),
-      category: String(data.category).trim(),
-      cost_price: Number(data.cost_price),
-      selling_price: Number(data.selling_price),
-      current_stock: Math.floor(Number(data.current_stock) || 0),
-      low_stock_threshold: Math.floor(Number(data.low_stock_threshold) || 10)
-    };
-
-    return { isValid: true, errors: [], sanitizedData };
-  };
-
-  const validateCustomerData = (data: any): ValidationResult => {
-    const errors: string[] = [];
-    
-    if (!data.name || typeof data.name !== 'string') {
-      errors.push('Invalid customer name');
-    }
-    if (!data.phone || typeof data.phone !== 'string') {
-      errors.push('Invalid phone number');
-    }
-
-    if (errors.length > 0) {
-      return { isValid: false, errors };
-    }
-
-    const sanitizedData = {
-      user_id: user?.id,
-      name: String(data.name).trim(),
-      phone: String(data.phone).trim(),
-      email: data.email ? String(data.email).trim() : null,
-      address: data.address ? String(data.address).trim() : null,
-      credit_limit: Number(data.credit_limit) || 1000,
-      outstanding_debt: Number(data.outstanding_debt) || 0,
-      total_purchases: Number(data.total_purchases) || 0,
-      risk_rating: data.risk_rating || 'low'
-    };
-
-    return { isValid: true, errors: [], sanitizedData };
-  };
-
-  // Check for duplicate sales by offline_id
+  // Enhanced duplicate checking with robust error handling
   const checkForDuplicateOrder = async (offlineId: string): Promise<boolean> => {
     try {
+      console.log(`[UnifiedSync] Checking for duplicate order: ${offlineId}`);
+      
       const { data, error } = await supabase
         .from('sales')
-        .select('id')
+        .select('id, offline_id')
         .eq('offline_id', offlineId)
         .maybeSingle();
 
@@ -167,136 +111,60 @@ export const useUnifiedSyncManager = () => {
         return false;
       }
 
-      return !!data;
+      const isDuplicate = !!data;
+      if (isDuplicate) {
+        console.log(`[UnifiedSync] Duplicate found for offline_id: ${offlineId}`);
+      }
+      
+      return isDuplicate;
     } catch (error) {
       console.error('[UnifiedSync] Error checking duplicate:', error);
       return false;
     }
   };
 
-  // Sync a single operation with proper validation and deduplication
-  const syncOperation = async (operation: SyncOperation): Promise<boolean> => {
-    try {
-      console.log(`[UnifiedSync] Syncing ${operation.type} operation:`, operation.id);
-
-      switch (operation.type) {
-        case 'sale':
-          return await syncSaleOperation(operation);
-        case 'product':
-          return await syncProductOperation(operation);
-        case 'customer':
-          return await syncCustomerOperation(operation);
-        case 'inventory_update':
-          return await syncInventoryOperation(operation);
-        default:
-          console.warn(`[UnifiedSync] Unknown operation type: ${operation.type}`);
-          return false;
-      }
-    } catch (error) {
-      console.error(`[UnifiedSync] Error syncing operation ${operation.id}:`, error);
-      return false;
-    }
-  };
-
+  // Enhanced sync operation with idempotency
   const syncSaleOperation = async (operation: SyncOperation): Promise<boolean> => {
-    // Handle offline orders specially
-    if (operation.data.offline_id) {
-      const isDuplicate = await checkForDuplicateOrder(operation.data.offline_id);
-      if (isDuplicate) {
-        console.log(`[UnifiedSync] Order ${operation.data.offline_id} already exists, skipping`);
-        return true;
+    try {
+      console.log(`[UnifiedSync] Processing sale operation:`, operation.data.offline_id);
+
+      // Always check for duplicates before syncing
+      if (operation.data.offline_id) {
+        const isDuplicate = await checkForDuplicateOrder(operation.data.offline_id);
+        if (isDuplicate) {
+          console.log(`[UnifiedSync] Skipping duplicate order: ${operation.data.offline_id}`);
+          return true; // Mark as successful to remove from queue
+        }
       }
-    }
 
-    const validation = validateSaleData(operation.data);
-    if (!validation.isValid) {
-      console.error(`[UnifiedSync] Invalid sale data:`, validation.errors);
-      return false;
-    }
+      const validation = validateSaleData(operation.data);
+      if (!validation.isValid) {
+        console.error(`[UnifiedSync] Invalid sale data:`, validation.errors);
+        return false;
+      }
 
-    const { error } = await supabase
-      .from('sales')
-      .insert([validation.sanitizedData]);
-
-    if (error) {
-      console.error(`[UnifiedSync] Failed to sync sale:`, error);
-      return false;
-    }
-
-    return true;
-  };
-
-  const syncProductOperation = async (operation: SyncOperation): Promise<boolean> => {
-    const validation = validateProductData(operation.data);
-    if (!validation.isValid) {
-      console.error(`[UnifiedSync] Invalid product data:`, validation.errors);
-      return false;
-    }
-
-    if (operation.operation === 'create') {
+      console.log(`[UnifiedSync] Inserting new sale with offline_id: ${operation.data.offline_id}`);
+      
       const { error } = await supabase
-        .from('products')
+        .from('sales')
         .insert([validation.sanitizedData]);
 
-      return !error;
-    } else if (operation.operation === 'update') {
-      const { error } = await supabase
-        .from('products')
-        .update(validation.sanitizedData)
-        .eq('id', operation.data.id)
-        .eq('user_id', user?.id);
+      if (error) {
+        console.error(`[UnifiedSync] Failed to sync sale:`, error);
+        return false;
+      }
 
-      return !error;
-    }
+      console.log(`[UnifiedSync] Successfully synced sale: ${operation.data.offline_id}`);
+      return true;
 
-    return false;
-  };
-
-  const syncCustomerOperation = async (operation: SyncOperation): Promise<boolean> => {
-    const validation = validateCustomerData(operation.data);
-    if (!validation.isValid) {
-      console.error(`[UnifiedSync] Invalid customer data:`, validation.errors);
+    } catch (error) {
+      console.error(`[UnifiedSync] Error syncing sale:`, error);
       return false;
     }
-
-    if (operation.operation === 'create') {
-      const { error } = await supabase
-        .from('customers')
-        .insert([validation.sanitizedData]);
-
-      return !error;
-    } else if (operation.operation === 'update') {
-      const { error } = await supabase
-        .from('customers')
-        .update(validation.sanitizedData)
-        .eq('id', operation.data.id)
-        .eq('user_id', user?.id);
-
-      return !error;
-    }
-
-    return false;
   };
 
-  const syncInventoryOperation = async (operation: SyncOperation): Promise<boolean> => {
-    const { productId, quantityChange, newStock } = operation.data;
-    
-    if (!productId || typeof quantityChange !== 'number') {
-      console.error(`[UnifiedSync] Invalid inventory data`);
-      return false;
-    }
-
-    const { error } = await supabase
-      .from('products')
-      .update({ current_stock: Math.max(0, newStock) })
-      .eq('id', productId)
-      .eq('user_id', user?.id);
-
-    return !error;
-  };
-
-  // Main sync function
-  const executeSync = useCallback(async () => {
+  // Main sync function with enhanced UI refresh
+  const executeSync = useCallback(async (forceRefresh = false) => {
     if (!syncState.isOnline || syncInProgress.current || !user) {
       return;
     }
@@ -316,7 +184,7 @@ export const useUnifiedSyncManager = () => {
       // Get offline orders
       const offlineOrders = await offlineOrderManager.getUnsyncedOrders();
       
-      // Convert orders to sync operations
+      // Convert orders to sync operations with unique offline IDs
       const operations: SyncOperation[] = [];
       
       for (const order of offlineOrders) {
@@ -336,7 +204,7 @@ export const useUnifiedSyncManager = () => {
               customer_id: order.customerId,
               customer_name: order.customerName,
               timestamp: order.timestamp,
-              offline_id: order.offlineId
+              offline_id: order.offlineId // Guaranteed unique ID
             },
             timestamp: order.timestamp,
             attempts: order.syncAttempts || 0
@@ -359,13 +227,19 @@ export const useUnifiedSyncManager = () => {
         }));
         localStorage.setItem('lastUnifiedSyncTime', new Date().toISOString());
         syncInProgress.current = false;
+        
+        // Still trigger UI refresh even if no operations
+        if (forceRefresh || !hasSyncedOnce.current) {
+          triggerUIRefresh();
+          hasSyncedOnce.current = true;
+        }
         return;
       }
 
       // Process operations sequentially to avoid conflicts
       for (const operation of operations) {
         try {
-          const success = await syncOperation(operation);
+          const success = await syncSaleOperation(operation);
           
           if (success) {
             completedCount++;
@@ -436,10 +310,9 @@ export const useUnifiedSyncManager = () => {
 
       console.log(`[UnifiedSync] Sync completed: ${completedCount} synced, ${errors.length} errors`);
 
-      // Trigger UI refresh
-      window.dispatchEvent(new CustomEvent('sync-completed', { 
-        detail: { completedCount, errors: errors.length, timestamp: finalSyncTime }
-      }));
+      // CRITICAL: Always trigger UI refresh after sync
+      triggerUIRefresh();
+      hasSyncedOnce.current = true;
 
     } catch (error) {
       console.error('[UnifiedSync] Sync process failed:', error);
@@ -459,7 +332,26 @@ export const useUnifiedSyncManager = () => {
     }
   }, [syncState.isOnline, user, toast]);
 
-  // Create offline order
+  // Enhanced UI refresh trigger
+  const triggerUIRefresh = useCallback(() => {
+    console.log('[UnifiedSync] Triggering comprehensive UI refresh');
+    
+    // Dispatch multiple events to ensure all components refresh
+    window.dispatchEvent(new CustomEvent('sync-completed', { 
+      detail: { timestamp: new Date().toISOString() }
+    }));
+    
+    window.dispatchEvent(new CustomEvent('refresh-data'));
+    window.dispatchEvent(new CustomEvent('orders-updated'));
+    window.dispatchEvent(new CustomEvent('sales-updated'));
+    
+    // Force a slight delay to ensure all components have time to respond
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('force-refresh'));
+    }, 100);
+  }, []);
+
+  // Create offline order with guaranteed unique ID
   const createOfflineOrder = useCallback(async (orderData: {
     items: Array<{
       productId: string;
@@ -477,7 +369,7 @@ export const useUnifiedSyncManager = () => {
     if (!user) throw new Error('User not authenticated');
 
     try {
-      console.log('[UnifiedSync] Creating offline order:', orderData);
+      console.log('[UnifiedSync] Creating offline order with unique ID');
 
       const offlineId = await offlineOrderManager.storeOfflineOrder({
         userId: user.id,
@@ -498,7 +390,7 @@ export const useUnifiedSyncManager = () => {
 
       // Try to sync immediately if online
       if (syncState.isOnline) {
-        setTimeout(() => executeSync(), 500);
+        setTimeout(() => executeSync(true), 500);
       }
 
       console.log('[UnifiedSync] Offline order created with ID:', offlineId);
@@ -510,13 +402,14 @@ export const useUnifiedSyncManager = () => {
     }
   }, [user, syncState.isOnline, executeSync]);
 
-  // Monitor online/offline status
+  // Enhanced online/offline monitoring with immediate sync
   useEffect(() => {
     const handleOnline = () => {
-      console.log('[UnifiedSync] Device online - starting sync');
+      console.log('[UnifiedSync] Device online - starting immediate sync with UI refresh');
       setSyncState(prev => ({ ...prev, isOnline: true }));
       if (user) {
-        setTimeout(() => executeSync(), 1000);
+        // Force immediate sync and UI refresh when going online
+        setTimeout(() => executeSync(true), 1000);
       }
     };
 
@@ -536,6 +429,12 @@ export const useUnifiedSyncManager = () => {
           ...prev, 
           pendingOperations: unsyncedOrders.length 
         }));
+        
+        // If we have pending operations and we're online, sync immediately
+        if (unsyncedOrders.length > 0 && navigator.onLine && user) {
+          console.log('[UnifiedSync] Found pending operations, syncing immediately');
+          setTimeout(() => executeSync(true), 2000);
+        }
       } catch (error) {
         console.error('[UnifiedSync] Failed to load pending count:', error);
       }
@@ -553,7 +452,7 @@ export const useUnifiedSyncManager = () => {
 
   const forceSyncNow = useCallback(async () => {
     if (syncState.isOnline && !syncState.isSyncing) {
-      await executeSync();
+      await executeSync(true);
     } else if (!syncState.isOnline) {
       toast({
         title: "Offline Mode",
@@ -572,6 +471,7 @@ export const useUnifiedSyncManager = () => {
     createOfflineOrder,
     executeSync,
     forceSyncNow,
-    clearSyncErrors
+    clearSyncErrors,
+    triggerUIRefresh
   };
 };

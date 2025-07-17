@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -21,17 +22,22 @@ const OrderManagement = () => {
     lastSyncTime,
     errors,
     forceSyncNow,
-    clearSyncErrors
+    clearSyncErrors,
+    triggerUIRefresh
   } = useSyncContext();
 
   const [offlineOrders, setOfflineOrders] = useState<OfflineOrder[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const loadOfflineOrders = async () => {
     try {
       setIsLoading(true);
+      console.log('[OrderManagement] Loading offline orders...');
       const orders = await offlineOrderManager.getAllOrders();
       setOfflineOrders(orders);
+      setLastRefresh(new Date());
+      console.log(`[OrderManagement] Loaded ${orders.length} offline orders`);
     } catch (error) {
       console.error('Failed to load offline orders:', error);
       toast({
@@ -44,22 +50,56 @@ const OrderManagement = () => {
     }
   };
 
-  // Refresh orders when sync completes
+  // Enhanced event listeners for automatic refresh
   useEffect(() => {
     const handleRefreshData = () => {
+      console.log('[OrderManagement] Refresh data event received');
       loadOfflineOrders();
     };
 
+    const handleOrdersUpdated = () => {
+      console.log('[OrderManagement] Orders updated event received');
+      loadOfflineOrders();
+    };
+
+    const handleSyncCompleted = () => {
+      console.log('[OrderManagement] Sync completed event received');
+      loadOfflineOrders();
+    };
+
+    const handleForceRefresh = () => {
+      console.log('[OrderManagement] Force refresh event received');
+      loadOfflineOrders();
+    };
+
+    // Listen to all relevant events
     window.addEventListener('refresh-data', handleRefreshData);
+    window.addEventListener('orders-updated', handleOrdersUpdated);
+    window.addEventListener('sync-completed', handleSyncCompleted);
+    window.addEventListener('force-refresh', handleForceRefresh);
 
     return () => {
       window.removeEventListener('refresh-data', handleRefreshData);
+      window.removeEventListener('orders-updated', handleOrdersUpdated);
+      window.removeEventListener('sync-completed', handleSyncCompleted);
+      window.removeEventListener('force-refresh', handleForceRefresh);
     };
   }, []);
 
+  // Auto-refresh when sync state changes
+  useEffect(() => {
+    if (!isSyncing && user) {
+      console.log('[OrderManagement] Sync state changed, refreshing orders');
+      loadOfflineOrders();
+    }
+  }, [isSyncing, user]);
+
+  // Enhanced cleanup duplicates with better feedback
   const handleCleanupDuplicates = async () => {
     try {
       setIsLoading(true);
+      console.log('[OrderManagement] Starting duplicate cleanup...');
+      
       const result = await SalesDeduplication.validateAndCleanup();
       
       if (result.duplicatesRemoved > 0) {
@@ -68,6 +108,9 @@ const OrderManagement = () => {
           description: `Removed ${result.duplicatesRemoved} duplicate orders`,
           duration: 5000,
         });
+        
+        // Trigger UI refresh after cleanup
+        triggerUIRefresh();
       } else {
         toast({
           title: "No Duplicates Found",
@@ -76,7 +119,7 @@ const OrderManagement = () => {
         });
       }
 
-      // Refresh the offline orders
+      // Always refresh the offline orders after cleanup
       await loadOfflineOrders();
 
     } catch (error) {
@@ -94,6 +137,8 @@ const OrderManagement = () => {
   const handleClearSyncedOrders = async () => {
     try {
       setIsLoading(true);
+      console.log('[OrderManagement] Clearing synced orders...');
+      
       await offlineOrderManager.clearSyncedOrders();
       await loadOfflineOrders();
       
@@ -112,6 +157,28 @@ const OrderManagement = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Enhanced force sync with UI feedback
+  const handleForceSyncNow = async () => {
+    try {
+      console.log('[OrderManagement] Force sync triggered');
+      await forceSyncNow();
+      
+      // Additional UI refresh after force sync
+      setTimeout(() => {
+        loadOfflineOrders();
+        triggerUIRefresh();
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Force sync failed:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to force sync",
+        variant: "destructive",
+      });
     }
   };
 
@@ -147,7 +214,7 @@ const OrderManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sync Status Header */}
+      {/* Enhanced Sync Status Header */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -157,9 +224,12 @@ const OrderManagement = () => {
               <WifiOff className="h-5 w-5 text-red-600" />
             )}
             Unified Order Sync Status
+            <Badge variant="outline" className="ml-auto">
+              Last refresh: {lastRefresh.toLocaleTimeString()}
+            </Badge>
           </CardTitle>
           <CardDescription>
-            {isOnline ? 'Connected - Orders sync automatically with validation' : 'Offline - Orders will sync when connection is restored'}
+            {isOnline ? 'Connected - Orders sync automatically with deduplication' : 'Offline - Orders will sync when connection is restored'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -186,7 +256,7 @@ const OrderManagement = () => {
 
           <div className="flex gap-2 flex-wrap">
             <Button
-              onClick={forceSyncNow}
+              onClick={handleForceSyncNow}
               disabled={!isOnline || isSyncing || isLoading}
               size="sm"
             >
@@ -210,6 +280,16 @@ const OrderManagement = () => {
               size="sm"
             >
               Clear Synced
+            </Button>
+
+            <Button
+              onClick={loadOfflineOrders}
+              disabled={isLoading}
+              variant="ghost"
+              size="sm"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
           </div>
 
@@ -236,12 +316,12 @@ const OrderManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Offline Orders List */}
+      {/* Enhanced Offline Orders List */}
       <Card>
         <CardHeader>
           <CardTitle>Offline Orders ({offlineOrders.length})</CardTitle>
           <CardDescription>
-            Orders created while offline and their sync status
+            Orders created while offline and their sync status - auto-refreshes when sync completes
           </CardDescription>
         </CardHeader>
         <CardContent>
