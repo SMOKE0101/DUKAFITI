@@ -12,7 +12,7 @@ import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import PremiumAppLayout from './components/layout/PremiumAppLayout';
 import InventoryPage from './components/InventoryPage';
-import UltraPolishedReportsPage from './pages/UltraPolishedReportsPage';
+import UltraPolishedReportsPage from './components/reports/UltraPolishedReportsPage';
 import Settings from './pages/Settings';
 import CustomersPage from './components/CustomersPage';
 
