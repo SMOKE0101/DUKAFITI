@@ -143,7 +143,9 @@ class OfflineOrderManager {
       const store = transaction.objectStore('orders');
       const index = store.index('synced');
       
-      const request = index.getAll(false);
+      // Use IDBKeyRange for boolean values
+      const range = IDBKeyRange.only(false);
+      const request = index.getAll(range);
       
       request.onsuccess = () => {
         const unsyncedOrders = request.result || [];
@@ -290,7 +292,9 @@ class OfflineOrderManager {
       const store = transaction.objectStore('orders');
       const index = store.index('synced');
       
-      const getAllRequest = index.getAll(true);
+      // Use IDBKeyRange for boolean values
+      const range = IDBKeyRange.only(true);
+      const getAllRequest = index.getAll(range);
       
       getAllRequest.onsuccess = () => {
         const syncedOrders = getAllRequest.result || [];
