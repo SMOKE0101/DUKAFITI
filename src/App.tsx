@@ -1,16 +1,17 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import { Toaster } from 'react-hot-toast';
-import { QueryClient } from 'react-query';
+import { Toaster } from 'sonner';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
-import PremiumAppLayout from './components/PremiumAppLayout';
-import InventoryPage from './pages/InventoryPage';
+import PremiumAppLayout from './components/layout/PremiumAppLayout';
+import InventoryPage from './components/InventoryPage';
 import UltraPolishedReportsPage from './pages/UltraPolishedReportsPage';
 import Settings from './pages/Settings';
 import CustomersPage from './components/CustomersPage';
@@ -19,9 +20,11 @@ import { SyncStatusProvider } from './components/sync/SyncStatusProvider';
 import { UnifiedSyncIndicator } from './components/sync/UnifiedSyncIndicator';
 import SalesManagement from './components/SalesManagement';
 
+const queryClient = new QueryClient();
+
 function App() {
   return (
-    <QueryClient>
+    <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <BrowserRouter>
           <SyncStatusProvider>
@@ -72,7 +75,7 @@ function App() {
           </SyncStatusProvider>
         </BrowserRouter>
       </HelmetProvider>
-    </QueryClient>
+    </QueryClientProvider>
   );
 }
 
