@@ -70,7 +70,8 @@ export const useSupabaseCustomers = () => {
     tableName: 'customers',
     loadFromSupabase,
     transformToLocal,
-    transformFromLocal
+    transformFromLocal,
+    user
   });
 
   // Create customer with offline support

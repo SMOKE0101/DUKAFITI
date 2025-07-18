@@ -104,15 +104,15 @@ export const useOfflineFirstSupabase = <T extends { id: string }>({
   tableName,
   loadFromSupabase,
   transformToLocal,
-  transformFromLocal
-}: UseOfflineFirstSupabaseOptions<T>) => {
+  transformFromLocal,
+  user = null // Accept user as parameter to break circular dependency
+}: UseOfflineFirstSupabaseOptions<T> & { user?: any }) => {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   
-  const { user } = useAuth();
   const { toast } = useToast();
   const initializationRef = useRef(false);
   const loadingRef = useRef(false);

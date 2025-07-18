@@ -38,8 +38,9 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <AuthProvider>
-              <TooltipProvider>
+            <ErrorBoundary>
+              <AuthProvider>
+                <TooltipProvider>
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
@@ -78,8 +79,9 @@ function App() {
                   <Toaster />
                   <ProductionToaster />
                 </div>
-              </TooltipProvider>
-            </AuthProvider>
+                </TooltipProvider>
+              </AuthProvider>
+            </ErrorBoundary>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
