@@ -7,6 +7,7 @@ import EnhancedTopbar from './EnhancedTopbar';
 import OfflineStatus from '../OfflineStatus';
 import { BottomNavigation } from './BottomNavigation';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 
 interface PremiumAppLayoutProps {
   children?: React.ReactNode;
@@ -16,6 +17,9 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
+  
+  // Initialize offline queue processing
+  useOfflineQueue();
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(!sidebarCollapsed);

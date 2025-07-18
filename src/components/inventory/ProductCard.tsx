@@ -7,6 +7,7 @@ import { Product } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { useOfflineManager } from '../../hooks/useOfflineManager';
+import OfflineBadge from '@/components/ui/offline-badge';
 import RestockModal from './RestockModal';
 
 interface ProductCardProps {
@@ -63,7 +64,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
             {/* Header with name, ID and badge */}
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1 min-w-0 mr-3">
-                <h3 className="font-semibold text-base text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-base text-gray-900 dark:text-white truncate">{product.name}</h3>
+                  <OfflineBadge show={product.id.startsWith('offline_')} />
+                </div>
                 <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-2">#{product.id.slice(0, 8).toUpperCase()}</p>
               </div>
               <div className="flex-shrink-0">
@@ -170,7 +174,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
           <CardContent className="p-5">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1 min-w-0 mr-4">
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">{product.name}</h3>
+                  <OfflineBadge show={product.id.startsWith('offline_')} />
+                </div>
                 <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-2">#{product.id.slice(0, 8).toUpperCase()}</p>
               </div>
               <div className="flex-shrink-0">
@@ -230,8 +237,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                   className="flex-1 h-10 rounded-lg bg-green-600 hover:bg-green-700"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Stock
-                  {!isOnline && <span className="ml-1 text-orange-200">⏳</span>}
+                   {!isOnline ? 'Save Offline ⏳' : 'Add Stock'}
                 </Button>
               )}
               <Button
@@ -264,7 +270,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
         <CardContent className="p-6 flex flex-col h-full">
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">{product.name}</h3>
+                <OfflineBadge show={product.id.startsWith('offline_')} />
+              </div>
               <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-2">#{product.id.slice(0, 8).toUpperCase()}</p>
             </div>
             <div className="flex-shrink-0 ml-2">
@@ -326,8 +335,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                 title={isUnspecifiedQuantity ? 'Cannot restock unspecified quantity products' : 'Restock product'}
               >
                 <Package className="w-3 h-3" />
-                <span className="hidden sm:inline">Stock</span>
-                {!isOnline && !isUnspecifiedQuantity && <span className="text-orange-500">⏳</span>}
+                 <span className="hidden sm:inline">{!isOnline ? 'Save ⏳' : 'Stock'}</span>
               </Button>
               <Button
                 variant="outline"

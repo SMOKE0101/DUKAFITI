@@ -112,12 +112,39 @@ export const useSupabaseProducts = () => {
       console.log('[useSupabaseProducts] Creating product:', productData);
 
       if (!isOnline) {
+        // Offline mode - queue for sync and show optimistic UI
+        const offlineId = `offline_product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newProduct: Product = {
+          id: offlineId,
+          ...productData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Add to local cache with offline indicator
+        const currentProducts = JSON.parse(localStorage.getItem('products') || '[]');
+        const updatedProducts = [newProduct, ...currentProducts];
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
+
+        // Queue for sync
+        const queueData = {
+          type: 'CREATE_PRODUCT',
+          payload: productData,
+          offlineId,
+          timestamp: Date.now(),
+        };
+        const currentQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+        localStorage.setItem('offline_queue', JSON.stringify([...currentQueue, queueData]));
+
+        // Refresh to show new product
+        await refreshProducts();
+
         toast({
-          title: "Offline Mode",
-          description: "Product will be created when connection is restored",
-          variant: "default",
+          title: "Saved Offline ⏳",
+          description: "Product will sync when connection is restored",
         });
-        throw new Error('Cannot create product while offline');
+
+        return newProduct;
       }
 
       const { supabase } = await import('@/integrations/supabase/client');
@@ -297,12 +324,41 @@ export const useSupabaseProducts = () => {
       }
 
       if (!isOnline) {
+        // Offline mode - update locally and queue for sync
+        const newStock = product.currentStock + quantity;
+        const updatedProduct = {
+          ...product,
+          currentStock: newStock,
+          costPrice: buyingPrice,
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Update in local cache
+        const currentProducts = JSON.parse(localStorage.getItem('products') || '[]');
+        const updatedProducts = currentProducts.map((p: Product) => 
+          p.id === productId ? updatedProduct : p
+        );
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
+
+        // Queue for sync
+        const queueData = {
+          type: 'ADD_STOCK',
+          payload: { productId, quantity, buyingPrice, supplier },
+          offlineId: `add_stock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now(),
+        };
+        const currentQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+        localStorage.setItem('offline_queue', JSON.stringify([...currentQueue, queueData]));
+
+        // Refresh to show updated stock
+        await refreshProducts();
+
         toast({
-          title: "Offline Mode",
-          description: "Stock changes will sync when connection is restored",
-          variant: "default",
+          title: "Stock Added Offline ⏳",
+          description: `Added ${quantity} units of ${product.name}. Will sync when online.`,
         });
-        throw new Error('Cannot add stock while offline');
+
+        return;
       }
 
       // Update the product stock
