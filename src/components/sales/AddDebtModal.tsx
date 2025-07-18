@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useOfflineManager } from '@/hooks/useOfflineManager';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/currency';
-import { DollarSign, UserPlus, AlertTriangle, TrendingUp } from 'lucide-react';
+import { DollarSign, UserPlus, AlertTriangle, TrendingUp, WifiOff } from 'lucide-react';
 import AddCustomerModal from './AddCustomerModal';
 
 interface AddDebtModalProps {
@@ -24,6 +25,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
   const { customers, updateCustomer } = useSupabaseCustomers();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isOnline, addOfflineOperation } = useOfflineManager();
 
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [debtAmount, setDebtAmount] = useState('');
@@ -68,39 +70,67 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
     setIsProcessing(true);
 
     try {
-      // Create transaction record for cash lending
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          customer_id: selectedCustomerId,
-          item_id: null, // No product for cash lending
-          quantity: 1,
-          unit_price: totalAmount,
-          total_amount: totalAmount,
-          notes: notes || 'Cash lending transaction',
-          paid: false,
+      const transactionData = {
+        user_id: user.id,
+        customer_id: selectedCustomerId,
+        item_id: null, // No product for cash lending
+        quantity: 1,
+        unit_price: totalAmount,
+        total_amount: totalAmount,
+        notes: notes || 'Cash lending transaction',
+        paid: false,
+      };
+
+      if (isOnline) {
+        // Online - direct to database
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .insert(transactionData);
+
+        if (transactionError) {
+          throw new Error('Failed to create transaction record');
+        }
+
+        // Update customer debt
+        if (selectedCustomer) {
+          const currentDebt = selectedCustomer.outstandingDebt || 0;
+          const updatedDebt = currentDebt + totalAmount;
+          
+          await updateCustomer(selectedCustomer.id, {
+            outstandingDebt: updatedDebt,
+            lastPurchaseDate: new Date().toISOString(),
+          });
+        }
+
+        toast({
+          title: "Cash Lending Recorded",
+          description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
         });
+      } else {
+        // Offline - queue for sync
+        await addOfflineOperation('transaction', 'create', transactionData, 'high');
 
-      if (transactionError) {
-        throw new Error('Failed to create transaction record');
-      }
+        // Update customer debt locally
+        if (selectedCustomer) {
+          const currentDebt = selectedCustomer.outstandingDebt || 0;
+          const updatedDebt = currentDebt + totalAmount;
+          
+          const customerUpdate = {
+            id: selectedCustomer.id,
+            updates: {
+              outstandingDebt: updatedDebt,
+              lastPurchaseDate: new Date().toISOString(),
+            }
+          };
 
-      // Update customer debt
-      if (selectedCustomer) {
-        const currentDebt = selectedCustomer.outstandingDebt || 0;
-        const updatedDebt = currentDebt + totalAmount;
-        
-        await updateCustomer(selectedCustomer.id, {
-          outstandingDebt: updatedDebt,
-          lastPurchaseDate: new Date().toISOString(),
+          await addOfflineOperation('customer', 'update', customerUpdate, 'high');
+        }
+
+        toast({
+          title: "Saved Offline ⏳",
+          description: `Debt of ${formatCurrency(totalAmount)} will sync when online.`,
         });
       }
-
-      toast({
-        title: "Cash Lending Recorded",
-        description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
-      });
 
       // Reset form and close
       setSelectedCustomerId('');
@@ -141,7 +171,15 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
               </div>
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-red-700 dark:text-red-300">Record Cash Lending</span>
-                <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Debt Management</span>
+                <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">
+                  Debt Management
+                  {!isOnline && (
+                    <span className="inline-flex items-center gap-1 ml-2 text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded-full">
+                      <WifiOff className="w-3 h-3" />
+                      Offline
+                    </span>
+                  )}
+                </span>
               </div>
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border-l-4 border-red-500">

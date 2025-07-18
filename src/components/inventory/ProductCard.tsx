@@ -6,6 +6,7 @@ import { Edit, Trash2, AlertTriangle, Package, Plus } from 'lucide-react';
 import { Product } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
+import { useOfflineManager } from '../../hooks/useOfflineManager';
 import RestockModal from './RestockModal';
 
 interface ProductCardProps {
@@ -20,6 +21,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
   const [isRestocking, setIsRestocking] = useState(false);
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
+  const { isOnline } = useOfflineManager();
   
   const isLowStock = product.currentStock <= product.lowStockThreshold && product.currentStock !== -1;
   const isOutOfStock = product.currentStock === 0;
@@ -229,6 +231,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Stock
+                  {!isOnline && <span className="ml-1 text-orange-200">⏳</span>}
                 </Button>
               )}
               <Button
@@ -324,6 +327,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               >
                 <Package className="w-3 h-3" />
                 <span className="hidden sm:inline">Stock</span>
+                {!isOnline && !isUnspecifiedQuantity && <span className="text-orange-500">⏳</span>}
               </Button>
               <Button
                 variant="outline"

@@ -4,8 +4,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Package, Loader2 } from 'lucide-react';
+import { Package, Loader2, WifiOff } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
+import { useOfflineManager } from '../../hooks/useOfflineManager';
+import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
 
 interface RestockModalProps {
@@ -20,6 +23,10 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
   const [quantity, setQuantity] = useState('1');
   const [buyingPrice, setBuyingPrice] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const { isOnline, addOfflineOperation } = useOfflineManager();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -41,14 +48,52 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
     if (!validateForm()) return;
 
     try {
-      await onSave(parseInt(quantity), parseFloat(buyingPrice));
+      if (isOnline) {
+        // Online - use existing onSave function
+        await onSave(parseInt(quantity), parseFloat(buyingPrice));
+        
+        toast({
+          title: "Stock Updated",
+          description: `Added ${quantity} units to ${product?.name}`,
+        });
+      } else {
+        // Offline - queue for sync
+        const stockUpdateData = {
+          id: product?.id,
+          updates: {
+            current_stock: (product?.currentStock || 0) + parseInt(quantity),
+            updated_at: new Date().toISOString()
+          },
+          metadata: {
+            operation: 'add_stock',
+            quantity: parseInt(quantity),
+            buying_price: parseFloat(buyingPrice),
+            supplier: undefined
+          }
+        };
+
+        await addOfflineOperation('product', 'update', stockUpdateData, 'medium');
+        
+        toast({
+          title: "Saved Offline ⏳",
+          description: `Stock update for ${product?.name} will sync when online.`,
+        });
+      }
       
       // Reset form
       setQuantity('1');
       setBuyingPrice('');
       setErrors({});
+      
+      // Close modal
+      handleClose();
     } catch (error) {
       console.error('Error restocking product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update stock. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -85,7 +130,15 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
             <div className="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
               <Package className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
-            Restock {product.name}
+            <div className="flex flex-col">
+              <span>Restock {product.name}</span>
+              {!isOnline && (
+                <span className="flex items-center gap-1 text-xs font-normal text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded-full mt-1">
+                  <WifiOff className="w-3 h-3" />
+                  Offline Mode
+                </span>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
         

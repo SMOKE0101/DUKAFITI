@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useToast } from '../../hooks/use-toast';
-import { UserPlus, Loader2 } from 'lucide-react';
+import { useOfflineManager } from '../../hooks/useOfflineManager';
+import { UserPlus, Loader2, WifiOff } from 'lucide-react';
 
 interface AddCustomerModalProps {
   open: boolean;
@@ -27,6 +28,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
   const { createCustomer } = useSupabaseCustomers();
   const { toast } = useToast();
+  const { isOnline, addOfflineOperation } = useOfflineManager();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,14 +76,45 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         createdDate: new Date().toISOString(),
       };
 
-      const newCustomer = await createCustomer(customerData);
-      
-      console.log('✅ Customer created successfully:', newCustomer);
-      
-      toast({
-        title: "Success!",
-        description: `Customer ${formData.name} has been added successfully.`,
-      });
+      if (isOnline) {
+        // Online - direct to database
+        const newCustomer = await createCustomer(customerData);
+        console.log('✅ Customer created successfully:', newCustomer);
+        
+        toast({
+          title: "Success!",
+          description: `Customer ${formData.name} has been added successfully.`,
+        });
+
+        // Close modal first, then notify parent
+        onOpenChange(false);
+        
+        // Use timeout to ensure modal closes before selecting customer
+        setTimeout(() => {
+          onCustomerAdded?.(newCustomer);
+        }, 100);
+      } else {
+        // Offline - queue for sync
+        const offlineCustomer = {
+          id: `offline_customer_${Date.now()}`,
+          ...customerData,
+        };
+
+        await addOfflineOperation('customer', 'create', customerData, 'high');
+        
+        toast({
+          title: "Saved Offline ⏳",
+          description: `Customer ${formData.name} will sync when online.`,
+        });
+
+        // Close modal first, then notify parent with offline customer
+        onOpenChange(false);
+        
+        // Use timeout to ensure modal closes before selecting customer
+        setTimeout(() => {
+          onCustomerAdded?.(offlineCustomer);
+        }, 100);
+      }
 
       // Reset form
       setFormData({
@@ -92,14 +125,6 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         creditLimit: 1000,
         initialDebt: 0,
       });
-
-      // Close modal first, then notify parent
-      onOpenChange(false);
-      
-      // Use timeout to ensure modal closes before selecting customer
-      setTimeout(() => {
-        onCustomerAdded?.(newCustomer);
-      }, 100);
     } catch (error) {
       console.error('Error creating customer:', error);
       toast({
@@ -126,6 +151,12 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-purple-600" />
             Add New Customer
+            {!isOnline && (
+              <span className="flex items-center gap-1 text-xs font-normal text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded-full">
+                <WifiOff className="w-3 h-3" />
+                Offline Mode
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
         

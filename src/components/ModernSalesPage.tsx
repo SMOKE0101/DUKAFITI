@@ -383,8 +383,9 @@ const ModernSalesPage = () => {
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-mono font-black uppercase tracking-wide text-red-700 dark:text-red-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors text-xs">
+                      <h3 className="font-mono font-black uppercase tracking-wide text-red-700 dark:text-red-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors text-xs flex items-center gap-1">
                         RECORD DEBT
+                        {!isOnline && <span className="text-orange-500">⏳</span>}
                       </h3>
                       <p className="text-red-600 dark:text-red-400 uppercase font-mono font-bold text-xs">
                         CASH LENDING

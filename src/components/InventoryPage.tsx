@@ -81,6 +81,7 @@ const InventoryPage: React.FC = () => {
   const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
     try {
       await addStock(product.id, quantity, buyingPrice);
+      setShowRestockModal(false);
     } catch (error) {
       console.error('Failed to add stock:', error);
     }

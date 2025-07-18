@@ -397,13 +397,38 @@ export const useOfflineManager = () => {
         
         return !error;
       } else if (operation.operation === 'update') {
-        const { error } = await supabase
-          .from('products')
-          .update(data.updates)
-          .eq('id', data.id)
-          .eq('user_id', user?.id);
-        
-        return !error;
+        // Handle special stock operations
+        if (data.metadata?.operation === 'add_stock') {
+          // Get current product to safely update stock
+          const { data: currentProduct } = await supabase
+            .from('products')
+            .select('current_stock')
+            .eq('id', data.id)
+            .eq('user_id', user?.id)
+            .single();
+
+          const newStock = (currentProduct?.current_stock || 0) + data.metadata.quantity;
+          
+          const { error } = await supabase
+            .from('products')
+            .update({ 
+              current_stock: newStock,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', data.id)
+            .eq('user_id', user?.id);
+          
+          return !error;
+        } else {
+          // Regular update
+          const { error } = await supabase
+            .from('products')
+            .update(data.updates)
+            .eq('id', data.id)
+            .eq('user_id', user?.id);
+          
+          return !error;
+        }
       }
       
       return false;
