@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '../hooks/use-toast';
 import { Customer } from '../types';
 import { formatCurrency } from '../utils/currency';
-import OfflineBadge from '@/components/ui/offline-badge';
 import { 
   Search, 
   Filter, 
@@ -322,10 +321,7 @@ const CustomersPage = () => {
                 <div key={customer.id} className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent hover:border-primary/50 transition-all duration-200">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{customer.name}</h4>
-                        <OfflineBadge show={customer.id.startsWith('offline_')} />
-                      </div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">{customer.name}</h4>
                       <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
                         <Phone className="w-3 h-3" />
                         <span>{customer.phone}</span>

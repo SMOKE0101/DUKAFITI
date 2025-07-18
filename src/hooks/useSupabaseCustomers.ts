@@ -83,48 +83,12 @@ export const useSupabaseCustomers = () => {
       console.log('[useSupabaseCustomers] Creating customer:', customerData);
 
       if (!isOnline) {
-        // Offline mode - queue for sync and show optimistic UI
-        const offlineId = `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const newCustomer: Customer = {
-          id: offlineId,
-          ...customerData,
-          createdDate: new Date().toISOString(),
-        };
-
-        // Add to local cache with offline indicator
-        const currentCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
-        const updatedCustomers = [newCustomer, ...currentCustomers];
-        localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-
-        // Queue for sync
-        const queueData = {
-          type: 'CREATE_CUSTOMER',
-          payload: {
-            name: customerData.name,
-            phone: customerData.phone,
-            email: customerData.email,
-            address: customerData.address,
-            total_purchases: customerData.totalPurchases || 0,
-            outstanding_debt: customerData.outstandingDebt || 0,
-            credit_limit: customerData.creditLimit || 1000,
-            risk_rating: customerData.riskRating || 'low',
-            last_purchase_date: customerData.lastPurchaseDate,
-          },
-          offlineId,
-          timestamp: Date.now(),
-        };
-        const currentQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-        localStorage.setItem('offline_queue', JSON.stringify([...currentQueue, queueData]));
-
-        // Refresh to show new customer
-        await refreshCustomers();
-
         toast({
-          title: "Saved Offline ⏳",
-          description: "Customer will sync when connection is restored",
+          title: "Offline Mode",
+          description: "Customer will be created when connection is restored",
+          variant: "default",
         });
-
-        return newCustomer;
+        throw new Error('Cannot create customer while offline');
       }
 
       const { data, error } = await supabase

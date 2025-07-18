@@ -107,25 +107,23 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
           description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
         });
       } else {
-        // Offline - queue for sync and update local state
-        const queueData = {
-          type: 'RECORD_DEBT',
-          payload: transactionData,
-          offlineId: `debt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          timestamp: Date.now(),
-        };
-        const currentQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-        localStorage.setItem('offline_queue', JSON.stringify([...currentQueue, queueData]));
+        // Offline - queue for sync
+        await addOfflineOperation('transaction', 'create', transactionData, 'high');
 
-        // Update customer debt locally if using updateCustomer
+        // Update customer debt locally
         if (selectedCustomer) {
           const currentDebt = selectedCustomer.outstandingDebt || 0;
           const updatedDebt = currentDebt + totalAmount;
           
-          await updateCustomer(selectedCustomer.id, {
-            outstandingDebt: updatedDebt,
-            lastPurchaseDate: new Date().toISOString(),
-          });
+          const customerUpdate = {
+            id: selectedCustomer.id,
+            updates: {
+              outstandingDebt: updatedDebt,
+              lastPurchaseDate: new Date().toISOString(),
+            }
+          };
+
+          await addOfflineOperation('customer', 'update', customerUpdate, 'high');
         }
 
         toast({
@@ -397,9 +395,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                 ) : (
                   <div className="flex items-center gap-3">
                     <DollarSign className="w-5 h-5" />
-                    <span className="font-bold">
-                      {!isOnline ? 'Save Offline ⏳' : 'Record Cash Lending'}
-                    </span>
+                    <span className="font-bold">Record Cash Lending</span>
                   </div>
                 )}
               </Button>

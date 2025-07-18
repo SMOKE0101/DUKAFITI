@@ -7,8 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Customer } from '../../types';
-import { useOfflineManager } from '../../hooks/useOfflineManager';
-import { X, User, Phone, Mail, MapPin, CreditCard, DollarSign, WifiOff } from 'lucide-react';
+import { X, User, Phone, Mail, MapPin, CreditCard, DollarSign } from 'lucide-react';
 
 interface NewCustomerDrawerProps {
   isOpen: boolean;
@@ -21,7 +20,6 @@ const NewCustomerDrawer: React.FC<NewCustomerDrawerProps> = ({
   onClose,
   onSave,
 }) => {
-  const { isOnline } = useOfflineManager();
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -114,12 +112,6 @@ const NewCustomerDrawer: React.FC<NewCustomerDrawerProps> = ({
               </div>
               <SheetTitle className="font-mono text-lg font-black uppercase tracking-wider">
                 Add New Customer
-                {!isOnline && (
-                  <span className="inline-flex items-center gap-1 ml-2 text-orange-600 bg-orange-100 px-2 py-1 rounded-full text-xs normal-case font-medium">
-                    <WifiOff className="w-3 h-3" />
-                    Offline
-                  </span>
-                )}
               </SheetTitle>
             </div>
             <Button
@@ -292,7 +284,7 @@ const NewCustomerDrawer: React.FC<NewCustomerDrawerProps> = ({
               type="submit" 
               className="flex-1 h-11 bg-green-600 hover:bg-green-700 text-white"
             >
-              {!isOnline ? 'Save Offline ⏳' : 'Add Customer'}
+              Add Customer
             </Button>
           </div>
         </form>
