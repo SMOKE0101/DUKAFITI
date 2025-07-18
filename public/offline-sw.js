@@ -7,13 +7,17 @@ const API_CACHE = 'dukafiti-api-v4';
 // Core app shell - critical for offline functionality
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
+  '/app',
+  '/dashboard',
+  '/inventory',
+  '/customers',
+  '/reports',
+  '/settings',
+  '/offline',
   '/manifest.json',
-  '/vite.svg',
-  // These will be replaced with built assets during build
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/index.css'
+  // Add critical CSS and JS files
+  '/src/index.css',
+  '/src/main.tsx'
 ];
 
 // API patterns to cache
@@ -161,44 +165,20 @@ async function handleAPIRequest(request) {
   }
 }
 
-// Page requests - Handle navigation (serve main app for SPA routing)
+// Page requests - Handle navigation
 async function handlePageRequest(request) {
-  const url = new URL(request.url);
-  
   try {
-    // Try network first for navigation requests
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
-      return networkResponse;
     }
     
-    throw new Error('Network request failed');
+    return networkResponse;
     
   } catch (error) {
-    console.log('[SW] Network failed for navigation, serving cached app');
-    
-    // For app routes, serve the cached main app (SPA)
-    if (url.pathname.startsWith('/app') || 
-        url.pathname === '/dashboard' ||
-        url.pathname === '/inventory' ||
-        url.pathname === '/customers' ||
-        url.pathname === '/reports' ||
-        url.pathname === '/settings') {
-      
-      // Try to serve cached main app
-      const staticCache = await caches.open(STATIC_CACHE);
-      const mainApp = await staticCache.match('/') || await staticCache.match('/index.html');
-      
-      if (mainApp) {
-        console.log('[SW] Serving cached main app for SPA route:', url.pathname);
-        return mainApp;
-      }
-    }
-    
-    // For other routes, try cache first
+    // Try cache first
     const cache = await caches.open(DYNAMIC_CACHE);
     const cachedResponse = await cache.match(request);
     
@@ -206,20 +186,29 @@ async function handlePageRequest(request) {
       return cachedResponse;
     }
     
-    // If it's the root path or an app route, serve the main app anyway
-    if (url.pathname === '/' || url.pathname.startsWith('/app')) {
-      const staticCache = await caches.open(STATIC_CACHE);
-      const mainApp = await staticCache.match('/') || await staticCache.match('/index.html');
-      
-      if (mainApp) {
-        console.log('[SW] Serving main app as fallback for:', url.pathname);
-        return mainApp;
-      }
+    // Return offline page for navigation requests
+    const offlineResponse = await cache.match('/offline');
+    if (offlineResponse) {
+      return offlineResponse;
     }
     
-    // Generate a proper offline fallback that doesn't reload
-    const offlineHtml = await generateOfflineFallback();
-    return new Response(offlineHtml, {
+    // Fallback offline page
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>DukaFiti - Offline</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head>
+        <body>
+          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+            <h1>You're Offline</h1>
+            <p>DukaFiti is working offline. Your data is safe and will sync when you're back online.</p>
+            <button onclick="window.location.reload()">Try Again</button>
+          </div>
+        </body>
+      </html>
+    `, {
       status: 200,
       headers: { 'Content-Type': 'text/html' }
     });
@@ -390,74 +379,6 @@ async function removeStoredOfflineRequest(id) {
     
     request.onerror = () => reject(request.error);
   });
-}
-
-// Generate proper offline fallback that preserves React app
-async function generateOfflineFallback() {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DukaFiti - Offline Mode</title>
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            display: flex; 
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh; 
-            margin: 0; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-          }
-          .offline-container { 
-            text-align: center; 
-            max-width: 400px;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-          }
-          .offline-icon { 
-            font-size: 4rem; 
-            margin-bottom: 1rem;
-            opacity: 0.8;
-          }
-          .retry-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: all 0.3s ease;
-          }
-          .retry-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-          }
-        </style>
-      </head>
-      <body>
-        <div class="offline-container">
-          <div class="offline-icon">📱</div>
-          <h2>You're Offline</h2>
-          <p>DukaFiti is working in offline mode. Your data will sync when you're back online.</p>
-          <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
-          <button class="retry-btn" onclick="window.history.back()" style="margin-left: 10px;">Go Back</button>
-        </div>
-        <script>
-          // Check if we can access the main app without causing reload loops
-          window.addEventListener('online', () => {
-            setTimeout(() => window.location.reload(), 1000);
-          });
-        </script>
-      </body>
-    </html>
-  `;
 }
 
 // Message handling

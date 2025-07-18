@@ -7,7 +7,6 @@ import EnhancedTopbar from './EnhancedTopbar';
 import OfflineStatus from '../OfflineStatus';
 import { BottomNavigation } from './BottomNavigation';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 interface PremiumAppLayoutProps {
   children?: React.ReactNode;
@@ -17,9 +16,6 @@ const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
-  
-  // Initialize offline sync capabilities
-  useOfflineSync();
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(!sidebarCollapsed);

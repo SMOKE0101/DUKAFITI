@@ -1,25 +1,22 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth';
-import { useToast } from './use-toast';
 import { offlineDB } from '../utils/indexedDB';
 import { supabase } from '../integrations/supabase/client';
-import { OfflineAggregator, AggregatedSaleData } from '../utils/offlineAggregator';
+import { useAuth } from './useAuth';
+import { useToast } from './use-toast';
 
 interface OfflineState {
   isOnline: boolean;
   isInitialized: boolean;
   isSyncing: boolean;
   pendingOperations: number;
-  lastSyncTime: string | null;
-  syncErrors: string[];
   syncProgress: number;
+  lastSyncTime: string | null;
   errors: string[];
 }
 
 interface OfflineOperation {
   id: string;
-  type: 'sale' | 'product' | 'customer' | 'inventory';
+  type: 'sale' | 'product' | 'customer' | 'transaction';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp: string;
@@ -37,18 +34,17 @@ export const useOfflineManager = () => {
     isInitialized: false,
     isSyncing: false,
     pendingOperations: 0,
-    lastSyncTime: localStorage.getItem('lastSyncTime'),
-    syncErrors: [],
     syncProgress: 0,
+    lastSyncTime: localStorage.getItem('lastSyncTime'),
     errors: []
   });
 
-  // Initialize offline system
+  // Initialize offline capabilities
   useEffect(() => {
     initializeOfflineSystem();
     
     const handleOnline = () => {
-      console.log('[OfflineManager] Device online');
+      console.log('[OfflineManager] Online detected');
       setOfflineState(prev => ({ ...prev, isOnline: true }));
       if (user) {
         setTimeout(() => syncPendingOperations(), 1000);
@@ -56,7 +52,7 @@ export const useOfflineManager = () => {
     };
 
     const handleOffline = () => {
-      console.log('[OfflineManager] Device offline');
+      console.log('[OfflineManager] Offline detected');
       setOfflineState(prev => ({ ...prev, isOnline: false }));
     };
 
@@ -73,23 +69,57 @@ export const useOfflineManager = () => {
     try {
       console.log('[OfflineManager] Initializing offline system...');
       
+      // Register service worker with better error handling
+      if ('serviceWorker' in navigator) {
+        try {
+          // Only register offline-sw.js to avoid conflicts
+          const registration = await navigator.serviceWorker.register('/offline-sw.js', {
+            scope: '/'
+          });
+          console.log('[OfflineManager] Service Worker registered successfully:', registration.scope);
+          
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  toast({
+                    title: "App Updated",
+                    description: "New version available. Restart to apply updates.",
+                    duration: 5000,
+                  });
+                }
+              });
+            }
+          });
+          
+          // Test service worker functionality
+          if (navigator.serviceWorker.controller) {
+            console.log('[OfflineManager] Service Worker is active and controlling');
+          }
+          
+        } catch (error) {
+          console.error('[OfflineManager] Service Worker registration failed:', error);
+          // Don't throw - continue with degraded functionality
+        }
+      }
+
+      // Initialize IndexedDB
       await offlineDB.init();
+      
+      // Load pending operations count
       await loadPendingOperationsCount();
       
       setOfflineState(prev => ({ ...prev, isInitialized: true }));
       console.log('[OfflineManager] Offline system initialized successfully');
       
-      if (navigator.onLine && user) {
-        setTimeout(() => syncPendingOperations(), 2000);
-      }
-      
     } catch (error) {
       console.error('[OfflineManager] Failed to initialize offline system:', error);
       setOfflineState(prev => ({ 
         ...prev, 
-        isInitialized: true,
-        syncErrors: [`Initialization failed: ${error.message}`],
-        errors: [`Initialization failed: ${error.message}`]
+        isInitialized: true, // Still mark as initialized to prevent infinite loops
+        errors: [...prev.errors, `Initialization failed: ${error.message}`]
       }));
     }
   };
@@ -106,7 +136,86 @@ export const useOfflineManager = () => {
     }
   };
 
-  // Enhanced sync with deduplication and aggregation
+  // Add operation to offline queue
+  const addOfflineOperation = useCallback(async (
+    type: 'sale' | 'product' | 'customer' | 'transaction',
+    operation: 'create' | 'update' | 'delete',
+    data: any,
+    priority: 'high' | 'medium' | 'low' = 'medium'
+  ): Promise<string> => {
+    const operationId = `${type}_${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const offlineOperation: OfflineOperation = {
+      id: operationId,
+      type,
+      operation,
+      data: { ...data, user_id: user?.id },
+      timestamp: new Date().toISOString(),
+      priority,
+      attempts: 0,
+      synced: false
+    };
+
+    try {
+      // Store in IndexedDB
+      await offlineDB.addToSyncQueue(offlineOperation);
+      
+      // Update local storage immediately for UI responsiveness
+      await updateLocalStorage(type, operation, data);
+      
+      // Update pending count
+      await loadPendingOperationsCount();
+      
+      // Try immediate sync if online
+      if (offlineState.isOnline && user) {
+        setTimeout(() => syncPendingOperations(), 500);
+      }
+      
+      console.log(`[OfflineManager] Added ${type} ${operation} to offline queue:`, operationId);
+      return operationId;
+      
+    } catch (error) {
+      console.error('[OfflineManager] Failed to add offline operation:', error);
+      throw error;
+    }
+  }, [user, offlineState.isOnline]);
+
+  // Update local storage for immediate UI feedback
+  const updateLocalStorage = async (type: string, operation: string, data: any) => {
+    try {
+      switch (type) {
+        case 'sale':
+          if (operation === 'create') {
+            await offlineDB.storeOfflineData('sales', data);
+            // Update product stock locally
+            if (data.product_id && data.quantity) {
+              const product = await offlineDB.getOfflineData('products', data.product_id);
+              if (product) {
+                product.current_stock = Math.max(0, product.current_stock - data.quantity);
+                await offlineDB.storeOfflineData('products', product);
+              }
+            }
+          }
+          break;
+          
+        case 'product':
+          await offlineDB.storeOfflineData('products', data);
+          break;
+          
+        case 'customer':
+          await offlineDB.storeOfflineData('customers', data);
+          break;
+          
+        case 'transaction':
+          await offlineDB.storeOfflineData('transactions', data);
+          break;
+      }
+    } catch (error) {
+      console.error('[OfflineManager] Failed to update local storage:', error);
+    }
+  };
+
+  // Sync pending operations
   const syncPendingOperations = useCallback(async () => {
     if (!offlineState.isOnline || offlineState.isSyncing || !user) {
       return;
@@ -114,151 +223,72 @@ export const useOfflineManager = () => {
 
     setOfflineState(prev => ({ 
       ...prev, 
-      isSyncing: true,
-      syncErrors: [],
-      syncProgress: 0
+      isSyncing: true, 
+      syncProgress: 0,
+      errors: []
     }));
 
     try {
       const operations = await offlineDB.getSyncQueue();
-      
-      if (!operations || operations.length === 0) {
+      const totalOperations = operations?.length || 0;
+
+      if (totalOperations === 0) {
         setOfflineState(prev => ({ 
           ...prev, 
           isSyncing: false,
-          syncProgress: 100,
           lastSyncTime: new Date().toISOString()
         }));
         localStorage.setItem('lastSyncTime', new Date().toISOString());
         return;
       }
 
-      console.log(`[OfflineManager] Starting sync of ${operations.length} operations`);
+      console.log(`[OfflineManager] Starting sync of ${totalOperations} operations`);
 
-      // Deduplicate operations by unique ID before processing
-      const uniqueOperations = deduplicateOperations(operations);
-      console.log(`[OfflineManager] After deduplication: ${uniqueOperations.length} operations`);
-
-      // Sort operations by priority and type
-      const sortedOperations = uniqueOperations.sort((a, b) => {
+      // Sort by priority and timestamp
+      const sortedOperations = operations.sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
         if (priorityDiff !== 0) return priorityDiff;
-        
-        // Process deletes first, then creates, then updates
-        const typeOrder = { delete: 3, create: 2, update: 1 };
-        return typeOrder[b.operation] - typeOrder[a.operation];
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
       });
 
-      // Aggregate operations before syncing
-      const { aggregated: aggregatedSales, nonSaleOperations } = OfflineAggregator.aggregateSaleOperations(sortedOperations);
-      const { aggregated: aggregatedInventory, processed: processedInventoryIds } = OfflineAggregator.aggregateInventoryOperations(sortedOperations);
-
-      const totalOperations = aggregatedSales.length + aggregatedInventory.length + nonSaleOperations.length;
       let completed = 0;
       const errors: string[] = [];
-      const syncedOperationIds: string[] = [];
 
-      // Sync aggregated sales
-      for (const aggregatedSale of aggregatedSales) {
-        setOfflineState(prev => ({ 
-          ...prev, 
-          syncProgress: Math.round(((completed + 1) / totalOperations) * 100)
-        }));
-
-        try {
-          const success = await syncAggregatedSale(aggregatedSale);
-          if (success) {
-            syncedOperationIds.push(...aggregatedSale.original_operations);
-            completed++;
-          } else {
-            errors.push(`Failed to sync aggregated sale for ${aggregatedSale.product_name}`);
-          }
-        } catch (error) {
-          console.error(`[OfflineManager] Failed to sync aggregated sale:`, error);
-          errors.push(`Failed to sync sale: ${error.message}`);
-        }
-      }
-
-      // Sync aggregated inventory
-      for (const inventoryOp of aggregatedInventory) {
-        setOfflineState(prev => ({ 
-          ...prev, 
-          syncProgress: Math.round(((completed + 1) / totalOperations) * 100)
-        }));
-
-        try {
-          const success = await syncSingleOperation(inventoryOp);
-          if (success) {
-            syncedOperationIds.push(inventoryOp.id);
-            completed++;
-          }
-        } catch (error) {
-          errors.push(`Failed to sync inventory: ${error.message}`);
-        }
-      }
-
-      // Add processed inventory operations to synced list
-      syncedOperationIds.push(...processedInventoryIds);
-
-      // Sync remaining operations
-      for (const operation of nonSaleOperations) {
-        if (syncedOperationIds.includes(operation.id)) continue;
-
-        setOfflineState(prev => ({ 
-          ...prev, 
-          syncProgress: Math.round(((completed + 1) / totalOperations) * 100)
-        }));
-
+      for (const operation of sortedOperations) {
         try {
           const success = await syncSingleOperation(operation);
           if (success) {
-            syncedOperationIds.push(operation.id);
+            await offlineDB.removeFromSyncQueue(operation.id);
             completed++;
           } else {
-            // Increment attempt count and retry or remove
-            operation.attempts = (operation.attempts || 0) + 1;
+            // Increment attempts
+            operation.attempts++;
             if (operation.attempts >= 3) {
-              syncedOperationIds.push(operation.id);
+              await offlineDB.removeFromSyncQueue(operation.id);
               errors.push(`Max attempts reached for ${operation.type} ${operation.operation}`);
             } else {
               await offlineDB.addToSyncQueue(operation);
-              console.log(`[OfflineManager] Retry ${operation.attempts} for operation ${operation.id}`);
             }
           }
         } catch (error) {
           console.error(`[OfflineManager] Failed to sync operation ${operation.id}:`, error);
           errors.push(`Failed to sync ${operation.type}: ${error.message}`);
-          
-          // Mark as failed after max attempts
-          operation.attempts = (operation.attempts || 0) + 1;
-          if (operation.attempts >= 3) {
-            syncedOperationIds.push(operation.id);
-          } else {
-            await offlineDB.addToSyncQueue(operation);
-          }
         }
+
+        // Update progress
+        const progress = Math.round(((completed + errors.length) / totalOperations) * 100);
+        setOfflineState(prev => ({ ...prev, syncProgress: progress }));
       }
 
-      // Remove successfully synced operations
-      for (const operationId of syncedOperationIds) {
-        try {
-          await offlineDB.removeFromSyncQueue(operationId);
-        } catch (error) {
-          console.warn(`Failed to remove synced operation ${operationId}:`, error);
-        }
-      }
-
-      const finalPendingCount = Math.max(0, totalOperations - syncedOperationIds.length);
+      const finalPendingCount = totalOperations - completed;
       const syncTime = new Date().toISOString();
       
       setOfflineState(prev => ({ 
         ...prev, 
         isSyncing: false,
-        syncProgress: 100,
         pendingOperations: finalPendingCount,
         lastSyncTime: syncTime,
-        syncErrors: errors,
         errors: errors
       }));
 
@@ -267,7 +297,7 @@ export const useOfflineManager = () => {
       if (completed > 0) {
         toast({
           title: "Sync Complete",
-          description: `${completed} operations synced successfully${aggregatedSales.length > 0 ? ` (${aggregatedSales.length} sales aggregated)` : ''}`,
+          description: `${completed} operations synced successfully`,
           duration: 3000,
         });
       }
@@ -288,89 +318,22 @@ export const useOfflineManager = () => {
       setOfflineState(prev => ({ 
         ...prev, 
         isSyncing: false,
-        syncProgress: 0,
-        syncErrors: [`Sync failed: ${error.message}`],
-        errors: [`Sync failed: ${error.message}`]
+        errors: [...prev.errors, `Sync failed: ${error.message}`]
       }));
-      
-      toast({
-        title: "Sync Failed",
-        description: "Unable to sync offline changes. Will retry automatically.",
-        variant: "destructive",
-      });
-    } finally {
-      // Update pending operations count
-      await loadPendingOperationsCount();
     }
   }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
 
-  // Deduplication function to prevent duplicate sync operations
-  const deduplicateOperations = (operations: OfflineOperation[]): OfflineOperation[] => {
-    const seen = new Set<string>();
-    const unique: OfflineOperation[] = [];
-    
-    for (const operation of operations) {
-      // Create a unique key based on operation type, entity ID, and data hash
-      const key = `${operation.type}_${operation.operation}_${operation.data?.id || JSON.stringify(operation.data)}`;
-      
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(operation);
-      } else {
-        console.log(`[OfflineManager] Deduplicating operation: ${key}`);
-      }
-    }
-    
-    return unique;
-  };
-
-  // Enhanced aggregated sale sync
-  const syncAggregatedSale = async (aggregatedSale: AggregatedSaleData): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('sales')
-        .insert([{
-          user_id: user?.id,
-          product_id: aggregatedSale.product_id,
-          product_name: aggregatedSale.product_name,
-          quantity: aggregatedSale.total_quantity,
-          selling_price: aggregatedSale.selling_price,
-          cost_price: aggregatedSale.cost_price,
-          profit: aggregatedSale.total_profit,
-          total_amount: aggregatedSale.total_amount,
-          payment_method: aggregatedSale.payment_method,
-          customer_id: aggregatedSale.customer_id,
-          customer_name: aggregatedSale.customer_name,
-          payment_details: aggregatedSale.payment_details || {},
-          timestamp: aggregatedSale.timestamp
-        }]);
-      
-      if (error) {
-        console.error('[OfflineManager] Aggregated sale sync error:', error);
-        return false;
-      }
-      
-      console.log(`[OfflineManager] Successfully synced aggregated sale: ${aggregatedSale.product_name} (qty: ${aggregatedSale.total_quantity})`);
-      return true;
-    } catch (error) {
-      console.error('[OfflineManager] Aggregated sale sync error:', error);
-      return false;
-    }
-  };
-
-  // Enhanced single operation sync with better error handling
   const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
     try {
-      console.log(`[OfflineManager] Syncing ${operation.type} ${operation.operation}:`, operation.id);
-      
       switch (operation.type) {
         case 'sale':
           return await syncSale(operation);
         case 'product':
-        case 'inventory':
           return await syncProduct(operation);
         case 'customer':
           return await syncCustomer(operation);
+        case 'transaction':
+          return await syncTransaction(operation);
         default:
           console.warn(`[OfflineManager] Unknown operation type: ${operation.type}`);
           return false;
@@ -383,23 +346,26 @@ export const useOfflineManager = () => {
 
   const syncSale = async (operation: OfflineOperation): Promise<boolean> => {
     try {
+      const { data } = operation;
+      
       if (operation.operation === 'create') {
         const { error } = await supabase
           .from('sales')
           .insert([{
             user_id: user?.id,
-            product_id: operation.data.product_id,
-            product_name: operation.data.product_name,
-            quantity: operation.data.quantity,
-            selling_price: operation.data.selling_price,
-            cost_price: operation.data.cost_price,
-            profit: operation.data.profit,
-            total_amount: operation.data.total_amount,
-            payment_method: operation.data.payment_method,
-            customer_id: operation.data.customer_id,
-            customer_name: operation.data.customer_name,
-            payment_details: operation.data.payment_details || {},
-            timestamp: operation.data.timestamp || new Date().toISOString()
+            product_id: data.product_id,
+            product_name: data.product_name,
+            quantity: data.quantity,
+            selling_price: data.selling_price,
+            cost_price: data.cost_price,
+            profit: data.profit,
+            total_amount: data.total_amount,
+            payment_method: data.payment_method,
+            customer_id: data.customer_id,
+            customer_name: data.customer_name,
+            payment_details: data.payment_details || {},
+            timestamp: data.timestamp || new Date().toISOString(),
+            synced: true
           }]);
         
         return !error;
@@ -414,25 +380,27 @@ export const useOfflineManager = () => {
 
   const syncProduct = async (operation: OfflineOperation): Promise<boolean> => {
     try {
+      const { data } = operation;
+      
       if (operation.operation === 'create') {
         const { error } = await supabase
           .from('products')
           .insert([{
             user_id: user?.id,
-            name: operation.data.name,
-            category: operation.data.category,
-            cost_price: operation.data.cost_price,
-            selling_price: operation.data.selling_price,
-            current_stock: operation.data.current_stock || 0,
-            low_stock_threshold: operation.data.low_stock_threshold || 10
+            name: data.name,
+            category: data.category,
+            cost_price: data.cost_price,
+            selling_price: data.selling_price,
+            current_stock: data.current_stock || 0,
+            low_stock_threshold: data.low_stock_threshold || 10
           }]);
         
         return !error;
       } else if (operation.operation === 'update') {
         const { error } = await supabase
           .from('products')
-          .update(operation.data.updates)
-          .eq('id', operation.data.id)
+          .update(data.updates)
+          .eq('id', data.id)
           .eq('user_id', user?.id);
         
         return !error;
@@ -447,25 +415,27 @@ export const useOfflineManager = () => {
 
   const syncCustomer = async (operation: OfflineOperation): Promise<boolean> => {
     try {
+      const { data } = operation;
+      
       if (operation.operation === 'create') {
         const { error } = await supabase
           .from('customers')
           .insert([{
             user_id: user?.id,
-            name: operation.data.name,
-            phone: operation.data.phone,
-            email: operation.data.email,
-            address: operation.data.address,
-            credit_limit: operation.data.credit_limit || 1000,
-            outstanding_debt: operation.data.outstanding_debt || 0
+            name: data.name,
+            phone: data.phone,
+            email: data.email,
+            address: data.address,
+            credit_limit: data.credit_limit || 1000,
+            outstanding_debt: data.outstanding_debt || 0
           }]);
         
         return !error;
       } else if (operation.operation === 'update') {
         const { error } = await supabase
           .from('customers')
-          .update(operation.data.updates)
-          .eq('id', operation.data.id)
+          .update(data.updates)
+          .eq('id', data.id)
           .eq('user_id', user?.id);
         
         return !error;
@@ -478,6 +448,35 @@ export const useOfflineManager = () => {
     }
   };
 
+  const syncTransaction = async (operation: OfflineOperation): Promise<boolean> => {
+    try {
+      const { data } = operation;
+      
+      if (operation.operation === 'create') {
+        const { error } = await supabase
+          .from('transactions')
+          .insert([{
+            user_id: user?.id,
+            customer_id: data.customer_id,
+            item_id: data.item_id,
+            quantity: data.quantity,
+            unit_price: data.unit_price,
+            total_amount: data.total_amount,
+            paid: data.paid || false,
+            notes: data.notes
+          }]);
+        
+        return !error;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[OfflineManager] Transaction sync error:', error);
+      return false;
+    }
+  };
+
+  // Force sync now
   const forceSyncNow = useCallback(async () => {
     if (offlineState.isOnline && !offlineState.isSyncing) {
       await syncPendingOperations();
@@ -490,75 +489,20 @@ export const useOfflineManager = () => {
     }
   }, [offlineState.isOnline, offlineState.isSyncing, syncPendingOperations, toast]);
 
+  // Clear sync errors
   const clearSyncErrors = useCallback(() => {
-    setOfflineState(prev => ({ ...prev, syncErrors: [], errors: [] }));
+    setOfflineState(prev => ({ ...prev, errors: [] }));
   }, []);
 
-  // Enhanced data retrieval with better caching
+  // Get offline data with better error handling
   const getOfflineData = useCallback(async (type: string, id?: string) => {
     try {
-      console.log(`[OfflineManager] Getting offline data for ${type}${id ? ` (${id})` : ''}`);
-      const data = await offlineDB.getData(type, id);
-      
-      if (Array.isArray(data)) {
-        // Filter out items marked for deletion
-        return data.filter(item => {
-          if (typeof item === 'object' && item !== null) {
-            return !(item as any).pendingOperation || (item as any).pendingOperation !== 'delete';
-          }
-          return true;
-        });
-      }
-      
-      return data;
+      return await offlineDB.getOfflineData(type, id);
     } catch (error) {
       console.error(`[OfflineManager] Failed to get offline data for ${type}:`, error);
       return null;
     }
   }, []);
-
-  // Enhanced operation management with deduplication
-  const addOfflineOperation = useCallback(async (
-    type: 'sale' | 'product' | 'customer' | 'inventory',
-    operation: 'create' | 'update' | 'delete',
-    data: any,
-    priority: 'high' | 'medium' | 'low' = 'medium'
-  ): Promise<string> => {
-    const operationId = `${type}_${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    const offlineOperation: OfflineOperation = {
-      id: operationId,
-      type,
-      operation,
-      data: { ...data, user_id: user?.id },
-      timestamp: new Date().toISOString(),
-      priority,
-      attempts: 0,
-      synced: false
-    };
-
-    try {
-      await offlineDB.addToSyncQueue(offlineOperation);
-      await loadPendingOperationsCount();
-      
-      console.log(`[OfflineManager] Added ${type} ${operation} to queue:`, operationId);
-      
-      // Auto-sync if online with debouncing
-      if (offlineState.isOnline && user && !offlineState.isSyncing) {
-        setTimeout(() => {
-          if (!offlineState.isSyncing) {
-            syncPendingOperations();
-          }
-        }, 1000);
-      }
-      
-      return operationId;
-      
-    } catch (error) {
-      console.error('[OfflineManager] Failed to add offline operation:', error);
-      throw error;
-    }
-  }, [user, offlineState.isOnline, offlineState.isSyncing, syncPendingOperations]);
 
   return {
     ...offlineState,
@@ -566,6 +510,6 @@ export const useOfflineManager = () => {
     syncPendingOperations,
     forceSyncNow,
     clearSyncErrors,
-    getOfflineData
+    getOfflineData,
   };
 };

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,48 +11,77 @@ import {
   AlertCircle, 
   Clock,
   Database,
-  TestTube,
-  Zap
+  Loader2,
+  TestTube
 } from 'lucide-react';
-import { useOfflineManager } from '../hooks/useOfflineManager';
-import { useServiceWorker } from '../hooks/useServiceWorker';
-import { offlineDB } from '../utils/indexedDB';
+import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { useSupabaseSales } from '../hooks/useSupabaseSales';
 
 const OfflineIndicator: React.FC = () => {
   const { 
-    isOnline, 
-    pendingOperations, 
-    lastSyncTime, 
-    syncErrors,
-    forceSyncNow 
-  } = useOfflineManager();
+    isOnline: customersOnline, 
+    lastSyncTime: customersSync, 
+    loading: customersLoading,
+    error: customersError,
+    testOffline: testCustomersOffline 
+  } = useSupabaseCustomers();
   
   const { 
-    isInstalling, 
-    updateAvailable, 
-    triggerSync, 
-    clearCache 
-  } = useServiceWorker();
+    isOnline: productsOnline, 
+    lastSyncTime: productsSync, 
+    loading: productsLoading,
+    error: productsError,
+    testOffline: testProductsOffline 
+  } = useSupabaseProducts();
+  
+  const { 
+    isOnline: salesOnline, 
+    lastSyncTime: salesSync, 
+    loading: salesLoading,
+    error: salesError,
+    testOffline: testSalesOffline 
+  } = useSupabaseSales();
 
-  const getStatusColor = () => {
-    if (syncErrors.length > 0) return 'border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/20';
-    if (!isOnline) return 'border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-900/20';
-    if (isInstalling) return 'border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/20';
-    return 'border-green-200 dark:border-green-800/50 bg-green-50 dark:bg-green-900/20';
-  };
+  const isOnline = customersOnline && productsOnline && salesOnline;
+  const isLoading = customersLoading || productsLoading || salesLoading;
+  const hasErrors = !!(customersError || productsError || salesError);
+  const errors = [customersError, productsError, salesError].filter(Boolean);
 
-  const testOffline = async () => {
+  const lastSyncTimes = [customersSync, productsSync, salesSync].filter(Boolean);
+  const mostRecentSync = lastSyncTimes.length > 0 
+    ? new Date(Math.max(...lastSyncTimes.map(time => new Date(time!).getTime())))
+    : null;
+
+  const handleTestOffline = async () => {
     console.log('[OfflineIndicator] Testing offline functionality...');
+    
     try {
-      const testResult = await offlineDB.testOfflineCapabilities();
-      console.log('[OfflineIndicator] IndexedDB test result:', testResult);
+      const [customersTest, productsTest, salesTest] = await Promise.all([
+        testCustomersOffline(),
+        testProductsOffline(),
+        testSalesOffline()
+      ]);
+
+      console.log('[OfflineIndicator] Test results:', {
+        customers: customersTest,
+        products: productsTest,
+        sales: salesTest
+      });
+
+      const allPassed = customersTest.success && productsTest.success && salesTest.success;
       
-      triggerSync();
-      
-      console.log('[OfflineIndicator] Offline tests completed');
+      console.log('[OfflineIndicator] All tests passed:', allPassed);
     } catch (error) {
       console.error('[OfflineIndicator] Testing failed:', error);
     }
+  };
+
+  const getStatusColor = () => {
+    if (hasErrors) return 'border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/20';
+    if (!isOnline) return 'border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-900/20';
+    if (isLoading) return 'border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/20';
+    return 'border-green-200 dark:border-green-800/50 bg-green-50 dark:bg-green-900/20';
   };
 
   return (
@@ -78,20 +108,13 @@ const OfflineIndicator: React.FC = () => {
               )}
             </div>
 
-            {/* Status Indicators */}
+            {/* Loading Status */}
             <div className="flex items-center gap-2">
-              {isInstalling ? (
+              {isLoading ? (
                 <>
-                  <RefreshCw className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
                   <span className="text-xs text-blue-600 dark:text-blue-400">
-                    Installing...
-                  </span>
-                </>
-              ) : updateAvailable ? (
-                <>
-                  <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                  <span className="text-xs text-orange-600 dark:text-orange-400">
-                    Update Available
+                    Loading...
                   </span>
                 </>
               ) : (
@@ -100,43 +123,53 @@ const OfflineIndicator: React.FC = () => {
             </div>
           </div>
 
-          {/* Pending Operations */}
-          {pendingOperations > 0 && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-3 w-3 text-yellow-600 dark:text-yellow-400" />
-                <span className="text-sm text-yellow-700 dark:text-yellow-300">
-                  {pendingOperations} operation{pendingOperations !== 1 ? 's' : ''} pending
-                </span>
-              </div>
-              <Badge variant="secondary" className="text-xs">
-                {pendingOperations}
+          {/* Data Status */}
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="text-center">
+              <Database className="h-3 w-3 mx-auto mb-1 text-blue-600 dark:text-blue-400" />
+              <div className="text-muted-foreground">Customers</div>
+              <Badge variant={customersOnline ? "default" : "secondary"} className="text-xs mt-1">
+                {customersOnline ? "Online" : "Offline"}
               </Badge>
             </div>
-          )}
+            <div className="text-center">
+              <Database className="h-3 w-3 mx-auto mb-1 text-purple-600 dark:text-purple-400" />
+              <div className="text-muted-foreground">Products</div>
+              <Badge variant={productsOnline ? "default" : "secondary"} className="text-xs mt-1">
+                {productsOnline ? "Online" : "Offline"}
+              </Badge>
+            </div>
+            <div className="text-center">
+              <Database className="h-3 w-3 mx-auto mb-1 text-indigo-600 dark:text-indigo-400" />
+              <div className="text-muted-foreground">Sales</div>
+              <Badge variant={salesOnline ? "default" : "secondary"} className="text-xs mt-1">
+                {salesOnline ? "Online" : "Offline"}
+              </Badge>
+            </div>
+          </div>
 
           {/* Last Sync Time */}
-          {lastSyncTime && (
+          {mostRecentSync && (
             <div className="flex items-center gap-2">
-              <Database className="h-3 w-3 text-muted-foreground dark:text-slate-500" />
+              <Clock className="h-3 w-3 text-muted-foreground dark:text-slate-500" />
               <span className="text-xs text-muted-foreground dark:text-slate-400">
-                Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
+                Last sync: {mostRecentSync.toLocaleTimeString()}
               </span>
             </div>
           )}
 
           {/* Errors */}
-          {syncErrors.length > 0 && (
+          {hasErrors && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                 <span className="text-sm text-red-600 dark:text-red-400">
-                  {syncErrors.length} sync error{syncErrors.length !== 1 ? 's' : ''}
+                  {errors.length} error{errors.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              <div className="max-h-16 overflow-y-auto">
-                {syncErrors.slice(0, 2).map((error, index) => (
-                  <p key={index} className="text-xs text-red-500 dark:text-red-400 truncate">
+              <div className="max-h-20 overflow-y-auto">
+                {errors.map((error, index) => (
+                  <p key={index} className="text-xs text-red-500 dark:text-red-400">
                     {error}
                   </p>
                 ))}
@@ -149,45 +182,21 @@ const OfflineIndicator: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={forceSyncNow}
-              disabled={!isOnline}
-              className="text-xs h-7 px-3"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Sync
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={testOffline}
-              className="text-xs h-7 px-3"
+              onClick={handleTestOffline}
+              className="text-xs h-7 px-3 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               <TestTube className="h-3 w-3 mr-1" />
-              Test
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={clearCache}
-              className="text-xs h-7 px-3"
-            >
-              <Database className="h-3 w-3 mr-1" />
-              Clear
+              Test Offline
             </Button>
           </div>
 
-          {/* Offline-First Message */}
-          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-            <Zap className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-            <p className="text-xs text-muted-foreground dark:text-slate-400">
-              {isOnline 
-                ? "Offline-first mode active. Data loads from cache instantly, syncs in background."
-                : "Working offline with cached data. Changes will sync when connection restores."
-              }
-            </p>
-          </div>
+          {/* Status Message */}
+          <p className="text-xs text-muted-foreground dark:text-slate-400">
+            {isOnline 
+              ? "Offline-first mode active. Data loads from cache instantly, syncs in background."
+              : "Working offline with cached data. Changes will sync when connection restores."
+            }
+          </p>
         </div>
       </CardContent>
     </Card>  

@@ -12,18 +12,18 @@ const EnhancedOfflineIndicator: React.FC = () => {
     pendingOperations, 
     syncProgress, 
     lastSyncTime,
-    syncErrors 
+    errors 
   } = useOfflineManager();
 
   const getStatusColor = () => {
-    if (syncErrors.length > 0) return 'destructive';
+    if (errors.length > 0) return 'destructive';
     if (!isOnline) return 'secondary';
     if (isSyncing) return 'default';
     return 'default';
   };
 
   const getStatusText = () => {
-    if (syncErrors.length > 0) return `${syncErrors.length} Sync Error${syncErrors.length > 1 ? 's' : ''}`;
+    if (errors.length > 0) return `${errors.length} Sync Error${errors.length > 1 ? 's' : ''}`;
     if (isSyncing) return `Syncing... ${syncProgress}%`;
     if (!isOnline && pendingOperations > 0) return `Offline - ${pendingOperations} Pending`;
     if (!isOnline) return 'Offline Mode';
@@ -32,7 +32,7 @@ const EnhancedOfflineIndicator: React.FC = () => {
   };
 
   const getIcon = () => {
-    if (syncErrors.length > 0) return <AlertTriangle className="w-3 h-3" />;
+    if (errors.length > 0) return <AlertTriangle className="w-3 h-3" />;
     if (isSyncing) return <RefreshCw className="w-3 h-3 animate-spin" />;
     if (!isOnline) return <WifiOff className="w-3 h-3" />;
     if (pendingOperations === 0) return <CheckCircle className="w-3 h-3" />;
@@ -45,9 +45,9 @@ const EnhancedOfflineIndicator: React.FC = () => {
         variant={getStatusColor()}
         className={cn(
           "flex items-center gap-1 text-xs font-medium transition-all duration-200",
-          syncErrors.length > 0 && "bg-red-100 text-red-700 border-red-200",
-          !isOnline && syncErrors.length === 0 && "bg-orange-100 text-orange-700 border-orange-200",
-          isOnline && pendingOperations === 0 && syncErrors.length === 0 && "bg-green-100 text-green-700 border-green-200"
+          errors.length > 0 && "bg-red-100 text-red-700 border-red-200",
+          !isOnline && errors.length === 0 && "bg-orange-100 text-orange-700 border-orange-200",
+          isOnline && pendingOperations === 0 && errors.length === 0 && "bg-green-100 text-green-700 border-green-200"
         )}
       >
         {getIcon()}
