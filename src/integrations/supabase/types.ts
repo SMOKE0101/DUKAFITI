@@ -232,11 +232,13 @@ export type Database = {
       }
       sales: {
         Row: {
+          client_sale_id: string | null
           cost_price: number
           created_at: string | null
           customer_id: string | null
           customer_name: string | null
           id: string
+          offline_id: string | null
           payment_details: Json | null
           payment_method: string
           product_id: string
@@ -250,11 +252,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_sale_id?: string | null
           cost_price: number
           created_at?: string | null
           customer_id?: string | null
           customer_name?: string | null
           id?: string
+          offline_id?: string | null
           payment_details?: Json | null
           payment_method: string
           product_id: string
@@ -268,11 +272,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_sale_id?: string | null
           cost_price?: number
           created_at?: string | null
           customer_id?: string | null
           customer_name?: string | null
           id?: string
+          offline_id?: string | null
           payment_details?: Json | null
           payment_method?: string
           product_id?: string
