@@ -9,10 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
-import { useCustomerOperations } from '../../hooks/useCustomerOperations';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
+import { supabase } from '../../integrations/supabase/client';
 
 interface NewRepaymentDrawerProps {
   isOpen: boolean;
@@ -26,13 +26,50 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
   customer
 }) => {
   const { toast } = useToast();
-  const { recordPayment, isRecordingPayment } = useCustomerOperations();
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   
   const [formData, setFormData] = useState({
     amount: '',
     paymentMethod: '',
     notes: ''
   });
+
+  const recordPayment = async (customerId: string, amount: number, method: string, notes?: string) => {
+    setIsRecordingPayment(true);
+    try {
+      // Calculate new outstanding debt
+      const currentDebt = customer?.outstandingDebt || 0;
+      const newOutstandingDebt = Math.max(0, currentDebt - amount);
+
+      // Update customer with new debt amount
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          outstanding_debt: newOutstandingDebt,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment Recorded",
+        description: `Payment of ${formatCurrency(amount)} recorded successfully`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to record payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record payment. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsRecordingPayment(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +115,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
       onClose();
     } catch (error) {
       console.error('Failed to record payment:', error);
-      // Error handling is done in useCustomerOperations
+      // Error handling is done in recordPayment function
     }
   };
 
@@ -96,7 +133,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
   if (!customer) return null;
 
   const remainingAfterPayment = (customer.outstandingDebt || 0) - parseFloat(formData.amount || '0');
-  const isSubmitting = isRecordingPayment === customer.id;
+  const isSubmitting = isRecordingPayment;
 
   return (
     <Sheet open={isOpen} onOpenChange={handleClose}>

@@ -12,7 +12,6 @@ import CustomerHistoryModal from './customers/CustomerHistoryModal';
 import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
 import DeleteCustomerModal from './customers/DeleteCustomerModal';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useCustomerOperations } from '../hooks/useCustomerOperations';
 import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import { supabase } from '../integrations/supabase/client';
 
@@ -24,9 +23,9 @@ const CustomerManagement: React.FC = () => {
   const [showRepaymentDrawer, setShowRepaymentDrawer] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { toast } = useToast();
   const { customers, loading, createCustomer, updateCustomer, fetchCustomers } = useSupabaseCustomers();
-  const { deleteCustomer, isDeleting } = useCustomerOperations();
   const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
 
   // Set up real-time subscription for customer updates
@@ -94,14 +93,34 @@ const CustomerManagement: React.FC = () => {
   };
 
   const handleConfirmDelete = async (customerId: string) => {
+    setIsDeleting(customerId);
     try {
-      await deleteCustomer(customerId);
+      // Use Supabase directly for deletion
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Customer deleted successfully",
+      });
+      
       setShowDeleteModal(false);
       setSelectedCustomer(null);
       // Refresh customers list
       await fetchCustomers();
     } catch (error) {
       console.error('Delete customer failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(null);
     }
   };
 
