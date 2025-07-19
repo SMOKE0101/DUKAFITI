@@ -91,7 +91,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
           throw new Error('Failed to create transaction record');
         }
 
-        // Update customer debt using the hook method
+        // Update customer debt
         if (selectedCustomer) {
           const currentDebt = selectedCustomer.outstandingDebt || 0;
           const updatedDebt = currentDebt + totalAmount;
@@ -110,15 +110,20 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
         // Offline - queue for sync
         await addOfflineOperation('transaction', 'create', transactionData, 'high');
 
-        // Update customer debt using the hook method (it handles offline updates)
+        // Update customer debt locally
         if (selectedCustomer) {
           const currentDebt = selectedCustomer.outstandingDebt || 0;
           const updatedDebt = currentDebt + totalAmount;
           
-          await updateCustomer(selectedCustomer.id, {
-            outstandingDebt: updatedDebt,
-            lastPurchaseDate: new Date().toISOString(),
-          });
+          const customerUpdate = {
+            id: selectedCustomer.id,
+            updates: {
+              outstandingDebt: updatedDebt,
+              lastPurchaseDate: new Date().toISOString(),
+            }
+          };
+
+          await addOfflineOperation('customer', 'update', customerUpdate, 'high');
         }
 
         toast({

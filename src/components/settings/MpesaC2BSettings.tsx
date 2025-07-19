@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSettings } from '../../hooks/useSettings';
 import { Smartphone, Shield, Info, Settings } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MpesaC2BSettings = () => {
   const { settings, loading } = useSettings();
@@ -26,7 +26,8 @@ const MpesaC2BSettings = () => {
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="w-5 h-5" />
             M-Pesa Integration Status
-            <Tooltip>
+            <TooltipProvider>
+              <Tooltip>
                 <TooltipTrigger>
                   <Info className="w-4 h-4 text-gray-400" />
                 </TooltipTrigger>
@@ -34,6 +35,7 @@ const MpesaC2BSettings = () => {
                   <p>This integration is coming soon</p>
                 </TooltipContent>
               </Tooltip>
+            </TooltipProvider>
           </CardTitle>
         </CardHeader>
         <CardContent>

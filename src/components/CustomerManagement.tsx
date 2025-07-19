@@ -11,7 +11,6 @@ import CustomerModal from './CustomerModal';
 import CustomerHistoryModal from './customers/CustomerHistoryModal';
 import RepaymentDrawer from './customers/RepaymentDrawer';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import { supabase } from '../integrations/supabase/client';
 
 const CustomerManagement: React.FC = () => {
@@ -23,7 +22,6 @@ const CustomerManagement: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
   const { customers, loading, createCustomer, updateCustomer } = useSupabaseCustomers();
-  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
 
   // Set up real-time subscription for customer updates
   useEffect(() => {
@@ -38,6 +36,8 @@ const CustomerManagement: React.FC = () => {
         },
         (payload) => {
           console.log('Customer change detected:', payload);
+          // The useSupabaseCustomers hook already handles real-time updates
+          // This is just for logging/debugging
         }
       )
       .subscribe();
@@ -85,40 +85,13 @@ const CustomerManagement: React.FC = () => {
   const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       if (editingCustomer) {
-        if (isOnline) {
-          await updateCustomer(editingCustomer.id, customerData);
-        } else {
-          await addOfflineOperation('customer', 'update', {
-            id: editingCustomer.id,
-            updates: customerData
-          }, 'high');
-          toast({
-            title: "Offline Mode",
-            description: "Customer will be updated when connection is restored",
-            variant: "default",
-          });
-        }
+        await updateCustomer(editingCustomer.id, customerData);
         toast({
           title: "Success",
           description: "Customer updated successfully",
         });
       } else {
-        if (isOnline) {
-          await createCustomer(customerData);
-        } else {
-          const offlineCustomer = {
-            id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            ...customerData,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          await addOfflineOperation('customer', 'create', offlineCustomer, 'high');
-          toast({
-            title: "Offline Mode",
-            description: "Customer will be created when connection is restored",
-            variant: "default",
-          });
-        }
+        await createCustomer(customerData);
         toast({
           title: "Success",
           description: `Customer ${customerData.name} added successfully`,
@@ -128,11 +101,6 @@ const CustomerManagement: React.FC = () => {
       setEditingCustomer(null);
     } catch (error) {
       console.error('Failed to save customer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save customer. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -150,14 +118,7 @@ const CustomerManagement: React.FC = () => {
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Customer Management</h1>
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Manage your customer database and credit accounts</p>
-            {!isOnline && (
-              <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
-                Offline Mode
-              </span>
-            )}
-          </div>
+          <p className="text-muted-foreground">Manage your customer database and credit accounts</p>
         </div>
         <Button 
           onClick={handleAddCustomer} 

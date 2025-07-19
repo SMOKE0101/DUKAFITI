@@ -1,6 +1,9 @@
 
-import React from 'react';
-import { SafeToasterWrapper } from "./components/SafeToasterWrapper";
+import * as React from 'react';
+import { ReactInitCheck } from './components/ReactInitCheck';
+import { Toaster } from "@/components/ui/toaster";
+import { ProductionToaster } from "@/components/ui/production-toast";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
@@ -32,13 +35,20 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // Add safety check for React
+  if (typeof React === 'undefined' || !React.useState) {
+    return <div>Loading React...</div>;
+  }
+
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+    <ReactInitCheck>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <AuthProvider>
-              <ErrorBoundary>
+            <ErrorBoundary>
+              <AuthProvider>
+                <TooltipProvider>
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
@@ -74,14 +84,17 @@ function App() {
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                  <SafeToasterWrapper />
+                  <Toaster />
+                  <ProductionToaster />
                 </div>
-              </ErrorBoundary>
-            </AuthProvider>
+                </TooltipProvider>
+              </AuthProvider>
+            </ErrorBoundary>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </ReactInitCheck>
   );
 }
 
