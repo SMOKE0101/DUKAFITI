@@ -400,7 +400,7 @@ export const useUnifiedCustomers = () => {
     }
   }, [user?.id]);
 
-  // Listen for network reconnection and sync pending operations
+  // Listen for network reconnection and sync events
   useEffect(() => {
     const handleReconnect = async () => {
       if (user && isOnline) {
@@ -409,9 +409,21 @@ export const useUnifiedCustomers = () => {
       }
     };
 
+    const handleSyncComplete = () => {
+      console.log('[UnifiedCustomers] Sync completed, refreshing data');
+      loadCustomers();
+    };
+
     window.addEventListener('network-reconnected', handleReconnect);
-    return () => window.removeEventListener('network-reconnected', handleReconnect);
-  }, [user?.id, isOnline, syncPendingOperations]);
+    window.addEventListener('sync-completed', handleSyncComplete);
+    window.addEventListener('data-synced', handleSyncComplete);
+    
+    return () => {
+      window.removeEventListener('network-reconnected', handleReconnect);
+      window.removeEventListener('sync-completed', handleSyncComplete);
+      window.removeEventListener('data-synced', handleSyncComplete);
+    };
+  }, [user?.id, isOnline, syncPendingOperations, loadCustomers]);
 
   // Sync pending operations when coming online
   useEffect(() => {

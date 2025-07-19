@@ -16,9 +16,9 @@ import {
   AlertTriangle,
   Zap
 } from 'lucide-react';
-import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
-import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
-import { useSupabaseSales } from '../../hooks/useSupabaseSales';
+import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
+import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
+import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { formatCurrency } from '../../utils/currency';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useIsMobile } from '../../hooks/use-mobile';
@@ -31,9 +31,9 @@ const BlockyReportsPage = () => {
   const [selectedChart, setSelectedChart] = useState<'sales' | 'orders'>('sales');
   
   const isMobile = useIsMobile();
-  const { customers, loading: customersLoading } = useSupabaseCustomers();
-  const { products, loading: productsLoading } = useSupabaseProducts();
-  const { sales, loading: salesLoading } = useSupabaseSales();
+  const { customers, loading: customersLoading } = useUnifiedCustomers();
+  const { products, loading: productsLoading } = useUnifiedProducts();
+  const { sales, loading: salesLoading } = useUnifiedSales();
 
   const getDateRange = () => {
     const now = new Date();

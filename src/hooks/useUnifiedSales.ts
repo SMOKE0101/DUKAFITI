@@ -157,7 +157,8 @@ export const useUnifiedSales = () => {
         const updatedSales = await supabase
           .from('sales')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false });
         
         if (updatedSales.data) {
           const transformedData = updatedSales.data.map(transformDbSale);
@@ -192,14 +193,27 @@ export const useUnifiedSales = () => {
     loadSales();
   }, [loadSales]);
 
-  // Listen for network reconnection
+  // Listen for network reconnection and sync events
   useEffect(() => {
     const handleReconnect = () => {
+      console.log('[UnifiedSales] Network reconnected, refreshing data');
+      loadSales();
+    };
+
+    const handleSyncComplete = () => {
+      console.log('[UnifiedSales] Sync completed, refreshing data');
       loadSales();
     };
 
     window.addEventListener('network-reconnected', handleReconnect);
-    return () => window.removeEventListener('network-reconnected', handleReconnect);
+    window.addEventListener('sync-completed', handleSyncComplete);
+    window.addEventListener('data-synced', handleSyncComplete);
+    
+    return () => {
+      window.removeEventListener('network-reconnected', handleReconnect);
+      window.removeEventListener('sync-completed', handleSyncComplete);
+      window.removeEventListener('data-synced', handleSyncComplete);
+    };
   }, [loadSales]);
 
   return {

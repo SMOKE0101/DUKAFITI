@@ -15,16 +15,16 @@ import {
   TrendingUp,
   Activity
 } from 'lucide-react';
-import { useSupabaseSales } from '../hooks/useSupabaseSales';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { useUnifiedSales } from '../hooks/useUnifiedSales';
+import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
+import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
 
 const ColoredCardDashboard = () => {
-  const { sales } = useSupabaseSales();
-  const { products } = useSupabaseProducts();
-  const { customers } = useSupabaseCustomers();
+  const { sales } = useUnifiedSales();
+  const { products } = useUnifiedProducts();
+  const { customers } = useUnifiedCustomers();
   const navigate = useNavigate();
 
   // Calculate today's metrics

@@ -505,6 +505,22 @@ export const useUnifiedProducts = () => {
     }
   }, [isOnline, user?.id]); // Remove syncPendingOperations from deps to prevent infinite loops
 
+  // Listen for sync events
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      console.log('[UnifiedProducts] Sync completed, refreshing data');
+      loadProducts(true);
+    };
+
+    window.addEventListener('sync-completed', handleSyncComplete);
+    window.addEventListener('data-synced', handleSyncComplete);
+    
+    return () => {
+      window.removeEventListener('sync-completed', handleSyncComplete);
+      window.removeEventListener('data-synced', handleSyncComplete);
+    };
+  }, []);
+
   return {
     products,
     loading,
