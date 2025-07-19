@@ -2,7 +2,7 @@
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { ProductionToaster } from "@/components/ui/production-toast";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipWrapper } from "./components/TooltipWrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
@@ -39,8 +39,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <TooltipProvider>
-              <AuthProvider>
+            <AuthProvider>
+              <TooltipWrapper>
                 <ErrorBoundary>
                   <div className="min-h-screen w-full bg-background text-foreground">
                     <Routes>
@@ -81,8 +81,8 @@ function App() {
                     <ProductionToaster />
                   </div>
                 </ErrorBoundary>
-              </AuthProvider>
-            </TooltipProvider>
+              </TooltipWrapper>
+            </AuthProvider>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
