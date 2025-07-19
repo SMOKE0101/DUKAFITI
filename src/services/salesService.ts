@@ -144,13 +144,7 @@ export class SalesService {
       return sale;
     } catch (error) {
       console.error('[SalesService] Error creating sale:', error);
-      
-      // Re-throw with more specific error message
-      if (error instanceof Error) {
-        throw error;
-      } else {
-        throw new Error('Unknown error occurred while creating sale');
-      }
+      throw error;
     }
   }
 
@@ -171,15 +165,7 @@ export class SalesService {
         return;
       }
 
-      if (!product) {
-        console.warn('[SalesService] Product not found:', productId);
-        return;
-      }
-
-      const currentStock = product.current_stock || 0;
-      const newStock = Math.max(0, currentStock - quantitySold);
-
-      console.log('[SalesService] Updating stock from', currentStock, 'to', newStock);
+      const newStock = Math.max(0, (product.current_stock || 0) - quantitySold);
 
       const { error: updateError } = await supabase
         .from('products')
@@ -193,7 +179,7 @@ export class SalesService {
         console.error('[SalesService] Error updating stock:', updateError);
         // Don't throw here - stock update is not critical for sale completion
       } else {
-        console.log('[SalesService] Stock updated successfully');
+        console.log('[SalesService] Stock updated successfully:', newStock);
       }
     } catch (error) {
       console.error('[SalesService] Stock update failed:', error);
@@ -202,10 +188,7 @@ export class SalesService {
   }
 
   static async updateCustomerDebt(customerId: string, debtAmount: number): Promise<void> {
-    if (!customerId || debtAmount <= 0) {
-      console.log('[SalesService] Skipping customer debt update - invalid parameters');
-      return;
-    }
+    if (!customerId || debtAmount <= 0) return;
 
     console.log('[SalesService] Updating customer debt:', customerId, debtAmount);
 
@@ -222,15 +205,8 @@ export class SalesService {
         return;
       }
 
-      if (!customer) {
-        console.warn('[SalesService] Customer not found:', customerId);
-        return;
-      }
-
       const newDebt = (customer.outstanding_debt || 0) + debtAmount;
       const newTotalPurchases = (customer.total_purchases || 0) + debtAmount;
-
-      console.log('[SalesService] Updating customer debt from', customer.outstanding_debt, 'to', newDebt);
 
       const { error: updateError } = await supabase
         .from('customers')
@@ -250,33 +226,5 @@ export class SalesService {
     } catch (error) {
       console.error('[SalesService] Customer update failed:', error);
     }
-  }
-
-  // New method to handle offline sales
-  static createOfflineSale(userId: string, saleData: CreateSaleRequest): Sale {
-    console.log('[SalesService] Creating offline sale:', saleData);
-    
-    const totalAmount = saleData.sellingPrice * saleData.quantity;
-    const profit = (saleData.sellingPrice - saleData.costPrice) * saleData.quantity;
-    
-    const offlineSale: Sale = {
-      id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      productId: saleData.productId,
-      productName: saleData.productName,
-      quantity: saleData.quantity,
-      sellingPrice: saleData.sellingPrice,
-      costPrice: saleData.costPrice,
-      profit: profit,
-      timestamp: new Date().toISOString(),
-      synced: false,
-      customerId: saleData.customerId,
-      customerName: saleData.customerName,
-      paymentMethod: saleData.paymentMethod,
-      paymentDetails: saleData.paymentDetails,
-      total: totalAmount,
-    };
-
-    console.log('[SalesService] Created offline sale:', offlineSale);
-    return offlineSale;
   }
 }

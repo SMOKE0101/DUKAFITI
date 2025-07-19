@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
@@ -8,7 +7,7 @@ import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import { formatCurrency } from '../utils/currency';
 import { Product, Customer } from '../types';
 import { CartItem } from '../types/cart';
-import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus, Wifi, WifiOff, Clock, Grid3X3 } from 'lucide-react';
+import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus, Wifi, WifiOff, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
@@ -20,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const OptimizedModernSalesPage = () => {
-  console.log('🚀 OptimizedModernSalesPage component loaded - REDESIGNED v3.0');
+  console.log('🚀 OptimizedModernSalesPage component loaded - ENHANCED MOBILE v2.0 with Error Fix');
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,7 +27,7 @@ const OptimizedModernSalesPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddDebt, setShowAddDebt] = useState(false);
-  const [activePanel, setActivePanel] = useState<'products' | 'cart'>('products');
+  const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const { user } = useAuth();
@@ -108,11 +107,6 @@ const OptimizedModernSalesPage = () => {
       const cartItem: CartItem = { ...product, quantity: 1 };
       setCart([...cart, cartItem]);
     }
-
-    // Switch to cart view on mobile after adding
-    if (isMobile) {
-      setActivePanel('cart');
-    }
   };
 
   const removeFromCart = (productId: string) => {
@@ -161,260 +155,311 @@ const OptimizedModernSalesPage = () => {
   };
 
   const getStockColorClass = (stock: number, lowStockThreshold: number = 10) => {
-    if (stock < 0) return 'text-slate-400';
-    if (stock === 0) return 'text-red-400';
-    if (stock <= lowStockThreshold) return 'text-yellow-400';
-    return 'text-green-400';
+    if (stock < 0) return 'text-gray-500 dark:text-gray-400';
+    if (stock === 0) return 'text-orange-500 dark:text-orange-400';
+    if (stock <= lowStockThreshold) return 'text-yellow-500 dark:text-yellow-400';
+    return 'text-purple-500 dark:text-purple-400';
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      {/* Header */}
-      <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-40">
-        <div className="px-4 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Mobile-Optimized Header */}
+      <header className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-40 shadow-lg">
+        <div className="mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="h-6 w-6 text-purple-400" />
-                <h1 className="text-xl font-bold">SALES POINT</h1>
-              </div>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                🛒 SALES
+              </h1>
               
-              {/* Online Status */}
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                isOnline 
-                  ? 'bg-green-900/30 text-green-300 border border-green-600' 
-                  : 'bg-red-900/30 text-red-300 border border-red-600'
-              }`}>
-                {isOnline ? 'ONLINE' : 'OFFLINE'}
+              {/* Connection Status */}
+              <div className="flex items-center gap-1 sm:gap-2">
+                {isOnline ? (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
+                    <Wifi className="h-3 w-3" />
+                    {!isMobile && "Online"}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-bold">
+                    <WifiOff className="h-3 w-3" />
+                    {!isMobile && "Offline"}
+                  </div>
+                )}
+                
+                {pendingOperations > 0 && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
+                    <Clock className="h-3 w-3" />
+                    {!isMobile ? `${pendingOperations} pending` : pendingOperations}
+                  </div>
+                )}
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              {/* Total Display */}
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4" />
-                <span>TOTAL: {formatCurrency(total)}</span>
+            {/* Mobile Panel Toggle */}
+            {isMobile && (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setActivePanel('search')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all touch-target ${
+                    activePanel === 'search'
+                      ? 'bg-purple-600 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  Products
+                </button>
+                <button
+                  onClick={() => setActivePanel('cart')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 touch-target ${
+                    activePanel === 'cart'
+                      ? 'bg-purple-600 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <ShoppingCart className="h-3 w-3" />
+                  Cart {cart.length > 0 && `(${cart.length})`}
+                </button>
               </div>
-              
-              {/* Mobile Panel Toggle */}
-              {isMobile && (
-                <div className="flex bg-slate-700 rounded-lg p-1">
-                  <button
-                    onClick={() => setActivePanel('products')}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      activePanel === 'products'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    Products
-                  </button>
-                  <button
-                    onClick={() => setActivePanel('cart')}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      activePanel === 'cart'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    Cart ({cart.length})
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="flex h-[calc(100vh-80px)]">
-        {/* Products Panel */}
+      <main className="flex-1 flex">
+        {/* Left Panel - Product Search & Quick Picks */}
         <div className={`${
           isMobile 
-            ? activePanel === 'products' ? 'flex' : 'hidden'
+            ? activePanel === 'search' ? 'flex' : 'hidden'
             : 'flex'
-        } flex-col ${isMobile ? 'w-full' : 'flex-1'} ${!isMobile ? 'border-r border-slate-700' : ''}`}>
+        } flex-col ${isMobile ? 'w-full' : 'w-2/3 border-r border-gray-200/60 dark:border-slate-700/60'}`}>
           
-          {/* Search Bar */}
-          <div className="p-4 border-b border-slate-700">
+          {/* Search Section */}
+          <div className="p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 border-b border-gray-200/60 dark:border-slate-700/60">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
-                placeholder="SEARCH PRODUCTS..."
+                placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-purple-600 rounded-lg focus:outline-none focus:border-purple-400 text-white placeholder-slate-400 uppercase tracking-wider"
-                style={{ fontSize: '16px' }}
+                className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-700 border-2 border-purple-200 dark:border-purple-600/30 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
+                style={{ fontSize: '16px' }} // Prevent zoom on iOS
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 touch-target flex items-center justify-center"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Products Grid */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Add Debt Card */}
-              <div
-                onClick={() => setShowAddDebt(true)}
-                className="bg-red-900/20 border-2 border-red-600 rounded-lg p-4 cursor-pointer hover:bg-red-900/30 transition-colors relative group"
-              >
-                <div className="absolute top-3 right-3">
-                  <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
-                    <UserPlus className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-bold text-red-300 uppercase">ADD DEBT</h3>
-                  <p className="text-red-300 uppercase text-sm">CREDIT SALE</p>
-                  <div className="mt-3">
-                    <p className="text-red-300 font-medium">Cash Lending</p>
-                    <p className="text-red-400 text-sm uppercase">RECORD DEBT</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Product Cards */}
-              {filteredProducts.map((product) => (
-                <div
+          {/* Quick Select Section */}
+          <div className="p-3 sm:p-4 bg-white/30 dark:bg-slate-800/30 border-b border-gray-200/40 dark:border-slate-700/40">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">⚡ Quick Picks</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+              {products.slice(0, 6).map((product) => (
+                <button
                   key={product.id}
                   onClick={() => addToCart(product)}
-                  className="bg-slate-800 border-2 border-purple-600 rounded-lg p-4 cursor-pointer hover:bg-slate-700 transition-colors relative group"
+                  className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group min-h-[80px] active:scale-95"
                 >
-                  <div className="absolute top-3 right-3">
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                      <Plus className="h-4 w-4 text-white" />
-                    </div>
+                  <div className="font-bold text-gray-900 dark:text-white text-sm mb-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
+                    {product.name}
                   </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-bold text-white uppercase line-clamp-2">
-                      {product.name}
-                    </h3>
-                    <p className="text-purple-300 uppercase text-sm">
-                      {product.category}
-                    </p>
-                    
-                    <div className="mt-3 space-y-1">
-                      <p className="text-xl font-bold text-white">
-                        {formatCurrency(product.sellingPrice)}
-                      </p>
-                      <p className={`text-sm uppercase ${getStockColorClass(product.currentStock)}`}>
-                        STOCK: {getStockDisplayText(product.currentStock)}
-                      </p>
-                    </div>
+                  <div className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
+                    {formatCurrency(product.sellingPrice)}
                   </div>
-                </div>
+                  <div className={`text-xs mt-1 ${getStockColorClass(product.currentStock)}`}>
+                    {getStockDisplayText(product.currentStock)}
+                  </div>
+                </button>
               ))}
+            </div>
+          </div>
+
+          {/* Product Grid */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-20">
+              {filteredProducts.length === 0 ? (
+                <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-8">
+                  <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-bold">No products found</p>
+                  <p className="text-sm">Try adjusting your search</p>
+                </div>
+              ) : (
+                filteredProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-4 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group text-left active:scale-95"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
+                          {product.name}
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-xs">
+                          {product.category}
+                        </p>
+                      </div>
+                      <div className="ml-2">
+                        <Package className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <div className="text-purple-600 dark:text-purple-400 font-bold text-lg">
+                          {formatCurrency(product.sellingPrice)}
+                        </div>
+                        <div className={`text-xs ${getStockColorClass(product.currentStock)}`}>
+                          Stock: {getStockDisplayText(product.currentStock)}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </div>
 
-        {/* Cart Panel */}
+        {/* Right Panel - Cart & Checkout */}
         <div className={`${
           isMobile 
             ? activePanel === 'cart' ? 'flex' : 'hidden'
             : 'flex'
-        } flex-col ${isMobile ? 'w-full' : 'w-80'} bg-slate-800/50`}>
+        } flex-col ${isMobile ? 'w-full' : 'w-1/3'} bg-white/60 dark:bg-slate-800/60`}>
           
           {/* Cart Header */}
-          <div className="p-4 border-b border-slate-700">
-            <h2 className="text-lg font-bold uppercase">CART ({cart.length})</h2>
+          <div className="p-3 sm:p-4 border-b border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
+                Cart ({cart.length})
+              </h2>
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="text-red-500 hover:text-red-700 text-sm font-bold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
+              Total: {formatCurrency(total)}
+            </div>
           </div>
 
-          {/* Cart Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Cart Items */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
             {cart.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center p-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-lg flex items-center justify-center">
-                    <ShoppingCart className="h-8 w-8 text-slate-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-300 mb-2 uppercase">CART EMPTY</h3>
-                  <p className="text-slate-400">Add products to get started</p>
-                </div>
+              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="font-bold">Your cart is empty</p>
+                <p className="text-sm">Add products to get started</p>
               </div>
             ) : (
-              <div className="p-4 space-y-4">
-                {cart.map((item) => (
-                  <div key={item.id} className="bg-slate-800 border border-slate-600 rounded-lg p-3">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-white text-sm uppercase">
-                          {item.name}
-                        </h4>
-                        <p className="text-purple-300 text-xs uppercase">
-                          {item.category}
-                        </p>
-                      </div>
+              cart.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white dark:bg-slate-700 rounded-xl p-3 sm:p-4 border-2 border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md transition-all"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 pr-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
+                        {formatCurrency(item.sellingPrice)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeFromCart(item.id)}
+                      className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target flex items-center justify-center"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="text-red-400 hover:text-red-300 p-1"
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
+                        disabled={item.quantity <= 1}
                       >
-                        <X className="h-4 w-4" />
+                        <Minus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                      </button>
+                      <span className="font-bold text-lg text-gray-900 dark:text-white min-w-[2.5rem] text-center">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
+                      >
+                        <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
                       </button>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      </div>
-                      
-                      <div className="text-right">
-                        <p className="text-white font-semibold">
-                          {formatCurrency(item.sellingPrice * item.quantity)}
-                        </p>
+                    <div className="text-right">
+                      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Subtotal</div>
+                      <div className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
+                        {formatCurrency(item.sellingPrice * item.quantity)}
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
 
           {/* Checkout Section */}
           {cart.length > 0 && (
-            <div className="p-4 border-t border-slate-700 space-y-4">
+            <div className="p-3 sm:p-4 border-t border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 space-y-4 pb-safe">
+              
               {/* Customer Selection */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 uppercase">
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                   Customer (Optional)
                 </label>
-                <select
-                  value={selectedCustomerId || ''}
-                  onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-purple-400"
-                >
-                  <option value="">Select customer...</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.phone}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedCustomerId || ''}
+                    onChange={(e) => setSelectedCustomerId(e.target.value || null)}
+                    className="flex-1 px-3 py-3 bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white"
+                    style={{ fontSize: '16px' }} // Prevent zoom on iOS
+                  >
+                    <option value="">Select customer...</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name} - {customer.phone}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowAddCustomer(true)}
+                    className="px-3 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors flex items-center justify-center min-w-[44px] active:scale-95"
+                    title="Add new customer"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* Payment Method */}
+              {/* Payment Method Selection */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 uppercase">
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                   Payment Method
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -422,29 +467,46 @@ const OptimizedModernSalesPage = () => {
                     <button
                       key={method}
                       onClick={() => setPaymentMethod(method)}
-                      className={`px-3 py-2 rounded text-sm font-medium uppercase transition-colors ${
+                      className={`px-3 py-3 rounded-xl text-sm font-bold transition-all touch-target active:scale-95 ${
                         paymentMethod === method
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          ? 'bg-purple-600 text-white shadow-lg scale-105'
+                          : 'bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-500'
                       }`}
                     >
-                      {method}
+                      {method.charAt(0).toUpperCase() + method.slice(1)}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Total */}
-              <div className="bg-slate-700 rounded-lg p-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold uppercase">Total:</span>
-                  <span className="text-xl font-bold text-purple-300">
-                    {formatCurrency(total)}
-                  </span>
+              {/* Debt-specific validation */}
+              {paymentMethod === 'debt' && !selectedCustomerId && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3">
+                  <p className="text-yellow-700 dark:text-yellow-300 text-sm font-bold">
+                    ⚠️ Please select a customer for debt transactions
+                  </p>
                 </div>
+              )}
+
+              {/* Quick Action Buttons */}
+              <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
+                <button
+                  onClick={() => setShowAddCustomer(true)}
+                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add Customer
+                </button>
+                <button
+                  onClick={() => setShowAddDebt(true)}
+                  className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
+                >
+                  <Package className="h-4 w-4" />
+                  Record Debt
+                </button>
               </div>
 
-              {/* Checkout Button */}
+              {/* Enhanced Checkout Button */}
               <SalesCheckout
                 cart={cart}
                 selectedCustomerId={selectedCustomerId}
@@ -457,20 +519,6 @@ const OptimizedModernSalesPage = () => {
           )}
         </div>
       </main>
-
-      {/* Floating Action Button for Mobile */}
-      {isMobile && (
-        <button
-          onClick={() => setActivePanel(activePanel === 'products' ? 'cart' : 'products')}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center shadow-lg z-50"
-        >
-          {activePanel === 'products' ? (
-            <ShoppingCart className="h-6 w-6 text-white" />
-          ) : (
-            <Grid3X3 className="h-6 w-6 text-white" />
-          )}
-        </button>
-      )}
 
       {/* Modals */}
       {showAddCustomer && (
