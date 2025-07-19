@@ -461,9 +461,24 @@ export const useOfflineManager = () => {
         
         return !error;
       } else if (operation.operation === 'update') {
+        // Handle field mapping for updates
+        const updateData: any = {};
+        
+        // Map all possible fields with proper null handling
+        if (data.updates.name !== undefined) updateData.name = data.updates.name;
+        if (data.updates.phone !== undefined) updateData.phone = data.updates.phone;
+        if (data.updates.email !== undefined) updateData.email = data.updates.email;
+        if (data.updates.address !== undefined) updateData.address = data.updates.address;
+        if (data.updates.total_purchases !== undefined) updateData.total_purchases = data.updates.total_purchases;
+        if (data.updates.outstanding_debt !== undefined) updateData.outstanding_debt = data.updates.outstanding_debt;
+        if (data.updates.credit_limit !== undefined) updateData.credit_limit = data.updates.credit_limit;
+        if (data.updates.risk_rating !== undefined) updateData.risk_rating = data.updates.risk_rating;
+        if (data.updates.last_purchase_date !== undefined) updateData.last_purchase_date = data.updates.last_purchase_date;
+        if (data.updates.updated_at !== undefined) updateData.updated_at = data.updates.updated_at;
+
         const { error } = await supabase
           .from('customers')
-          .update(data.updates)
+          .update(updateData)
           .eq('id', data.id)
           .eq('user_id', user?.id);
         

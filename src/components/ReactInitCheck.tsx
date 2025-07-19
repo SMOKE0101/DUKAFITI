@@ -5,36 +5,37 @@ interface ReactInitCheckProps {
 }
 
 export const ReactInitCheck: React.FC<ReactInitCheckProps> = ({ children }) => {
-  // Check if React and its hooks are properly available
-  if (typeof React === 'undefined') {
-    console.error('React is undefined');
-    return <div style={{ padding: '20px', color: 'red' }}>React is not loaded</div>;
-  }
+  // Check if React and its hooks are properly available - but always call hooks first
+  const [mounted, setMounted] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  
+  React.useEffect(() => {
+    try {
+      // Check if React is properly loaded
+      if (typeof React === 'undefined') {
+        setError('React is not loaded');
+        return;
+      }
 
-  if (typeof React.useState === 'undefined') {
-    console.error('React.useState is undefined');
-    return <div style={{ padding: '20px', color: 'red' }}>React hooks are not available</div>;
-  }
+      if (typeof React.useState === 'undefined') {
+        setError('React hooks are not available');
+        return;
+      }
 
-  try {
-    // Try using React hooks to verify they work
-    const [mounted, setMounted] = React.useState(false);
-    
-    React.useEffect(() => {
       setMounted(true);
-    }, []);
-
-    if (!mounted) {
-      return <div style={{ padding: '20px' }}>Initializing React...</div>;
+    } catch (err) {
+      console.error('React initialization error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
     }
+  }, []);
 
-    return <>{children}</>;
-  } catch (error) {
-    console.error('React hook error:', error);
-    return (
-      <div style={{ padding: '20px', color: 'red' }}>
-        React hook error: {error instanceof Error ? error.message : 'Unknown error'}
-      </div>
-    );
+  if (error) {
+    return <div style={{ padding: '20px', color: 'red' }}>React Error: {error}</div>;
   }
+
+  if (!mounted) {
+    return <div style={{ padding: '20px' }}>Initializing React...</div>;
+  }
+
+  return <>{children}</>;
 };
