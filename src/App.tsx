@@ -40,8 +40,8 @@ function App() {
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <TooltipProvider>
-              <ErrorBoundary>
-                <AuthProvider>
+              <AuthProvider>
+                <ErrorBoundary>
                   <div className="min-h-screen w-full bg-background text-foreground">
                     <Routes>
                       {/* Public routes */}
@@ -80,8 +80,8 @@ function App() {
                     <Toaster />
                     <ProductionToaster />
                   </div>
-                </AuthProvider>
-              </ErrorBoundary>
+                </ErrorBoundary>
+              </AuthProvider>
             </TooltipProvider>
           </ThemeProvider>
         </BrowserRouter>
