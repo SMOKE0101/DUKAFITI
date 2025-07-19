@@ -6,6 +6,36 @@ import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
 import { Sale } from '../types';
 
+// Helper function to transform database sale to interface
+const transformDbSale = (dbSale: any): Sale => ({
+  id: dbSale.id,
+  productId: dbSale.product_id,
+  productName: dbSale.product_name,
+  customerId: dbSale.customer_id,
+  customerName: dbSale.customer_name,
+  quantity: dbSale.quantity,
+  sellingPrice: dbSale.selling_price,
+  costPrice: dbSale.cost_price,
+  profit: dbSale.profit,
+  total: dbSale.total_amount,
+  paymentMethod: (dbSale.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial') || 'cash',
+  paymentDetails: typeof dbSale.payment_details === 'object' && dbSale.payment_details 
+    ? dbSale.payment_details as {
+        cashAmount: number;
+        mpesaAmount: number;
+        debtAmount: number;
+        mpesaReference?: string;
+        tillNumber?: string;
+      }
+    : {
+        cashAmount: 0,
+        mpesaAmount: 0,
+        debtAmount: 0,
+      },
+  timestamp: dbSale.timestamp,
+  synced: dbSale.synced || true,
+});
+
 export const useUnifiedSales = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,28 +72,9 @@ export const useUnifiedSales = () => {
             .order('timestamp', { ascending: false });
 
           if (!fetchError && data) {
-            const formattedData = data.map(item => ({
-              id: item.id,
-              productId: item.product_id,
-              productName: item.product_name,
-              customerId: item.customer_id,
-              customerName: item.customer_name,
-              quantity: item.quantity,
-              sellingPrice: item.selling_price,
-              costPrice: item.cost_price,
-              profit: item.profit,
-              total: item.total_amount,
-              paymentMethod: item.payment_method,
-              paymentDetails: item.payment_details || {
-                cashAmount: 0,
-                mpesaAmount: 0,
-                debtAmount: 0,
-              },
-              timestamp: item.timestamp,
-              synced: item.synced,
-            }));
-            setCache('sales', formattedData);
-            setSales(formattedData);
+            const transformedData = data.map(transformDbSale);
+            setCache('sales', transformedData);
+            setSales(transformedData);
           }
         }
         return;
@@ -81,28 +92,9 @@ export const useUnifiedSales = () => {
           setError('Failed to load sales');
           console.error('[UnifiedSales] Fetch error:', fetchError);
         } else {
-          const formattedData = (data || []).map(item => ({
-            id: item.id,
-            productId: item.product_id,
-            productName: item.product_name,
-            customerId: item.customer_id,
-            customerName: item.customer_name,
-            quantity: item.quantity,
-            sellingPrice: item.selling_price,
-            costPrice: item.cost_price,
-            profit: item.profit,
-            total: item.total_amount,
-            paymentMethod: item.payment_method,
-            paymentDetails: item.payment_details || {
-              cashAmount: 0,
-              mpesaAmount: 0,
-              debtAmount: 0,
-            },
-            timestamp: item.timestamp,
-            synced: item.synced,
-          }));
-          setCache('sales', formattedData);
-          setSales(formattedData);
+          const transformedData = (data || []).map(transformDbSale);
+          setCache('sales', transformedData);
+          setSales(transformedData);
         }
       } else {
         setError('No cached data available offline');
@@ -154,30 +146,11 @@ export const useUnifiedSales = () => {
 
         if (error) throw error;
 
-        const formattedSale: Sale = {
-          id: data.id,
-          productId: data.product_id,
-          productName: data.product_name,
-          customerId: data.customer_id,
-          customerName: data.customer_name,
-          quantity: data.quantity,
-          sellingPrice: data.selling_price,
-          costPrice: data.cost_price,
-          profit: data.profit,
-          total: data.total_amount,
-          paymentMethod: data.payment_method,
-          paymentDetails: data.payment_details || {
-            cashAmount: 0,
-            mpesaAmount: 0,
-            debtAmount: 0,
-          },
-          timestamp: data.timestamp,
-          synced: data.synced,
-        };
+        const transformedSale = transformDbSale(data);
 
         // Replace temp sale with real one
         setSales(prev => 
-          prev.map(s => s.id === newSale.id ? formattedSale : s)
+          prev.map(s => s.id === newSale.id ? transformedSale : s)
         );
 
         // Update cache
@@ -187,30 +160,11 @@ export const useUnifiedSales = () => {
           .eq('user_id', user.id);
         
         if (updatedSales.data) {
-          const formattedData = updatedSales.data.map(item => ({
-            id: item.id,
-            productId: item.product_id,
-            productName: item.product_name,
-            customerId: item.customer_id,
-            customerName: item.customer_name,
-            quantity: item.quantity,
-            sellingPrice: item.selling_price,
-            costPrice: item.cost_price,
-            profit: item.profit,
-            total: item.total_amount,
-            paymentMethod: item.payment_method,
-            paymentDetails: item.payment_details || {
-              cashAmount: 0,
-              mpesaAmount: 0,
-              debtAmount: 0,
-            },
-            timestamp: item.timestamp,
-            synced: item.synced,
-          }));
-          setCache('sales', formattedData);
+          const transformedData = updatedSales.data.map(transformDbSale);
+          setCache('sales', transformedData);
         }
 
-        return formattedSale;
+        return transformedSale;
       } catch (error) {
         // Revert optimistic update and queue for sync
         setSales(prev => prev.filter(s => s.id !== newSale.id));

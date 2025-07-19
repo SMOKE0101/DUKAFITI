@@ -6,6 +6,21 @@ import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
 import { Customer } from '../types';
 
+// Helper function to transform database customer to interface
+const transformDbCustomer = (dbCustomer: any): Customer => ({
+  id: dbCustomer.id,
+  name: dbCustomer.name,
+  phone: dbCustomer.phone,
+  email: dbCustomer.email,
+  address: dbCustomer.address,
+  createdDate: dbCustomer.created_date || dbCustomer.created_at,
+  totalPurchases: dbCustomer.total_purchases || 0,
+  outstandingDebt: dbCustomer.outstanding_debt || 0,
+  creditLimit: dbCustomer.credit_limit || 1000,
+  lastPurchaseDate: dbCustomer.last_purchase_date,
+  riskRating: (dbCustomer.risk_rating as 'low' | 'medium' | 'high') || 'low',
+});
+
 export const useUnifiedCustomers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +57,9 @@ export const useUnifiedCustomers = () => {
             .order('created_date', { ascending: false });
 
           if (!fetchError && data) {
-            setCache('customers', data);
-            setCustomers(data);
+            const transformedData = data.map(transformDbCustomer);
+            setCache('customers', transformedData);
+            setCustomers(transformedData);
           }
         }
         return;
@@ -61,8 +77,9 @@ export const useUnifiedCustomers = () => {
           setError('Failed to load customers');
           console.error('[UnifiedCustomers] Fetch error:', fetchError);
         } else {
-          setCache('customers', data || []);
-          setCustomers(data || []);
+          const transformedData = (data || []).map(transformDbCustomer);
+          setCache('customers', transformedData);
+          setCustomers(transformedData);
         }
       } else {
         setError('No cached data available offline');
@@ -83,8 +100,8 @@ export const useUnifiedCustomers = () => {
       ...customerData,
       id: `temp_${Date.now()}`,
       createdDate: new Date().toISOString(),
-      totalPurchases: 0,
-      outstandingDebt: 0,
+      totalPurchases: customerData.totalPurchases || 0,
+      outstandingDebt: customerData.outstandingDebt || 0,
       creditLimit: customerData.creditLimit || 1000,
     };
 
@@ -93,17 +110,33 @@ export const useUnifiedCustomers = () => {
 
     if (isOnline) {
       try {
+        // Transform interface to database format
+        const dbData = {
+          name: customerData.name,
+          phone: customerData.phone,
+          email: customerData.email,
+          address: customerData.address,
+          total_purchases: customerData.totalPurchases || 0,
+          outstanding_debt: customerData.outstandingDebt || 0,
+          credit_limit: customerData.creditLimit || 1000,
+          risk_rating: customerData.riskRating || 'low',
+          last_purchase_date: customerData.lastPurchaseDate,
+          user_id: user.id,
+        };
+
         const { data, error } = await supabase
           .from('customers')
-          .insert([{ ...customerData, user_id: user.id }])
+          .insert([dbData])
           .select()
           .single();
 
         if (error) throw error;
 
+        const transformedCustomer = transformDbCustomer(data);
+        
         // Replace temp customer with real one
         setCustomers(prev => 
-          prev.map(c => c.id === newCustomer.id ? data : c)
+          prev.map(c => c.id === newCustomer.id ? transformedCustomer : c)
         );
 
         // Update cache
@@ -113,10 +146,11 @@ export const useUnifiedCustomers = () => {
           .eq('user_id', user.id);
         
         if (updatedCustomers.data) {
-          setCache('customers', updatedCustomers.data);
+          const transformedData = updatedCustomers.data.map(transformDbCustomer);
+          setCache('customers', transformedData);
         }
 
-        return data;
+        return transformedCustomer;
       } catch (error) {
         // Revert optimistic update and queue for sync
         setCustomers(prev => prev.filter(c => c.id !== newCustomer.id));
@@ -150,9 +184,21 @@ export const useUnifiedCustomers = () => {
 
     if (isOnline) {
       try {
+        // Transform interface updates to database format
+        const dbUpdates: any = {};
+        if (updates.name) dbUpdates.name = updates.name;
+        if (updates.phone) dbUpdates.phone = updates.phone;
+        if (updates.email) dbUpdates.email = updates.email;
+        if (updates.address) dbUpdates.address = updates.address;
+        if (updates.totalPurchases !== undefined) dbUpdates.total_purchases = updates.totalPurchases;
+        if (updates.outstandingDebt !== undefined) dbUpdates.outstanding_debt = updates.outstandingDebt;
+        if (updates.creditLimit !== undefined) dbUpdates.credit_limit = updates.creditLimit;
+        if (updates.riskRating) dbUpdates.risk_rating = updates.riskRating;
+        if (updates.lastPurchaseDate !== undefined) dbUpdates.last_purchase_date = updates.lastPurchaseDate;
+
         const { error } = await supabase
           .from('customers')
-          .update(updates)
+          .update(dbUpdates)
           .eq('id', id)
           .eq('user_id', user.id);
 
@@ -165,7 +211,8 @@ export const useUnifiedCustomers = () => {
           .eq('user_id', user.id);
         
         if (updatedCustomers.data) {
-          setCache('customers', updatedCustomers.data);
+          const transformedData = updatedCustomers.data.map(transformDbCustomer);
+          setCache('customers', transformedData);
         }
       } catch (error) {
         // Revert optimistic update and queue for sync
