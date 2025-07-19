@@ -43,10 +43,11 @@ export class SyncService {
     }
 
     if (allSuccess) {
-      console.log('[SyncService] All operations synced successfully');
+      console.log('[SyncService] All operations synced successfully - dispatching events');
       // Dispatch sync events to notify components
       window.dispatchEvent(new CustomEvent('sync-completed'));
       window.dispatchEvent(new CustomEvent('data-synced'));
+      console.log('[SyncService] Events dispatched: sync-completed, data-synced');
     }
 
     return allSuccess;
@@ -90,13 +91,29 @@ export class SyncService {
           .from('products')
           .insert([{
             user_id: userId,
-            ...data,
+            name: data.name,
+            category: data.category,
+            cost_price: data.costPrice,
+            selling_price: data.sellingPrice,
+            current_stock: data.currentStock || 0,
+            low_stock_threshold: data.lowStockThreshold || 10,
           }]);
         break;
       case 'update':
+        const updateData: any = {};
+        const updates = data.updates;
+        
+        if (updates.name !== undefined) updateData.name = updates.name;
+        if (updates.category !== undefined) updateData.category = updates.category;
+        if (updates.costPrice !== undefined) updateData.cost_price = updates.costPrice;
+        if (updates.sellingPrice !== undefined) updateData.selling_price = updates.sellingPrice;
+        if (updates.currentStock !== undefined) updateData.current_stock = updates.currentStock;
+        if (updates.lowStockThreshold !== undefined) updateData.low_stock_threshold = updates.lowStockThreshold;
+        if (updates.updatedAt !== undefined) updateData.updated_at = updates.updatedAt;
+        
         await supabase
           .from('products')
-          .update(data.updates)
+          .update(updateData)
           .eq('id', data.id)
           .eq('user_id', userId);
         break;
@@ -114,13 +131,34 @@ export class SyncService {
           .from('customers')
           .insert([{
             user_id: userId,
-            ...data,
+            name: data.name,
+            phone: data.phone,
+            email: data.email,
+            address: data.address,
+            total_purchases: data.totalPurchases || 0,
+            outstanding_debt: data.outstandingDebt || 0,
+            credit_limit: data.creditLimit || 1000,
+            risk_rating: data.riskRating || 'low',
+            last_purchase_date: data.lastPurchaseDate,
           }]);
         break;
       case 'update':
+        const updateData: any = {};
+        const updates = data.updates;
+        
+        if (updates.name !== undefined) updateData.name = updates.name;
+        if (updates.phone !== undefined) updateData.phone = updates.phone;
+        if (updates.email !== undefined) updateData.email = updates.email;
+        if (updates.address !== undefined) updateData.address = updates.address;
+        if (updates.totalPurchases !== undefined) updateData.total_purchases = updates.totalPurchases;
+        if (updates.outstandingDebt !== undefined) updateData.outstanding_debt = updates.outstandingDebt;
+        if (updates.creditLimit !== undefined) updateData.credit_limit = updates.creditLimit;
+        if (updates.riskRating !== undefined) updateData.risk_rating = updates.riskRating;
+        if (updates.lastPurchaseDate !== undefined) updateData.last_purchase_date = updates.lastPurchaseDate;
+        
         await supabase
           .from('customers')
-          .update(data.updates)
+          .update(updateData)
           .eq('id', data.id)
           .eq('user_id', userId);
         break;

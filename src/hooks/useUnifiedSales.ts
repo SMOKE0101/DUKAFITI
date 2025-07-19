@@ -118,8 +118,12 @@ export const useUnifiedSales = () => {
       timestamp: saleData.timestamp || new Date().toISOString(),
     };
 
-    // Optimistically update UI
-    setSales(prev => [newSale, ...prev]);
+    // Optimistically update UI and cache
+    setSales(prev => {
+      const updated = [newSale, ...prev];
+      setCache('sales', updated);
+      return updated;
+    });
 
     if (isOnline) {
       try {
@@ -184,6 +188,7 @@ export const useUnifiedSales = () => {
         operation: 'create',
         data: saleData,
       });
+      console.log('[UnifiedSales] Sale created offline and queued for sync');
       return newSale;
     }
   }, [user, isOnline, setCache, addPendingOperation]);
@@ -205,14 +210,21 @@ export const useUnifiedSales = () => {
       loadSales();
     };
 
+    const handleSalesSync = () => {
+      console.log('[UnifiedSales] Sales sync event received, refreshing data');
+      loadSales();
+    };
+
     window.addEventListener('network-reconnected', handleReconnect);
     window.addEventListener('sync-completed', handleSyncComplete);
     window.addEventListener('data-synced', handleSyncComplete);
+    window.addEventListener('sales-synced', handleSalesSync);
     
     return () => {
       window.removeEventListener('network-reconnected', handleReconnect);
       window.removeEventListener('sync-completed', handleSyncComplete);
       window.removeEventListener('data-synced', handleSyncComplete);
+      window.removeEventListener('sales-synced', handleSalesSync);
     };
   }, [loadSales]);
 

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
+import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
@@ -33,6 +34,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const { createSale } = useUnifiedSales();
   const { updateProduct } = useUnifiedProducts();
   const { updateCustomer } = useUnifiedCustomers();
+  const { addOfflineOperation } = useUnifiedOfflineManager();
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
@@ -98,11 +100,16 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
         console.log('[SalesCheckout] Processing sale for item:', item.name);
 
-        // Create the sale using unified system (works offline)
+        // Create the sale - always use unified hooks for local updates
         await createSale(saleData);
         console.log('[SalesCheckout] Sale created for item:', item.name);
 
-        // Update product stock (works offline)
+        // If offline, also add to sync queue
+        if (!isOnline) {
+          await addOfflineOperation('sale', 'create', saleData);
+        }
+
+        // Update product stock - always update locally 
         const currentStock = item.currentStock || 0;
         const newStock = Math.max(0, currentStock - item.quantity);
         await updateProduct(item.id, { 
@@ -110,15 +117,37 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           updatedAt: new Date().toISOString()
         });
 
-        // Update customer debt if applicable (works offline)
+        // If offline, also add to sync queue
+        if (!isOnline) {
+          await addOfflineOperation('product', 'update', {
+            id: item.id,
+            updates: {
+              currentStock: newStock,
+              updatedAt: new Date().toISOString()
+            }
+          });
+        }
+
+        // Update customer debt if applicable
         if (paymentMethod === 'debt' && selectedCustomerId) {
           const customerToUpdate = customers.find(c => c.id === selectedCustomerId);
           if (customerToUpdate) {
-            await updateCustomer(selectedCustomerId, {
+            const updates = {
               outstandingDebt: (customerToUpdate.outstandingDebt || 0) + itemTotal,
               totalPurchases: (customerToUpdate.totalPurchases || 0) + itemTotal,
               lastPurchaseDate: new Date().toISOString(),
-            });
+            };
+            
+            // Always update locally
+            await updateCustomer(selectedCustomerId, updates);
+            
+            // If offline, also add to sync queue
+            if (!isOnline) {
+              await addOfflineOperation('customer', 'update', {
+                id: selectedCustomerId,
+                updates
+              });
+            }
           }
         }
       }

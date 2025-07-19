@@ -58,7 +58,15 @@ export const useUnifiedOfflineManager = () => {
         setOperations([]);
         setPendingOperations(0);
         localStorage.removeItem('pendingOperations');
-        console.log('[UnifiedOfflineManager] Sync completed successfully');
+        console.log('[UnifiedOfflineManager] Sync completed successfully - operations cleared');
+        
+        // Manually dispatch additional events to ensure all components refresh
+        setTimeout(() => {
+          console.log('[UnifiedOfflineManager] Dispatching additional refresh events');
+          window.dispatchEvent(new CustomEvent('sales-synced'));
+          window.dispatchEvent(new CustomEvent('products-synced')); 
+          window.dispatchEvent(new CustomEvent('customers-synced'));
+        }, 100);
       } else {
         console.log('[UnifiedOfflineManager] Some operations failed to sync');
       }
