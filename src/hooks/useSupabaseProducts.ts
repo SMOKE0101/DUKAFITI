@@ -53,14 +53,22 @@ export const useSupabaseProducts = () => {
 
   const loadFromSupabase = async () => {
     if (!user) {
-      console.log('[useSupabaseProducts] No user authenticated');
+      console.log('[useSupabaseProducts] No user authenticated, user state:', user);
       return [];
     }
     
-    console.log('[useSupabaseProducts] Loading products from Supabase...');
+    console.log('[useSupabaseProducts] Loading products from Supabase for user:', user.id);
     
     try {
       const { supabase } = await import('@/integrations/supabase/client');
+      
+      // First, let's check what products exist in the database
+      const { data: allProducts, error: allError } = await supabase
+        .from('products')
+        .select('*')
+        .limit(5);
+      
+      console.log('[useSupabaseProducts] All products (first 5):', allProducts);
       
       const { data, error } = await supabase
         .from('products')
@@ -78,7 +86,7 @@ export const useSupabaseProducts = () => {
         return [];
       }
 
-      console.log('[useSupabaseProducts] Loaded products from Supabase:', data.length);
+      console.log('[useSupabaseProducts] Loaded products from Supabase for user:', data.length, 'products');
       return data.map(transformToLocal).filter(product => product.id); // Filter out invalid products
     } catch (error) {
       console.error('[useSupabaseProducts] Load error:', error);

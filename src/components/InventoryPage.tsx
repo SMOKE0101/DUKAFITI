@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, Plus, AlertTriangle, RefreshCw, TrendingUp, Filter, Search } from 'lucide-react';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { useAuth } from '../hooks/useAuth';
 import AddProductModal from './inventory/AddProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
@@ -16,6 +17,7 @@ import { Product } from '../types';
 import { getCategoryDisplayName, PRODUCT_CATEGORIES } from '../constants/categories';
 
 const InventoryPage: React.FC = () => {
+  const { user, loading: authLoading } = useAuth();
   const { 
     products, 
     loading, 
@@ -27,6 +29,11 @@ const InventoryPage: React.FC = () => {
     refreshProducts,
     isOnline 
   } = useSupabaseProducts();
+
+  // Debug log authentication state
+  useEffect(() => {
+    console.log('[InventoryPage] Auth state:', { user: user?.id, authLoading, productsCount: products.length });
+  }, [user, authLoading, products.length]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -134,15 +141,45 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto p-4">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-muted-foreground">Loading inventory...</p>
+            <p className="text-muted-foreground">
+              {authLoading ? 'Checking authentication...' : 'Loading inventory...'}
+            </p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show authentication required message if no user
+  if (!user && !authLoading) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                <div>
+                  <h3 className="font-semibold text-yellow-800">Authentication Required</h3>
+                  <p className="text-yellow-600 text-sm mt-1">Please sign in to view your inventory.</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.href = '/'}
+                className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+              >
+                Sign In
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
