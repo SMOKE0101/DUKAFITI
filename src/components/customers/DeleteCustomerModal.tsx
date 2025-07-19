@@ -4,94 +4,104 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Customer } from '../../types';
 import { AlertTriangle } from 'lucide-react';
+import { formatCurrency } from '../../utils/currency';
 
 interface DeleteCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  customer: Customer;
-  onDelete: (id: string) => Promise<void>;
+  customer: Customer | null;
+  onDelete: () => Promise<void>;
+  isDeleting: boolean;
 }
 
 const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
   isOpen,
   onClose,
   customer,
-  onDelete
+  onDelete,
+  isDeleting
 }) => {
   const handleDelete = async () => {
-    await onDelete(customer.id);
-    onClose();
+    try {
+      await onDelete();
+    } catch (error) {
+      console.error('Failed to delete customer:', error);
+    }
   };
+
+  if (!customer) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[500px] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden">
-        
-        {/* Modern Header */}
-        <div className="border-b-4 border-red-600 bg-white dark:bg-gray-900 p-6 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-red-600" />
+      <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-semibold">
+                Delete Customer
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                This action cannot be undone
+              </p>
+            </div>
           </div>
-          <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
-            DELETE CUSTOMER
-          </DialogTitle>
-          <p className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2 uppercase tracking-wider">
-            This action cannot be undone
-          </p>
-        </div>
+        </DialogHeader>
         
-        <div className="bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
+        <div className="space-y-4">
           {/* Customer Details */}
-          <div className="border-2 border-red-300 dark:border-red-600 rounded-xl p-4 bg-red-50/50 dark:bg-red-900/20 mb-6">
-            <h3 className="font-mono font-bold uppercase tracking-wider text-red-900 dark:text-red-100 mb-2">
-              Customer to Delete
-            </h3>
-            <div className="space-y-1 font-mono text-sm">
+          <div className="border-2 border-red-200 rounded-lg p-4 bg-red-50">
+            <h3 className="font-semibold text-red-900 mb-2">Customer to Delete</h3>
+            <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Name:</span>
-                <span className="font-bold text-gray-900 dark:text-white">{customer.name}</span>
+                <span className="text-muted-foreground">Name:</span>
+                <span className="font-medium">{customer.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Phone:</span>
-                <span className="text-gray-900 dark:text-white">{customer.phone}</span>
+                <span className="text-muted-foreground">Phone:</span>
+                <span>{customer.phone}</span>
               </div>
               {customer.email && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Email:</span>
-                  <span className="text-gray-900 dark:text-white">{customer.email}</span>
+                  <span className="text-muted-foreground">Email:</span>
+                  <span>{customer.email}</span>
                 </div>
               )}
               {customer.outstandingDebt && customer.outstandingDebt > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Outstanding Debt:</span>
-                  <span className="text-red-600 font-bold">KES {customer.outstandingDebt.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Outstanding Debt:</span>
+                  <span className="text-red-600 font-semibold">
+                    {formatCurrency(customer.outstandingDebt)}
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Warning Message */}
-          <div className="border-2 border-yellow-300 dark:border-yellow-600 rounded-xl p-4 bg-yellow-50/50 dark:bg-yellow-900/20 mb-6">
-            <p className="font-mono text-sm text-yellow-800 dark:text-yellow-200 text-center">
-              <strong className="uppercase tracking-wide">Warning:</strong> This will permanently remove <strong>{customer.name}</strong> from your customer database. All purchase history and debt records will be lost.
+          <div className="border-2 border-yellow-200 rounded-lg p-4 bg-yellow-50">
+            <p className="text-sm text-yellow-800 text-center">
+              <strong>Warning:</strong> This will permanently remove <strong>{customer.name}</strong> from your customer database. All purchase history and debt records will be lost.
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
             <Button 
-              type="button" 
-              onClick={handleDelete}
-              className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200"
+              variant="outline" 
+              onClick={onClose}
+              className="flex-1"
             >
-              DELETE CUSTOMER
+              Cancel
             </Button>
             <Button 
-              type="button" 
-              onClick={onClose}
-              className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
             >
-              CANCEL
+              {isDeleting ? 'Deleting...' : 'Delete Customer'}
             </Button>
           </div>
         </div>
