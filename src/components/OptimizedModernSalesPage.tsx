@@ -1,815 +1,541 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSupabaseSales } from '../hooks/useSupabaseSales';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
-import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
-import { Product, Customer } from '../types';
 import { CartItem } from '../types/cart';
-import { ShoppingCart, Package, UserPlus, Search, X, Minus, Plus, Wifi, WifiOff, Clock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import { Customer } from '../types';
+import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
+import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
+import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
-import SalesCheckout from './sales/SalesCheckout';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-
-type PaymentMethod = 'cash' | 'mpesa' | 'debt';
+import { 
+  Search, 
+  ShoppingCart, 
+  Plus, 
+  Minus, 
+  UserPlus, 
+  WifiOff, 
+  Wifi,
+  RefreshCw,
+  CreditCard,
+  Receipt
+} from 'lucide-react';
 
 const OptimizedModernSalesPage = () => {
-  console.log('🚀 OptimizedModernSalesPage component loaded - TWO PANEL MOBILE POS');
-  const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
-  const [showAddCustomer, setShowAddCustomer] = useState(false);
-  const [showAddDebt, setShowAddDebt] = useState(false);
-  const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
-  const isMobile = useIsMobile();
-  const isTablet = useIsTablet();
-  const { user } = useAuth();
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
+  const [customerToAddDebt, setCustomerToAddDebt] = useState<Customer | null>(null);
+
+  const { products, loading: productsLoading } = useUnifiedProducts();
+  const { customers, loading: customersLoading } = useUnifiedCustomers();
+  const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
 
-  const { sales, loading: salesLoading, refreshSales } = useSupabaseSales();
-  const { products, loading: productsLoading } = useSupabaseProducts();
-  const { customers, loading: customersLoading } = useSupabaseCustomers();
-  const { isOnline, pendingOperations } = useUnifiedSyncManager();
+  const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
 
-  const isLoading = salesLoading || productsLoading || customersLoading;
-
-  // Set up real-time subscriptions
-  useEffect(() => {
-    if (!user) return;
-
-    console.log('[OptimizedModernSalesPage] Setting up real-time subscriptions');
-
-    const productsChannel = supabase
-      .channel('products-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'products',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        console.log('[OptimizedModernSalesPage] Products updated:', payload);
-      })
-      .subscribe();
-
-    const customersChannel = supabase
-      .channel('customers-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'customers',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        console.log('[OptimizedModernSalesPage] Customers updated:', payload);
-      })
-      .subscribe();
-
-    return () => {
-      console.log('[OptimizedModernSalesPage] Cleaning up subscriptions');
-      supabase.removeChannel(productsChannel);
-      supabase.removeChannel(customersChannel);
-    };
-  }, [user]);
-
-  const total = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
-  }, [cart]);
+  const categories = useMemo(() => {
+    const categorySet = new Set<string>();
+    products.forEach(product => {
+      if (product.category) {
+        categorySet.add(product.category);
+      }
+    });
+    return Array.from(categorySet).sort();
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return products.filter(product =>
-      product.name.toLowerCase().includes(term) ||
-      product.category.toLowerCase().includes(term)
-    );
-  }, [products, searchTerm]);
+    return products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !selectedCategory || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, selectedCategory]);
 
-  const addToCart = (product: Product) => {
-    console.log('[OptimizedModernSalesPage] Adding to cart:', product.name);
-    
-    if (product.currentStock === 0) {
-      const shouldAdd = window.confirm('This product is out of stock. Do you want to add it anyway?');
-      if (!shouldAdd) return;
-    }
+  const addToCart = useCallback((product: any) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.id === product.id);
+      if (existingItem) {
+        if (existingItem.quantity >= product.currentStock) {
+          toast({
+            title: "Insufficient Stock",
+            description: `Only ${product.currentStock} units available`,
+            variant: "destructive",
+          });
+          return prevCart;
+        }
+        return prevCart.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      
+      if (product.currentStock <= 0) {
+        toast({
+          title: "Out of Stock",
+          description: `${product.name} is currently out of stock`,
+          variant: "destructive",
+        });
+        return prevCart;
+      }
 
-    const existingItem = cart.find(item => item.id === product.id);
-    if (existingItem) {
-      const updatedCart = cart.map(item =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-      );
-      setCart(updatedCart);
-    } else {
-      const cartItem: CartItem = { ...product, quantity: 1 };
-      setCart([...cart, cartItem]);
-    }
-  };
+      return [...prevCart, { ...product, quantity: 1 }];
+    });
+  }, [toast]);
 
-  const removeFromCart = (productId: string) => {
-    console.log('[OptimizedModernSalesPage] Removing from cart:', productId);
-    const updatedCart = cart.filter(item => item.id !== productId);
-    setCart(updatedCart);
-  };
-
-  const updateQuantity = (productId: string, newQuantity: number) => {
-    console.log('[OptimizedModernSalesPage] Updating quantity:', productId, newQuantity);
-    
+  const updateQuantity = useCallback((productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId);
+      setCart(prevCart => prevCart.filter(item => item.id !== productId));
       return;
     }
 
-    const updatedCart = cart.map(item =>
-      item.id === productId ? { ...item, quantity: newQuantity } : item
+    setCart(prevCart =>
+      prevCart.map(item => {
+        if (item.id === productId) {
+          const maxQuantity = products.find(p => p.id === productId)?.currentStock || 0;
+          if (newQuantity > maxQuantity) {
+            toast({
+              title: "Insufficient Stock",
+              description: `Only ${maxQuantity} units available`,
+              variant: "destructive",
+            });
+            return item;
+          }
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      })
     );
-    setCart(updatedCart);
-  };
+  }, [products, toast]);
 
-  const clearCart = () => {
-    console.log('[OptimizedModernSalesPage] Clearing cart');
+  const clearCart = useCallback(() => {
     setCart([]);
-  };
-
-  const handleCheckoutComplete = async () => {
-    console.log('[OptimizedModernSalesPage] Checkout completed, clearing cart');
-    clearCart();
     setSelectedCustomerId(null);
     setPaymentMethod('cash');
+  }, []);
+
+  const handleCustomerAdded = useCallback((newCustomer: Customer) => {
+    console.log('[OptimizedModernSalesPage] Customer added:', newCustomer);
     
-    // Refresh sales data
+    // Automatically select the newly created customer
+    setSelectedCustomerId(newCustomer.id);
+    
+    toast({
+      title: "Customer Added & Selected",
+      description: `${newCustomer.name} has been added and selected for this sale.`,
+    });
+  }, [toast]);
+
+  const handleAddDebt = useCallback((customer: Customer) => {
+    setCustomerToAddDebt(customer);
+    setIsAddDebtModalOpen(true);
+  }, []);
+
+  const handleSync = async () => {
+    if (!isOnline) {
+      toast({
+        title: "Offline Mode",
+        description: "Please connect to the internet to sync data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      await refreshSales();
+      await syncPendingOperations();
+      toast({
+        title: "Sync Complete",
+        description: "All offline data has been synchronized.",
+      });
     } catch (error) {
-      console.error('[OptimizedModernSalesPage] Failed to refresh sales after checkout:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync some data. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const getStockDisplayText = (stock: number) => {
-    if (stock < 0) return 'Unspecified';
-    if (stock === 0) return 'Out of Stock';
-    return stock.toString();
-  };
-
-  const getStockColorClass = (stock: number, lowStockThreshold: number = 10) => {
-    if (stock < 0) return 'text-gray-500 dark:text-gray-400';
-    if (stock === 0) return 'text-orange-500 dark:text-orange-400';
-    if (stock <= lowStockThreshold) return 'text-yellow-500 dark:text-yellow-400';
-    return 'text-purple-500 dark:text-purple-400';
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Header */}
-      <header className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-40 shadow-lg">
-        <div className="mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-                🛒 SALES
-              </h1>
-              
-              {/* Connection Status */}
-              <div className="flex items-center gap-1 sm:gap-2">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
+                <Receipt className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sales Point</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Process sales and manage customers</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* Network Status & Sync */}
+              <div className="flex items-center gap-2">
                 {isOnline ? (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
-                    <Wifi className="h-3 w-3" />
-                    {!isMobile && "Online"}
+                  <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                    <Wifi className="w-4 h-4" />
+                    <span className="text-sm font-medium">Online</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-bold">
-                    <WifiOff className="h-3 w-3" />
-                    {!isMobile && "Offline"}
+                  <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                    <WifiOff className="w-4 h-4" />
+                    <span className="text-sm font-medium">Offline</span>
                   </div>
                 )}
                 
                 {pendingOperations > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
-                    <Clock className="h-3 w-3" />
-                    {!isMobile ? `${pendingOperations} pending` : pendingOperations}
-                  </div>
+                  <Button
+                    onClick={handleSync}
+                    disabled={!isOnline}
+                    size="sm"
+                    variant="outline"
+                    className="gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Sync ({pendingOperations})
+                  </Button>
                 )}
+              </div>
+
+              {/* Cart Summary */}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                <ShoppingCart className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                  {cart.length} items • {formatCurrency(total)}
+                </span>
               </div>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="flex-1 relative">
-        {/* Two Panel Layout for Mobile */}
-        {isMobile ? (
-          <div className="relative w-full h-[calc(100vh-80px)] overflow-hidden">
-            {/* Panel A: Search & Quick-Select */}
-            <div className={`absolute inset-0 w-full h-full transform transition-transform duration-200 ease-out ${
-              activePanel === 'search' ? 'translate-x-0' : '-translate-x-full'
-            }`}>
-              <div className="flex flex-col h-full">
-                {/* Search Section */}
-                <div className="p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 border-b border-gray-200/60 dark:border-slate-700/60">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Search and Filters */}
+            <Card className="border-0 shadow-md bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input
                       type="text"
                       placeholder="Search products..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-700 border-2 border-purple-200 dark:border-purple-600/30 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
-                      style={{ fontSize: '16px' }}
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm('')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 touch-target flex items-center justify-center"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Select Section */}
-                <div className="p-3 sm:p-4 bg-white/30 dark:bg-slate-800/30 border-b border-gray-200/40 dark:border-slate-700/40">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">⚡ Quick Picks</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                    {products.slice(0, 6).map((product) => (
-                      <button
-                        key={product.id}
-                        onClick={() => addToCart(product)}
-                        className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group min-h-[80px] active:scale-95"
-                      >
-                        <div className="font-bold text-gray-900 dark:text-white text-sm mb-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
-                          {product.name}
-                        </div>
-                        <div className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                          {formatCurrency(product.sellingPrice)}
-                        </div>
-                        <div className={`text-xs mt-1 ${getStockColorClass(product.currentStock)}`}>
-                          {getStockDisplayText(product.currentStock)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Product Grid */}
-                <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-20">
-                    {filteredProducts.length === 0 ? (
-                      <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-8">
-                        <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p className="font-bold">No products found</p>
-                        <p className="text-sm">Try adjusting your search</p>
-                      </div>
-                    ) : (
-                      filteredProducts.map((product) => (
-                        <button
-                          key={product.id}
-                          onClick={() => addToCart(product)}
-                          className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-4 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group text-left active:scale-95"
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
-                                {product.name}
-                              </h3>
-                              <p className="text-gray-500 dark:text-gray-400 text-xs">
-                                {product.category}
-                              </p>
-                            </div>
-                            <div className="ml-2">
-                              <Package className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-end">
-                            <div>
-                              <div className="text-purple-600 dark:text-purple-400 font-bold text-lg">
-                                {formatCurrency(product.sellingPrice)}
-                              </div>
-                              <div className={`text-xs ${getStockColorClass(product.currentStock)}`}>
-                                Stock: {getStockDisplayText(product.currentStock)}
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Panel B: Cart & Checkout */}
-            <div className={`absolute inset-0 w-full h-full transform transition-transform duration-200 ease-out ${
-              activePanel === 'cart' ? 'translate-x-0' : 'translate-x-full'
-            }`}>
-              <div className="flex flex-col h-full bg-white/60 dark:bg-slate-800/60">
-                {/* Cart Header */}
-                <div className="p-3 sm:p-4 border-b border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80">
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                      <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
-                      Cart ({cart.length})
-                    </h2>
-                    {cart.length > 0 && (
-                      <button
-                        onClick={clearCart}
-                        className="text-red-500 hover:text-red-700 text-sm font-bold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-                  <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
-                    Total: {formatCurrency(total)}
-                  </div>
-                </div>
-
-                {/* Cart Items */}
-                <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-                  {cart.length === 0 ? (
-                    <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                      <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p className="font-bold">Your cart is empty</p>
-                      <p className="text-sm">Add products to get started</p>
-                    </div>
-                  ) : (
-                    cart.map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-white dark:bg-slate-700 rounded-xl p-3 sm:p-4 border-2 border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md transition-all"
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1 pr-2">
-                            <h3 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2">
-                              {item.name}
-                            </h3>
-                            <p className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                              {formatCurrency(item.sellingPrice)}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target flex items-center justify-center"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
-                              disabled={item.quantity <= 1}
-                            >
-                              <Minus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                            </button>
-                            <span className="font-bold text-lg text-gray-900 dark:text-white min-w-[2.5rem] text-center">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
-                            >
-                              <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                            </button>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Subtotal</div>
-                            <div className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                              {formatCurrency(item.sellingPrice * item.quantity)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Checkout Section */}
-                {cart.length > 0 && (
-                  <div className="p-3 sm:p-4 border-t border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 space-y-4 pb-safe">
-                    
-                    {/* Customer Selection */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                        Customer (Optional)
-                      </label>
-                      <div className="flex gap-2">
-                        <select
-                          value={selectedCustomerId || ''}
-                          onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                          className="flex-1 px-3 py-3 bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white"
-                          style={{ fontSize: '16px' }}
-                        >
-                          <option value="">Select customer...</option>
-                          {customers.map((customer) => (
-                            <option key={customer.id} value={customer.id}>
-                              {customer.name} - {customer.phone}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => setShowAddCustomer(true)}
-                          className="px-3 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors flex items-center justify-center min-w-[44px] active:scale-95"
-                          title="Add new customer"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Payment Method Selection */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                        Payment Method
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(['cash', 'mpesa', 'debt'] as PaymentMethod[]).map((method) => (
-                          <button
-                            key={method}
-                            onClick={() => setPaymentMethod(method)}
-                            className={`px-3 py-3 rounded-xl text-sm font-bold transition-all touch-target active:scale-95 ${
-                              paymentMethod === method
-                                ? 'bg-purple-600 text-white shadow-lg scale-105'
-                                : 'bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-500'
-                            }`}
-                          >
-                            {method.charAt(0).toUpperCase() + method.slice(1)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Debt-specific validation */}
-                    {paymentMethod === 'debt' && !selectedCustomerId && (
-                      <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3">
-                        <p className="text-yellow-700 dark:text-yellow-300 text-sm font-bold">
-                          ⚠️ Please select a customer for debt transactions
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Quick Action Buttons */}
-                    <div className="flex gap-2 flex-col">
-                      <button
-                        onClick={() => setShowAddCustomer(true)}
-                        className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        Add Customer
-                      </button>
-                      <button
-                        onClick={() => setShowAddDebt(true)}
-                        className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
-                      >
-                        <Package className="h-4 w-4" />
-                        Record Debt
-                      </button>
-                    </div>
-
-                    {/* Enhanced Checkout Button */}
-                    <SalesCheckout
-                      cart={cart}
-                      selectedCustomerId={selectedCustomerId}
-                      paymentMethod={paymentMethod}
-                      customers={customers}
-                      onCheckoutComplete={handleCheckoutComplete}
-                      isOnline={isOnline}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     />
                   </div>
-                )}
-              </div>
-            </div>
+                  
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full sm:w-48 border-gray-200 dark:border-slate-600 rounded-xl">
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Categories</SelectItem>
+                      {categories.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Floating Toggle Button */}
-            <button
-              onClick={() => setActivePanel(activePanel === 'search' ? 'cart' : 'search')}
-              className={`fixed top-1/2 transform -translate-y-1/2 z-50 w-14 h-14 bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 ease-out active:scale-95 ${
-                activePanel === 'search' ? 'right-4' : 'left-4'
-              }`}
-              aria-label={activePanel === 'search' ? 'Go to Cart' : 'Go to Search'}
-            >
-              {activePanel === 'search' ? (
-                <ShoppingCart className="h-6 w-6" />
+            {/* Products Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {productsLoading ? (
+                Array.from({ length: 8 }).map((_, index) => (
+                  <div key={index} className="bg-white dark:bg-slate-800 rounded-xl p-4 animate-pulse">
+                    <div className="w-full h-24 bg-gray-200 dark:bg-slate-700 rounded-lg mb-3"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-2/3"></div>
+                  </div>
+                ))
+              ) : filteredProducts.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <div className="text-gray-400 dark:text-slate-500 mb-2">
+                    <Search className="w-12 h-12 mx-auto mb-3" />
+                    <p className="text-lg font-medium">No products found</p>
+                    <p className="text-sm">Try adjusting your search or filters</p>
+                  </div>
+                </div>
               ) : (
-                <Search className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-        ) : (
-          // Desktop Layout (unchanged)
-          <div className="flex">
-            {/* Left Panel - Product Search & Quick Picks */}
-            <div className="flex flex-col w-2/3 border-r border-gray-200/60 dark:border-slate-700/60">
-              
-              {/* Search Section */}
-              <div className="p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 border-b border-gray-200/60 dark:border-slate-700/60">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-700 border-2 border-purple-200 dark:border-purple-600/30 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
-                    style={{ fontSize: '16px' }}
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 touch-target flex items-center justify-center"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Quick Select Section */}
-              <div className="p-3 sm:p-4 bg-white/30 dark:bg-slate-800/30 border-b border-gray-200/40 dark:border-slate-700/40">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">⚡ Quick Picks</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                  {products.slice(0, 6).map((product) => (
-                    <button
-                      key={product.id}
-                      onClick={() => addToCart(product)}
-                      className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group min-h-[80px] active:scale-95"
-                    >
-                      <div className="font-bold text-gray-900 dark:text-white text-sm mb-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
+                filteredProducts.map(product => (
+                  <Card 
+                    key={product.id} 
+                    className="group hover:shadow-lg transition-all duration-200 cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                    onClick={() => addToCart(product)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="aspect-square bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <div className="text-2xl">📦</div>
+                      </div>
+                      
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 line-clamp-2">
                         {product.name}
-                      </div>
-                      <div className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                        {formatCurrency(product.sellingPrice)}
-                      </div>
-                      <div className={`text-xs mt-1 ${getStockColorClass(product.currentStock)}`}>
-                        {getStockDisplayText(product.currentStock)}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Product Grid */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-20">
-                  {filteredProducts.length === 0 ? (
-                    <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-8">
-                      <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p className="font-bold">No products found</p>
-                      <p className="text-sm">Try adjusting your search</p>
-                    </div>
-                  ) : (
-                    filteredProducts.map((product) => (
-                      <button
-                        key={product.id}
-                        onClick={() => addToCart(product)}
-                        className="bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl p-4 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-lg transition-all group text-left active:scale-95"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
-                              {product.name}
-                            </h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs">
-                              {product.category}
-                            </p>
-                          </div>
-                          <div className="ml-2">
-                            <Package className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <div className="text-purple-600 dark:text-purple-400 font-bold text-lg">
-                              {formatCurrency(product.sellingPrice)}
-                            </div>
-                            <div className={`text-xs ${getStockColorClass(product.currentStock)}`}>
-                              Stock: {getStockDisplayText(product.currentStock)}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Panel - Cart & Checkout */}
-            <div className="flex flex-col w-1/3 bg-white/60 dark:bg-slate-800/60">
-              
-              {/* Cart Header */}
-              <div className="p-3 sm:p-4 border-b border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
-                    Cart ({cart.length})
-                  </h2>
-                  {cart.length > 0 && (
-                    <button
-                      onClick={clearCart}
-                      className="text-red-500 hover:text-red-700 text-sm font-bold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target"
-                    >
-                      Clear All
-                    </button>
-                  )}
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
-                  Total: {formatCurrency(total)}
-                </div>
-              </div>
-
-              {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-                {cart.length === 0 ? (
-                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p className="font-bold">Your cart is empty</p>
-                    <p className="text-sm">Add products to get started</p>
-                  </div>
-                ) : (
-                  cart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-white dark:bg-slate-700 rounded-xl p-3 sm:p-4 border-2 border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md transition-all"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1 pr-2">
-                          <h3 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2">
-                            {item.name}
-                          </h3>
-                          <p className="text-purple-600 dark:text-purple-400 font-bold text-base sm:text-lg">
-                            {formatCurrency(item.sellingPrice)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors touch-target flex items-center justify-center"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                      </h3>
+                      
+                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+                        <span className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                          {product.category}
+                        </span>
+                        <span className={`font-medium ${product.currentStock <= 5 ? 'text-red-500' : 'text-green-600'}`}>
+                          Stock: {product.currentStock}
+                        </span>
                       </div>
                       
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                          </button>
-                          <span className="font-bold text-lg text-gray-900 dark:text-white min-w-[2.5rem] text-center">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-10 h-10 sm:w-8 sm:h-8 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-lg flex items-center justify-center transition-colors active:scale-95"
-                          >
-                            <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                          </button>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Subtotal</div>
-                          <div className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                            {formatCurrency(item.sellingPrice * item.quantity)}
-                          </div>
-                        </div>
+                        <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                          {formatCurrency(product.sellingPrice)}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg"
+                          disabled={product.currentStock <= 0}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
 
-              {/* Checkout Section */}
-              {cart.length > 0 && (
-                <div className="p-3 sm:p-4 border-t border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 space-y-4 pb-safe">
-                  
-                  {/* Customer Selection */}
+          <div className="space-y-6">
+            <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm sticky top-24">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <ShoppingCart className="w-5 h-5 text-purple-600" />
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Checkout</h2>
+                </div>
+
+                {/* Customer Selection */}
+                <div className="space-y-4 mb-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                       Customer (Optional)
                     </label>
                     <div className="flex gap-2">
-                      <select
-                        value={selectedCustomerId || ''}
-                        onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                        className="flex-1 px-3 py-3 bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-purple-400 dark:focus:border-purple-500 text-gray-900 dark:text-white"
-                        style={{ fontSize: '16px' }}
+                      <Select value={selectedCustomerId || ''} onValueChange={(value) => setSelectedCustomerId(value || null)}>
+                        <SelectTrigger className="flex-1 border-gray-200 dark:border-slate-600 rounded-xl">
+                          <SelectValue placeholder="Select customer..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No customer</SelectItem>
+                          {customers.map(customer => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              <div className="flex items-center justify-between w-full">
+                                <span>{customer.name}</span>
+                                <span className="text-xs text-gray-500 ml-2">
+                                  {customer.phone}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={() => setIsAddCustomerModalOpen(true)}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-3"
                       >
-                        <option value="">Select customer...</option>
-                        {customers.map((customer) => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.name} - {customer.phone}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => setShowAddCustomer(true)}
-                        className="px-3 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors flex items-center justify-center min-w-[44px] active:scale-95"
-                        title="Add new customer"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                      </button>
+                        <UserPlus className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
 
-                  {/* Payment Method Selection */}
+                  {/* Payment Method */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                       Payment Method
                     </label>
                     <div className="grid grid-cols-3 gap-2">
-                      {(['cash', 'mpesa', 'debt'] as PaymentMethod[]).map((method) => (
+                      {[
+                        { value: 'cash', label: 'Cash', icon: '💵' },
+                        { value: 'mpesa', label: 'Mpesa', icon: '📱' },
+                        { value: 'debt', label: 'Debt', icon: '📝' }
+                      ].map(method => (
                         <button
-                          key={method}
-                          onClick={() => setPaymentMethod(method)}
-                          className={`px-3 py-3 rounded-xl text-sm font-bold transition-all touch-target active:scale-95 ${
-                            paymentMethod === method
-                              ? 'bg-purple-600 text-white shadow-lg scale-105'
-                              : 'bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-500'
+                          key={method.value}
+                          onClick={() => setPaymentMethod(method.value as any)}
+                          className={`p-3 rounded-xl border-2 transition-all text-center ${
+                            paymentMethod === method.value
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
+                              : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 text-gray-600 dark:text-gray-400'
                           }`}
                         >
-                          {method.charAt(0).toUpperCase() + method.slice(1)}
+                          <div className="text-lg mb-1">{method.icon}</div>
+                          <div className="text-xs font-medium">{method.label}</div>
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Debt-specific validation */}
-                  {paymentMethod === 'debt' && !selectedCustomerId && (
-                    <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3">
-                      <p className="text-yellow-700 dark:text-yellow-300 text-sm font-bold">
-                        ⚠️ Please select a customer for debt transactions
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Quick Action Buttons */}
-                  <div className="flex gap-2 flex-col">
-                    <button
-                      onClick={() => setShowAddCustomer(true)}
-                      className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Add Customer
-                    </button>
-                    <button
-                      onClick={() => setShowAddDebt(true)}
-                      className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 touch-target active:scale-95"
-                    >
-                      <Package className="h-4 w-4" />
-                      Record Debt
-                    </button>
-                  </div>
-
-                  {/* Enhanced Checkout Button */}
-                  <SalesCheckout
-                    cart={cart}
-                    selectedCustomerId={selectedCustomerId}
-                    paymentMethod={paymentMethod}
-                    customers={customers}
-                    onCheckoutComplete={handleCheckoutComplete}
-                    isOnline={isOnline}
-                  />
                 </div>
-              )}
-            </div>
+
+                {/* Cart Items */}
+                <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
+                  {cart.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Your cart is empty</p>
+                      <p className="text-xs">Add products to get started</p>
+                    </div>
+                  ) : (
+                    cart.map(item => (
+                      <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center text-sm">
+                          📦
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                            {item.name}
+                          </h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatCurrency(item.sellingPrice)} each
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="w-8 h-8 p-0 rounded-lg"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          
+                          <span className="w-8 text-center text-sm font-medium text-gray-900 dark:text-white">
+                            {item.quantity}
+                          </span>
+                          
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="w-8 h-8 p-0 rounded-lg"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                            {formatCurrency(item.sellingPrice * item.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Total and Actions */}
+                {cart.length > 0 && (
+                  <>
+                    <Separator className="my-4" />
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">Total:</span>
+                        <span className="text-2xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                          {formatCurrency(total)}
+                        </span>
+                      </div>
+
+                      <SalesCheckout
+                        cart={cart}
+                        selectedCustomerId={selectedCustomerId}
+                        paymentMethod={paymentMethod}
+                        customers={customers}
+                        onCheckoutComplete={clearCart}
+                        isOnline={isOnline}
+                      />
+
+                      <Button
+                        onClick={clearCart}
+                        variant="outline"
+                        className="w-full border-2 border-gray-300 hover:border-gray-400 rounded-xl"
+                      >
+                        Clear Cart
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="border-0 shadow-md bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Quick Actions</h3>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => setIsAddCustomerModalOpen(true)}
+                    className="w-full justify-start bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add Customer
+                  </Button>
+                  
+                  {selectedCustomerId && (
+                    <Button
+                      onClick={() => {
+                        const customer = customers.find(c => c.id === selectedCustomerId);
+                        if (customer) handleAddDebt(customer);
+                      }}
+                      className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Record Debt
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
-      </main>
+        </div>
+      </div>
 
       {/* Modals */}
-      {showAddCustomer && (
-        <AddCustomerModal
-          open={showAddCustomer}
-          onOpenChange={setShowAddCustomer}
-          onCustomerAdded={(customer) => {
-            setSelectedCustomerId(customer.id);
-            setShowAddCustomer(false);
-          }}
-        />
-      )}
+      <AddCustomerModal
+        open={isAddCustomerModalOpen}
+        onOpenChange={setIsAddCustomerModalOpen}
+        onCustomerAdded={handleCustomerAdded}
+      />
 
-      {showAddDebt && (
-        <AddDebtModal
-          isOpen={showAddDebt}
-          onClose={() => setShowAddDebt(false)}
-        />
-      )}
+      <AddDebtModal
+        open={isAddDebtModalOpen}
+        onOpenChange={setIsAddDebtModalOpen}
+        customer={customerToAddDebt}
+        onDebtAdded={() => {
+          // Refresh customers list or handle debt added
+          toast({
+            title: "Debt Recorded",
+            description: "Customer debt has been updated successfully.",
+          });
+        }}
+      />
     </div>
   );
 };

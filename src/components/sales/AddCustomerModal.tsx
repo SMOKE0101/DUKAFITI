@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
+import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
 import { useToast } from '../../hooks/use-toast';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { UserPlus, Loader2, WifiOff } from 'lucide-react';
@@ -25,7 +26,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { createCustomer } = useSupabaseCustomers();
+  const { createCustomer } = useUnifiedCustomers();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
@@ -52,7 +53,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
     if (formData.initialDebt < 0) {
       toast({
-        title: "Validation Error",
+        title: "Validation Error", 
         description: "Initial debt cannot be negative.",
         variant: "destructive",
       });
@@ -62,6 +63,8 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
     setIsSubmitting(true);
 
     try {
+      console.log('[AddCustomerModal] Creating customer with data:', formData);
+
       const customerData = {
         name: formData.name.trim(),
         phone: formData.phone.trim(),
@@ -75,22 +78,14 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         createdDate: new Date().toISOString(),
       };
 
-      // Create customer (handles both online and offline scenarios)
+      // Create customer using unified hook (handles both online and offline scenarios)
       const newCustomer = await createCustomer(customerData);
-      console.log('✅ Customer created successfully:', newCustomer);
+      console.log('[AddCustomerModal] Customer created successfully:', newCustomer);
       
       toast({
         title: "Success!",
         description: `Customer ${formData.name} has been ${isOnline ? 'added' : 'saved offline and will sync when online'}.`,
       });
-
-      // Close modal first, then notify parent
-      onOpenChange(false);
-      
-      // Use timeout to ensure modal closes before selecting customer
-      setTimeout(() => {
-        onCustomerAdded?.(newCustomer);
-      }, 100);
 
       // Reset form
       setFormData({
@@ -101,11 +96,26 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         creditLimit: 1000,
         initialDebt: 0,
       });
+
+      // Close modal first
+      onOpenChange(false);
+      
+      // Notify parent component with the new customer
+      // Use timeout to ensure modal closes before selecting customer
+      setTimeout(() => {
+        console.log('[AddCustomerModal] Notifying parent with new customer:', newCustomer);
+        onCustomerAdded?.(newCustomer);
+      }, 100);
+
     } catch (error) {
-      console.error('Error creating customer:', error);
+      console.error('[AddCustomerModal] Error creating customer:', error);
+      
+      // More specific error handling
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       toast({
         title: "Error",
-        description: "Failed to add customer. Please try again.",
+        description: `Failed to add customer: ${errorMessage}. ${!isOnline ? 'Please check your offline storage.' : 'Please try again.'}`,
         variant: "destructive",
       });
     } finally {
