@@ -25,36 +25,78 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
     initialDebt: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { createCustomer } = useUnifiedCustomers();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
+  const validateField = (name: string, value: string | number) => {
+    const newErrors = { ...errors };
+
+    switch (name) {
+      case 'name':
+        if (!String(value).trim()) {
+          newErrors.name = 'Customer name is required';
+        } else {
+          delete newErrors.name;
+        }
+        break;
+      case 'phone':
+        if (!String(value).trim()) {
+          newErrors.phone = 'Phone number is required';
+        } else {
+          delete newErrors.phone;
+        }
+        break;
+      case 'creditLimit':
+        if (Number(value) < 0) {
+          newErrors.creditLimit = 'Credit limit cannot be negative';
+        } else {
+          delete newErrors.creditLimit;
+        }
+        break;
+      case 'initialDebt':
+        if (Number(value) < 0) {
+          newErrors.initialDebt = 'Initial debt cannot be negative';
+        } else {
+          delete newErrors.initialDebt;
+        }
+        break;
+    }
+
+    setErrors(newErrors);
+  };
+
+  const handleChange = (field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    validateField(field, value);
+  };
+
+  const isFormValid = () => {
+    return formData.name.trim() && 
+           formData.phone.trim() && 
+           formData.creditLimit >= 0 &&
+           formData.initialDebt >= 0 &&
+           Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.phone.trim()) {
+    // Final validation
+    validateField('name', formData.name);
+    validateField('phone', formData.phone);
+    validateField('creditLimit', formData.creditLimit);
+    validateField('initialDebt', formData.initialDebt);
+
+    if (!isFormValid()) {
       toast({
         title: "Validation Error",
-        description: "Name and phone are required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.creditLimit < 0) {
-      toast({
-        title: "Validation Error",
-        description: "Credit limit cannot be negative.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.initialDebt < 0) {
-      toast({
-        title: "Validation Error", 
-        description: "Initial debt cannot be negative.",
+        description: "Please fill in all required fields correctly.",
         variant: "destructive",
       });
       return;
@@ -75,7 +117,6 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         creditLimit: formData.creditLimit,
         riskRating: 'low' as const,
         lastPurchaseDate: null,
-        createdDate: new Date().toISOString(),
       };
 
       // Create customer using unified hook (handles both online and offline scenarios)
@@ -96,6 +137,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         creditLimit: 1000,
         initialDebt: 0,
       });
+      setErrors({});
 
       // Close modal first
       onOpenChange(false);
@@ -111,7 +153,12 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
       console.error('[AddCustomerModal] Error creating customer:', error);
       
       // More specific error handling
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       
       toast({
         title: "Error",
@@ -123,15 +170,23 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
     }
   };
 
-  const handleChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleClose = () => {
+    if (isSubmitting) return;
+    
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      address: '',
+      creditLimit: 1000,
+      initialDebt: 0,
+    });
+    setErrors({});
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md w-[95vw] max-h-[95vh] overflow-y-auto bg-white dark:bg-slate-800 fixed z-[10002] mx-auto my-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
@@ -152,32 +207,34 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
               <Label htmlFor="name" className="text-sm font-bold text-gray-700">
                 Name *
               </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="Customer name"
-                  required
-                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl h-12"
-                  style={{ fontSize: '16px' }}
-                  disabled={isSubmitting}
-                />
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Customer name"
+                required
+                className={`mt-1 border-2 ${errors.name ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
+                style={{ fontSize: '16px' }}
+                disabled={isSubmitting}
+              />
+              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
             </div>
             
             <div>
               <Label htmlFor="phone" className="text-sm font-bold text-gray-700">
                 Phone *
               </Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                  placeholder="Phone number"
-                  required
-                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl h-12"
-                  style={{ fontSize: '16px' }}
-                  disabled={isSubmitting}
-                />
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="Phone number"
+                required
+                className={`mt-1 border-2 ${errors.phone ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
+                style={{ fontSize: '16px' }}
+                disabled={isSubmitting}
+              />
+              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
             </div>
             
             <div>
@@ -221,9 +278,10 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
                   onChange={(e) => handleChange('creditLimit', Number(e.target.value))}
                   placeholder="1000"
                   min="0"
-                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                  className={`mt-1 border-2 ${errors.creditLimit ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl`}
                   disabled={isSubmitting}
                 />
+                {errors.creditLimit && <p className="text-red-500 text-xs mt-1">{errors.creditLimit}</p>}
               </div>
 
               <div>
@@ -238,9 +296,10 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
                   placeholder="0"
                   min="0"
                   step="0.01"
-                  className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
+                  className={`mt-1 border-2 ${errors.initialDebt ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl`}
                   disabled={isSubmitting}
                 />
+                {errors.initialDebt && <p className="text-red-500 text-xs mt-1">{errors.initialDebt}</p>}
               </div>
             </div>
             
@@ -253,7 +312,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               className="flex-1 border-2 border-gray-300 hover:border-gray-400 rounded-xl h-12"
               disabled={isSubmitting}
             >
@@ -262,7 +321,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
             <Button
               type="submit"
               className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl h-12"
-              disabled={isSubmitting || !formData.name.trim() || !formData.phone.trim()}
+              disabled={!isFormValid() || isSubmitting}
             >
               {isSubmitting ? (
                 <div className="flex items-center gap-2">
