@@ -12,7 +12,7 @@ export const useCacheManager = () => {
   const [pendingOps, setPendingOps] = useState<PendingOperation[]>([]);
 
   // Load pending operations from localStorage on mount
-  useEffect(() => {
+  const loadPendingOperations = () => {
     try {
       const stored = localStorage.getItem('pendingOperations');
       if (stored) {
@@ -22,6 +22,10 @@ export const useCacheManager = () => {
     } catch (error) {
       console.error('[CacheManager] Failed to load pending operations:', error);
     }
+  };
+
+  useEffect(() => {
+    loadPendingOperations();
   }, []);
 
   // Save pending operations to localStorage whenever they change
@@ -67,15 +71,24 @@ export const useCacheManager = () => {
     }
   };
 
-  const addPendingOperation = (operation: PendingOperation): void => {
+  const addPendingOperation = (operation: Omit<PendingOperation, 'id'>): void => {
+    const operationWithId = {
+      ...operation,
+      id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    };
+
     setPendingOps(prev => {
       // Check if operation already exists
-      const exists = prev.some(op => op.id === operation.id);
+      const exists = prev.some(op => op.id === operationWithId.id);
       if (exists) {
         return prev;
       }
-      return [...prev, operation];
+      return [...prev, operationWithId];
     });
+  };
+
+  const removePendingOperation = (operationId: string): void => {
+    setPendingOps(prev => prev.filter(op => op.id !== operationId));
   };
 
   const clearPendingOperation = (operationId: string): void => {
@@ -90,8 +103,10 @@ export const useCacheManager = () => {
     getCache,
     setCache,
     addPendingOperation,
+    removePendingOperation,
     clearPendingOperation,
     clearAllPendingOperations,
+    loadPendingOperations,
     pendingOps,
   };
 };
