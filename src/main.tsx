@@ -4,20 +4,21 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Register enhanced service worker for offline functionality
+// Register unified service worker for comprehensive offline functionality
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      // Unregister any existing service workers first
+      // Unregister any existing service workers to prevent conflicts
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.map(registration => registration.unregister()));
+      console.log('[Main] Cleared existing service workers');
       
-      // Register the enhanced service worker
-      const registration = await navigator.serviceWorker.register('/enhanced-robust-sw.js', {
+      // Register the unified service worker
+      const registration = await navigator.serviceWorker.register('/unified-offline-sw.js', {
         scope: '/'
       });
       
-      console.log('[Main] Enhanced Service worker registered:', registration.scope);
+      console.log('[Main] Unified Service worker registered:', registration.scope);
       
       // Handle service worker updates
       registration.addEventListener('updatefound', () => {
@@ -26,9 +27,20 @@ if ('serviceWorker' in navigator) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               console.log('[Main] New service worker available');
-              // Optionally show update notification to user
+              // Auto-reload if there's an update
+              if (confirm('New version available! Reload to update?')) {
+                window.location.reload();
+              }
             }
           });
+        }
+      });
+      
+      // Listen for network reconnection to sync data
+      window.addEventListener('online', () => {
+        console.log('[Main] Network reconnected - triggering sync');
+        if (registration.active) {
+          registration.active.postMessage({ type: 'SYNC_NOW' });
         }
       });
       

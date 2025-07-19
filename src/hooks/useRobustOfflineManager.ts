@@ -25,24 +25,24 @@ interface OfflineOperation {
   synced: boolean;
 }
 
-// Enhanced IndexedDB with proper field mapping and error recovery
-class RobustOfflineDB {
+// Enhanced IndexedDB with better error handling
+class UnifiedOfflineDB {
   private db: IDBDatabase | null = null;
-  private dbName = 'DukaFitiRobustV2';
-  private version = 4;
+  private dbName = 'DukaFitiUnifiedV1';
+  private version = 1;
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        console.error('RobustOfflineDB failed to open:', request.error);
+        console.error('[UnifiedOfflineDB] Failed to open:', request.error);
         reject(request.error);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('RobustOfflineDB initialized successfully');
+        console.log('[UnifiedOfflineDB] Initialized successfully');
         resolve();
       };
 
@@ -54,68 +54,37 @@ class RobustOfflineDB {
   }
 
   private createStores(db: IDBDatabase): void {
-    // Clear existing stores to prevent conflicts
-    const existingStores = Array.from(db.objectStoreNames);
-    existingStores.forEach(storeName => {
-      if (db.objectStoreNames.contains(storeName)) {
-        try {
-          db.deleteObjectStore(storeName);
-        } catch (error) {
-          console.warn('Failed to delete store:', storeName, error);
-        }
-      }
-    });
-
-    // Sales store
-    const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
-    salesStore.createIndex('userId', 'userId', { unique: false });
-    salesStore.createIndex('timestamp', 'timestamp', { unique: false });
-    salesStore.createIndex('synced', 'synced', { unique: false });
+    // Sales store with better indexing
+    if (!db.objectStoreNames.contains('sales')) {
+      const salesStore = db.createObjectStore('sales', { keyPath: 'id' });
+      salesStore.createIndex('userId', 'userId', { unique: false });
+      salesStore.createIndex('timestamp', 'timestamp', { unique: false });
+      salesStore.createIndex('synced', 'synced', { unique: false });
+    }
 
     // Products store
-    const productsStore = db.createObjectStore('products', { keyPath: 'id' });
-    productsStore.createIndex('userId', 'userId', { unique: false });
-    productsStore.createIndex('category', 'category', { unique: false });
+    if (!db.objectStoreNames.contains('products')) {
+      const productsStore = db.createObjectStore('products', { keyPath: 'id' });
+      productsStore.createIndex('userId', 'userId', { unique: false });
+      productsStore.createIndex('category', 'category', { unique: false });
+    }
 
     // Customers store
-    const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
-    customersStore.createIndex('userId', 'userId', { unique: false });
-    customersStore.createIndex('name', 'name', { unique: false });
-
-    // Sync queue
-    const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-    syncStore.createIndex('type', 'type', { unique: false });
-    syncStore.createIndex('priority', 'priority', { unique: false });
-    syncStore.createIndex('timestamp', 'timestamp', { unique: false });
-
-    console.log('RobustOfflineDB stores created successfully');
-  }
-
-  // Field name transformation - handles snake_case ↔ camelCase conversion
-  transformFields(obj: any, toFormat: 'camelCase' | 'snake_case'): any {
-    if (!obj || typeof obj !== 'object') return obj;
-    
-    const result: any = Array.isArray(obj) ? [] : {};
-    
-    for (const [key, value] of Object.entries(obj)) {
-      let newKey = key;
-      
-      if (toFormat === 'camelCase') {
-        // snake_case to camelCase
-        newKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-      } else {
-        // camelCase to snake_case
-        newKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      }
-      
-      if (Array.isArray(result)) {
-        result.push(value);
-      } else {
-        result[newKey] = value;
-      }
+    if (!db.objectStoreNames.contains('customers')) {
+      const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
+      customersStore.createIndex('userId', 'userId', { unique: false });
+      customersStore.createIndex('name', 'name', { unique: false });
     }
-    
-    return result;
+
+    // Sync queue with priority
+    if (!db.objectStoreNames.contains('syncQueue')) {
+      const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+      syncStore.createIndex('type', 'type', { unique: false });
+      syncStore.createIndex('priority', 'priority', { unique: false });
+      syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+    }
+
+    console.log('[UnifiedOfflineDB] Stores created successfully');
   }
 
   async storeData(storeName: string, data: any): Promise<void> {
@@ -182,27 +151,9 @@ class RobustOfflineDB {
       }
     });
   }
-
-  async clearStore(storeName: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db!.transaction([storeName], 'readwrite');
-        const store = transaction.objectStore(storeName);
-        
-        const request = store.clear();
-        
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
 }
 
-const robustOfflineDB = new RobustOfflineDB();
+const unifiedOfflineDB = new UnifiedOfflineDB();
 
 export const useRobustOfflineManager = () => {
   const { user } = useAuth();
@@ -214,16 +165,16 @@ export const useRobustOfflineManager = () => {
     isSyncing: false,
     pendingOperations: 0,
     syncProgress: 0,
-    lastSyncTime: localStorage.getItem('robustLastSyncTime'),
+    lastSyncTime: localStorage.getItem('unifiedLastSyncTime'),
     errors: []
   });
 
-  // Initialize robust offline system
+  // Initialize unified offline system
   useEffect(() => {
-    initializeRobustOfflineSystem();
+    initializeUnifiedOfflineSystem();
     
     const handleOnline = () => {
-      console.log('[RobustOfflineManager] Online detected');
+      console.log('[UnifiedOfflineManager] Online detected');
       setOfflineState(prev => ({ ...prev, isOnline: true }));
       if (user) {
         setTimeout(() => syncPendingOperations(), 1000);
@@ -231,7 +182,7 @@ export const useRobustOfflineManager = () => {
     };
 
     const handleOffline = () => {
-      console.log('[RobustOfflineManager] Offline detected');
+      console.log('[UnifiedOfflineManager] Offline detected');
       setOfflineState(prev => ({ ...prev, isOnline: false }));
     };
 
@@ -244,87 +195,42 @@ export const useRobustOfflineManager = () => {
     };
   }, [user]);
 
-  const initializeRobustOfflineSystem = async () => {
+  const initializeUnifiedOfflineSystem = async () => {
     try {
-      console.log('[RobustOfflineManager] Initializing robust offline system...');
+      console.log('[UnifiedOfflineManager] Initializing unified offline system...');
       
-      // Unregister all existing service workers to prevent conflicts
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(registration => registration.unregister()));
-        console.log('[RobustOfflineManager] Cleared existing service workers');
-      }
-
-      // Initialize enhanced IndexedDB
-      await robustOfflineDB.init();
-      
-      // Register single robust service worker
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.register('/enhanced-robust-sw.js', {
-            scope: '/'
-          });
-          console.log('[RobustOfflineManager] Enhanced Robust Service Worker registered:', registration.scope);
-          
-          // Handle service worker messages
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            const { data } = event;
-            if (data.type === 'NETWORK_ONLINE') {
-              handleOnline();
-            } else if (data.type === 'NETWORK_OFFLINE') {
-              handleOffline();
-            } else if (data.type === 'SYNC_START') {
-              setOfflineState(prev => ({ ...prev, isSyncing: true }));
-            } else if (data.type === 'SYNC_COMPLETE') {
-              setOfflineState(prev => ({ ...prev, isSyncing: false }));
-            }
-          });
-          
-        } catch (error) {
-          console.error('[RobustOfflineManager] Service Worker registration failed:', error);
-        }
-      }
+      // Initialize IndexedDB
+      await unifiedOfflineDB.init();
       
       // Load pending operations
       await loadPendingOperationsCount();
       
       setOfflineState(prev => ({ ...prev, isInitialized: true }));
-      console.log('[RobustOfflineManager] Robust offline system initialized successfully');
+      console.log('[UnifiedOfflineManager] Unified offline system initialized successfully');
       
     } catch (error) {
-      console.error('[RobustOfflineManager] Failed to initialize robust offline system:', error);
+      console.error('[UnifiedOfflineManager] Failed to initialize unified offline system:', error);
       setOfflineState(prev => ({ 
         ...prev, 
         isInitialized: true,
-        errors: [...prev.errors, `Robust initialization failed: ${error.message}`]
+        errors: [...prev.errors, `Unified initialization failed: ${error.message}`]
       }));
     }
   };
 
   const loadPendingOperationsCount = async () => {
     try {
-      const queue = await robustOfflineDB.getSyncQueue();
+      const queue = await unifiedOfflineDB.getSyncQueue();
       setOfflineState(prev => ({ 
         ...prev, 
         pendingOperations: queue?.length || 0 
       }));
     } catch (error) {
-      console.error('[RobustOfflineManager] Failed to load pending operations:', error);
+      console.error('[UnifiedOfflineManager] Failed to load pending operations:', error);
     }
   };
 
-  const handleOnline = () => {
-    setOfflineState(prev => ({ ...prev, isOnline: true }));
-    if (user) {
-      setTimeout(() => syncPendingOperations(), 1000);
-    }
-  };
-
-  const handleOffline = () => {
-    setOfflineState(prev => ({ ...prev, isOnline: false }));
-  };
-
-  // Add robust offline operation
+  // Add unified offline operation
   const addOfflineOperation = useCallback(async (
     type: 'sale' | 'product' | 'customer',
     operation: 'create' | 'update' | 'delete',
@@ -345,8 +251,8 @@ export const useRobustOfflineManager = () => {
     };
 
     try {
-      // Store in robust IndexedDB
-      await robustOfflineDB.addToSyncQueue(offlineOperation);
+      // Store in IndexedDB
+      await unifiedOfflineDB.addToSyncQueue(offlineOperation);
       
       // Update local storage immediately
       await updateLocalStorage(type, operation, data);
@@ -359,39 +265,39 @@ export const useRobustOfflineManager = () => {
         setTimeout(() => syncPendingOperations(), 500);
       }
       
-      console.log(`[RobustOfflineManager] Added ${type} ${operation} to robust offline queue:`, operationId);
+      console.log(`[UnifiedOfflineManager] Added ${type} ${operation} to unified offline queue:`, operationId);
       return operationId;
       
     } catch (error) {
-      console.error('[RobustOfflineManager] Failed to add robust offline operation:', error);
+      console.error('[UnifiedOfflineManager] Failed to add unified offline operation:', error);
       throw error;
     }
   }, [user, offlineState.isOnline]);
 
-  // Update local storage with proper field mapping
+  // Update local storage
   const updateLocalStorage = async (type: string, operation: string, data: any) => {
     try {
       switch (type) {
         case 'sale':
           if (operation === 'create') {
-            await robustOfflineDB.storeData('sales', data);
+            await unifiedOfflineDB.storeData('sales', data);
           }
           break;
           
         case 'product':
-          await robustOfflineDB.storeData('products', data);
+          await unifiedOfflineDB.storeData('products', data);
           break;
           
         case 'customer':
-          await robustOfflineDB.storeData('customers', data);
+          await unifiedOfflineDB.storeData('customers', data);
           break;
       }
     } catch (error) {
-      console.error('[RobustOfflineManager] Failed to update robust local storage:', error);
+      console.error('[UnifiedOfflineManager] Failed to update unified local storage:', error);
     }
   };
 
-  // Robust sync operations
+  // Unified sync operations
   const syncPendingOperations = useCallback(async () => {
     if (!offlineState.isOnline || offlineState.isSyncing || !user) {
       return;
@@ -405,7 +311,7 @@ export const useRobustOfflineManager = () => {
     }));
 
     try {
-      const operations = await robustOfflineDB.getSyncQueue();
+      const operations = await unifiedOfflineDB.getSyncQueue();
       const totalOperations = operations?.length || 0;
 
       if (totalOperations === 0) {
@@ -414,11 +320,11 @@ export const useRobustOfflineManager = () => {
           isSyncing: false,
           lastSyncTime: new Date().toISOString()
         }));
-        localStorage.setItem('robustLastSyncTime', new Date().toISOString());
+        localStorage.setItem('unifiedLastSyncTime', new Date().toISOString());
         return;
       }
 
-      console.log(`[RobustOfflineManager] Starting robust sync of ${totalOperations} operations`);
+      console.log(`[UnifiedOfflineManager] Starting unified sync of ${totalOperations} operations`);
 
       // Sort by priority and timestamp
       const sortedOperations = operations.sort((a, b) => {
@@ -435,19 +341,19 @@ export const useRobustOfflineManager = () => {
         try {
           const success = await syncSingleOperation(operation);
           if (success) {
-            await robustOfflineDB.removeFromSyncQueue(operation.id);
+            await unifiedOfflineDB.removeFromSyncQueue(operation.id);
             completed++;
           } else {
             operation.attempts++;
             if (operation.attempts >= 3) {
-              await robustOfflineDB.removeFromSyncQueue(operation.id);
+              await unifiedOfflineDB.removeFromSyncQueue(operation.id);
               errors.push(`Max attempts reached for ${operation.type} ${operation.operation}`);
             } else {
-              await robustOfflineDB.addToSyncQueue(operation);
+              await unifiedOfflineDB.addToSyncQueue(operation);
             }
           }
         } catch (error) {
-          console.error(`[RobustOfflineManager] Failed to sync operation ${operation.id}:`, error);
+          console.error(`[UnifiedOfflineManager] Failed to sync operation ${operation.id}:`, error);
           errors.push(`Failed to sync ${operation.type}: ${error.message}`);
         }
 
@@ -467,7 +373,7 @@ export const useRobustOfflineManager = () => {
         errors: errors
       }));
 
-      localStorage.setItem('robustLastSyncTime', syncTime);
+      localStorage.setItem('unifiedLastSyncTime', syncTime);
       
       if (completed > 0) {
         toast({
@@ -486,59 +392,56 @@ export const useRobustOfflineManager = () => {
         });
       }
 
-      console.log(`[RobustOfflineManager] Robust sync completed: ${completed} synced, ${errors.length} errors, ${finalPendingCount} pending`);
+      console.log(`[UnifiedOfflineManager] Unified sync completed: ${completed} synced, ${errors.length} errors, ${finalPendingCount} pending`);
 
     } catch (error) {
-      console.error('[RobustOfflineManager] Robust sync process failed:', error);
+      console.error('[UnifiedOfflineManager] Unified sync process failed:', error);
       setOfflineState(prev => ({ 
         ...prev, 
         isSyncing: false,
-        errors: [...prev.errors, `Robust sync failed: ${error.message}`]
+        errors: [...prev.errors, `Unified sync failed: ${error.message}`]
       }));
     }
   }, [offlineState.isOnline, offlineState.isSyncing, user, toast]);
 
   const syncSingleOperation = async (operation: OfflineOperation): Promise<boolean> => {
     try {
-      // Transform data to snake_case for database
-      const dbData = robustOfflineDB.transformFields(operation.data, 'snake_case');
-      
       switch (operation.type) {
         case 'sale':
-          return await syncSale(operation, dbData);
+          return await syncSale(operation);
         case 'product':
-          return await syncProduct(operation, dbData);
+          return await syncProduct(operation);
         case 'customer':
-          return await syncCustomer(operation, dbData);
+          return await syncCustomer(operation);
         default:
-          console.warn(`[RobustOfflineManager] Unknown operation type: ${operation.type}`);
+          console.warn(`[UnifiedOfflineManager] Unknown operation type: ${operation.type}`);
           return false;
       }
     } catch (error) {
-      console.error(`[RobustOfflineManager] Error syncing ${operation.type}:`, error);
+      console.error(`[UnifiedOfflineManager] Error syncing ${operation.type}:`, error);
       return false;
     }
   };
 
-  const syncSale = async (operation: OfflineOperation, dbData: any): Promise<boolean> => {
+  const syncSale = async (operation: OfflineOperation): Promise<boolean> => {
     try {
       if (operation.operation === 'create') {
         const { error } = await supabase
           .from('sales')
           .insert([{
             user_id: user?.id,
-            product_id: dbData.product_id,
-            product_name: dbData.product_name,
-            quantity: dbData.quantity,
-            selling_price: dbData.selling_price,
-            cost_price: dbData.cost_price,
-            profit: dbData.profit,
-            total_amount: dbData.total_amount,
-            payment_method: dbData.payment_method,
-            customer_id: dbData.customer_id,
-            customer_name: dbData.customer_name,
-            payment_details: dbData.payment_details || {},
-            timestamp: dbData.timestamp || new Date().toISOString(),
+            product_id: operation.data.productId,
+            product_name: operation.data.productName,
+            quantity: operation.data.quantity,
+            selling_price: operation.data.sellingPrice,
+            cost_price: operation.data.costPrice,
+            profit: operation.data.profit,
+            total_amount: operation.data.totalAmount,
+            payment_method: operation.data.paymentMethod,
+            customer_id: operation.data.customerId,
+            customer_name: operation.data.customerName,
+            payment_details: operation.data.paymentDetails || {},
+            timestamp: operation.data.timestamp || new Date().toISOString(),
             synced: true
           }]);
         
@@ -547,32 +450,39 @@ export const useRobustOfflineManager = () => {
       
       return false;
     } catch (error) {
-      console.error('[RobustOfflineManager] Sale sync error:', error);
+      console.error('[UnifiedOfflineManager] Sale sync error:', error);
       return false;
     }
   };
 
-  const syncProduct = async (operation: OfflineOperation, dbData: any): Promise<boolean> => {
+  const syncProduct = async (operation: OfflineOperation): Promise<boolean> => {
     try {
       if (operation.operation === 'create') {
         const { error } = await supabase
           .from('products')
           .insert([{
             user_id: user?.id,
-            name: dbData.name,
-            category: dbData.category,
-            cost_price: dbData.cost_price,
-            selling_price: dbData.selling_price,
-            current_stock: dbData.current_stock || 0,
-            low_stock_threshold: dbData.low_stock_threshold || 10
+            name: operation.data.name,
+            category: operation.data.category,
+            cost_price: operation.data.costPrice,
+            selling_price: operation.data.sellingPrice,
+            current_stock: operation.data.currentStock || 0,
+            low_stock_threshold: operation.data.lowStockThreshold || 10
           }]);
         
         return !error;
       } else if (operation.operation === 'update') {
         const { error } = await supabase
           .from('products')
-          .update(dbData.updates)
-          .eq('id', dbData.id)
+          .update({
+            name: operation.data.name,
+            category: operation.data.category,
+            cost_price: operation.data.costPrice,
+            selling_price: operation.data.sellingPrice,
+            current_stock: operation.data.currentStock,
+            low_stock_threshold: operation.data.lowStockThreshold
+          })
+          .eq('id', operation.data.id)
           .eq('user_id', user?.id);
         
         return !error;
@@ -580,32 +490,39 @@ export const useRobustOfflineManager = () => {
       
       return false;
     } catch (error) {
-      console.error('[RobustOfflineManager] Product sync error:', error);
+      console.error('[UnifiedOfflineManager] Product sync error:', error);
       return false;
     }
   };
 
-  const syncCustomer = async (operation: OfflineOperation, dbData: any): Promise<boolean> => {
+  const syncCustomer = async (operation: OfflineOperation): Promise<boolean> => {
     try {
       if (operation.operation === 'create') {
         const { error } = await supabase
           .from('customers')
           .insert([{
             user_id: user?.id,
-            name: dbData.name,
-            phone: dbData.phone,
-            email: dbData.email,
-            address: dbData.address,
-            credit_limit: dbData.credit_limit || 1000,
-            outstanding_debt: dbData.outstanding_debt || 0
+            name: operation.data.name,
+            phone: operation.data.phone,
+            email: operation.data.email,
+            address: operation.data.address,
+            credit_limit: operation.data.creditLimit || 1000,
+            outstanding_debt: operation.data.outstandingDebt || 0
           }]);
         
         return !error;
       } else if (operation.operation === 'update') {
         const { error } = await supabase
           .from('customers')
-          .update(dbData.updates)
-          .eq('id', dbData.id)
+          .update({
+            name: operation.data.name,
+            phone: operation.data.phone,
+            email: operation.data.email,
+            address: operation.data.address,
+            credit_limit: operation.data.creditLimit,
+            outstanding_debt: operation.data.outstandingDebt
+          })
+          .eq('id', operation.data.id)
           .eq('user_id', user?.id);
         
         return !error;
@@ -613,7 +530,7 @@ export const useRobustOfflineManager = () => {
       
       return false;
     } catch (error) {
-      console.error('[RobustOfflineManager] Customer sync error:', error);
+      console.error('[UnifiedOfflineManager] Customer sync error:', error);
       return false;
     }
   };
@@ -636,59 +553,15 @@ export const useRobustOfflineManager = () => {
     setOfflineState(prev => ({ ...prev, errors: [] }));
   }, []);
 
-  // Get offline data with proper field transformation
+  // Get offline data
   const getOfflineData = useCallback(async (type: string, id?: string) => {
     try {
-      return await robustOfflineDB.getData(type, id);
+      return await unifiedOfflineDB.getData(type, id);
     } catch (error) {
-      console.error(`[RobustOfflineManager] Failed to get robust offline data for ${type}:`, error);
+      console.error(`[UnifiedOfflineManager] Failed to get unified offline data for ${type}:`, error);
       return null;
     }
   }, []);
-
-  // Test robust offline functionality
-  const testRobustOffline = useCallback(async () => {
-    console.log('[RobustOfflineManager] Testing robust offline functionality...');
-    
-    try {
-      // Test data creation with proper field mapping
-      const testSale = {
-        id: 'test_sale_' + Date.now(),
-        productId: 'test_product_123',
-        productName: 'Test Product',
-        quantity: 2,
-        sellingPrice: 100,
-        costPrice: 50,
-        profit: 50,
-        totalAmount: 200,
-        paymentMethod: 'cash',
-        timestamp: new Date().toISOString(),
-        synced: false
-      };
-
-      // Test storing robust offline operation
-      await addOfflineOperation('sale', 'create', testSale, 'high');
-      console.log('[RobustOfflineManager] ✅ Robust offline operation test passed');
-
-      // Test sync queue
-      const queue = await robustOfflineDB.getSyncQueue();
-      console.log('[RobustOfflineManager] ✅ Robust sync queue test passed, items:', queue.length);
-
-      return {
-        success: true,
-        message: 'Robust offline functionality working correctly',
-        pendingOperations: queue.length
-      };
-
-    } catch (error) {
-      console.error('[RobustOfflineManager] ❌ Robust offline test failed:', error);
-      return {
-        success: false,
-        message: 'Robust offline test failed',
-        error: error.message
-      };
-    }
-  }, [addOfflineOperation]);
 
   return {
     ...offlineState,
@@ -697,7 +570,6 @@ export const useRobustOfflineManager = () => {
     forceSyncNow,
     clearSyncErrors,
     getOfflineData,
-    testRobustOffline,
-    robustOfflineDB
+    unifiedOfflineDB
   };
 };
