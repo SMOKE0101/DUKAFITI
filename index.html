@@ -67,16 +67,17 @@
             
             console.log('[SW] Enhanced service worker registered successfully');
             
-            // Handle updates
+            // Handle updates silently - no annoying popups
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New version available
-                    if (confirm('New version available! Reload to update?')) {
-                      window.location.reload();
-                    }
+                    // Update available - activate silently after a delay
+                    console.log('[SW] New version available, will update automatically');
+                    setTimeout(() => {
+                      newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    }, 2000);
                   }
                 });
               }
