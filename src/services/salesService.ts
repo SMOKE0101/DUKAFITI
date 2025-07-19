@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Sale } from '../types';
 
@@ -19,6 +18,48 @@ export interface CreateSaleRequest {
     tillNumber?: string;
   };
 }
+
+// Helper function to safely parse payment details from Supabase
+const parsePaymentDetails = (details: any) => {
+  try {
+    // If it's already an object, use it directly
+    if (typeof details === 'object' && details !== null) {
+      return {
+        cashAmount: Number(details.cashAmount || 0),
+        mpesaAmount: Number(details.mpesaAmount || 0),
+        debtAmount: Number(details.debtAmount || 0),
+        mpesaReference: details.mpesaReference || undefined,
+        tillNumber: details.tillNumber || undefined,
+      };
+    }
+    
+    // If it's a string, try to parse it as JSON
+    if (typeof details === 'string') {
+      const parsed = JSON.parse(details);
+      return {
+        cashAmount: Number(parsed.cashAmount || 0),
+        mpesaAmount: Number(parsed.mpesaAmount || 0),
+        debtAmount: Number(parsed.debtAmount || 0),
+        mpesaReference: parsed.mpesaReference || undefined,
+        tillNumber: parsed.tillNumber || undefined,
+      };
+    }
+    
+    // Fallback to default values
+    return {
+      cashAmount: 0,
+      mpesaAmount: 0,
+      debtAmount: 0,
+    };
+  } catch (error) {
+    console.error('[SalesService] Error parsing payment details:', error);
+    return {
+      cashAmount: 0,
+      mpesaAmount: 0,
+      debtAmount: 0,
+    };
+  }
+};
 
 export class SalesService {
   static async createSale(userId: string, saleData: CreateSaleRequest): Promise<Sale> {
@@ -96,7 +137,7 @@ export class SalesService {
         customerId: data.customer_id,
         customerName: data.customer_name,
         paymentMethod: data.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial',
-        paymentDetails: data.payment_details,
+        paymentDetails: parsePaymentDetails(data.payment_details),
         total: data.total_amount,
       };
 
