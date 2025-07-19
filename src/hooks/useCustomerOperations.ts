@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useNetworkStatus } from './useNetworkStatus';
-import { useUnifiedOfflineManager } from './useUnifiedOfflineManager';
+import { useCacheManager } from './useCacheManager';
 import { Customer } from '../types';
 
 export const useCustomerOperations = () => {
@@ -13,7 +13,7 @@ export const useCustomerOperations = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
-  const { addOfflineOperation } = useUnifiedOfflineManager();
+  const { addPendingOperation, setCache, getCache } = useCacheManager();
 
   const deleteCustomer = async (customerId: string): Promise<void> => {
     if (!user) {
@@ -35,13 +35,31 @@ export const useCustomerOperations = () => {
           throw new Error(error.message);
         }
 
+        // Update local cache
+        const cached = getCache<Customer[]>('customers');
+        if (cached) {
+          const updatedCustomers = cached.filter(c => c.id !== customerId);
+          setCache('customers', updatedCustomers);
+        }
+
         toast({
           title: "Success",
           description: "Customer deleted successfully",
         });
       } else {
         // Queue for offline sync
-        await addOfflineOperation('customer', 'delete', { id: customerId }, 'high');
+        await addPendingOperation({
+          type: 'customer',
+          operation: 'delete',
+          data: { id: customerId }
+        });
+        
+        // Update local cache optimistically
+        const cached = getCache<Customer[]>('customers');
+        if (cached) {
+          const updatedCustomers = cached.filter(c => c.id !== customerId);
+          setCache('customers', updatedCustomers);
+        }
         
         toast({
           title: "Offline Mode",
@@ -104,18 +122,44 @@ export const useCustomerOperations = () => {
           throw new Error(updateError.message);
         }
 
+        // Update local cache
+        const cached = getCache<Customer[]>('customers');
+        if (cached) {
+          const updatedCustomers = cached.map(c => 
+            c.id === customerId 
+              ? { ...c, outstandingDebt: newOutstandingDebt, lastPurchaseDate: new Date().toISOString() }
+              : c
+          );
+          setCache('customers', updatedCustomers);
+        }
+
         toast({
           title: "Payment Recorded",
           description: `Payment of KES ${paymentAmount.toLocaleString()} recorded successfully`,
         });
       } else {
         // Queue for offline sync
-        await addOfflineOperation('customer', 'payment', {
-          customerId,
-          paymentAmount,
-          paymentMethod,
-          notes
-        }, 'high');
+        await addPendingOperation({
+          type: 'customer',
+          operation: 'payment',
+          data: {
+            customerId,
+            paymentAmount,
+            paymentMethod,
+            notes
+          }
+        });
+
+        // Update local cache optimistically
+        const cached = getCache<Customer[]>('customers');
+        if (cached) {
+          const updatedCustomers = cached.map(c => 
+            c.id === customerId 
+              ? { ...c, outstandingDebt: Math.max(0, c.outstandingDebt - paymentAmount) }
+              : c
+          );
+          setCache('customers', updatedCustomers);
+        }
 
         toast({
           title: "Offline Mode",

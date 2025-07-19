@@ -234,6 +234,54 @@ export const useUnifiedCustomers = () => {
     }
   }, [user, isOnline, setCache, addPendingOperation, loadCustomers]);
 
+  // Delete customer
+  const deleteCustomer = useCallback(async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    // Optimistically update UI
+    setCustomers(prev => prev.filter(c => c.id !== id));
+
+    if (isOnline) {
+      try {
+        const { error } = await supabase
+          .from('customers')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        // Update cache
+        const updatedCustomers = await supabase
+          .from('customers')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (updatedCustomers.data) {
+          const transformedData = updatedCustomers.data.map(transformDbCustomer);
+          setCache('customers', transformedData);
+        }
+      } catch (error) {
+        // Revert optimistic update and queue for sync
+        await loadCustomers();
+        addPendingOperation({
+          type: 'customer',
+          operation: 'delete',
+          data: { id },
+        });
+        console.error('[UnifiedCustomers] Delete failed, queued for sync:', error);
+        throw error;
+      }
+    } else {
+      // Queue for sync when online
+      addPendingOperation({
+        type: 'customer',
+        operation: 'delete',
+        data: { id },
+      });
+    }
+  }, [user, isOnline, setCache, addPendingOperation, loadCustomers]);
+
   // Load customers on mount and when dependencies change
   useEffect(() => {
     loadCustomers();
@@ -255,6 +303,7 @@ export const useUnifiedCustomers = () => {
     error,
     createCustomer,
     updateCustomer,
+    deleteCustomer,
     refetch: loadCustomers,
     isOnline,
     pendingOperations: pendingOps.filter(op => op.type === 'customer').length,
