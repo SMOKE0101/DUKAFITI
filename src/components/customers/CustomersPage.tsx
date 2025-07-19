@@ -33,8 +33,13 @@ const CustomersPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [isRecordingPayment, setIsRecordingPayment] = useState<string | null>(null);
+  const [operationsInProgress, setOperationsInProgress] = useState<{
+    deleting: string | null;
+    recordingPayment: string | null;
+  }>({
+    deleting: null,
+    recordingPayment: null,
+  });
 
   // Filter customers based on search query
   const filteredCustomers = customers.filter(customer =>
@@ -76,13 +81,13 @@ const CustomersPage = () => {
         await updateCustomer(selectedCustomer.id, customerData);
         toast({
           title: "Success",
-          description: "Customer updated successfully",
+          description: isOnline ? "Customer updated successfully" : "Customer updated (will sync when online)",
         });
       } else {
         await createCustomer(customerData);
         toast({
           title: "Success",
-          description: "Customer created successfully",
+          description: isOnline ? "Customer created successfully" : "Customer created (will sync when online)",
         });
       }
       setShowFormModal(false);
@@ -100,12 +105,12 @@ const CustomersPage = () => {
   const handleConfirmDelete = async () => {
     if (!selectedCustomer) return;
     
-    setIsDeleting(selectedCustomer.id);
+    setOperationsInProgress(prev => ({ ...prev, deleting: selectedCustomer.id }));
     try {
       await deleteCustomer(selectedCustomer.id);
       toast({
         title: "Success",
-        description: "Customer deleted successfully",
+        description: isOnline ? "Customer deleted successfully" : "Customer deleted (will sync when online)",
       });
       setShowDeleteModal(false);
       setSelectedCustomer(null);
@@ -117,14 +122,14 @@ const CustomersPage = () => {
         variant: "destructive",
       });
     } finally {
-      setIsDeleting(null);
+      setOperationsInProgress(prev => ({ ...prev, deleting: null }));
     }
   };
 
   const handlePaymentComplete = async (paymentData: { amount: number; method: string; notes?: string }) => {
     if (!selectedCustomer) return;
     
-    setIsRecordingPayment(selectedCustomer.id);
+    setOperationsInProgress(prev => ({ ...prev, recordingPayment: selectedCustomer.id }));
     try {
       // Calculate new outstanding debt
       const newOutstandingDebt = Math.max(0, selectedCustomer.outstandingDebt - paymentData.amount);
@@ -137,7 +142,9 @@ const CustomersPage = () => {
 
       toast({
         title: "Payment Recorded",
-        description: `Payment of ${formatCurrency(paymentData.amount)} recorded successfully`,
+        description: isOnline 
+          ? `Payment of ${formatCurrency(paymentData.amount)} recorded successfully`
+          : `Payment of ${formatCurrency(paymentData.amount)} recorded (will sync when online)`,
       });
       
       setShowPaymentModal(false);
@@ -150,7 +157,7 @@ const CustomersPage = () => {
         variant: "destructive",
       });
     } finally {
-      setIsRecordingPayment(null);
+      setOperationsInProgress(prev => ({ ...prev, recordingPayment: null }));
     }
   };
 
@@ -170,12 +177,12 @@ const CustomersPage = () => {
 
           <div className="flex items-center gap-3">
             {pendingOperations > 0 && (
-              <Badge variant="outline">
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
                 {pendingOperations} pending sync
               </Badge>
             )}
             {!isOnline && (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="bg-red-50 text-red-800 border-red-200">
                 Working Offline
               </Badge>
             )}
@@ -283,8 +290,8 @@ const CustomersPage = () => {
                 onEdit={handleEditCustomer}
                 onDelete={handleDeleteCustomer}
                 onRecordPayment={handleRecordPayment}
-                isDeleting={isDeleting === customer.id}
-                isRecordingPayment={isRecordingPayment === customer.id}
+                isDeleting={operationsInProgress.deleting === customer.id}
+                isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
               />
             ))}
           </div>
@@ -310,7 +317,7 @@ const CustomersPage = () => {
           }}
           customer={selectedCustomer}
           onPayment={handlePaymentComplete}
-          isRecording={isRecordingPayment === selectedCustomer?.id}
+          isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
         />
 
         <DeleteCustomerModal
@@ -321,7 +328,7 @@ const CustomersPage = () => {
           }}
           customer={selectedCustomer}
           onDelete={handleConfirmDelete}
-          isDeleting={isDeleting === selectedCustomer?.id}
+          isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
         />
       </div>
     </TooltipWrapper>
