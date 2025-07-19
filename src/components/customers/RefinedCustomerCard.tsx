@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { History, Edit, Trash2, CreditCard } from 'lucide-react';
+import { Edit, Trash2, CreditCard } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { Customer } from '../../types';
 
 interface RefinedCustomerCardProps {
   customer: Customer;
-  onViewHistory: (customer: Customer) => void;
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
   onRecordRepayment: (customer: Customer) => void;
@@ -20,7 +19,6 @@ interface RefinedCustomerCardProps {
 
 const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
   customer,
-  onViewHistory,
   onEdit,
   onDelete,
   onRecordRepayment,
@@ -107,19 +105,6 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
 
         {/* Action Row - Icon Only Buttons */}
         <div className="flex gap-3 justify-end mt-6">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={() => onViewHistory(customer)}
-                className="w-10 h-10 bg-purple-100 dark:bg-purple-900/20 text-purple-600 rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-all duration-200 hover:scale-110 active:scale-95 p-0"
-                aria-label="View history"
-              >
-                <History className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>View history</TooltipContent>
-          </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

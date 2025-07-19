@@ -6,29 +6,35 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, User, Users, TrendingUp, DollarSign } from 'lucide-react';
 import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
-import { useCustomerOperations } from '../../hooks/useCustomerOperations';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { useToast } from '../../hooks/use-toast';
 import { TooltipWrapper } from '../TooltipWrapper';
 import CustomerCard from './CustomerCard';
 import CustomerFormModal from './CustomerFormModal';
-import CustomerHistoryModal from './CustomerHistoryModal';
 import PaymentModal from './PaymentModal';
 import DeleteCustomerModal from './DeleteCustomerModal';
 
 const CustomersPage = () => {
-  const { customers, loading, createCustomer, updateCustomer, isOnline, pendingOperations } = useUnifiedCustomers();
-  const { deleteCustomer, recordPayment, isDeleting, isRecordingPayment } = useCustomerOperations();
+  const { 
+    customers, 
+    loading, 
+    createCustomer, 
+    updateCustomer, 
+    deleteCustomer,
+    isOnline, 
+    pendingOperations 
+  } = useUnifiedCustomers();
   const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [showFormModal, setShowFormModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isRecordingPayment, setIsRecordingPayment] = useState<string | null>(null);
 
   // Filter customers based on search query
   const filteredCustomers = customers.filter(customer =>
@@ -52,11 +58,6 @@ const CustomersPage = () => {
     setSelectedCustomer(customer);
     setIsEditing(true);
     setShowFormModal(true);
-  };
-
-  const handleViewHistory = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setShowHistoryModal(true);
   };
 
   const handleRecordPayment = (customer: Customer) => {
@@ -99,24 +100,57 @@ const CustomersPage = () => {
   const handleConfirmDelete = async () => {
     if (!selectedCustomer) return;
     
+    setIsDeleting(selectedCustomer.id);
     try {
       await deleteCustomer(selectedCustomer.id);
+      toast({
+        title: "Success",
+        description: "Customer deleted successfully",
+      });
       setShowDeleteModal(false);
       setSelectedCustomer(null);
     } catch (error) {
       console.error('Failed to delete customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(null);
     }
   };
 
   const handlePaymentComplete = async (paymentData: { amount: number; method: string; notes?: string }) => {
     if (!selectedCustomer) return;
     
+    setIsRecordingPayment(selectedCustomer.id);
     try {
-      await recordPayment(selectedCustomer.id, paymentData.amount, paymentData.method, paymentData.notes);
+      // Calculate new outstanding debt
+      const newOutstandingDebt = Math.max(0, selectedCustomer.outstandingDebt - paymentData.amount);
+      
+      // Update customer with new debt amount
+      await updateCustomer(selectedCustomer.id, {
+        outstandingDebt: newOutstandingDebt,
+        lastPurchaseDate: new Date().toISOString()
+      });
+
+      toast({
+        title: "Payment Recorded",
+        description: `Payment of ${formatCurrency(paymentData.amount)} recorded successfully`,
+      });
+      
       setShowPaymentModal(false);
       setSelectedCustomer(null);
     } catch (error) {
       console.error('Failed to record payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRecordingPayment(null);
     }
   };
 
@@ -248,7 +282,6 @@ const CustomersPage = () => {
                 customer={customer}
                 onEdit={handleEditCustomer}
                 onDelete={handleDeleteCustomer}
-                onViewHistory={handleViewHistory}
                 onRecordPayment={handleRecordPayment}
                 isDeleting={isDeleting === customer.id}
                 isRecordingPayment={isRecordingPayment === customer.id}
@@ -267,15 +300,6 @@ const CustomersPage = () => {
           customer={selectedCustomer}
           isEditing={isEditing}
           onSave={handleSaveCustomer}
-        />
-
-        <CustomerHistoryModal
-          isOpen={showHistoryModal}
-          onClose={() => {
-            setShowHistoryModal(false);
-            setSelectedCustomer(null);
-          }}
-          customer={selectedCustomer}
         />
 
         <PaymentModal

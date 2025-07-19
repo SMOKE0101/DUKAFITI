@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { History, Edit, Trash2, CreditCard, Phone, Mail, MapPin } from 'lucide-react';
+import { Edit, Trash2, CreditCard, Phone, Mail, MapPin } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { Customer } from '../../types';
 
@@ -12,7 +12,6 @@ interface CustomerCardProps {
   customer: Customer;
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
-  onViewHistory: (customer: Customer) => void;
   onRecordPayment: (customer: Customer) => void;
   isDeleting?: boolean;
   isRecordingPayment?: boolean;
@@ -22,7 +21,6 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   customer,
   onEdit,
   onDelete,
-  onViewHistory,
   onRecordPayment,
   isDeleting = false,
   isRecordingPayment = false
@@ -127,16 +125,6 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onViewHistory(customer)}
-            className="flex-1"
-          >
-            <History className="w-4 h-4 mr-1" />
-            History
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => onRecordPayment(customer)}
             disabled={(customer.outstandingDebt || 0) === 0}
             className="flex-1"
@@ -144,9 +132,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <CreditCard className="w-4 h-4 mr-1" />
             Payment
           </Button>
-        </div>
-
-        <div className="flex gap-2">
+          
           <Button
             variant="outline"
             size="sm"
@@ -156,7 +142,9 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <Edit className="w-4 h-4 mr-1" />
             Edit
           </Button>
-          
+        </div>
+
+        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
