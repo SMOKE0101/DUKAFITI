@@ -1,6 +1,6 @@
+
 import React from 'react';
 import { SafeToasterWrapper } from "./components/SafeToasterWrapper";
-import { TooltipWrapper } from "./components/TooltipWrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
@@ -38,47 +38,45 @@ function App() {
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <AuthProvider>
-              <TooltipWrapper>
-                <ErrorBoundary>
-                  <div className="min-h-screen w-full bg-background text-foreground">
-                    <Routes>
-                      {/* Public routes */}
-                      <Route path="/" element={<ModernLanding />} />
-                      <Route path="/modern-landing" element={<ModernLanding />} />
-                      <Route path="/landing" element={<Landing />} />
-                      <Route path="/signin" element={<SignIn />} />
-                      <Route path="/signup" element={<SignUp />} />
-                      <Route path="/auth" element={<Navigate to="/signin" replace />} />
-                      <Route path="/offline" element={<Offline />} />
-                      
-                      {/* Dashboard compatibility route */}
-                      <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-                      
-                      {/* Protected routes with layout */}
-                      <Route path="/app" element={
-                        <ProtectedRoute>
-                          <PremiumAppLayout />
-                        </ProtectedRoute>
-                      }>
-                        <Route index element={<Navigate to="/app/dashboard" replace />} />
-                        <Route path="dashboard" element={<Dashboard />} />
-                        <Route path="sales" element={<ModernSalesPage />} />
-                        <Route path="inventory" element={<InventoryPage />} />
-                        <Route path="customers" element={<CustomersPage />} />
-                        <Route path="reports" element={<ReportsPage />} />
-                        <Route path="settings" element={<Settings />} />
-                      </Route>
-                      
-                      {/* Legacy route redirect */}
-                      <Route path="/index" element={<Index />} />
-                      
-                      {/* 404 */}
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                    <SafeToasterWrapper />
-                  </div>
-                </ErrorBoundary>
-              </TooltipWrapper>
+              <ErrorBoundary>
+                <div className="min-h-screen w-full bg-background text-foreground">
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/" element={<ModernLanding />} />
+                    <Route path="/modern-landing" element={<ModernLanding />} />
+                    <Route path="/landing" element={<Landing />} />
+                    <Route path="/signin" element={<SignIn />} />
+                    <Route path="/signup" element={<SignUp />} />
+                    <Route path="/auth" element={<Navigate to="/signin" replace />} />
+                    <Route path="/offline" element={<Offline />} />
+                    
+                    {/* Dashboard compatibility route */}
+                    <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                    
+                    {/* Protected routes with layout */}
+                    <Route path="/app" element={
+                      <ProtectedRoute>
+                        <PremiumAppLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<Navigate to="/app/dashboard" replace />} />
+                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route path="sales" element={<ModernSalesPage />} />
+                      <Route path="inventory" element={<InventoryPage />} />
+                      <Route path="customers" element={<CustomersPage />} />
+                      <Route path="reports" element={<ReportsPage />} />
+                      <Route path="settings" element={<Settings />} />
+                    </Route>
+                    
+                    {/* Legacy route redirect */}
+                    <Route path="/index" element={<Index />} />
+                    
+                    {/* 404 */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                  <SafeToasterWrapper />
+                </div>
+              </ErrorBoundary>
             </AuthProvider>
           </ThemeProvider>
         </BrowserRouter>
