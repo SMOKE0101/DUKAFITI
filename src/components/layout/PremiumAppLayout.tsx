@@ -1,61 +1,39 @@
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import PremiumSidebar from './PremiumSidebar';
-import EnhancedTopbar from './EnhancedTopbar';
-import OfflineStatus from '../OfflineStatus';
-import { BottomNavigation } from './BottomNavigation';
-import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import Sidebar from './Sidebar';
+import TopNavigation from './TopNavigation';
+import { useCacheManager } from '../../hooks/useCacheManager';
+import { useBackgroundSync } from '../../hooks/useBackgroundSync';
+import NetworkStatusIndicator from '../NetworkStatusIndicator';
 
-interface PremiumAppLayoutProps {
-  children?: React.ReactNode;
-}
+const PremiumAppLayout = () => {
+  const { loadPendingOperations } = useCacheManager();
+  
+  // Initialize cache manager on mount
+  useEffect(() => {
+    loadPendingOperations();
+  }, [loadPendingOperations]);
 
-const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const isMobile = useIsMobile();
-  const isTablet = useIsTablet();
-
-  const handleSidebarToggle = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
+  // Initialize background sync
+  useBackgroundSync();
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground">
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
-          <PremiumSidebar 
-            isCollapsed={sidebarCollapsed} 
-            onToggle={handleSidebarToggle} 
-          />
-          <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 bg-background min-h-screen ${
-            !isMobile && !isTablet && !sidebarCollapsed 
-              ? 'ml-64' 
-              : !isMobile && !isTablet && sidebarCollapsed 
-                ? 'ml-16' 
-                : 'ml-0'
-          }`}>
-            <EnhancedTopbar 
-              sidebarCollapsed={sidebarCollapsed} 
-              onSidebarToggle={handleSidebarToggle}
-            />
-            <div className={`flex-1 overflow-auto bg-background w-full ${isMobile || isTablet ? 'pb-20' : ''}`}>
-              <div className="w-full p-4 pt-20 space-y-4 bg-background min-h-full">
-                <OfflineStatus />
-                {children || <Outlet />}
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <TopNavigation />
+              <NetworkStatusIndicator />
             </div>
+          </div>
+          <main className="flex-1 overflow-auto">
+            <Outlet />
           </main>
-          
-          {/* Bottom Navigation for Mobile/Tablet */}
-          {(isMobile || isTablet) && (
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t">
-              <BottomNavigation />
-            </div>
-          )}
         </div>
-      </SidebarProvider>
+      </div>
     </div>
   );
 };

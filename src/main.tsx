@@ -6,6 +6,19 @@ import './index.css';
 
 console.log('[Main] Starting React application initialization...');
 
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[Main] Service worker registered:', registration.scope);
+      })
+      .catch((error) => {
+        console.log('[Main] Service worker registration failed:', error);
+      });
+  });
+}
+
 // Ensure React is properly loaded
 if (typeof React === 'undefined') {
   throw new Error('React is not properly loaded');
