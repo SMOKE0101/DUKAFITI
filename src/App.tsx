@@ -16,7 +16,7 @@ import Offline from "./pages/Offline";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./components/Dashboard";
-import ModernSalesPage from "./components/ModernSalesPage";
+import OptimizedModernSalesPage from "./components/OptimizedModernSalesPage";
 import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
@@ -66,7 +66,7 @@ function App() {
                     }>
                       <Route index element={<Navigate to="/app/dashboard" replace />} />
                       <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="sales" element={<ModernSalesPage />} />
+                      <Route path="sales" element={<OptimizedModernSalesPage />} />
                       <Route path="inventory" element={<InventoryPage />} />
                       <Route path="customers" element={<CustomersPage />} />
                       <Route path="reports" element={<ReportsPage />} />
