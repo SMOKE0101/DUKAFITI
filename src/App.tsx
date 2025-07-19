@@ -1,6 +1,5 @@
 
-import * as React from 'react';
-import { ReactInitCheck } from './components/ReactInitCheck';
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { ProductionToaster } from "@/components/ui/production-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,14 +34,8 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  // Add safety check for React
-  if (typeof React === 'undefined' || !React.useState) {
-    return <div>Loading React...</div>;
-  }
-
   return (
-    <ReactInitCheck>
-      <ErrorBoundary>
+    <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -93,8 +86,7 @@ function App() {
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
-      </ErrorBoundary>
-    </ReactInitCheck>
+    </ErrorBoundary>
   );
 }
 
