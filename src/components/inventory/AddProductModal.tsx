@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
 import { Shuffle } from 'lucide-react';
@@ -167,8 +167,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const showProfitCalculation = !unspecifiedStock && formData.costPrice > 0 && formData.sellingPrice > 0;
 
   return (
-    <TooltipProvider>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
           {/* Modern Header */}
           <div className="border-b-4 border-green-600 bg-white dark:bg-gray-900 p-6 text-center flex-shrink-0">
@@ -414,7 +413,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-    </TooltipProvider>
   );
 };
 

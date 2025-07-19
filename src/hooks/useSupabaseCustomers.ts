@@ -4,11 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useOfflineFirstSupabase } from './useOfflineFirstSupabase';
+import { useOfflineManager } from './useOfflineManager';
 import { Customer } from '../types';
 
 export const useSupabaseCustomers = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { addOfflineOperation } = useOfflineManager();
 
   // Transform functions for field mapping
   const transformToLocal = (customer: any): Customer => ({
@@ -155,23 +157,40 @@ export const useSupabaseCustomers = () => {
       console.log('[useSupabaseCustomers] Updating customer:', id, updates);
 
       if (!isOnline) {
-        // Work offline: update local data only
+        // Work offline: queue the update for sync
+        const customerUpdate = {
+          id: id,
+          updates: {
+            name: updates.name,
+            phone: updates.phone,
+            email: updates.email,
+            address: updates.address,
+            total_purchases: updates.totalPurchases,
+            outstanding_debt: updates.outstandingDebt,
+            credit_limit: updates.creditLimit,
+            risk_rating: updates.riskRating,
+            last_purchase_date: updates.lastPurchaseDate,
+            updated_at: new Date().toISOString(),
+          }
+        };
+
+        await addOfflineOperation('customer', 'update', customerUpdate, 'high');
+        
+        // Update local state immediately for UI responsiveness
         const currentCustomers = customers || [];
         const customerIndex = currentCustomers.findIndex(c => c.id === id);
         
-        if (customerIndex === -1) {
-          throw new Error('Customer not found');
+        if (customerIndex !== -1) {
+          const updatedCustomer = { ...currentCustomers[customerIndex], ...updates };
+          
+          toast({
+            title: "Offline Mode", 
+            description: "Changes saved and will sync when online",
+            variant: "default",
+          });
+
+          return updatedCustomer;
         }
-
-        const updatedCustomer = { ...currentCustomers[customerIndex], ...updates };
-        
-        toast({
-          title: "Offline Mode", 
-          description: "Changes saved and will sync when online",
-          variant: "default",
-        });
-
-        return updatedCustomer;
       }
 
       const { data, error } = await supabase

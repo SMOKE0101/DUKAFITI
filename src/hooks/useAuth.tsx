@@ -1,5 +1,4 @@
 
-import * as React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
@@ -16,28 +15,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Add safety check for React hooks
-  if (typeof useState === 'undefined') {
-    console.error('React hooks not available - this should not happen');
-    return <div>Loading...</div>;
-  }
-
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // Initialize with safe defaults
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let mounted = true;
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         // Handle logout redirect
         if (event === 'SIGNED_OUT') {
-          // Use setTimeout to ensure state updates are complete before navigation
           setTimeout(() => {
             window.location.href = '/';
           }, 100);
@@ -45,14 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -65,7 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string) => {
-    // Use deployed URL for mobile compatibility
     const redirectUrl = window.location.hostname === 'localhost' 
       ? `${window.location.origin}/app/dashboard`
       : `https://2e731d33-212e-43f1-b204-1c6ae466708b.lovableproject.com/app/dashboard`;
@@ -82,7 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
-    // Use deployed URL for mobile compatibility
     const redirectUrl = window.location.hostname === 'localhost' 
       ? `${window.location.origin}/app/dashboard`
       : `https://2e731d33-212e-43f1-b204-1c6ae466708b.lovableproject.com/app/dashboard`;
@@ -102,7 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // Navigation will be handled by the auth state change listener
   };
 
   const value = {
@@ -115,7 +114,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
