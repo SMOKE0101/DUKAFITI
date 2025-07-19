@@ -428,6 +428,7 @@ const CustomerManagement: React.FC = () => {
           }}
           customer={selectedCustomer}
           onDelete={handleConfirmDelete}
+          isDeleting={isDeleting === selectedCustomer.id}
         />
       )}
     </div>

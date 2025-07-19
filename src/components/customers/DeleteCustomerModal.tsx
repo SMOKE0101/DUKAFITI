@@ -10,8 +10,8 @@ interface DeleteCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: Customer | null;
-  onDelete: () => Promise<void>;
-  isDeleting: boolean;
+  onDelete: (id: string) => Promise<void>;
+  isDeleting?: boolean;
 }
 
 const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
@@ -19,11 +19,13 @@ const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
   onClose,
   customer,
   onDelete,
-  isDeleting
+  isDeleting = false
 }) => {
   const handleDelete = async () => {
+    if (!customer) return;
+    
     try {
-      await onDelete();
+      await onDelete(customer.id);
     } catch (error) {
       console.error('Failed to delete customer:', error);
     }

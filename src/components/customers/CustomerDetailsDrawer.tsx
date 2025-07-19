@@ -238,7 +238,7 @@ const CustomerDetailsDrawer: React.FC<CustomerDetailsDrawerProps> = ({
         <DeleteCustomerModal
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
-          customer={customer}
+          customer={selectedCustomer}
           onDelete={handleDeleteConfirm}
         />
       )}
