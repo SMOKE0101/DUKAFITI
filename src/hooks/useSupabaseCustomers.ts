@@ -16,9 +16,9 @@ const transformDbCustomer = (dbCustomer: any): Customer => ({
   email: dbCustomer.email,
   address: dbCustomer.address,
   createdDate: dbCustomer.created_date || dbCustomer.created_at,
-  totalPurchases: dbCustomer.total_purchases || 0,
-  outstandingDebt: dbCustomer.outstanding_debt || 0,
-  creditLimit: dbCustomer.credit_limit || 1000,
+  totalPurchases: Number(dbCustomer.total_purchases) || 0,
+  outstandingDebt: Number(dbCustomer.outstanding_debt) || 0,
+  creditLimit: Number(dbCustomer.credit_limit) || 1000,
   lastPurchaseDate: dbCustomer.last_purchase_date,
   riskRating: (dbCustomer.risk_rating as 'low' | 'medium' | 'high') || 'low',
 });
@@ -29,9 +29,9 @@ const transformToDbCustomer = (customer: Omit<Customer, 'id'>, userId: string) =
   phone: customer.phone,
   email: customer.email,
   address: customer.address,
-  total_purchases: customer.totalPurchases || 0,
-  outstanding_debt: customer.outstandingDebt || 0,
-  credit_limit: customer.creditLimit || 1000,
+  total_purchases: Number(customer.totalPurchases) || 0,
+  outstanding_debt: Number(customer.outstandingDebt) || 0,
+  credit_limit: Number(customer.creditLimit) || 1000,
   risk_rating: customer.riskRating || 'low',
   last_purchase_date: customer.lastPurchaseDate,
   user_id: userId,
@@ -46,18 +46,16 @@ export const useSupabaseCustomers = () => {
   const { setValue } = useLocalStorage('customers', []);
   const { addOfflineOperation } = useUnifiedOfflineManager();
 
-  useEffect(() => {
-    if (!user) return;
-    fetchCustomers();
-  }, [user, isOnline]);
-
   const fetchCustomers = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
       if (isOnline) {
         const { data, error } = await supabase
           .from('customers')
           .select('*')
+          .eq('user_id', user.id)
           .order('created_date', { ascending: false });
 
         if (error) {
@@ -89,6 +87,10 @@ export const useSupabaseCustomers = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [user, isOnline]);
 
   const createCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer> => {
     try {
@@ -136,9 +138,9 @@ export const useSupabaseCustomers = () => {
         if (updates.phone) dbUpdates.phone = updates.phone;
         if (updates.email) dbUpdates.email = updates.email;
         if (updates.address) dbUpdates.address = updates.address;
-        if (updates.totalPurchases !== undefined) dbUpdates.total_purchases = updates.totalPurchases;
-        if (updates.outstandingDebt !== undefined) dbUpdates.outstanding_debt = updates.outstandingDebt;
-        if (updates.creditLimit !== undefined) dbUpdates.credit_limit = updates.creditLimit;
+        if (updates.totalPurchases !== undefined) dbUpdates.total_purchases = Number(updates.totalPurchases);
+        if (updates.outstandingDebt !== undefined) dbUpdates.outstanding_debt = Number(updates.outstandingDebt);
+        if (updates.creditLimit !== undefined) dbUpdates.credit_limit = Number(updates.creditLimit);
         if (updates.riskRating) dbUpdates.risk_rating = updates.riskRating;
         if (updates.lastPurchaseDate !== undefined) dbUpdates.last_purchase_date = updates.lastPurchaseDate;
 
@@ -146,6 +148,7 @@ export const useSupabaseCustomers = () => {
           .from('customers')
           .update(dbUpdates)
           .eq('id', id)
+          .eq('user_id', user?.id)
           .select()
           .single();
 

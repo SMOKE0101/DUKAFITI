@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
-import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
+import { useCustomerOperations } from '../../hooks/useCustomerOperations';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
@@ -26,14 +26,13 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
   customer
 }) => {
   const { toast } = useToast();
-  const { updateCustomer } = useSupabaseCustomers();
+  const { recordPayment, isRecordingPayment } = useCustomerOperations();
   
   const [formData, setFormData] = useState({
     amount: '',
     paymentMethod: '',
     notes: ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +56,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
     }
 
     const paymentAmount = parseFloat(formData.amount);
-    if (paymentAmount > customer.outstandingDebt) {
+    if (paymentAmount > (customer.outstandingDebt || 0)) {
       toast({
         title: "Amount Too High",
         description: "Payment amount cannot exceed outstanding debt",
@@ -66,20 +65,8 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      // Update customer's outstanding debt
-      const newOutstandingDebt = Math.max(0, customer.outstandingDebt - paymentAmount);
-      
-      await updateCustomer(customer.id, {
-        outstandingDebt: newOutstandingDebt,
-        lastPurchaseDate: new Date().toISOString()
-      });
-
-      toast({
-        title: "Payment Recorded",
-        description: `Payment of ${formatCurrency(paymentAmount)} recorded successfully`,
-      });
+      await recordPayment(customer.id, paymentAmount, formData.paymentMethod, formData.notes);
 
       // Reset form
       setFormData({
@@ -91,18 +78,12 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
       onClose();
     } catch (error) {
       console.error('Failed to record payment:', error);
-      toast({
-        title: "Error",
-        description: "Failed to record payment. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      // Error handling is done in useCustomerOperations
     }
   };
 
   const handleClose = () => {
-    if (isSubmitting) return;
+    if (isRecordingPayment) return;
     
     setFormData({
       amount: '',
@@ -114,7 +95,8 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
 
   if (!customer) return null;
 
-  const remainingAfterPayment = customer.outstandingDebt - parseFloat(formData.amount || '0');
+  const remainingAfterPayment = (customer.outstandingDebt || 0) - parseFloat(formData.amount || '0');
+  const isSubmitting = isRecordingPayment === customer.id;
 
   return (
     <Sheet open={isOpen} onOpenChange={handleClose}>
@@ -140,7 +122,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Outstanding:</span>
                 <Badge variant="destructive" className="rounded-full">
-                  {formatCurrency(customer.outstandingDebt)}
+                  {formatCurrency(customer.outstandingDebt || 0)}
                 </Badge>
               </div>
             </div>
@@ -160,7 +142,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
                   type="number"
                   step="0.01"
                   min="0.01"
-                  max={customer.outstandingDebt}
+                  max={customer.outstandingDebt || 0}
                   value={formData.amount}
                   onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                   className="pl-10 h-12 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent focus:border-green-500 focus:ring-2 focus:ring-green-200"

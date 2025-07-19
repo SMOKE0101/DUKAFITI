@@ -1,15 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, User, Phone, Mail, MapPin, Users, DollarSign, TrendingUp } from 'lucide-react';
+import { Plus, Search, User, Phone, Mail, MapPin, Users, DollarSign, TrendingUp, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { Customer } from '../types';
 import { useToast } from '../hooks/use-toast';
 import CustomerModal from './CustomerModal';
 import CustomerHistoryModal from './customers/CustomerHistoryModal';
-import RepaymentDrawer from './customers/RepaymentDrawer';
+import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
+import DeleteCustomerModal from './customers/DeleteCustomerModal';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
+import { useCustomerOperations } from '../hooks/useCustomerOperations';
 import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import { supabase } from '../integrations/supabase/client';
 
@@ -19,9 +22,11 @@ const CustomerManagement: React.FC = () => {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showRepaymentDrawer, setShowRepaymentDrawer] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
-  const { customers, loading, createCustomer, updateCustomer } = useSupabaseCustomers();
+  const { customers, loading, createCustomer, updateCustomer, fetchCustomers } = useSupabaseCustomers();
+  const { deleteCustomer, isDeleting } = useCustomerOperations();
   const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
 
   // Set up real-time subscription for customer updates
@@ -37,6 +42,8 @@ const CustomerManagement: React.FC = () => {
         },
         (payload) => {
           console.log('Customer change detected:', payload);
+          // Refresh customers when changes are detected
+          fetchCustomers();
         }
       )
       .subscribe();
@@ -44,7 +51,7 @@ const CustomerManagement: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchCustomers]);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -79,6 +86,23 @@ const CustomerManagement: React.FC = () => {
   const handleRecordPayment = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowRepaymentDrawer(true);
+  };
+
+  const handleDeleteCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async (customerId: string) => {
+    try {
+      await deleteCustomer(customerId);
+      setShowDeleteModal(false);
+      setSelectedCustomer(null);
+      // Refresh customers list
+      await fetchCustomers();
+    } catch (error) {
+      console.error('Delete customer failed:', error);
+    }
   };
 
   const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -125,6 +149,8 @@ const CustomerManagement: React.FC = () => {
       }
       setShowModal(false);
       setEditingCustomer(null);
+      // Refresh customers list
+      await fetchCustomers();
     } catch (error) {
       console.error('Failed to save customer:', error);
       toast({
@@ -133,6 +159,13 @@ const CustomerManagement: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handlePaymentComplete = async () => {
+    setShowRepaymentDrawer(false);
+    setSelectedCustomer(null);
+    // Refresh customers list to show updated debt
+    await fetchCustomers();
   };
 
   if (loading) {
@@ -206,7 +239,7 @@ const CustomerManagement: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(customers.reduce((sum, c) => sum + c.totalPurchases, 0))}
+                  {formatCurrency(customers.reduce((sum, c) => sum + (c.totalPurchases || 0), 0))}
                 </div>
                 <div className="text-sm text-green-700">Total Sales</div>
               </div>
@@ -221,7 +254,7 @@ const CustomerManagement: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-orange-600">
-                  {formatCurrency(customers.reduce((sum, c) => sum + c.outstandingDebt, 0))}
+                  {formatCurrency(customers.reduce((sum, c) => sum + (c.outstandingDebt || 0), 0))}
                 </div>
                 <div className="text-sm text-orange-700">Outstanding Debt</div>
               </div>
@@ -248,9 +281,9 @@ const CustomerManagement: React.FC = () => {
                   </div>
                 </div>
                 <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  customer.outstandingDebt > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  (customer.outstandingDebt || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                 }`}>
-                  Balance: {formatCurrency(customer.outstandingDebt)}
+                  Balance: {formatCurrency(customer.outstandingDebt || 0)}
                 </div>
               </div>
             </CardHeader>
@@ -275,15 +308,15 @@ const CustomerManagement: React.FC = () => {
               <div className="pt-3 border-t space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Purchases:</span>
-                  <span className="font-medium text-green-600">{formatCurrency(customer.totalPurchases)}</span>
+                  <span className="font-medium text-green-600">{formatCurrency(customer.totalPurchases || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Credit Limit:</span>
-                  <span className="font-medium">{formatCurrency(customer.creditLimit)}</span>
+                  <span className="font-medium">{formatCurrency(customer.creditLimit || 1000)}</span>
                 </div>
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex gap-2 flex-wrap">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -299,7 +332,7 @@ const CustomerManagement: React.FC = () => {
                   variant="outline" 
                   size="sm" 
                   className="flex-1"
-                  disabled={customer.outstandingDebt === 0}
+                  disabled={(customer.outstandingDebt || 0) === 0}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRecordPayment(customer);
@@ -316,6 +349,22 @@ const CustomerManagement: React.FC = () => {
                   }}
                 >
                   Edit
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCustomer(customer);
+                  }}
+                  disabled={isDeleting === customer.id}
+                >
+                  {isDeleting === customer.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -363,14 +412,24 @@ const CustomerManagement: React.FC = () => {
       />
 
       {/* Repayment Drawer */}
-      <RepaymentDrawer
+      <NewRepaymentDrawer
         isOpen={showRepaymentDrawer}
-        onClose={() => {
-          setShowRepaymentDrawer(false);
-          setSelectedCustomer(null);
-        }}
+        onClose={handlePaymentComplete}
         customer={selectedCustomer}
       />
+
+      {/* Delete Customer Modal */}
+      {selectedCustomer && (
+        <DeleteCustomerModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedCustomer(null);
+          }}
+          customer={selectedCustomer}
+          onDelete={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 };
