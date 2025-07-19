@@ -27,6 +27,9 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 3,
+      // Enhanced offline support
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
     },
   },
 });
@@ -53,7 +56,7 @@ function App() {
                     {/* Dashboard compatibility route */}
                     <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                     
-                    {/* Protected routes with new layout */}
+                    {/* Protected routes with persistent layout */}
                     <Route path="/app" element={
                       <ProtectedRoute>
                         <AppLayout>
@@ -73,7 +76,7 @@ function App() {
                     {/* Legacy route redirect */}
                     <Route path="/index" element={<Index />} />
                     
-                    {/* 404 */}
+                    {/* 404 - Always show with layout if user is authenticated */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                   <SafeToasterWrapper />

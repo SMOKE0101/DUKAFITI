@@ -1,8 +1,8 @@
 
-const CACHE_VERSION = 'dukafiti-v5-enhanced';
-const STATIC_CACHE = 'dukafiti-static-v5';
-const DYNAMIC_CACHE = 'dukafiti-dynamic-v5';
-const API_CACHE = 'dukafiti-api-v5';
+const CACHE_VERSION = 'dukafiti-v6-enhanced';
+const STATIC_CACHE = 'dukafiti-static-v6';
+const DYNAMIC_CACHE = 'dukafiti-dynamic-v6';
+const API_CACHE = 'dukafiti-api-v6';
 
 // Critical app resources for offline functionality
 const STATIC_ASSETS = [
@@ -15,7 +15,9 @@ const STATIC_ASSETS = [
   '/app/reports',
   '/app/settings',
   '/offline',
-  '/manifest.json'
+  '/manifest.json',
+  '/assets/index.js',
+  '/assets/index.css'
 ];
 
 // API endpoints to cache
@@ -28,7 +30,7 @@ const API_PATTERNS = [
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('[Enhanced SW] Installing DukaFiti Enhanced Service Worker v5');
+  console.log('[Enhanced SW] Installing DukaFiti Enhanced Service Worker v6');
   
   event.waitUntil(
     Promise.all([
@@ -51,7 +53,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[Enhanced SW] Activating DukaFiti Enhanced Service Worker v5');
+  console.log('[Enhanced SW] Activating DukaFiti Enhanced Service Worker v6');
   
   event.waitUntil(
     Promise.all([
@@ -117,34 +119,14 @@ async function handleStaticAsset(request) {
   } catch (error) {
     console.error('[Enhanced SW] Static asset fetch failed:', error);
     
-    // Try to serve a basic offline page
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>DukaFiti - Offline</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: system-ui, sans-serif; text-align: center; padding: 50px; }
-            .offline-container { max-width: 400px; margin: 0 auto; }
-            .retry-btn { 
-              background: #8b5cf6; color: white; border: none; 
-              padding: 12px 24px; border-radius: 8px; cursor: pointer; 
-            }
-          </style>
-        </head>
-        <body>
-          <div class="offline-container">
-            <h1>You're Offline</h1>
-            <p>DukaFiti is working offline. Your data is safe and will sync when you're back online.</p>
-            <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
-          </div>
-        </body>
-      </html>
-    `, { 
-      status: 200,
-      headers: { 'Content-Type': 'text/html' }
-    });
+    // For critical app files, try to serve the main app shell
+    const cache = await caches.open(STATIC_CACHE);
+    const appShell = await cache.match('/');
+    if (appShell) {
+      return appShell;
+    }
+    
+    return createOfflineResponse();
   }
 }
 
@@ -194,7 +176,7 @@ async function handleAPIRequest(request) {
   }
 }
 
-// Enhanced app navigation handling
+// Enhanced app navigation handling - CRITICAL FIX
 async function handleAppNavigation(request) {
   try {
     const networkResponse = await fetch(request);
@@ -207,60 +189,33 @@ async function handleAppNavigation(request) {
     return networkResponse;
     
   } catch (error) {
-    console.log('[Enhanced SW] App navigation failed, serving offline app:', request.url);
+    console.log('[Enhanced SW] App navigation failed, serving cached app shell:', request.url);
     
-    // Always serve the main app shell for SPA navigation
-    const cache = await caches.open(STATIC_CACHE);
-    const appShell = await cache.match('/app') || await cache.match('/');
+    // CRITICAL: Always serve the main app shell for SPA navigation
+    // This ensures sidebar and topbar are always present
+    const staticCache = await caches.open(STATIC_CACHE);
+    const dynamicCache = await caches.open(DYNAMIC_CACHE);
+    
+    // Try to get the main app shell first
+    let appShell = await staticCache.match('/');
+    
+    // If not found in static cache, try dynamic cache
+    if (!appShell) {
+      appShell = await dynamicCache.match('/');
+    }
+    
+    // If still not found, try to get any cached app route
+    if (!appShell) {
+      appShell = await staticCache.match('/app');
+    }
     
     if (appShell) {
+      console.log('[Enhanced SW] Serving cached app shell for offline navigation');
       return appShell;
     }
     
-    // Fallback offline app
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>DukaFiti - Offline</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { 
-              font-family: system-ui, sans-serif; 
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              margin: 0; padding: 0; min-height: 100vh;
-              display: flex; align-items: center; justify-content: center;
-            }
-            .container { 
-              background: white; border-radius: 16px; padding: 40px; 
-              text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-              max-width: 400px; margin: 20px;
-            }
-            .logo { 
-              width: 64px; height: 64px; background: linear-gradient(45deg, #8b5cf6, #3b82f6);
-              border-radius: 12px; margin: 0 auto 20px; display: flex;
-              align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;
-            }
-            .retry-btn { 
-              background: linear-gradient(45deg, #8b5cf6, #3b82f6); color: white; 
-              border: none; padding: 12px 24px; border-radius: 8px; 
-              cursor: pointer; font-size: 16px; margin-top: 20px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="logo">D</div>
-            <h1>DukaFiti</h1>
-            <p>You're offline, but your data is safe. The app will sync when you're back online.</p>
-            <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
-          </div>
-        </body>
-      </html>
-    `, {
-      status: 200,
-      headers: { 'Content-Type': 'text/html' }
-    });
+    // Fallback: create a minimal app shell that preserves layout
+    return createMinimalAppShell();
   }
 }
 
@@ -277,7 +232,13 @@ async function handlePageRequest(request) {
     return networkResponse;
     
   } catch (error) {
-    // Try cache first
+    // For the root route or app routes, always serve the app shell
+    const url = new URL(request.url);
+    if (url.pathname === '/' || url.pathname.startsWith('/app')) {
+      return handleAppNavigation(request);
+    }
+    
+    // Try cache first for other pages
     const cache = await caches.open(DYNAMIC_CACHE);
     const cachedResponse = await cache.match(request);
     
@@ -291,10 +252,7 @@ async function handlePageRequest(request) {
       return appShell;
     }
     
-    return new Response('Page not available offline', { 
-      status: 503,
-      statusText: 'Service Unavailable'
-    });
+    return createOfflineResponse();
   }
 }
 
@@ -336,6 +294,265 @@ async function handleWriteRequest(request) {
   }
 }
 
+// Create minimal app shell that preserves layout structure
+function createMinimalAppShell() {
+  return new Response(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DukaFiti - Business Manager</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background: #f8fafc;
+            min-height: 100vh;
+          }
+          .app-container { 
+            min-height: 100vh; 
+            display: flex; 
+            width: 100%;
+          }
+          .sidebar { 
+            width: 256px; 
+            background: rgba(255, 255, 255, 0.5); 
+            border-right: 1px solid #e2e8f0;
+            backdrop-filter: blur(4px);
+            padding: 1rem;
+          }
+          .main-content { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column;
+            min-width: 0;
+          }
+          .topbar { 
+            height: 64px; 
+            background: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            backdrop-filter: blur(12px);
+            display: flex; 
+            align-items: center; 
+            padding: 0 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+          }
+          .content { 
+            flex: 1; 
+            overflow: auto; 
+            padding: 2rem;
+          }
+          .brand { 
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem; 
+            margin-bottom: 2rem;
+          }
+          .brand-logo { 
+            width: 32px; 
+            height: 32px; 
+            background: linear-gradient(45deg, #8b5cf6, #3b82f6); 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: bold;
+          }
+          .nav-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem; 
+            padding: 0.75rem; 
+            border-radius: 12px; 
+            margin-bottom: 0.5rem; 
+            color: #64748b; 
+            text-decoration: none;
+            transition: all 0.2s;
+          }
+          .nav-item:hover { 
+            background: rgba(139, 92, 246, 0.1); 
+            color: #8b5cf6;
+          }
+          .offline-indicator { 
+            background: #fee2e2; 
+            color: #dc2626; 
+            padding: 1rem; 
+            border-radius: 8px; 
+            margin-bottom: 1rem;
+            text-align: center;
+          }
+          .loading { 
+            text-align: center; 
+            padding: 2rem; 
+            color: #64748b;
+          }
+          .retry-btn { 
+            background: linear-gradient(45deg, #8b5cf6, #3b82f6); 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            margin-top: 20px;
+          }
+          .network-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #dc2626;
+            font-size: 0.875rem;
+          }
+          .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #dc2626;
+            border-radius: 50%;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="app-container">
+          <div class="sidebar">
+            <div class="brand">
+              <div class="brand-logo">D</div>
+              <div>
+                <h1 style="font-size: 1.125rem; font-weight: bold; color: #1e293b;">DukaFiti</h1>
+                <p style="font-size: 0.75rem; color: #64748b;">Business Manager</p>
+              </div>
+            </div>
+            
+            <div class="network-status">
+              <div class="status-dot"></div>
+              <span>Offline Mode</span>
+            </div>
+            
+            <nav style="margin-top: 1.5rem;">
+              <a href="/app/dashboard" class="nav-item">📊 Dashboard</a>
+              <a href="/app/sales" class="nav-item">🛒 Sales</a>
+              <a href="/app/inventory" class="nav-item">📦 Inventory</a>
+              <a href="/app/customers" class="nav-item">👥 Customers</a>
+              <a href="/app/reports" class="nav-item">📈 Reports</a>
+              <a href="/app/settings" class="nav-item">⚙️ Settings</a>
+            </nav>
+          </div>
+          
+          <div class="main-content">
+            <div class="topbar">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <button onclick="toggleSidebar()" style="background: none; border: none; padding: 0.5rem; cursor: pointer;">☰</button>
+                <div class="network-status">
+                  <div class="status-dot"></div>
+                  <span>Offline</span>
+                </div>
+              </div>
+              
+              <div style="margin-left: auto; display: flex; align-items: center; gap: 0.75rem;">
+                <button onclick="window.location.reload()" class="retry-btn" style="padding: 8px 16px; font-size: 14px;">
+                  Try Again
+                </button>
+              </div>
+            </div>
+            
+            <div class="content">
+              <div class="offline-indicator">
+                <h2 style="margin-bottom: 0.5rem;">You're Offline</h2>
+                <p>DukaFiti is working offline. Your data is safe and will sync when you're back online.</p>
+              </div>
+              
+              <div class="loading">
+                <div id="app">Loading DukaFiti...</div>
+                <button onclick="window.location.reload()" class="retry-btn">
+                  Reload App
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <script>
+          // Try to load the main app
+          setTimeout(() => {
+            if (navigator.onLine) {
+              window.location.reload();
+            }
+          }, 2000);
+          
+          // Handle online/offline events
+          window.addEventListener('online', () => {
+            window.location.reload();
+          });
+          
+          function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const isVisible = sidebar.style.display !== 'none';
+            sidebar.style.display = isVisible ? 'none' : 'block';
+          }
+        </script>
+      </body>
+    </html>
+  `, {
+    status: 200,
+    headers: { 
+      'Content-Type': 'text/html',
+      'Cache-Control': 'no-cache'
+    }
+  });
+}
+
+// Create basic offline response
+function createOfflineResponse() {
+  return new Response(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>DukaFiti - Offline</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { 
+            font-family: system-ui, sans-serif; 
+            text-align: center; 
+            padding: 50px; 
+            background: #f8fafc;
+          }
+          .offline-container { 
+            max-width: 400px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          }
+          .retry-btn { 
+            background: #8b5cf6; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            margin-top: 1rem;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="offline-container">
+          <h1>You're Offline</h1>
+          <p>DukaFiti is working offline. Your data is safe and will sync when you're back online.</p>
+          <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
+        </div>
+      </body>
+    </html>
+  `, { 
+    status: 200,
+    headers: { 'Content-Type': 'text/html' }
+  });
+}
+
 // Helper functions
 function isStaticAsset(request) {
   const url = new URL(request.url);
@@ -348,7 +565,8 @@ function isAPIRequest(request) {
 
 function isAppNavigation(request) {
   const url = new URL(request.url);
-  return url.pathname.startsWith('/app/') && request.headers.get('accept')?.includes('text/html');
+  return (url.pathname.startsWith('/app/') || url.pathname === '/') && 
+         request.headers.get('accept')?.includes('text/html');
 }
 
 async function updateCacheInBackground(request, cache) {
@@ -393,9 +611,8 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   } else if (event.data && event.data.type === 'SYNC_NOW') {
-    // Trigger sync process
     console.log('[Enhanced SW] Manual sync triggered');
   }
 });
 
-console.log('[Enhanced SW] Enhanced Service Worker v5 loaded successfully');
+console.log('[Enhanced SW] Enhanced Service Worker v6 loaded successfully');

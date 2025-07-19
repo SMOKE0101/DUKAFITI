@@ -1,53 +1,58 @@
 
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
-import './index.css';
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
 
-console.log('[Main] Starting React application initialization...');
-
-// Register service worker
+// Register enhanced service worker for offline functionality
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('[Main] Service worker registered:', registration.scope);
-      })
-      .catch((error) => {
-        console.log('[Main] Service worker registration failed:', error);
+  window.addEventListener('load', async () => {
+    try {
+      // Unregister any existing service workers first
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration => registration.unregister()));
+      
+      // Register the enhanced service worker
+      const registration = await navigator.serviceWorker.register('/enhanced-robust-sw.js', {
+        scope: '/'
       });
+      
+      console.log('[Main] Enhanced Service worker registered:', registration.scope);
+      
+      // Handle service worker updates
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[Main] New service worker available');
+              // Optionally show update notification to user
+            }
+          });
+        }
+      });
+      
+    } catch (error) {
+      console.error('[Main] Service worker registration failed:', error);
+    }
   });
 }
 
-// Ensure React is properly loaded
-if (typeof React === 'undefined') {
-  throw new Error('React is not properly loaded');
+console.log('[Main] Starting React application initialization...');
+
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  throw new Error("Root element not found");
 }
 
-const container = document.getElementById('root');
-if (!container) {
-  throw new Error('Root element not found');
-}
+console.log('[Main] Creating React root...');
+const root = createRoot(rootElement);
 
-try {
-  console.log('[Main] Creating React root...');
-  const root = createRoot(container);
-  
-  console.log('[Main] Rendering React app...');
-  root.render(<App />);
-  
-  console.log('[Main] React app rendered successfully');
-} catch (error) {
-  console.error('[Main] Failed to render React app:', error);
-  container.innerHTML = `
-    <div style="padding: 20px; color: red; font-family: monospace; max-width: 600px; margin: 50px auto;">
-      <h1>App Failed to Load</h1>
-      <p>There was an error initializing the React application.</p>
-      <p><strong>Error:</strong> ${error.message}</p>
-      <p>Please refresh the page or contact support.</p>
-      <button onclick="window.location.reload()" style="padding: 10px 20px; margin-top: 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer;">
-        Refresh Page
-      </button>
-    </div>
-  `;
-}
+console.log('[Main] Rendering React app...');
+root.render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
+
+console.log('[Main] React app rendered successfully');

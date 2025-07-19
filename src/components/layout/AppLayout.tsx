@@ -16,7 +16,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar />
           <main className="flex-1 overflow-auto">
-            {children}
+            <div className="h-full">
+              {children}
+            </div>
           </main>
         </div>
       </div>
