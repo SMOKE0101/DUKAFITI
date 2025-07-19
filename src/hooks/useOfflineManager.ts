@@ -69,6 +69,10 @@ export const useOfflineManager = () => {
     try {
       console.log('[OfflineManager] Initializing offline system...');
       
+      // Clean up legacy localStorage entries to prevent conflicts
+      localStorage.removeItem('offline_customer_creates');
+      localStorage.removeItem('offline_customer_updates');
+      
       // Register service worker with better error handling
       if ('serviceWorker' in navigator) {
         try {

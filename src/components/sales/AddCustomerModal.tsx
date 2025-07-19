@@ -94,13 +94,24 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
           onCustomerAdded?.(newCustomer);
         }, 100);
       } else {
-        // Offline - queue for sync
+        // Offline - create temp customer and queue for sync using the centralized offline manager
         const offlineCustomer = {
-          id: `offline_customer_${Date.now()}`,
+          id: `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           ...customerData,
+          createdDate: new Date().toISOString(),
         };
 
-        await addOfflineOperation('customer', 'create', customerData, 'high');
+        await addOfflineOperation('customer', 'create', {
+          name: customerData.name,
+          phone: customerData.phone,
+          email: customerData.email,
+          address: customerData.address,
+          credit_limit: customerData.creditLimit,
+          outstanding_debt: customerData.outstandingDebt,
+          risk_rating: customerData.riskRating,
+          total_purchases: customerData.totalPurchases,
+          last_purchase_date: customerData.lastPurchaseDate,
+        }, 'high');
         
         toast({
           title: "Saved Offline ⏳",

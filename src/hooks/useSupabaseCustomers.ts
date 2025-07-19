@@ -84,25 +84,12 @@ export const useSupabaseCustomers = () => {
       console.log('[useSupabaseCustomers] Creating customer:', customerData);
 
       if (!isOnline) {
-        // Work offline: create the customer locally and queue for sync
+        // Work offline: create the customer locally with temp ID
         const newCustomer: Customer = {
           ...customerData,
           id: `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           createdDate: new Date().toISOString(),
         };
-
-        // Store the operation for sync
-        const createOperation = {
-          id: `customer_create_${newCustomer.id}_${Date.now()}`,
-          type: 'customer' as const,
-          operation: 'create' as const,
-          data: newCustomer,
-          timestamp: new Date().toISOString(),
-        };
-
-        const pendingOps = JSON.parse(localStorage.getItem('offline_customer_creates') || '[]');
-        pendingOps.push(createOperation);
-        localStorage.setItem('offline_customer_creates', JSON.stringify(pendingOps));
 
         toast({
           title: "Offline Mode",
@@ -168,27 +155,13 @@ export const useSupabaseCustomers = () => {
       console.log('[useSupabaseCustomers] Updating customer:', id, updates);
 
       if (!isOnline) {
-        // Work offline: queue the update operation and update local cache
+        // Work offline: update local data only
         const currentCustomers = customers || [];
         const customerIndex = currentCustomers.findIndex(c => c.id === id);
         
         if (customerIndex === -1) {
           throw new Error('Customer not found');
         }
-
-        // Create a proper offline update operation
-        const updateOperation = {
-          id: `customer_update_${id}_${Date.now()}`,
-          type: 'customer' as const,
-          operation: 'update' as const,
-          data: { customerId: id, updates },
-          timestamp: new Date().toISOString(),
-        };
-
-        // Store the operation for sync (using localStorage as fallback)
-        const pendingOps = JSON.parse(localStorage.getItem('offline_customer_updates') || '[]');
-        pendingOps.push(updateOperation);
-        localStorage.setItem('offline_customer_updates', JSON.stringify(pendingOps));
 
         const updatedCustomer = { ...currentCustomers[customerIndex], ...updates };
         
@@ -295,7 +268,7 @@ export const useSupabaseCustomers = () => {
     }
   };
 
-  // Set up real-time subscription and offline sync
+  // Set up real-time subscription
   useEffect(() => {
     if (!user || !isOnline) return;
 
@@ -317,94 +290,11 @@ export const useSupabaseCustomers = () => {
       )
       .subscribe();
 
-    // Process offline operations when coming online
-    processOfflineOperations();
-
     return () => {
       console.log('[useSupabaseCustomers] Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, [user, isOnline, refreshCustomers]);
-
-  // Process offline operations when coming online
-  const processOfflineOperations = async () => {
-    if (!user || !isOnline) return;
-
-    try {
-      // Process offline customer creates
-      const pendingCreates = JSON.parse(localStorage.getItem('offline_customer_creates') || '[]');
-      for (const operation of pendingCreates) {
-        try {
-          const { data, error } = await supabase
-            .from('customers')
-            .insert({
-              user_id: user.id,
-              name: operation.data.name,
-              phone: operation.data.phone,
-              email: operation.data.email || '',
-              address: operation.data.address || '',
-              total_purchases: operation.data.totalPurchases || 0,
-              outstanding_debt: operation.data.outstandingDebt || 0,
-              credit_limit: operation.data.creditLimit || 1000,
-              risk_rating: operation.data.riskRating || 'low',
-              last_purchase_date: operation.data.lastPurchaseDate,
-            })
-            .select()
-            .single();
-
-          if (!error) {
-            console.log('[useSupabaseCustomers] Synced offline customer create:', data);
-          }
-        } catch (error) {
-          console.error('[useSupabaseCustomers] Failed to sync customer create:', error);
-        }
-      }
-      localStorage.removeItem('offline_customer_creates');
-
-      // Process offline customer updates
-      const pendingUpdates = JSON.parse(localStorage.getItem('offline_customer_updates') || '[]');
-      for (const operation of pendingUpdates) {
-        try {
-          const { customerId, updates } = operation.data;
-          const { data, error } = await supabase
-            .from('customers')
-            .update({
-              name: updates.name,
-              phone: updates.phone,
-              email: updates.email,
-              address: updates.address,
-              total_purchases: updates.totalPurchases,
-              outstanding_debt: updates.outstandingDebt,
-              credit_limit: updates.creditLimit,
-              risk_rating: updates.riskRating,
-              last_purchase_date: updates.lastPurchaseDate,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', customerId)
-            .select()
-            .single();
-
-          if (!error) {
-            console.log('[useSupabaseCustomers] Synced offline customer update:', data);
-          }
-        } catch (error) {
-          console.error('[useSupabaseCustomers] Failed to sync customer update:', error);
-        }
-      }
-      localStorage.removeItem('offline_customer_updates');
-
-      // Refresh data after sync
-      if (pendingCreates.length > 0 || pendingUpdates.length > 0) {
-        await refreshCustomers();
-        toast({
-          title: "Sync Complete",
-          description: `Synced ${pendingCreates.length + pendingUpdates.length} customer changes`,
-        });
-      }
-    } catch (error) {
-      console.error('[useSupabaseCustomers] Offline sync failed:', error);
-    }
-  };
 
   return {
     customers,
