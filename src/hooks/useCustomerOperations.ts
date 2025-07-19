@@ -138,24 +138,35 @@ export const useCustomerOperations = () => {
           description: `Payment of KES ${paymentAmount.toLocaleString()} recorded successfully`,
         });
       } else {
-        // Queue for offline sync
-        await addPendingOperation({
-          type: 'customer',
-          operation: 'payment',
-          data: {
-            customerId,
-            paymentAmount,
-            paymentMethod,
-            notes
-          }
-        });
-
-        // Update local cache optimistically
+        // Queue for offline sync - treat payment as a customer update
         const cached = getCache<Customer[]>('customers');
-        if (cached) {
+        const customer = cached?.find(c => c.id === customerId);
+        
+        if (customer) {
+          const newOutstandingDebt = Math.max(0, customer.outstandingDebt - paymentAmount);
+          
+          await addPendingOperation({
+            type: 'customer',
+            operation: 'update',
+            data: {
+              id: customerId,
+              updates: {
+                outstandingDebt: newOutstandingDebt,
+                lastPurchaseDate: new Date().toISOString(),
+                // Store payment info for reference
+                _paymentInfo: {
+                  amount: paymentAmount,
+                  method: paymentMethod,
+                  notes: notes
+                }
+              }
+            }
+          });
+
+          // Update local cache optimistically
           const updatedCustomers = cached.map(c => 
             c.id === customerId 
-              ? { ...c, outstandingDebt: Math.max(0, c.outstandingDebt - paymentAmount) }
+              ? { ...c, outstandingDebt: newOutstandingDebt }
               : c
           );
           setCache('customers', updatedCustomers);
