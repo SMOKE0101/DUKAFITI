@@ -9,15 +9,14 @@ import {
   History, 
   Settings
 } from 'lucide-react';
-import { useOfflineSync } from '../hooks/useOfflineSync';
+import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import UserMenu from './UserMenu';
-import EnhancedOfflineIndicator from './EnhancedOfflineIndicator';
 import { cn } from '@/lib/utils';
 
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isOnline } = useOfflineSync();
+  const { isOnline } = useUnifiedOfflineManager();
   
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
@@ -60,7 +59,11 @@ const Navigation = () => {
         })}
         
         <div className="flex items-center ml-auto space-x-3">
-          <EnhancedOfflineIndicator />
+          {!isOnline && (
+            <div className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+              Offline
+            </div>
+          )}
           <UserMenu />
         </div>
       </div>

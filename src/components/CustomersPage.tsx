@@ -21,7 +21,10 @@ const CustomersPage = () => {
     email: '',
     address: '',
     creditLimit: 1000,
-    riskRating: 'low' as const,
+    riskRating: 'low' as 'low' | 'medium' | 'high',
+    totalPurchases: 0,
+    outstandingDebt: 0,
+    lastPurchaseDate: null as string | null,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +52,9 @@ const CustomersPage = () => {
       address: '',
       creditLimit: 1000,
       riskRating: 'low',
+      totalPurchases: 0,
+      outstandingDebt: 0,
+      lastPurchaseDate: null,
     });
     setSelectedCustomer(null);
   };
@@ -62,6 +68,9 @@ const CustomersPage = () => {
       address: customer.address || '',
       creditLimit: customer.creditLimit || 1000,
       riskRating: customer.riskRating || 'low',
+      totalPurchases: customer.totalPurchases || 0,
+      outstandingDebt: customer.outstandingDebt || 0,
+      lastPurchaseDate: customer.lastPurchaseDate,
     });
     setIsDialogOpen(true);
   };

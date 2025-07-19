@@ -44,7 +44,6 @@ export const useUnifiedSales = () => {
           if (!fetchError && data) {
             const formattedData = data.map(item => ({
               id: item.id,
-              userId: item.user_id,
               productId: item.product_id,
               productName: item.product_name,
               customerId: item.customer_id,
@@ -53,8 +52,13 @@ export const useUnifiedSales = () => {
               sellingPrice: item.selling_price,
               costPrice: item.cost_price,
               profit: item.profit,
-              totalAmount: item.total_amount,
+              total: item.total_amount,
               paymentMethod: item.payment_method,
+              paymentDetails: item.payment_details || {
+                cashAmount: 0,
+                mpesaAmount: 0,
+                debtAmount: 0,
+              },
               timestamp: item.timestamp,
               synced: item.synced,
             }));
@@ -79,7 +83,6 @@ export const useUnifiedSales = () => {
         } else {
           const formattedData = (data || []).map(item => ({
             id: item.id,
-            userId: item.user_id,
             productId: item.product_id,
             productName: item.product_name,
             customerId: item.customer_id,
@@ -88,8 +91,13 @@ export const useUnifiedSales = () => {
             sellingPrice: item.selling_price,
             costPrice: item.cost_price,
             profit: item.profit,
-            totalAmount: item.total_amount,
+            total: item.total_amount,
             paymentMethod: item.payment_method,
+            paymentDetails: item.payment_details || {
+              cashAmount: 0,
+              mpesaAmount: 0,
+              debtAmount: 0,
+            },
             timestamp: item.timestamp,
             synced: item.synced,
           }));
@@ -108,13 +116,12 @@ export const useUnifiedSales = () => {
   }, [user, isOnline, getCache, setCache]);
 
   // Create sale
-  const createSale = useCallback(async (saleData: Omit<Sale, 'id' | 'userId' | 'synced'>) => {
+  const createSale = useCallback(async (saleData: Omit<Sale, 'id' | 'synced'>) => {
     if (!user) throw new Error('User not authenticated');
 
     const newSale: Sale = {
       ...saleData,
       id: `temp_${Date.now()}`,
-      userId: user.id,
       synced: false,
       timestamp: saleData.timestamp || new Date().toISOString(),
     };
@@ -136,8 +143,9 @@ export const useUnifiedSales = () => {
             selling_price: saleData.sellingPrice,
             cost_price: saleData.costPrice,
             profit: saleData.profit,
-            total_amount: saleData.totalAmount,
+            total_amount: saleData.total,
             payment_method: saleData.paymentMethod,
+            payment_details: saleData.paymentDetails,
             timestamp: newSale.timestamp,
             synced: true,
           }])
@@ -148,7 +156,6 @@ export const useUnifiedSales = () => {
 
         const formattedSale: Sale = {
           id: data.id,
-          userId: data.user_id,
           productId: data.product_id,
           productName: data.product_name,
           customerId: data.customer_id,
@@ -157,8 +164,13 @@ export const useUnifiedSales = () => {
           sellingPrice: data.selling_price,
           costPrice: data.cost_price,
           profit: data.profit,
-          totalAmount: data.total_amount,
+          total: data.total_amount,
           paymentMethod: data.payment_method,
+          paymentDetails: data.payment_details || {
+            cashAmount: 0,
+            mpesaAmount: 0,
+            debtAmount: 0,
+          },
           timestamp: data.timestamp,
           synced: data.synced,
         };
@@ -177,7 +189,6 @@ export const useUnifiedSales = () => {
         if (updatedSales.data) {
           const formattedData = updatedSales.data.map(item => ({
             id: item.id,
-            userId: item.user_id,
             productId: item.product_id,
             productName: item.product_name,
             customerId: item.customer_id,
@@ -186,8 +197,13 @@ export const useUnifiedSales = () => {
             sellingPrice: item.selling_price,
             costPrice: item.cost_price,
             profit: item.profit,
-            totalAmount: item.total_amount,
+            total: item.total_amount,
             paymentMethod: item.payment_method,
+            paymentDetails: item.payment_details || {
+              cashAmount: 0,
+              mpesaAmount: 0,
+              debtAmount: 0,
+            },
             timestamp: item.timestamp,
             synced: item.synced,
           }));

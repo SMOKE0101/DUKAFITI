@@ -24,7 +24,7 @@ const ModernSalesPage = () => {
     productId: '',
     customerId: '',
     quantity: 1,
-    paymentMethod: 'cash' as const,
+    paymentMethod: 'cash' as 'cash' | 'mpesa' | 'debt' | 'partial',
   });
 
   const selectedProduct = products.find(p => p.id === formData.productId);
@@ -42,15 +42,20 @@ const ModernSalesPage = () => {
       const saleData = {
         productId: selectedProduct.id,
         productName: selectedProduct.name,
-        customerId: formData.customerId || null,
-        customerName: selectedCustomer?.name || null,
+        customerId: formData.customerId || undefined,
+        customerName: selectedCustomer?.name || undefined,
         quantity: formData.quantity,
         sellingPrice: selectedProduct.sellingPrice,
         costPrice: selectedProduct.costPrice,
         profit,
-        totalAmount,
         paymentMethod: formData.paymentMethod,
         timestamp: new Date().toISOString(),
+        paymentDetails: {
+          cashAmount: formData.paymentMethod === 'cash' ? totalAmount : 0,
+          mpesaAmount: formData.paymentMethod === 'mpesa' ? totalAmount : 0,
+          debtAmount: formData.paymentMethod === 'debt' ? totalAmount : 0,
+        },
+        total: totalAmount,
       };
 
       await createSale(saleData);
@@ -76,7 +81,7 @@ const ModernSalesPage = () => {
     return saleDate === today;
   });
 
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
   const todayProfit = todaySales.reduce((sum, sale) => sum + sale.profit, 0);
 
   return (
@@ -170,7 +175,7 @@ const ModernSalesPage = () => {
                     <Label htmlFor="paymentMethod">Payment Method</Label>
                     <Select 
                       value={formData.paymentMethod} 
-                      onValueChange={(value: 'cash' | 'mpesa' | 'card' | 'credit') => 
+                      onValueChange={(value: 'cash' | 'mpesa' | 'debt' | 'partial') => 
                         setFormData(prev => ({ ...prev, paymentMethod: value }))
                       }
                     >
@@ -180,8 +185,8 @@ const ModernSalesPage = () => {
                       <SelectContent>
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="mpesa">M-Pesa</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
-                        <SelectItem value="credit">Credit</SelectItem>
+                        <SelectItem value="debt">Credit</SelectItem>
+                        <SelectItem value="partial">Partial</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -309,7 +314,7 @@ const ModernSalesPage = () => {
                     <TableCell className="font-medium">{sale.productName}</TableCell>
                     <TableCell>{sale.customerName || 'Walk-in'}</TableCell>
                     <TableCell>{sale.quantity}</TableCell>
-                    <TableCell>KSh {sale.totalAmount.toLocaleString()}</TableCell>
+                    <TableCell>KSh {sale.total.toLocaleString()}</TableCell>
                     <TableCell className="text-green-600">KSh {sale.profit.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
