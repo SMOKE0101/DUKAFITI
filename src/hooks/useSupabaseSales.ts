@@ -94,7 +94,8 @@ export const useSupabaseSales = () => {
     tableName: 'sales',
     loadFromSupabase,
     transformToLocal,
-    transformFromLocal
+    transformFromLocal,
+    user // Pass the user to the offline hook
   });
 
   // Create sales (batch) with offline support
