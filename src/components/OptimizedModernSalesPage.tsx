@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useOfflineSales } from '../hooks/useOfflineSales';
 import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import { formatCurrency } from '../utils/currency';
 import { Product, Customer } from '../types';
@@ -13,19 +12,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
+import SalesCheckout from './sales/SalesCheckout';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 type PaymentMethod = 'cash' | 'mpesa' | 'debt';
 
 const OptimizedModernSalesPage = () => {
-  console.log('🚀 OptimizedModernSalesPage component loaded - ENHANCED MOBILE v1.0');
+  console.log('🚀 OptimizedModernSalesPage component loaded - ENHANCED MOBILE v2.0 with Error Fix');
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
-  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddDebt, setShowAddDebt] = useState(false);
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
@@ -34,34 +33,49 @@ const OptimizedModernSalesPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const { sales, loading: salesLoading } = useSupabaseSales();
+  const { sales, loading: salesLoading, refreshSales } = useSupabaseSales();
   const { products, loading: productsLoading } = useSupabaseProducts();
-  const { customers, loading: customersLoading, updateCustomer } = useSupabaseCustomers();
-  const { createOfflineSale, isCreating: isCreatingOfflineSale } = useOfflineSales();
+  const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { isOnline, pendingOperations } = useUnifiedOfflineManager();
 
   const isLoading = salesLoading || productsLoading || customersLoading;
 
+  // Set up real-time subscriptions
   useEffect(() => {
+    if (!user) return;
+
+    console.log('[OptimizedModernSalesPage] Setting up real-time subscriptions');
+
     const productsChannel = supabase
       .channel('products-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-        console.log('Products updated:', payload);
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'products',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('[OptimizedModernSalesPage] Products updated:', payload);
       })
       .subscribe();
 
     const customersChannel = supabase
       .channel('customers-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
-        console.log('Customers updated:', payload);
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'customers',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('[OptimizedModernSalesPage] Customers updated:', payload);
       })
       .subscribe();
 
     return () => {
+      console.log('[OptimizedModernSalesPage] Cleaning up subscriptions');
       supabase.removeChannel(productsChannel);
       supabase.removeChannel(customersChannel);
     };
-  }, []);
+  }, [user]);
 
   const total = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
@@ -76,6 +90,8 @@ const OptimizedModernSalesPage = () => {
   }, [products, searchTerm]);
 
   const addToCart = (product: Product) => {
+    console.log('[OptimizedModernSalesPage] Adding to cart:', product.name);
+    
     if (product.currentStock === 0) {
       const shouldAdd = window.confirm('This product is out of stock. Do you want to add it anyway?');
       if (!shouldAdd) return;
@@ -94,11 +110,14 @@ const OptimizedModernSalesPage = () => {
   };
 
   const removeFromCart = (productId: string) => {
+    console.log('[OptimizedModernSalesPage] Removing from cart:', productId);
     const updatedCart = cart.filter(item => item.id !== productId);
     setCart(updatedCart);
   };
 
   const updateQuantity = (productId: string, newQuantity: number) => {
+    console.log('[OptimizedModernSalesPage] Updating quantity:', productId, newQuantity);
+    
     if (newQuantity <= 0) {
       removeFromCart(productId);
       return;
@@ -111,126 +130,21 @@ const OptimizedModernSalesPage = () => {
   };
 
   const clearCart = () => {
+    console.log('[OptimizedModernSalesPage] Clearing cart');
     setCart([]);
   };
 
-  const handleCheckout = async () => {
-    if (cart.length === 0) return;
-    if (paymentMethod === 'debt' && !selectedCustomerId) {
-      toast({
-        title: "Customer Required",
-        description: "Please select a customer for debt transactions.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsProcessingCheckout(true);
-
+  const handleCheckoutComplete = async () => {
+    console.log('[OptimizedModernSalesPage] Checkout completed, clearing cart');
+    clearCart();
+    setSelectedCustomerId(null);
+    setPaymentMethod('cash');
+    
+    // Refresh sales data
     try {
-      const customer = selectedCustomerId 
-        ? customers.find(c => c.id === selectedCustomerId) || null 
-        : null;
-
-      if (isOnline) {
-        await processOnlineSale(selectedCustomerId, customer);
-      } else {
-        await processOfflineSale(selectedCustomerId, customer);
-      }
-
-      toast({
-        title: "Sale Completed!",
-        description: `Transaction processed successfully${!isOnline ? ' (offline)' : ''}.`,
-      });
-
-      clearCart();
-      setSelectedCustomerId(null);
-      setPaymentMethod('cash');
+      await refreshSales();
     } catch (error) {
-      console.error('Checkout error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process sale. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingCheckout(false);
-    }
-  };
-
-  const processOnlineSale = async (customerId: string | null, customer: Customer | null) => {
-    if (!user) throw new Error('User not authenticated');
-
-    for (const item of cart) {
-      const saleData = {
-        user_id: user.id,
-        product_id: item.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        selling_price: item.sellingPrice,
-        cost_price: item.costPrice,
-        profit: (item.sellingPrice - item.costPrice) * item.quantity,
-        total_amount: item.sellingPrice * item.quantity,
-        customer_id: customerId,
-        customer_name: customer?.name || null,
-        payment_method: paymentMethod,
-        payment_details: {},
-        timestamp: new Date().toISOString(),
-        synced: true,
-      };
-
-      const { error: saleError } = await supabase
-        .from('sales')
-        .insert(saleData);
-
-      if (saleError) {
-        throw new Error(`Failed to create sale for ${item.name}: ${saleError.message}`);
-      }
-
-      if (paymentMethod === 'debt' && customer) {
-        const currentDebt = customer.outstandingDebt || 0;
-        await updateCustomer(customer.id, {
-          outstandingDebt: currentDebt + (item.sellingPrice * item.quantity),
-          totalPurchases: (customer.totalPurchases || 0) + (item.sellingPrice * item.quantity),
-          lastPurchaseDate: new Date().toISOString(),
-        });
-      }
-
-      const { error: stockError } = await supabase
-        .from('products')
-        .update({
-          current_stock: Math.max(0, item.currentStock - item.quantity)
-        })
-        .eq('id', item.id);
-
-      if (stockError) {
-        console.warn(`Failed to update stock for ${item.name}:`, stockError);
-      }
-    }
-  };
-
-  const processOfflineSale = async (customerId: string | null, customer: Customer | null) => {
-    if (!user) throw new Error('User not authenticated');
-
-    for (const item of cart) {
-      const saleData = {
-        user_id: user.id,
-        product_id: item.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        selling_price: item.sellingPrice,
-        cost_price: item.costPrice,
-        profit: (item.sellingPrice - item.costPrice) * item.quantity,
-        total_amount: item.sellingPrice * item.quantity,
-        customer_id: customerId,
-        customer_name: customer?.name || null,
-        payment_method: paymentMethod,
-        payment_details: {},
-        timestamp: new Date().toISOString(),
-        synced: false,
-      };
-
-      await createOfflineSale(saleData);
+      console.error('[OptimizedModernSalesPage] Failed to refresh sales after checkout:', error);
     }
   };
 
@@ -266,7 +180,7 @@ const OptimizedModernSalesPage = () => {
                 🛒 SALES
               </h1>
               
-              {/* Connection Status - Compact on mobile */}
+              {/* Connection Status */}
               <div className="flex items-center gap-1 sm:gap-2">
                 {isOnline ? (
                   <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
@@ -289,7 +203,7 @@ const OptimizedModernSalesPage = () => {
               </div>
             </div>
             
-            {/* Mobile Panel Toggle - Enhanced Touch Targets */}
+            {/* Mobile Panel Toggle */}
             {isMobile && (
               <div className="flex gap-1">
                 <button
@@ -320,14 +234,14 @@ const OptimizedModernSalesPage = () => {
       </header>
 
       <main className="flex-1 flex">
-        {/* Left Panel - Product Search & Quick Picks - Mobile Optimized */}
+        {/* Left Panel - Product Search & Quick Picks */}
         <div className={`${
           isMobile 
             ? activePanel === 'search' ? 'flex' : 'hidden'
             : 'flex'
         } flex-col ${isMobile ? 'w-full' : 'w-2/3 border-r border-gray-200/60 dark:border-slate-700/60'}`}>
           
-          {/* Search Section - Enhanced Mobile */}
+          {/* Search Section */}
           <div className="p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 border-b border-gray-200/60 dark:border-slate-700/60">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
@@ -350,7 +264,7 @@ const OptimizedModernSalesPage = () => {
             </div>
           </div>
 
-          {/* Quick Select Section - Touch-Optimized */}
+          {/* Quick Select Section */}
           <div className="p-3 sm:p-4 bg-white/30 dark:bg-slate-800/30 border-b border-gray-200/40 dark:border-slate-700/40">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">⚡ Quick Picks</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -374,7 +288,7 @@ const OptimizedModernSalesPage = () => {
             </div>
           </div>
 
-          {/* Product Grid - Mobile Optimized */}
+          {/* Product Grid */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-20">
               {filteredProducts.length === 0 ? (
@@ -420,14 +334,14 @@ const OptimizedModernSalesPage = () => {
           </div>
         </div>
 
-        {/* Right Panel - Cart & Checkout - Mobile Optimized */}
+        {/* Right Panel - Cart & Checkout */}
         <div className={`${
           isMobile 
             ? activePanel === 'cart' ? 'flex' : 'hidden'
             : 'flex'
         } flex-col ${isMobile ? 'w-full' : 'w-1/3'} bg-white/60 dark:bg-slate-800/60`}>
           
-          {/* Cart Header - Compact on Mobile */}
+          {/* Cart Header */}
           <div className="p-3 sm:p-4 border-b border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
@@ -448,7 +362,7 @@ const OptimizedModernSalesPage = () => {
             </div>
           </div>
 
-          {/* Cart Items - Touch-Optimized */}
+          {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
             {cart.length === 0 ? (
               <div className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -510,11 +424,11 @@ const OptimizedModernSalesPage = () => {
             )}
           </div>
 
-          {/* Checkout Section - Mobile Optimized */}
+          {/* Checkout Section */}
           {cart.length > 0 && (
             <div className="p-3 sm:p-4 border-t border-gray-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 space-y-4 pb-safe">
               
-              {/* Customer Selection - Touch-Friendly */}
+              {/* Customer Selection */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                   Customer (Optional)
@@ -543,7 +457,7 @@ const OptimizedModernSalesPage = () => {
                 </div>
               </div>
 
-              {/* Payment Method Selection - Touch-Optimized */}
+              {/* Payment Method Selection */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                   Payment Method
@@ -574,7 +488,7 @@ const OptimizedModernSalesPage = () => {
                 </div>
               )}
 
-              {/* Quick Action Buttons - Mobile Stack */}
+              {/* Quick Action Buttons */}
               <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
                 <button
                   onClick={() => setShowAddCustomer(true)}
@@ -592,25 +506,15 @@ const OptimizedModernSalesPage = () => {
                 </button>
               </div>
 
-              {/* Checkout Button - Enhanced for Mobile */}
-              <button
-                onClick={handleCheckout}
-                disabled={
-                  isProcessingCheckout ||
-                  cart.length === 0 ||
-                  (paymentMethod === 'debt' && !selectedCustomerId)
-                }
-                className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:transform-none active:scale-95 min-h-[56px]"
-              >
-                {isProcessingCheckout ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processing...
-                  </div>
-                ) : (
-                  `💳 Complete Sale - ${formatCurrency(total)}`
-                )}
-              </button>
+              {/* Enhanced Checkout Button */}
+              <SalesCheckout
+                cart={cart}
+                selectedCustomerId={selectedCustomerId}
+                paymentMethod={paymentMethod}
+                customers={customers}
+                onCheckoutComplete={handleCheckoutComplete}
+                isOnline={isOnline}
+              />
             </div>
           )}
         </div>
