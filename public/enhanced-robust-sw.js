@@ -1,11 +1,17 @@
 
-const CACHE_VERSION = 'dukafiti-v7-enhanced';
-const STATIC_CACHE = 'dukafiti-static-v7';
-const DYNAMIC_CACHE = 'dukafiti-dynamic-v7';
-const API_CACHE = 'dukafiti-api-v7';
+const CACHE_VERSION = 'dukafiti-v8-enhanced';
+const STATIC_CACHE = 'dukafiti-static-v8';
+const DYNAMIC_CACHE = 'dukafiti-dynamic-v8';
+const API_CACHE = 'dukafiti-api-v8';
 
-// Critical app resources for offline functionality
-const STATIC_ASSETS = [
+// Core app shell - these are the essential files for the SPA
+const CORE_ASSETS = [
+  '/',
+  '/manifest.json'
+];
+
+// SPA routes that should serve the main app shell
+const SPA_ROUTES = [
   '/',
   '/app',
   '/app/dashboard',
@@ -13,9 +19,7 @@ const STATIC_ASSETS = [
   '/app/inventory',
   '/app/customers',
   '/app/reports',
-  '/app/settings',
-  '/offline',
-  '/manifest.json'
+  '/app/settings'
 ];
 
 // API endpoints to cache
@@ -28,27 +32,30 @@ const API_PATTERNS = [
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('[Enhanced SW] Installing DukaFiti Enhanced Service Worker v7');
+  console.log('[Enhanced SW] Installing DukaFiti Enhanced Service Worker v8');
   
   event.waitUntil(
     Promise.all([
       caches.open(STATIC_CACHE).then(async cache => {
-        console.log('[Enhanced SW] Caching static assets');
+        console.log('[Enhanced SW] Caching core app shell assets');
         
-        // Cache the main app shell first
+        // Cache the main app shell first - this is critical for offline operation
         try {
-          await cache.add('/');
+          await cache.add(new Request('/', { 
+            credentials: 'same-origin',
+            cache: 'reload' // Force fresh cache to avoid stale content
+          }));
           console.log('[Enhanced SW] Main app shell cached successfully');
         } catch (error) {
           console.warn('[Enhanced SW] Failed to cache main app shell:', error);
         }
         
-        // Cache other routes
-        for (const url of STATIC_ASSETS.slice(1)) {
+        // Cache other core assets
+        for (const url of CORE_ASSETS.slice(1)) {
           try {
             await cache.add(new Request(url, { 
               credentials: 'same-origin',
-              cache: 'no-cache'
+              cache: 'reload'
             }));
           } catch (error) {
             console.warn(`[Enhanced SW] Failed to cache ${url}:`, error);
@@ -65,7 +72,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[Enhanced SW] Activating DukaFiti Enhanced Service Worker v7');
+  console.log('[Enhanced SW] Activating DukaFiti Enhanced Service Worker v8');
   
   event.waitUntil(
     Promise.all([
@@ -112,30 +119,37 @@ self.addEventListener('fetch', (event) => {
 // Enhanced static asset handling
 async function handleStaticAsset(request) {
   try {
+    // Try to fetch from network first for better performance online
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      // Cache the successful response for offline use
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+    
+    throw new Error('Network response not ok');
+    
+  } catch (error) {
+    console.log('[Enhanced SW] Static asset network failed, trying cache:', request.url);
+    
+    // Try to serve from cache
     const cache = await caches.open(STATIC_CACHE);
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
-      // Serve from cache immediately, update in background
-      updateCacheInBackground(request, cache);
       return cachedResponse;
     }
     
-    // Not in cache, fetch and cache
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-    
-  } catch (error) {
-    console.error('[Enhanced SW] Static asset fetch failed:', error);
-    
-    // For critical app files, try to serve the main app shell
-    const cache = await caches.open(STATIC_CACHE);
-    const appShell = await cache.match('/');
-    if (appShell) {
-      return appShell;
+    // For critical JS/CSS files, try to serve the main app shell which will bootstrap the app
+    const url = new URL(request.url);
+    if (url.pathname.includes('assets/') && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'))) {
+      console.log('[Enhanced SW] Critical asset not cached, serving app shell');
+      const appShell = await cache.match('/');
+      if (appShell) {
+        return appShell;
+      }
     }
     
     return createOfflineResponse();
@@ -629,4 +643,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[Enhanced SW] Enhanced Service Worker v7 loaded successfully');
+console.log('[Enhanced SW] Enhanced Service Worker v8 loaded successfully');
