@@ -93,23 +93,28 @@ async function handleNavigation(request) {
   } catch (error) {
     console.log('[RobustSW] Navigation failed, serving cached version for:', url.pathname);
     
-    // Try to serve cached version of the specific route
+    // CRITICAL FIX: Always try to serve the cached root page for SPA routes
     const cache = await caches.open(RUNTIME_CACHE);
-    const cachedResponse = await cache.match(request);
     
+    // For any app route, serve the cached root page (which contains the full React app)
+    if (url.pathname.startsWith('/app/') || url.pathname === '/' || url.pathname === '/app') {
+      const cachedRoot = await cache.match('/');
+      if (cachedRoot) {
+        console.log('[RobustSW] Serving cached root for SPA route:', url.pathname);
+        return cachedRoot;
+      }
+    }
+    
+    // Try to serve cached version of the specific route
+    const cachedResponse = await cache.match(request);
     if (cachedResponse) {
       return cachedResponse;
     }
     
-    // If no cached version of this route, serve cached root as app shell
-    const appShell = await cache.match('/');
-    if (appShell) {
-      console.log('[RobustSW] Serving cached app shell');
-      return appShell;
-    }
-    
-    // Last resort - create a basic offline page that will try to load the app
-    return createOfflineAppShell();
+    // If no cached content at all, return a minimal response that won't break the app
+    return new Response('<!DOCTYPE html><html><head><title>Offline</title></head><body><script>window.location.href = "/";</script></body></html>', {
+      headers: { 'Content-Type': 'text/html' }
+    });
   }
 }
 
@@ -205,121 +210,6 @@ async function handleOtherRequest(request) {
   } catch (error) {
     return new Response('Offline', { status: 503 });
   }
-}
-
-// Create offline app shell that loads the cached app
-function createOfflineAppShell() {
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DukaFiti - Loading...</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { 
-        font-family: system-ui, -apple-system, sans-serif; 
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-      }
-      .loading-container {
-        text-align: center;
-        max-width: 400px;
-        padding: 2rem;
-      }
-      .logo {
-        width: 64px;
-        height: 64px;
-        background: white;
-        border-radius: 16px;
-        margin: 0 auto 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        color: #667eea;
-        font-weight: bold;
-      }
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid rgba(255,255,255,0.3);
-        border-top: 4px solid white;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 1rem auto;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      .status {
-        margin-top: 1rem;
-        opacity: 0.9;
-        font-size: 0.9rem;
-      }
-      .retry-btn {
-        background: white;
-        color: #667eea;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        margin-top: 1rem;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="loading-container">
-      <div class="logo">D</div>
-      <h1>DukaFiti</h1>
-      <div class="spinner"></div>
-      <div class="status">Loading your business data...</div>
-      <p style="font-size: 0.8rem; margin-top: 1rem; opacity: 0.8;">
-        Working offline. Your data is safe and will sync when you're back online.
-      </p>
-      <button class="retry-btn" onclick="window.location.reload()">
-        Reload App
-      </button>
-    </div>
-    
-    <script>
-      // Try to navigate to the main app
-      setTimeout(() => {
-        if (navigator.onLine) {
-          window.location.href = '/app/dashboard';
-        } else {
-          // Check if we have cached app data
-          if ('caches' in window) {
-            caches.open('${RUNTIME_CACHE}').then(cache => {
-              cache.match('/').then(response => {
-                if (response) {
-                  window.location.href = '/app/dashboard';
-                }
-              });
-            });
-          }
-        }
-      }, 2000);
-      
-      // Listen for network reconnection
-      window.addEventListener('online', () => {
-        window.location.reload();
-      });
-    </script>
-  </body>
-</html>
-  `;
-  
-  return new Response(html, {
-    headers: { 'Content-Type': 'text/html' }
-  });
 }
 
 // Helper functions
