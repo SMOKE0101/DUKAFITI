@@ -95,11 +95,9 @@ const InventoryPage = () => {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!productToDelete) return;
-    
+  const handleDeleteProduct = async (id: string) => {
     try {
-      await deleteProduct(productToDelete.id);
+      await deleteProduct(id);
       setShowDeleteModal(false);
       setProductToDelete(null);
     } catch (error) {
@@ -379,7 +377,7 @@ const InventoryPage = () => {
           setShowDeleteModal(false);
           setProductToDelete(null);
         }}
-        onConfirm={handleDeleteConfirm}
+        onDelete={handleDeleteProduct}
         product={productToDelete}
       />
     </div>
