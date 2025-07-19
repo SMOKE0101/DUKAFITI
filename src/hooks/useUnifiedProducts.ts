@@ -281,7 +281,6 @@ export const useUnifiedProducts = () => {
         // Revert optimistic update and queue for sync
         setProducts(prev => prev.filter(p => p.id !== newProduct.id));
         addPendingOperation({
-          id: `create_${Date.now()}`,
           type: 'product',
           operation: 'create',
           data: productData,
@@ -299,7 +298,6 @@ export const useUnifiedProducts = () => {
     } else {
       // Queue for sync when online
       addPendingOperation({
-        id: `create_${Date.now()}`,
         type: 'product',
         operation: 'create',
         data: productData,
@@ -358,7 +356,6 @@ export const useUnifiedProducts = () => {
         }
         
         addPendingOperation({
-          id: `update_${id}_${Date.now()}`,
           type: 'product',
           operation: 'update',
           data: { id, updates },
@@ -374,7 +371,6 @@ export const useUnifiedProducts = () => {
     } else {
       // Queue for sync when online
       addPendingOperation({
-        id: `update_${id}_${Date.now()}`,
         type: 'product',
         operation: 'update',
         data: { id, updates },
@@ -421,7 +417,6 @@ export const useUnifiedProducts = () => {
         }
         
         addPendingOperation({
-          id: `delete_${id}_${Date.now()}`,
           type: 'product',
           operation: 'delete',
           data: { id },
@@ -437,7 +432,6 @@ export const useUnifiedProducts = () => {
     } else {
       // Queue for sync when online
       addPendingOperation({
-        id: `delete_${id}_${Date.now()}`,
         type: 'product',
         operation: 'delete',
         data: { id },
