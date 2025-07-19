@@ -8,9 +8,7 @@ interface PremiumAppLayoutProps {
 const PremiumAppLayout: React.FC<PremiumAppLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex h-screen">
-        {children}
-      </div>
+      {children}
     </div>
   );
 };

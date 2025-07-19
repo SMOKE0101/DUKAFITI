@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Offline from "./pages/Offline";
 import ProtectedRoute from "./components/ProtectedRoute";
-import PremiumAppLayout from "./components/layout/PremiumAppLayout";
+import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./components/Dashboard";
 import ModernSalesPage from "./components/ModernSalesPage";
 import InventoryPage from "./components/InventoryPage";
@@ -53,12 +53,12 @@ function App() {
                     {/* Dashboard compatibility route */}
                     <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                     
-                    {/* Protected routes with layout */}
+                    {/* Protected routes with new layout */}
                     <Route path="/app" element={
                       <ProtectedRoute>
-                        <PremiumAppLayout>
+                        <AppLayout>
                           <Outlet />
-                        </PremiumAppLayout>
+                        </AppLayout>
                       </ProtectedRoute>
                     }>
                       <Route index element={<Navigate to="/app/dashboard" replace />} />
