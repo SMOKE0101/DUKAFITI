@@ -63,7 +63,7 @@ export const useUnifiedSales = () => {
         setSales(cached);
         setLoading(false);
         
-        // If online, refresh in background
+        // If online, merge with server data instead of replacing
         if (isOnline) {
           const { data, error: fetchError } = await supabase
             .from('sales')
@@ -72,9 +72,19 @@ export const useUnifiedSales = () => {
             .order('timestamp', { ascending: false });
 
           if (!fetchError && data) {
-            const transformedData = data.map(transformDbSale);
-            setCache('sales', transformedData);
-            setSales(transformedData);
+            const serverData = data.map(transformDbSale);
+            
+            // Merge local unsynced data with server data
+            const unsyncedLocal = cached.filter(sale => sale.id.startsWith('temp_'));
+            const mergedData = [...unsyncedLocal, ...serverData];
+            
+            // Remove duplicates and sort
+            const uniqueData = mergedData.filter((sale, index, self) => 
+              index === self.findIndex(s => s.id === sale.id)
+            ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            
+            setCache('sales', uniqueData);
+            setSales(uniqueData);
           }
         }
         return;

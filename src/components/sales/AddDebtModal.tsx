@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
+import { useUnifiedCustomers } from '@/hooks/useUnifiedCustomers';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -22,7 +22,7 @@ interface AddDebtModalProps {
 }
 
 const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
-  const { customers, updateCustomer } = useSupabaseCustomers();
+  const { customers, updateCustomer } = useUnifiedCustomers();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();

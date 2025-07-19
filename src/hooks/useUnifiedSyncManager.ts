@@ -31,15 +31,23 @@ export const useUnifiedSyncManager = () => {
         clearAllPendingOperations();
         console.log('[UnifiedSyncManager] Sync completed successfully - operations cleared');
         
-        // Dispatch sync events to notify all components
+        // Dispatch sync events to notify all components immediately and after a delay
+        console.log('[UnifiedSyncManager] Dispatching immediate refresh events');
+        window.dispatchEvent(new CustomEvent('sync-completed'));
+        window.dispatchEvent(new CustomEvent('data-synced'));
+        window.dispatchEvent(new CustomEvent('sales-synced'));
+        window.dispatchEvent(new CustomEvent('products-synced')); 
+        window.dispatchEvent(new CustomEvent('customers-synced'));
+        
+        // Also dispatch after a delay to ensure all components receive the events
         setTimeout(() => {
-          console.log('[UnifiedSyncManager] Dispatching refresh events');
+          console.log('[UnifiedSyncManager] Dispatching delayed refresh events');
           window.dispatchEvent(new CustomEvent('sync-completed'));
           window.dispatchEvent(new CustomEvent('data-synced'));
           window.dispatchEvent(new CustomEvent('sales-synced'));
           window.dispatchEvent(new CustomEvent('products-synced')); 
           window.dispatchEvent(new CustomEvent('customers-synced'));
-        }, 100);
+        }, 500);
         
         return true;
       } else {

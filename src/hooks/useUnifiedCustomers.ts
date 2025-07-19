@@ -158,7 +158,7 @@ export const useUnifiedCustomers = () => {
         setCustomers(cached);
         setLoading(false);
         
-        // If online, refresh in background
+        // If online, merge with server data instead of replacing
         if (isOnline) {
           try {
             const { data, error: fetchError } = await supabase
@@ -168,12 +168,22 @@ export const useUnifiedCustomers = () => {
               .order('created_date', { ascending: false });
 
             if (!fetchError && data) {
-              const transformedData = data.map(transformDbCustomer);
+              const serverData = data.map(transformDbCustomer);
+              
+              // Merge local unsynced data with server data
+              const unsyncedLocal = cached.filter(customer => customer.id.startsWith('temp_'));
+              const mergedData = [...unsyncedLocal, ...serverData];
+              
+              // Remove duplicates and sort
+              const uniqueData = mergedData.filter((customer, index, self) => 
+                index === self.findIndex(c => c.id === customer.id)
+              ).sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+              
               // Only update if data actually changed
-              if (JSON.stringify(transformedData) !== JSON.stringify(cached)) {
+              if (JSON.stringify(uniqueData) !== JSON.stringify(cached)) {
                 console.log('[UnifiedCustomers] Background refresh: updating cache');
-                setCache('customers', transformedData);
-                setCustomers(transformedData);
+                setCache('customers', uniqueData);
+                setCustomers(uniqueData);
               }
             }
           } catch (bgError) {
@@ -414,14 +424,21 @@ export const useUnifiedCustomers = () => {
       loadCustomers();
     };
 
+    const handleCustomersSync = () => {
+      console.log('[UnifiedCustomers] Customers sync event received, refreshing data');
+      loadCustomers();
+    };
+
     window.addEventListener('network-reconnected', handleReconnect);
     window.addEventListener('sync-completed', handleSyncComplete);
     window.addEventListener('data-synced', handleSyncComplete);
+    window.addEventListener('customers-synced', handleCustomersSync);
     
     return () => {
       window.removeEventListener('network-reconnected', handleReconnect);
       window.removeEventListener('sync-completed', handleSyncComplete);
       window.removeEventListener('data-synced', handleSyncComplete);
+      window.removeEventListener('customers-synced', handleCustomersSync);
     };
   }, [user?.id, isOnline, syncPendingOperations, loadCustomers]);
 
