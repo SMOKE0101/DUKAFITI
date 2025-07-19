@@ -1,9 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
+import { useToast } from './use-toast';
 import { Product } from '../types';
 
 export const useUnifiedProducts = () => {
@@ -14,6 +14,7 @@ export const useUnifiedProducts = () => {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache, addPendingOperation, pendingOps } = useCacheManager();
+  const { toast } = useToast();
 
   // Load products from cache or server
   const loadProducts = useCallback(async () => {
@@ -167,6 +168,11 @@ export const useUnifiedProducts = () => {
           setCache('products', formattedData);
         }
 
+        toast({
+          title: "Product Created",
+          description: `${productData.name} has been added to your inventory.`,
+        });
+
         return formattedProduct;
       } catch (error) {
         // Revert optimistic update and queue for sync
@@ -177,6 +183,13 @@ export const useUnifiedProducts = () => {
           data: productData,
         });
         console.error('[UnifiedProducts] Create failed, queued for sync:', error);
+        
+        toast({
+          title: "Error",
+          description: "Failed to create product. Will retry when online.",
+          variant: "destructive",
+        });
+        
         return newProduct;
       }
     } else {
@@ -186,9 +199,15 @@ export const useUnifiedProducts = () => {
         operation: 'create',
         data: productData,
       });
+      
+      toast({
+        title: "Offline Mode",
+        description: "Product will be created when connection is restored.",
+      });
+      
       return newProduct;
     }
-  }, [user, isOnline, setCache, addPendingOperation]);
+  }, [user, isOnline, setCache, addPendingOperation, toast]);
 
   // Update product
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
@@ -237,6 +256,11 @@ export const useUnifiedProducts = () => {
           }));
           setCache('products', formattedData);
         }
+
+        toast({
+          title: "Product Updated",
+          description: "Product has been updated successfully.",
+        });
       } catch (error) {
         // Revert optimistic update and queue for sync
         await loadProducts();
@@ -246,6 +270,12 @@ export const useUnifiedProducts = () => {
           data: { id, updates },
         });
         console.error('[UnifiedProducts] Update failed, queued for sync:', error);
+        
+        toast({
+          title: "Error",
+          description: "Failed to update product. Will retry when online.",
+          variant: "destructive",
+        });
       }
     } else {
       // Queue for sync when online
@@ -254,8 +284,92 @@ export const useUnifiedProducts = () => {
         operation: 'update',
         data: { id, updates },
       });
+      
+      toast({
+        title: "Offline Mode",
+        description: "Changes will sync when connection is restored.",
+      });
     }
-  }, [user, isOnline, setCache, addPendingOperation, loadProducts]);
+  }, [user, isOnline, setCache, addPendingOperation, loadProducts, toast]);
+
+  // Delete product
+  const deleteProduct = useCallback(async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    // Find the product to delete for optimistic UI update
+    const productToDelete = products.find(p => p.id === id);
+    
+    // Optimistically remove from UI
+    setProducts(prev => prev.filter(p => p.id !== id));
+
+    if (isOnline) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        // Update cache
+        const updatedProducts = await supabase
+          .from('products')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (updatedProducts.data) {
+          const formattedData = updatedProducts.data.map(item => ({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            costPrice: item.cost_price,
+            sellingPrice: item.selling_price,
+            currentStock: item.current_stock,
+            lowStockThreshold: item.low_stock_threshold,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+          }));
+          setCache('products', formattedData);
+        }
+
+        toast({
+          title: "Product Deleted",
+          description: `${productToDelete?.name || 'Product'} has been removed from your inventory.`,
+        });
+      } catch (error) {
+        // Revert optimistic update
+        if (productToDelete) {
+          setProducts(prev => [...prev, productToDelete]);
+        }
+        
+        addPendingOperation({
+          type: 'product',
+          operation: 'delete',
+          data: { id },
+        });
+        console.error('[UnifiedProducts] Delete failed, queued for sync:', error);
+        
+        toast({
+          title: "Error",
+          description: "Failed to delete product. Will retry when online.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Queue for sync when online
+      addPendingOperation({
+        type: 'product',
+        operation: 'delete',
+        data: { id },
+      });
+      
+      toast({
+        title: "Offline Mode",
+        description: "Product will be deleted when connection is restored.",
+      });
+    }
+  }, [user, isOnline, products, setCache, addPendingOperation, toast]);
 
   // Load products on mount and when dependencies change
   useEffect(() => {
@@ -278,6 +392,7 @@ export const useUnifiedProducts = () => {
     error,
     createProduct,
     updateProduct,
+    deleteProduct,
     refetch: loadProducts,
     isOnline,
     pendingOperations: pendingOps.filter(op => op.type === 'product').length,

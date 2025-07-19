@@ -6,14 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
+import { Plus, Package, AlertTriangle, TrendingDown, TrendingUp, Trash2 } from 'lucide-react';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { Product } from '../types';
+import RestockModal from './inventory/RestockModal';
+import DeleteProductModal from './inventory/DeleteProductModal';
 
 const InventoryPage = () => {
-  const { products, loading, createProduct, updateProduct, isOnline, pendingOperations } = useUnifiedProducts();
+  const { products, loading, createProduct, updateProduct, deleteProduct, isOnline, pendingOperations } = useUnifiedProducts();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isRestocking, setIsRestocking] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -68,6 +74,47 @@ const InventoryPage = () => {
   const handleStockUpdate = async (product: Product, change: number) => {
     const newStock = Math.max(0, product.currentStock + change);
     await updateProduct(product.id, { currentStock: newStock });
+  };
+
+  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
+    if (!product) return;
+    
+    setIsRestocking(true);
+    try {
+      // Update the product stock and cost price
+      await updateProduct(product.id, {
+        currentStock: product.currentStock + quantity,
+        costPrice: buyingPrice, // Update cost price with latest buying price
+      });
+      setShowRestockModal(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Failed to restock product:', error);
+    } finally {
+      setIsRestocking(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+    
+    try {
+      await deleteProduct(productToDelete.id);
+      setShowDeleteModal(false);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+    }
+  };
+
+  const openRestockModal = (product: Product) => {
+    setSelectedProduct(product);
+    setShowRestockModal(true);
+  };
+
+  const openDeleteModal = (product: Product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
   };
 
   const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
@@ -281,20 +328,60 @@ const InventoryPage = () => {
                     </div>
                   </div>
 
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full mt-3"
-                    onClick={() => handleEdit(product)}
-                  >
-                    Edit Product
-                  </Button>
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEdit(product)}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="default"
+                      size="sm" 
+                      onClick={() => openRestockModal(product)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Package className="w-3 h-3 mr-1" />
+                      Stock
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      size="sm" 
+                      onClick={() => openDeleteModal(product)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Restock Modal */}
+      <RestockModal
+        isOpen={showRestockModal}
+        onClose={() => {
+          setShowRestockModal(false);
+          setSelectedProduct(null);
+        }}
+        onSave={(quantity, buyingPrice) => selectedProduct && handleRestock(selectedProduct, quantity, buyingPrice)}
+        product={selectedProduct}
+        isLoading={isRestocking}
+      />
+
+      {/* Delete Product Modal */}
+      <DeleteProductModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setProductToDelete(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        product={productToDelete}
+      />
     </div>
   );
 };
