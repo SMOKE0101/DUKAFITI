@@ -2,7 +2,7 @@
 import React from 'react';
 import { SafeToasterWrapper } from "./components/SafeToasterWrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
@@ -56,7 +56,9 @@ function App() {
                     {/* Protected routes with layout */}
                     <Route path="/app" element={
                       <ProtectedRoute>
-                        <PremiumAppLayout />
+                        <PremiumAppLayout>
+                          <Outlet />
+                        </PremiumAppLayout>
                       </ProtectedRoute>
                     }>
                       <Route index element={<Navigate to="/app/dashboard" replace />} />

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -6,6 +7,35 @@ import { useNetworkStatus } from './useNetworkStatus';
 import { useLocalStorage } from './useLocalStorage';
 import { useUnifiedOfflineManager } from './useUnifiedOfflineManager';
 import { Customer } from '../types';
+
+// Helper function to transform database customer to interface
+const transformDbCustomer = (dbCustomer: any): Customer => ({
+  id: dbCustomer.id,
+  name: dbCustomer.name,
+  phone: dbCustomer.phone,
+  email: dbCustomer.email,
+  address: dbCustomer.address,
+  createdDate: dbCustomer.created_date || dbCustomer.created_at,
+  totalPurchases: dbCustomer.total_purchases || 0,
+  outstandingDebt: dbCustomer.outstanding_debt || 0,
+  creditLimit: dbCustomer.credit_limit || 1000,
+  lastPurchaseDate: dbCustomer.last_purchase_date,
+  riskRating: (dbCustomer.risk_rating as 'low' | 'medium' | 'high') || 'low',
+});
+
+// Helper function to transform interface customer to database format
+const transformToDbCustomer = (customer: Omit<Customer, 'id'>, userId: string) => ({
+  name: customer.name,
+  phone: customer.phone,
+  email: customer.email,
+  address: customer.address,
+  total_purchases: customer.totalPurchases || 0,
+  outstanding_debt: customer.outstandingDebt || 0,
+  credit_limit: customer.creditLimit || 1000,
+  risk_rating: customer.riskRating || 'low',
+  last_purchase_date: customer.lastPurchaseDate,
+  user_id: userId,
+});
 
 export const useSupabaseCustomers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -28,15 +58,16 @@ export const useSupabaseCustomers = () => {
         const { data, error } = await supabase
           .from('customers')
           .select('*')
-          .order('createdDate', { ascending: false });
+          .order('created_date', { ascending: false });
 
         if (error) {
           throw new Error(error.message);
         }
 
         if (data) {
-          setCustomers(data);
-          setValue(data); // Update local storage
+          const transformedCustomers = data.map(transformDbCustomer);
+          setCustomers(transformedCustomers);
+          setValue(transformedCustomers); // Update local storage
         }
       } else {
         // Load from local storage when offline
@@ -61,9 +92,15 @@ export const useSupabaseCustomers = () => {
 
   const createCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer> => {
     try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const dbCustomerData = transformToDbCustomer(customerData, user.id);
+      
       const { data, error } = await supabase
         .from('customers')
-        .insert([customerData])
+        .insert([dbCustomerData])
         .select()
         .single();
 
@@ -72,9 +109,10 @@ export const useSupabaseCustomers = () => {
       }
 
       if (data) {
-        setCustomers(prevCustomers => [data, ...prevCustomers]);
-        setValue([data, ...customers]); // Optimistically update local storage
-        return data;
+        const transformedCustomer = transformDbCustomer(data);
+        setCustomers(prevCustomers => [transformedCustomer, ...prevCustomers]);
+        setValue([transformedCustomer, ...customers]); // Optimistically update local storage
+        return transformedCustomer;
       } else {
         throw new Error('Customer creation failed: No data returned');
       }
@@ -89,12 +127,24 @@ export const useSupabaseCustomers = () => {
     }
   };
 
-  const updateCustomer = async (id: string, updates: Partial<Customer>) => {
+  const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<void> => {
     if (isOnline) {
       try {
+        // Transform interface updates to database format
+        const dbUpdates: any = {};
+        if (updates.name) dbUpdates.name = updates.name;
+        if (updates.phone) dbUpdates.phone = updates.phone;
+        if (updates.email) dbUpdates.email = updates.email;
+        if (updates.address) dbUpdates.address = updates.address;
+        if (updates.totalPurchases !== undefined) dbUpdates.total_purchases = updates.totalPurchases;
+        if (updates.outstandingDebt !== undefined) dbUpdates.outstanding_debt = updates.outstandingDebt;
+        if (updates.creditLimit !== undefined) dbUpdates.credit_limit = updates.creditLimit;
+        if (updates.riskRating) dbUpdates.risk_rating = updates.riskRating;
+        if (updates.lastPurchaseDate !== undefined) dbUpdates.last_purchase_date = updates.lastPurchaseDate;
+
         const { data, error } = await supabase
           .from('customers')
-          .update(updates)
+          .update(dbUpdates)
           .eq('id', id)
           .select()
           .single();
@@ -104,10 +154,12 @@ export const useSupabaseCustomers = () => {
         }
 
         if (data) {
+          const transformedCustomer = transformDbCustomer(data);
           setCustomers(prevCustomers =>
-            prevCustomers.map(customer => (customer.id === id ? data : customer))
+            prevCustomers.map(customer => (customer.id === id ? transformedCustomer : customer))
           );
-          setValue(customers.map(customer => (customer.id === id ? data : customer))); // Update local storage
+          const updatedCustomers = customers.map(customer => (customer.id === id ? transformedCustomer : customer));
+          setValue(updatedCustomers); // Update local storage
         }
       } catch (error: any) {
         console.error('Failed to update customer:', error);
@@ -116,6 +168,7 @@ export const useSupabaseCustomers = () => {
           description: "Failed to update customer. Please try again.",
           variant: "destructive",
         });
+        throw error;
       }
     } else {
       // Queue update for sync when online
@@ -125,7 +178,8 @@ export const useSupabaseCustomers = () => {
       setCustomers(prevCustomers =>
         prevCustomers.map(customer => (customer.id === id ? { ...customer, ...updates } : customer))
       );
-      setValue(customers.map(customer => (customer.id === id ? { ...customer, ...updates } : customer))); // Update local storage
+      const updatedCustomers = customers.map(customer => (customer.id === id ? { ...customer, ...updates } : customer));
+      setValue(updatedCustomers); // Update local storage
     }
   };
 

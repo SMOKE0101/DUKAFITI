@@ -70,13 +70,13 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       }
 
       // Update customer balance
-      const updateResult = await updateCustomer(customer.id, {
-        outstandingDebt: newBalance,
-        lastPurchaseDate: new Date().toISOString()
-      });
-
-      if (updateResult && 'error' in updateResult && updateResult.error) {
-        console.error('Error updating customer balance:', updateResult.error);
+      try {
+        await updateCustomer(customer.id, {
+          outstandingDebt: newBalance,
+          lastPurchaseDate: new Date().toISOString()
+        });
+      } catch (updateError) {
+        console.error('Error updating customer balance:', updateError);
         throw new Error('Failed to update customer balance.');
       }
 
