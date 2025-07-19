@@ -1,14 +1,14 @@
 
 import React from 'react';
-import OptimizedModernSalesPage from './OptimizedModernSalesPage';
+import ComprehensiveSalesPage from './ComprehensiveSalesPage';
 import SalesErrorBoundary from './sales/SalesErrorBoundary';
 
 const SalesManagement = () => {
-  console.log('🔥 SalesManagement component loaded - should render OptimizedModernSalesPage with error boundary');
+  console.log('🔥 SalesManagement component loaded - rendering ComprehensiveSalesPage with error boundary');
   
   return (
     <SalesErrorBoundary>
-      <OptimizedModernSalesPage />
+      <ComprehensiveSalesPage />
     </SalesErrorBoundary>
   );
 };
