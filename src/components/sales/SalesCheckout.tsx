@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { SalesService, CreateSaleRequest } from '../../services/salesService';
+import { useUnifiedSales } from '../../hooks/useUnifiedSales';
+import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
+import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
 import { CartItem } from '../../types/cart';
-import { Customer } from '../../types';
+import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 
 interface SalesCheckoutProps {
@@ -28,6 +30,9 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { createSale } = useUnifiedSales();
+  const { updateProduct } = useUnifiedProducts();
+  const { updateCustomer } = useUnifiedCustomers();
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
@@ -60,14 +65,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       return;
     }
 
-    if (!isOnline) {
-      toast({
-        title: "Offline Mode",
-        description: "Sales can only be processed when online. Please check your connection.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Remove offline check - sales should work offline
 
     setIsProcessing(true);
 
@@ -77,13 +75,16 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       // Process each item in the cart as a separate sale
       for (const item of cart) {
         const itemTotal = item.sellingPrice * item.quantity;
+        const profit = (item.sellingPrice - item.costPrice) * item.quantity;
         
-        const saleRequest: CreateSaleRequest = {
+        const saleData: Omit<Sale, 'id' | 'synced'> = {
           productId: item.id,
           productName: item.name,
           quantity: item.quantity,
           sellingPrice: item.sellingPrice,
           costPrice: item.costPrice,
+          profit: profit,
+          total: itemTotal,
           customerId: selectedCustomerId || undefined,
           customerName: customer?.name || undefined,
           paymentMethod: paymentMethod,
@@ -92,26 +93,39 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
             mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,
             debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
           },
+          timestamp: new Date().toISOString(),
         };
 
         console.log('[SalesCheckout] Processing sale for item:', item.name);
 
-        // Create the sale
-        const sale = await SalesService.createSale(user.id, saleRequest);
-        console.log('[SalesCheckout] Sale created:', sale.id);
+        // Create the sale using unified system (works offline)
+        await createSale(saleData);
+        console.log('[SalesCheckout] Sale created for item:', item.name);
 
-        // Update product stock
-        await SalesService.updateProductStock(item.id, item.quantity);
+        // Update product stock (works offline)
+        const currentStock = item.currentStock || 0;
+        const newStock = Math.max(0, currentStock - item.quantity);
+        await updateProduct(item.id, { 
+          currentStock: newStock,
+          updatedAt: new Date().toISOString()
+        });
 
-        // Update customer debt if applicable
+        // Update customer debt if applicable (works offline)
         if (paymentMethod === 'debt' && selectedCustomerId) {
-          await SalesService.updateCustomerDebt(selectedCustomerId, itemTotal);
+          const customerToUpdate = customers.find(c => c.id === selectedCustomerId);
+          if (customerToUpdate) {
+            await updateCustomer(selectedCustomerId, {
+              outstandingDebt: (customerToUpdate.outstandingDebt || 0) + itemTotal,
+              totalPurchases: (customerToUpdate.totalPurchases || 0) + itemTotal,
+              lastPurchaseDate: new Date().toISOString(),
+            });
+          }
         }
       }
 
       toast({
         title: "Sale Completed!",
-        description: `Successfully processed ${cart.length} item(s) for ${formatCurrency(total)}.`,
+        description: `Successfully processed ${cart.length} item(s) for ${formatCurrency(total)}${!isOnline ? ' (will sync when online)' : ''}.`,
       });
 
       console.log('[SalesCheckout] Checkout completed successfully');
@@ -134,8 +148,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
   const isDisabled = isProcessing || 
     cart.length === 0 || 
-    (paymentMethod === 'debt' && !selectedCustomerId) ||
-    !isOnline;
+    (paymentMethod === 'debt' && !selectedCustomerId);
 
   return (
     <Button

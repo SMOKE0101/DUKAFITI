@@ -161,7 +161,6 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
             <SelectContent>
               <SelectItem value="cash">Cash</SelectItem>
               <SelectItem value="mpesa">M-Pesa</SelectItem>
-              <SelectItem value="bank">Bank Transfer</SelectItem>
             </SelectContent>
           </Select>
         </div>
