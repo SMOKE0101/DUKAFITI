@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useToast } from '../../hooks/use-toast';
-import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { UserPlus, Loader2, WifiOff } from 'lucide-react';
 
 interface AddCustomerModalProps {
@@ -27,7 +27,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
   const { createCustomer } = useSupabaseCustomers();
   const { toast } = useToast();
-  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
+  const { isOnline } = useNetworkStatus();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,56 +75,22 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
         createdDate: new Date().toISOString(),
       };
 
-      if (isOnline) {
-        // Online - direct to database
-        const newCustomer = await createCustomer(customerData);
-        console.log('✅ Customer created successfully:', newCustomer);
-        
-        toast({
-          title: "Success!",
-          description: `Customer ${formData.name} has been added successfully.`,
-        });
+      // Create customer (handles both online and offline scenarios)
+      const newCustomer = await createCustomer(customerData);
+      console.log('✅ Customer created successfully:', newCustomer);
+      
+      toast({
+        title: "Success!",
+        description: `Customer ${formData.name} has been ${isOnline ? 'added' : 'saved offline and will sync when online'}.`,
+      });
 
-        // Close modal first, then notify parent
-        onOpenChange(false);
-        
-        // Use timeout to ensure modal closes before selecting customer
-        setTimeout(() => {
-          onCustomerAdded?.(newCustomer);
-        }, 100);
-      } else {
-        // Offline - create temp customer and queue for sync using the centralized offline manager
-        const offlineCustomer = {
-          id: `offline_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          ...customerData,
-          createdDate: new Date().toISOString(),
-        };
-
-        await addOfflineOperation('customer', 'create', {
-          name: customerData.name,
-          phone: customerData.phone,
-          email: customerData.email,
-          address: customerData.address,
-          credit_limit: customerData.creditLimit,
-          outstanding_debt: customerData.outstandingDebt,
-          risk_rating: customerData.riskRating,
-          total_purchases: customerData.totalPurchases,
-          last_purchase_date: customerData.lastPurchaseDate,
-        }, 'high');
-        
-        toast({
-          title: "Saved Offline ⏳",
-          description: `Customer ${formData.name} will sync when online.`,
-        });
-
-        // Close modal first, then notify parent with offline customer
-        onOpenChange(false);
-        
-        // Use timeout to ensure modal closes before selecting customer
-        setTimeout(() => {
-          onCustomerAdded?.(offlineCustomer);
-        }, 100);
-      }
+      // Close modal first, then notify parent
+      onOpenChange(false);
+      
+      // Use timeout to ensure modal closes before selecting customer
+      setTimeout(() => {
+        onCustomerAdded?.(newCustomer);
+      }, 100);
 
       // Reset form
       setFormData({

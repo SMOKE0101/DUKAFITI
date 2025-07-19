@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
+import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { formatCurrency } from '../utils/currency';
 import { Product, Customer } from '../types';
 import { CartItem } from '../types/cart';
@@ -36,7 +36,7 @@ const OptimizedModernSalesPage = () => {
   const { sales, loading: salesLoading, refreshSales } = useSupabaseSales();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { customers, loading: customersLoading } = useSupabaseCustomers();
-  const { isOnline, pendingOperations } = useUnifiedOfflineManager();
+  const { isOnline, pendingOperations } = useUnifiedSyncManager();
 
   const isLoading = salesLoading || productsLoading || customersLoading;
 

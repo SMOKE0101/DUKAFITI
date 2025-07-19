@@ -18,6 +18,7 @@ import {
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
+import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
 
@@ -25,6 +26,7 @@ const ColoredCardDashboard = () => {
   const { sales } = useUnifiedSales();
   const { products } = useUnifiedProducts();
   const { customers } = useUnifiedCustomers();
+  const { pendingOperations } = useUnifiedSyncManager();
   const navigate = useNavigate();
 
   // Calculate today's metrics

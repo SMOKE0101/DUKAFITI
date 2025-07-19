@@ -19,6 +19,7 @@ import {
 import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
+import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
 import { formatCurrency } from '../../utils/currency';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useIsMobile } from '../../hooks/use-mobile';
@@ -34,6 +35,7 @@ const BlockyReportsPage = () => {
   const { customers, loading: customersLoading } = useUnifiedCustomers();
   const { products, loading: productsLoading } = useUnifiedProducts();
   const { sales, loading: salesLoading } = useUnifiedSales();
+  const { pendingOperations } = useUnifiedSyncManager();
 
   const getDateRange = () => {
     const now = new Date();

@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
-import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
+import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
@@ -34,7 +34,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const { createSale } = useUnifiedSales();
   const { updateProduct } = useUnifiedProducts();
   const { updateCustomer } = useUnifiedCustomers();
-  const { addOfflineOperation } = useUnifiedOfflineManager();
+  const { pendingOperations } = useUnifiedSyncManager();
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
@@ -100,16 +100,11 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
         console.log('[SalesCheckout] Processing sale for item:', item.name);
 
-        // Create the sale - always use unified hooks for local updates
+        // Create the sale - this will handle both local updates and offline queuing
         await createSale(saleData);
         console.log('[SalesCheckout] Sale created for item:', item.name);
 
-        // If offline, also add to sync queue
-        if (!isOnline) {
-          await addOfflineOperation('sale', 'create', saleData);
-        }
-
-        // Update product stock - always update locally 
+        // Update product stock - this will handle both local updates and offline queuing
         const currentStock = item.currentStock || 0;
         const newStock = Math.max(0, currentStock - item.quantity);
         await updateProduct(item.id, { 
@@ -117,18 +112,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           updatedAt: new Date().toISOString()
         });
 
-        // If offline, also add to sync queue
-        if (!isOnline) {
-          await addOfflineOperation('product', 'update', {
-            id: item.id,
-            updates: {
-              currentStock: newStock,
-              updatedAt: new Date().toISOString()
-            }
-          });
-        }
-
-        // Update customer debt if applicable
+        // Update customer debt if applicable - this will handle both local updates and offline queuing
         if (paymentMethod === 'debt' && selectedCustomerId) {
           const customerToUpdate = customers.find(c => c.id === selectedCustomerId);
           if (customerToUpdate) {
@@ -138,16 +122,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
               lastPurchaseDate: new Date().toISOString(),
             };
             
-            // Always update locally
             await updateCustomer(selectedCustomerId, updates);
-            
-            // If offline, also add to sync queue
-            if (!isOnline) {
-              await addOfflineOperation('customer', 'update', {
-                id: selectedCustomerId,
-                updates
-              });
-            }
           }
         }
       }

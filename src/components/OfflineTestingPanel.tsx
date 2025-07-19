@@ -3,11 +3,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
+import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 
 const OfflineTestingPanel: React.FC = () => {
   const { isOnline } = useNetworkStatus();
-  const { pendingOperations, syncPendingOperations } = useUnifiedOfflineManager();
+  const { pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
 
   const handleTestOffline = () => {
     if ('serviceWorker' in navigator) {

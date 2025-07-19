@@ -9,14 +9,14 @@ import {
   History, 
   Settings
 } from 'lucide-react';
-import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import UserMenu from './UserMenu';
 import { cn } from '@/lib/utils';
 
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isOnline } = useUnifiedOfflineManager();
+  const { isOnline } = useNetworkStatus();
   
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/dashboard' },

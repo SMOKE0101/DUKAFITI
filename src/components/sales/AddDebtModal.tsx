@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useUnifiedOfflineManager } from '@/hooks/useUnifiedOfflineManager';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/currency';
 import { DollarSign, UserPlus, AlertTriangle, TrendingUp, WifiOff } from 'lucide-react';
@@ -25,7 +25,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
   const { customers, updateCustomer } = useSupabaseCustomers();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
+  const { isOnline } = useNetworkStatus();
 
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [debtAmount, setDebtAmount] = useState('');
@@ -91,39 +91,27 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
           throw new Error('Failed to create transaction record');
         }
 
-        // Update customer debt using the hook method
-        if (selectedCustomer) {
-          const currentDebt = selectedCustomer.outstandingDebt || 0;
-          const updatedDebt = currentDebt + totalAmount;
-          
-          await updateCustomer(selectedCustomer.id, {
-            outstandingDebt: updatedDebt,
-            lastPurchaseDate: new Date().toISOString(),
-          });
-        }
-
         toast({
           title: "Cash Lending Recorded",
           description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
         });
-      } else {
-        // Offline - queue for sync
-        await addOfflineOperation('transaction', 'create', transactionData, 'high');
+      }
 
-        // Update customer debt using the hook method (it handles offline updates)
-        if (selectedCustomer) {
-          const currentDebt = selectedCustomer.outstandingDebt || 0;
-          const updatedDebt = currentDebt + totalAmount;
-          
-          await updateCustomer(selectedCustomer.id, {
-            outstandingDebt: updatedDebt,
-            lastPurchaseDate: new Date().toISOString(),
-          });
-        }
+      // Update customer debt using the hook method (it handles offline updates)
+      if (selectedCustomer) {
+        const currentDebt = selectedCustomer.outstandingDebt || 0;
+        const updatedDebt = currentDebt + totalAmount;
+        
+        await updateCustomer(selectedCustomer.id, {
+          outstandingDebt: updatedDebt,
+          lastPurchaseDate: new Date().toISOString(),
+        });
+      }
 
+      if (!isOnline) {
         toast({
-          title: "Saved Offline ⏳",
-          description: `Debt of ${formatCurrency(totalAmount)} will sync when online.`,
+          title: "Cash Lending Recorded",
+          description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name} (will sync when online)`,
         });
       }
 

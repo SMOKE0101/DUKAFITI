@@ -12,7 +12,7 @@ import CustomerHistoryModal from './customers/CustomerHistoryModal';
 import NewRepaymentDrawer from './customers/NewRepaymentDrawer';
 import DeleteCustomerModal from './customers/DeleteCustomerModal';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
-import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { supabase } from '../integrations/supabase/client';
 
 const CustomerManagement: React.FC = () => {
@@ -26,7 +26,7 @@ const CustomerManagement: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { toast } = useToast();
   const { customers, loading, createCustomer, updateCustomer, fetchCustomers } = useSupabaseCustomers();
-  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
+  const { isOnline } = useNetworkStatus();
 
   // Set up real-time subscription for customer updates
   useEffect(() => {
@@ -127,40 +127,13 @@ const CustomerManagement: React.FC = () => {
   const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       if (editingCustomer) {
-        if (isOnline) {
-          await updateCustomer(editingCustomer.id, customerData);
-        } else {
-          await addOfflineOperation('customer', 'update', {
-            id: editingCustomer.id,
-            updates: customerData
-          }, 'high');
-          toast({
-            title: "Offline Mode",
-            description: "Customer will be updated when connection is restored",
-            variant: "default",
-          });
-        }
+        await updateCustomer(editingCustomer.id, customerData);
         toast({
           title: "Success",
           description: "Customer updated successfully",
         });
       } else {
-        if (isOnline) {
-          await createCustomer(customerData);
-        } else {
-          const offlineCustomer = {
-            id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            ...customerData,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          await addOfflineOperation('customer', 'create', offlineCustomer, 'high');
-          toast({
-            title: "Offline Mode",
-            description: "Customer will be created when connection is restored",
-            variant: "default",
-          });
-        }
+        await createCustomer(customerData);
         toast({
           title: "Success",
           description: `Customer ${customerData.name} added successfully`,

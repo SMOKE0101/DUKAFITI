@@ -12,12 +12,12 @@ import {
   WifiOff
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
+import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
 import UserMenu from '../UserMenu';
 
 export function TopBar() {
   const { theme, setTheme } = useTheme();
-  const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedOfflineManager();
+  const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
 
   const handleSync = () => {
     if (isOnline) {

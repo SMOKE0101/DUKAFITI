@@ -5,7 +5,7 @@ import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useLocalStorage } from './useLocalStorage';
-import { useUnifiedOfflineManager } from './useUnifiedOfflineManager';
+import { useCacheManager } from './useCacheManager';
 import { Customer } from '../types';
 
 // Helper function to transform database customer to interface
@@ -44,7 +44,7 @@ export const useSupabaseCustomers = () => {
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
   const { setValue } = useLocalStorage('customers', []);
-  const { addOfflineOperation } = useUnifiedOfflineManager();
+  const { addPendingOperation } = useCacheManager();
 
   const fetchCustomers = async () => {
     if (!user) return;
@@ -175,7 +175,11 @@ export const useSupabaseCustomers = () => {
       }
     } else {
       // Queue update for sync when online
-      await addOfflineOperation('customer', 'update', { id, updates }, 'medium');
+      addPendingOperation({ 
+        type: 'customer', 
+        operation: 'update', 
+        data: { id, updates } 
+      });
 
       // Optimistically update local state
       setCustomers(prevCustomers =>

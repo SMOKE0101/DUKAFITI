@@ -23,7 +23,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
-import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
+import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
 import { cn } from '@/lib/utils';
 
 const navigationItems = [
@@ -75,7 +75,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { open } = useSidebar();
-  const { isOnline, pendingOperations } = useUnifiedOfflineManager();
+  const { isOnline, pendingOperations } = useUnifiedSyncManager();
 
   const isActive = (path: string) => location.pathname === path;
   const isCollapsed = !open;

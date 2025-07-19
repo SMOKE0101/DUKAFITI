@@ -12,18 +12,17 @@ import {
   WifiOff,
   Wifi
 } from 'lucide-react';
-import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
+import { useCacheManager } from '../hooks/useCacheManager';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useToast } from '../hooks/use-toast';
 
 const OfflineTestPanel: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [testResults, setTestResults] = useState<any>(null);
-  const { 
-    isOnline, 
-    pendingOperations,
-    syncPendingOperations,
-    addOfflineOperation
-  } = useUnifiedOfflineManager();
+  const { pendingOps, addPendingOperation } = useCacheManager();
+  const { isOnline } = useNetworkStatus();
+  const { syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
 
   const runComprehensiveTest = async () => {
@@ -77,10 +76,14 @@ const OfflineTestPanel: React.FC = () => {
   const testBasicOffline = async () => {
     try {
       // Test adding an offline operation
-      await addOfflineOperation('sale', 'create', { 
-        amount: 100, 
-        customer: 'Test Customer',
-        test: true 
+      addPendingOperation({ 
+        type: 'sale',
+        operation: 'create',
+        data: {
+          amount: 100, 
+          customer: 'Test Customer',
+          test: true 
+        }
       });
       
       return {
@@ -191,7 +194,7 @@ const OfflineTestPanel: React.FC = () => {
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-blue-600" />
             <span className="text-sm">
-              Pending: {pendingOperations}
+              Pending: {pendingOps.length}
             </span>
           </div>
         </div>
@@ -216,7 +219,7 @@ const OfflineTestPanel: React.FC = () => {
             )}
           </Button>
           
-          {isOnline && pendingOperations > 0 && (
+          {isOnline && pendingOps.length > 0 && (
             <Button 
               onClick={syncPendingOperations} 
               variant="outline"
