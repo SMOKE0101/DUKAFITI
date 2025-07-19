@@ -1,8 +1,8 @@
 
-const CACHE_VERSION = 'dukafiti-v6-enhanced';
-const STATIC_CACHE = 'dukafiti-static-v6';
-const DYNAMIC_CACHE = 'dukafiti-dynamic-v6';
-const API_CACHE = 'dukafiti-api-v6';
+const CACHE_VERSION = 'dukafiti-v7-enhanced';
+const STATIC_CACHE = 'dukafiti-static-v7';
+const DYNAMIC_CACHE = 'dukafiti-dynamic-v7';
+const API_CACHE = 'dukafiti-api-v7';
 
 // Critical app resources for offline functionality
 const STATIC_ASSETS = [
@@ -15,9 +15,7 @@ const STATIC_ASSETS = [
   '/app/reports',
   '/app/settings',
   '/offline',
-  '/manifest.json',
-  '/assets/index.js',
-  '/assets/index.css'
+  '/manifest.json'
 ];
 
 // API endpoints to cache
@@ -30,18 +28,32 @@ const API_PATTERNS = [
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('[Enhanced SW] Installing DukaFiti Enhanced Service Worker v6');
+  console.log('[Enhanced SW] Installing DukaFiti Enhanced Service Worker v7');
   
   event.waitUntil(
     Promise.all([
-      caches.open(STATIC_CACHE).then(cache => {
+      caches.open(STATIC_CACHE).then(async cache => {
         console.log('[Enhanced SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS.map(url => 
-          new Request(url, { 
-            credentials: 'same-origin',
-            cache: 'no-cache'
-          })
-        ));
+        
+        // Cache the main app shell first
+        try {
+          await cache.add('/');
+          console.log('[Enhanced SW] Main app shell cached successfully');
+        } catch (error) {
+          console.warn('[Enhanced SW] Failed to cache main app shell:', error);
+        }
+        
+        // Cache other routes
+        for (const url of STATIC_ASSETS.slice(1)) {
+          try {
+            await cache.add(new Request(url, { 
+              credentials: 'same-origin',
+              cache: 'no-cache'
+            }));
+          } catch (error) {
+            console.warn(`[Enhanced SW] Failed to cache ${url}:`, error);
+          }
+        }
       }),
       caches.open(DYNAMIC_CACHE),
       caches.open(API_CACHE)
@@ -53,7 +65,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[Enhanced SW] Activating DukaFiti Enhanced Service Worker v6');
+  console.log('[Enhanced SW] Activating DukaFiti Enhanced Service Worker v7');
   
   event.waitUntil(
     Promise.all([
@@ -565,7 +577,9 @@ function isAPIRequest(request) {
 
 function isAppNavigation(request) {
   const url = new URL(request.url);
-  return (url.pathname.startsWith('/app/') || url.pathname === '/') && 
+  // Check if it's a navigation request (page reload or direct navigation)
+  return request.mode === 'navigate' || 
+         (url.pathname.startsWith('/app/') || url.pathname === '/') && 
          request.headers.get('accept')?.includes('text/html');
 }
 
@@ -615,4 +629,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[Enhanced SW] Enhanced Service Worker v6 loaded successfully');
+console.log('[Enhanced SW] Enhanced Service Worker v7 loaded successfully');
