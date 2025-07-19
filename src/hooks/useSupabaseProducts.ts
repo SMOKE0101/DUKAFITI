@@ -107,7 +107,8 @@ export const useSupabaseProducts = () => {
     tableName: 'products',
     loadFromSupabase,
     transformToLocal,
-    transformFromLocal
+    transformFromLocal,
+    user // Pass the user to the offline hook
   });
 
   // Create product with offline support
