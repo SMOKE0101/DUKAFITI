@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface PendingOperation {
   id: string;
@@ -12,7 +12,7 @@ export const useCacheManager = () => {
   const [pendingOps, setPendingOps] = useState<PendingOperation[]>([]);
 
   // Load pending operations from localStorage on mount
-  const loadPendingOperations = () => {
+  const loadPendingOperations = useCallback(() => {
     try {
       const stored = localStorage.getItem('pendingOperations');
       if (stored) {
@@ -23,11 +23,11 @@ export const useCacheManager = () => {
     } catch (error) {
       console.error('[CacheManager] Failed to load pending operations:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadPendingOperations();
-  }, []);
+  }, [loadPendingOperations]);
 
   // Save pending operations to localStorage whenever they change
   useEffect(() => {
@@ -39,7 +39,7 @@ export const useCacheManager = () => {
     }
   }, [pendingOps]);
 
-  const getCache = <T>(key: string): T | null => {
+  const getCache = useCallback(<T>(key: string): T | null => {
     try {
       const cached = localStorage.getItem(`cache_${key}`);
       if (cached) {
@@ -59,9 +59,9 @@ export const useCacheManager = () => {
       console.error('[CacheManager] Failed to get cache:', error);
     }
     return null;
-  };
+  }, []);
 
-  const setCache = <T>(key: string, data: T): void => {
+  const setCache = useCallback(<T>(key: string, data: T): void => {
     try {
       const cacheData = {
         data,
@@ -72,9 +72,9 @@ export const useCacheManager = () => {
     } catch (error) {
       console.error('[CacheManager] Failed to set cache:', error);
     }
-  };
+  }, []);
 
-  const addPendingOperation = (operation: Omit<PendingOperation, 'id'>): void => {
+  const addPendingOperation = useCallback((operation: Omit<PendingOperation, 'id'>): void => {
     const operationWithId = {
       ...operation,
       id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -91,22 +91,22 @@ export const useCacheManager = () => {
       }
       return [...prev, operationWithId];
     });
-  };
+  }, []);
 
-  const removePendingOperation = (operationId: string): void => {
+  const removePendingOperation = useCallback((operationId: string): void => {
     console.log('[CacheManager] Removing pending operation:', operationId);
     setPendingOps(prev => prev.filter(op => op.id !== operationId));
-  };
+  }, []);
 
-  const clearPendingOperation = (operationId: string): void => {
+  const clearPendingOperation = useCallback((operationId: string): void => {
     console.log('[CacheManager] Clearing pending operation:', operationId);
     setPendingOps(prev => prev.filter(op => op.id !== operationId));
-  };
+  }, []);
 
-  const clearAllPendingOperations = (): void => {
+  const clearAllPendingOperations = useCallback((): void => {
     console.log('[CacheManager] Clearing all pending operations');
     setPendingOps([]);
-  };
+  }, []);
 
   return {
     getCache,

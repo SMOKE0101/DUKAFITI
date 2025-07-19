@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
@@ -29,37 +29,53 @@ export const useUnifiedCustomers = () => {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache, addPendingOperation, pendingOps } = useCacheManager();
+  
+  // Track if we're currently loading to prevent multiple simultaneous loads
+  const isLoadingRef = useRef(false);
 
-  // Load customers from cache or server
+  // Load customers from cache or server - memoized with stable dependencies
   const loadCustomers = useCallback(async () => {
-    if (!user) {
-      setCustomers([]);
-      setLoading(false);
+    if (!user || isLoadingRef.current) {
+      if (!user) {
+        setCustomers([]);
+        setLoading(false);
+      }
       return;
     }
 
+    isLoadingRef.current = true;
     setLoading(true);
     setError(null);
 
     try {
       // Try cache first
       const cached = getCache<Customer[]>('customers');
-      if (cached) {
+      if (cached && Array.isArray(cached)) {
+        console.log('[UnifiedCustomers] Using cached data:', cached.length, 'customers');
         setCustomers(cached);
         setLoading(false);
         
-        // If online, refresh in background
+        // If online, refresh in background without showing loading
         if (isOnline) {
-          const { data, error: fetchError } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_date', { ascending: false });
+          try {
+            const { data, error: fetchError } = await supabase
+              .from('customers')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_date', { ascending: false });
 
-          if (!fetchError && data) {
-            const transformedData = data.map(transformDbCustomer);
-            setCache('customers', transformedData);
-            setCustomers(transformedData);
+            if (!fetchError && data) {
+              const transformedData = data.map(transformDbCustomer);
+              // Only update if data actually changed
+              if (JSON.stringify(transformedData) !== JSON.stringify(cached)) {
+                console.log('[UnifiedCustomers] Background refresh: updating cache');
+                setCache('customers', transformedData);
+                setCustomers(transformedData);
+              }
+            }
+          } catch (bgError) {
+            console.error('[UnifiedCustomers] Background refresh failed:', bgError);
+            // Don't show error for background refresh failures
           }
         }
         return;
@@ -67,6 +83,7 @@ export const useUnifiedCustomers = () => {
 
       // If no cache and online, fetch from server
       if (isOnline) {
+        console.log('[UnifiedCustomers] No cache, fetching from server');
         const { data, error: fetchError } = await supabase
           .from('customers')
           .select('*')
@@ -78,6 +95,7 @@ export const useUnifiedCustomers = () => {
           console.error('[UnifiedCustomers] Fetch error:', fetchError);
         } else {
           const transformedData = (data || []).map(transformDbCustomer);
+          console.log('[UnifiedCustomers] Fetched from server:', transformedData.length, 'customers');
           setCache('customers', transformedData);
           setCustomers(transformedData);
         }
@@ -89,8 +107,9 @@ export const useUnifiedCustomers = () => {
       console.error('[UnifiedCustomers] Load error:', err);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [user, isOnline, getCache, setCache]);
+  }, [user?.id, isOnline]); // Only depend on user ID and online status
 
   // Create customer
   const createCustomer = useCallback(async (customerData: Omit<Customer, 'id' | 'createdDate'>) => {
@@ -139,16 +158,11 @@ export const useUnifiedCustomers = () => {
           prev.map(c => c.id === newCustomer.id ? transformedCustomer : c)
         );
 
-        // Update cache
-        const updatedCustomers = await supabase
-          .from('customers')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        if (updatedCustomers.data) {
-          const transformedData = updatedCustomers.data.map(transformDbCustomer);
-          setCache('customers', transformedData);
-        }
+        // Update cache with all customers
+        setCustomers(prev => {
+          setCache('customers', prev);
+          return prev;
+        });
 
         return transformedCustomer;
       } catch (error) {
@@ -171,16 +185,19 @@ export const useUnifiedCustomers = () => {
       });
       return newCustomer;
     }
-  }, [user, isOnline, setCache, addPendingOperation]);
+  }, [user, isOnline, addPendingOperation, setCache]);
 
   // Update customer
   const updateCustomer = useCallback(async (id: string, updates: Partial<Customer>) => {
     if (!user) throw new Error('User not authenticated');
 
     // Optimistically update UI
-    setCustomers(prev => 
-      prev.map(c => c.id === id ? { ...c, ...updates } : c)
-    );
+    setCustomers(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, ...updates } : c);
+      // Update cache immediately
+      setCache('customers', updated);
+      return updated;
+    });
 
     if (isOnline) {
       try {
@@ -204,25 +221,20 @@ export const useUnifiedCustomers = () => {
 
         if (error) throw error;
 
-        // Update cache
-        const updatedCustomers = await supabase
-          .from('customers')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        if (updatedCustomers.data) {
-          const transformedData = updatedCustomers.data.map(transformDbCustomer);
-          setCache('customers', transformedData);
-        }
+        console.log('[UnifiedCustomers] Customer updated successfully');
       } catch (error) {
         // Revert optimistic update and queue for sync
-        await loadCustomers();
+        console.error('[UnifiedCustomers] Update failed, queuing for sync:', error);
         addPendingOperation({
           type: 'customer',
           operation: 'update',
           data: { id, updates },
         });
-        console.error('[UnifiedCustomers] Update failed, queued for sync:', error);
+        // Reload from cache to revert optimistic update
+        const cached = getCache<Customer[]>('customers');
+        if (cached) {
+          setCustomers(cached);
+        }
       }
     } else {
       // Queue for sync when online
@@ -232,14 +244,19 @@ export const useUnifiedCustomers = () => {
         data: { id, updates },
       });
     }
-  }, [user, isOnline, setCache, addPendingOperation, loadCustomers]);
+  }, [user, isOnline, addPendingOperation, setCache, getCache]);
 
   // Delete customer
   const deleteCustomer = useCallback(async (id: string) => {
     if (!user) throw new Error('User not authenticated');
 
     // Optimistically update UI
-    setCustomers(prev => prev.filter(c => c.id !== id));
+    setCustomers(prev => {
+      const filtered = prev.filter(c => c.id !== id);
+      // Update cache immediately
+      setCache('customers', filtered);
+      return filtered;
+    });
 
     if (isOnline) {
       try {
@@ -251,25 +268,19 @@ export const useUnifiedCustomers = () => {
 
         if (error) throw error;
 
-        // Update cache
-        const updatedCustomers = await supabase
-          .from('customers')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        if (updatedCustomers.data) {
-          const transformedData = updatedCustomers.data.map(transformDbCustomer);
-          setCache('customers', transformedData);
-        }
+        console.log('[UnifiedCustomers] Customer deleted successfully');
       } catch (error) {
-        // Revert optimistic update and queue for sync
-        await loadCustomers();
+        console.error('[UnifiedCustomers] Delete failed, queuing for sync:', error);
         addPendingOperation({
           type: 'customer',
           operation: 'delete',
           data: { id },
         });
-        console.error('[UnifiedCustomers] Delete failed, queued for sync:', error);
+        // Reload from cache to revert optimistic update
+        const cached = getCache<Customer[]>('customers');
+        if (cached) {
+          setCustomers(cached);
+        }
         throw error;
       }
     } else {
@@ -280,22 +291,27 @@ export const useUnifiedCustomers = () => {
         data: { id },
       });
     }
-  }, [user, isOnline, setCache, addPendingOperation, loadCustomers]);
+  }, [user, isOnline, addPendingOperation, setCache, getCache]);
 
-  // Load customers on mount and when dependencies change
+  // Load customers on mount and when user changes
   useEffect(() => {
-    loadCustomers();
-  }, [loadCustomers]);
+    if (user) {
+      loadCustomers();
+    }
+  }, [user?.id]); // Only depend on user ID to prevent infinite loops
 
   // Listen for network reconnection
   useEffect(() => {
     const handleReconnect = () => {
-      loadCustomers();
+      if (user && isOnline) {
+        console.log('[UnifiedCustomers] Network reconnected, refreshing data');
+        loadCustomers();
+      }
     };
 
     window.addEventListener('network-reconnected', handleReconnect);
     return () => window.removeEventListener('network-reconnected', handleReconnect);
-  }, [loadCustomers]);
+  }, [user?.id, isOnline, loadCustomers]);
 
   return {
     customers,
