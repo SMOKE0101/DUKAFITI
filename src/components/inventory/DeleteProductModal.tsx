@@ -18,10 +18,22 @@ const DeleteProductModal: React.FC<DeleteProductModalProps> = ({
   product,
   onDelete
 }) => {
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
   const handleDelete = async () => {
     if (!product) return;
-    await onDelete(product.id);
-    onClose();
+    
+    console.log('[DeleteProductModal] Deleting product:', product.id);
+    setIsDeleting(true);
+    
+    try {
+      await onDelete(product.id);
+      onClose();
+    } catch (error) {
+      console.error('[DeleteProductModal] Delete failed:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (!product) {
@@ -85,14 +97,16 @@ const DeleteProductModal: React.FC<DeleteProductModalProps> = ({
             <Button 
               type="button" 
               onClick={handleDelete}
-              className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200"
+              disabled={isDeleting}
+              className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50"
             >
-              DELETE PRODUCT
+              {isDeleting ? 'DELETING...' : 'DELETE PRODUCT'}
             </Button>
             <Button 
               type="button" 
               onClick={onClose}
-              className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200"
+              disabled={isDeleting}
+              className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 disabled:opacity-50"
             >
               CANCEL
             </Button>

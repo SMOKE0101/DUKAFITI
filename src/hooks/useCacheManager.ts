@@ -17,6 +17,7 @@ export const useCacheManager = () => {
       const stored = localStorage.getItem('pendingOperations');
       if (stored) {
         const operations = JSON.parse(stored);
+        console.log('[CacheManager] Loaded pending operations:', operations.length);
         setPendingOps(operations);
       }
     } catch (error) {
@@ -32,6 +33,7 @@ export const useCacheManager = () => {
   useEffect(() => {
     try {
       localStorage.setItem('pendingOperations', JSON.stringify(pendingOps));
+      console.log('[CacheManager] Saved pending operations:', pendingOps.length);
     } catch (error) {
       console.error('[CacheManager] Failed to save pending operations:', error);
     }
@@ -66,6 +68,7 @@ export const useCacheManager = () => {
         timestamp: new Date().getTime()
       };
       localStorage.setItem(`cache_${key}`, JSON.stringify(cacheData));
+      console.log('[CacheManager] Set cache for key:', key, 'data length:', Array.isArray(data) ? data.length : 'N/A');
     } catch (error) {
       console.error('[CacheManager] Failed to set cache:', error);
     }
@@ -77,10 +80,13 @@ export const useCacheManager = () => {
       id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
 
+    console.log('[CacheManager] Adding pending operation:', operationWithId);
+
     setPendingOps(prev => {
       // Check if operation already exists
       const exists = prev.some(op => op.id === operationWithId.id);
       if (exists) {
+        console.log('[CacheManager] Operation already exists, skipping');
         return prev;
       }
       return [...prev, operationWithId];
@@ -88,14 +94,17 @@ export const useCacheManager = () => {
   };
 
   const removePendingOperation = (operationId: string): void => {
+    console.log('[CacheManager] Removing pending operation:', operationId);
     setPendingOps(prev => prev.filter(op => op.id !== operationId));
   };
 
   const clearPendingOperation = (operationId: string): void => {
+    console.log('[CacheManager] Clearing pending operation:', operationId);
     setPendingOps(prev => prev.filter(op => op.id !== operationId));
   };
 
   const clearAllPendingOperations = (): void => {
+    console.log('[CacheManager] Clearing all pending operations');
     setPendingOps([]);
   };
 

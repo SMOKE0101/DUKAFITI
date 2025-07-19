@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -270,6 +271,8 @@ export const useUnifiedProducts = () => {
       updatedAt: new Date().toISOString(),
     };
 
+    console.log('[UnifiedProducts] Creating product:', newProduct.name);
+
     // Optimistically update UI
     setProducts(prev => [newProduct, ...prev]);
 
@@ -299,9 +302,8 @@ export const useUnifiedProducts = () => {
         );
 
         // Update cache
-        const updatedProducts = prev => prev.map(p => p.id === newProduct.id ? formattedProduct : p);
-        const currentProducts = products.map(p => p.id === newProduct.id ? formattedProduct : p);
-        setCache('products', currentProducts);
+        const updatedProducts = products.map(p => p.id === newProduct.id ? formattedProduct : p);
+        setCache('products', updatedProducts);
         
         toast({
           title: "Product Created",
@@ -348,9 +350,16 @@ export const useUnifiedProducts = () => {
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
     if (!user) throw new Error('User not authenticated');
 
+    console.log('[UnifiedProducts] Updating product:', id, updates);
+
     // Optimistically update UI
     const originalProduct = products.find(p => p.id === id);
-    const updatedProduct = { ...originalProduct, ...updates };
+    if (!originalProduct) {
+      console.error('[UnifiedProducts] Product not found for update:', id);
+      return;
+    }
+
+    const updatedProduct = { ...originalProduct, ...updates, updatedAt: new Date().toISOString() };
     setProducts(prev => 
       prev.map(p => p.id === id ? updatedProduct : p)
     );
@@ -417,12 +426,18 @@ export const useUnifiedProducts = () => {
     }
   }, [user, isOnline, products, addPendingOperation, setCache, toast]);
 
-  // Delete product
+  // Delete product - Fixed to properly handle offline/online scenarios
   const deleteProduct = useCallback(async (id: string) => {
     if (!user) throw new Error('User not authenticated');
 
+    console.log('[UnifiedProducts] Deleting product:', id);
+
     // Find the product to delete for optimistic UI update
     const productToDelete = products.find(p => p.id === id);
+    if (!productToDelete) {
+      console.error('[UnifiedProducts] Product not found for deletion:', id);
+      return;
+    }
     
     // Optimistically remove from UI
     setProducts(prev => prev.filter(p => p.id !== id));
@@ -437,19 +452,17 @@ export const useUnifiedProducts = () => {
 
         if (error) throw error;
 
-        // Update cache
+        // Update cache - remove the deleted product
         const updatedProducts = products.filter(p => p.id !== id);
         setCache('products', updatedProducts);
 
         toast({
           title: "Product Deleted",
-          description: `${productToDelete?.name || 'Product'} has been removed from your inventory.`,
+          description: `${productToDelete.name} has been removed from your inventory.`,
         });
       } catch (error) {
         // Revert optimistic update
-        if (productToDelete) {
-          setProducts(prev => [...prev, productToDelete]);
-        }
+        setProducts(prev => [...prev, productToDelete]);
         
         addPendingOperation({
           type: 'product',

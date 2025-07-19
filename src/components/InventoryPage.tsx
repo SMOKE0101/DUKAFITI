@@ -76,41 +76,51 @@ const InventoryPage = () => {
     await updateProduct(product.id, { currentStock: newStock });
   };
 
+  // Fixed restock function to properly integrate with unified products
   const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
     if (!product) return;
     
+    console.log('[InventoryPage] Handling restock:', { productId: product.id, quantity, buyingPrice });
     setIsRestocking(true);
+    
     try {
-      // Update the product stock and cost price
+      // Use the unified updateProduct function with proper offline/online handling
       await updateProduct(product.id, {
         currentStock: product.currentStock + quantity,
         costPrice: buyingPrice, // Update cost price with latest buying price
       });
+      
       setShowRestockModal(false);
       setSelectedProduct(null);
+      console.log('[InventoryPage] Restock completed successfully');
     } catch (error) {
-      console.error('Failed to restock product:', error);
+      console.error('[InventoryPage] Failed to restock product:', error);
     } finally {
       setIsRestocking(false);
     }
   };
 
+  // Fixed delete function to properly integrate with unified products
   const handleDeleteProduct = async (id: string) => {
+    console.log('[InventoryPage] Handling delete:', id);
     try {
       await deleteProduct(id);
       setShowDeleteModal(false);
       setProductToDelete(null);
+      console.log('[InventoryPage] Delete completed successfully');
     } catch (error) {
-      console.error('Failed to delete product:', error);
+      console.error('[InventoryPage] Failed to delete product:', error);
     }
   };
 
   const openRestockModal = (product: Product) => {
+    console.log('[InventoryPage] Opening restock modal for product:', product.id);
     setSelectedProduct(product);
     setShowRestockModal(true);
   };
 
   const openDeleteModal = (product: Product) => {
+    console.log('[InventoryPage] Opening delete modal for product:', product.id);
     setProductToDelete(product);
     setShowDeleteModal(true);
   };
