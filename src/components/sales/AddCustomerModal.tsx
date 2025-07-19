@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useToast } from '../../hooks/use-toast';
-import { useOfflineManager } from '../../hooks/useOfflineManager';
+import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
 import { UserPlus, Loader2, WifiOff } from 'lucide-react';
 
 interface AddCustomerModalProps {
@@ -28,7 +27,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
   const { createCustomer } = useSupabaseCustomers();
   const { toast } = useToast();
-  const { isOnline, addOfflineOperation } = useOfflineManager();
+  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useOfflineManager } from '@/hooks/useOfflineManager';
+import { useUnifiedOfflineManager } from '@/hooks/useUnifiedOfflineManager';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/currency';
 import { DollarSign, UserPlus, AlertTriangle, TrendingUp, WifiOff } from 'lucide-react';
@@ -25,7 +25,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
   const { customers, updateCustomer } = useSupabaseCustomers();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isOnline, addOfflineOperation } = useOfflineManager();
+  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
 
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [debtAmount, setDebtAmount] = useState('');

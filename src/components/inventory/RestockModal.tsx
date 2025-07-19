@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Package, Loader2, WifiOff } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
-import { useOfflineManager } from '../../hooks/useOfflineManager';
+import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
@@ -24,7 +23,7 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
   const [buyingPrice, setBuyingPrice] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const { isOnline, addOfflineOperation } = useOfflineManager();
+  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
   const { user } = useAuth();
   const { toast } = useToast();
 

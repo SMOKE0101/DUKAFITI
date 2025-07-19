@@ -4,7 +4,7 @@ import { useSupabaseSales } from '../hooks/useSupabaseSales';
 import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
 import { useSupabaseCustomers } from '../hooks/useSupabaseCustomers';
 import { useOfflineSales } from '../hooks/useOfflineSales';
-import { useOfflineManager } from '../hooks/useOfflineManager';
+import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import { formatCurrency } from '../utils/currency';
 import { Product, Customer } from '../types';
 import { CartItem } from '../types/cart';
@@ -38,7 +38,7 @@ const OptimizedModernSalesPage = () => {
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { customers, loading: customersLoading, updateCustomer } = useSupabaseCustomers();
   const { createOfflineSale, isCreating: isCreatingOfflineSale } = useOfflineSales();
-  const { isOnline, pendingOperations } = useOfflineManager();
+  const { isOnline, pendingOperations } = useUnifiedOfflineManager();
 
   const isLoading = salesLoading || productsLoading || customersLoading;
 
