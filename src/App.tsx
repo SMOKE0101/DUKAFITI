@@ -1,7 +1,5 @@
-
 import React from 'react';
-import { Toaster } from "@/components/ui/toaster";
-import { ProductionToaster } from "@/components/ui/production-toast";
+import { SafeToasterWrapper } from "./components/SafeToasterWrapper";
 import { TooltipWrapper } from "./components/TooltipWrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -77,8 +75,7 @@ function App() {
                       {/* 404 */}
                       <Route path="*" element={<NotFound />} />
                     </Routes>
-                    <Toaster />
-                    <ProductionToaster />
+                    <SafeToasterWrapper />
                   </div>
                 </ErrorBoundary>
               </TooltipWrapper>
