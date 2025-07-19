@@ -525,15 +525,10 @@ const OptimizedModernSalesPage = () => {
       />
 
       <AddDebtModal
-        open={isAddDebtModalOpen}
-        onOpenChange={setIsAddDebtModalOpen}
-        customer={customerToAddDebt}
-        onDebtAdded={() => {
-          // Refresh customers list or handle debt added
-          toast({
-            title: "Debt Recorded",
-            description: "Customer debt has been updated successfully.",
-          });
+        isOpen={isAddDebtModalOpen}
+        onClose={() => {
+          setIsAddDebtModalOpen(false);
+          setCustomerToAddDebt(null);
         }}
       />
     </div>
