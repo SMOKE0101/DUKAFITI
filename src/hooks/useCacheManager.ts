@@ -1,125 +1,97 @@
 
-import { useState, useCallback } from 'react';
-
-interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-  key: string;
-}
+import { useState, useEffect } from 'react';
 
 interface PendingOperation {
   id: string;
   type: 'sale' | 'product' | 'customer';
   operation: 'create' | 'update' | 'delete';
   data: any;
-  timestamp: number;
 }
 
 export const useCacheManager = () => {
   const [pendingOps, setPendingOps] = useState<PendingOperation[]>([]);
 
-  // Cache management
-  const setCache = useCallback(<T>(key: string, data: T): void => {
+  // Load pending operations from localStorage on mount
+  useEffect(() => {
     try {
-      const cacheItem: CacheItem<T> = {
-        data,
-        timestamp: Date.now(),
-        key,
-      };
-      localStorage.setItem(`cache_${key}`, JSON.stringify(cacheItem));
-    } catch (error) {
-      console.warn('[CacheManager] Failed to set cache:', error);
-    }
-  }, []);
-
-  const getCache = useCallback(<T>(key: string, maxAge: number = 5 * 60 * 1000): T | null => {
-    try {
-      const cached = localStorage.getItem(`cache_${key}`);
-      if (!cached) return null;
-
-      const cacheItem: CacheItem<T> = JSON.parse(cached);
-      const isExpired = Date.now() - cacheItem.timestamp > maxAge;
-      
-      if (isExpired) {
-        localStorage.removeItem(`cache_${key}`);
-        return null;
-      }
-
-      return cacheItem.data;
-    } catch (error) {
-      console.warn('[CacheManager] Failed to get cache:', error);
-      return null;
-    }
-  }, []);
-
-  const clearCache = useCallback((pattern?: string): void => {
-    try {
-      const keys = Object.keys(localStorage).filter(key => 
-        key.startsWith('cache_') && (!pattern || key.includes(pattern))
-      );
-      keys.forEach(key => localStorage.removeItem(key));
-    } catch (error) {
-      console.warn('[CacheManager] Failed to clear cache:', error);
-    }
-  }, []);
-
-  // Pending operations management
-  const addPendingOperation = useCallback((op: Omit<PendingOperation, 'id' | 'timestamp'>): void => {
-    const operation: PendingOperation = {
-      ...op,
-      id: `${op.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-    };
-
-    setPendingOps(prev => {
-      const updated = [...prev, operation];
-      try {
-        localStorage.setItem('pending_operations', JSON.stringify(updated));
-      } catch (error) {
-        console.warn('[CacheManager] Failed to store pending operations:', error);
-      }
-      return updated;
-    });
-
-    console.log('[CacheManager] Added pending operation:', operation.id);
-  }, []);
-
-  const removePendingOperation = useCallback((id: string): void => {
-    setPendingOps(prev => {
-      const updated = prev.filter(op => op.id !== id);
-      try {
-        localStorage.setItem('pending_operations', JSON.stringify(updated));
-      } catch (error) {
-        console.warn('[CacheManager] Failed to update pending operations:', error);
-      }
-      return updated;
-    });
-
-    console.log('[CacheManager] Removed pending operation:', id);
-  }, []);
-
-  const loadPendingOperations = useCallback((): void => {
-    try {
-      const stored = localStorage.getItem('pending_operations');
+      const stored = localStorage.getItem('pendingOperations');
       if (stored) {
         const operations = JSON.parse(stored);
         setPendingOps(operations);
-        console.log('[CacheManager] Loaded pending operations:', operations.length);
       }
     } catch (error) {
-      console.warn('[CacheManager] Failed to load pending operations:', error);
+      console.error('[CacheManager] Failed to load pending operations:', error);
     }
   }, []);
 
+  // Save pending operations to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('pendingOperations', JSON.stringify(pendingOps));
+    } catch (error) {
+      console.error('[CacheManager] Failed to save pending operations:', error);
+    }
+  }, [pendingOps]);
+
+  const getCache = <T>(key: string): T | null => {
+    try {
+      const cached = localStorage.getItem(`cache_${key}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Check if cache is still valid (24 hours)
+        const cacheTime = parsed.timestamp;
+        const now = new Date().getTime();
+        const hoursDiff = (now - cacheTime) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 24) {
+          return parsed.data;
+        } else {
+          localStorage.removeItem(`cache_${key}`);
+        }
+      }
+    } catch (error) {
+      console.error('[CacheManager] Failed to get cache:', error);
+    }
+    return null;
+  };
+
+  const setCache = <T>(key: string, data: T): void => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: new Date().getTime()
+      };
+      localStorage.setItem(`cache_${key}`, JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('[CacheManager] Failed to set cache:', error);
+    }
+  };
+
+  const addPendingOperation = (operation: PendingOperation): void => {
+    setPendingOps(prev => {
+      // Check if operation already exists
+      const exists = prev.some(op => op.id === operation.id);
+      if (exists) {
+        return prev;
+      }
+      return [...prev, operation];
+    });
+  };
+
+  const clearPendingOperation = (operationId: string): void => {
+    setPendingOps(prev => prev.filter(op => op.id !== operationId));
+  };
+
+  const clearAllPendingOperations = (): void => {
+    setPendingOps([]);
+  };
+
   return {
-    // Cache
-    setCache,
     getCache,
-    clearCache,
-    // Pending operations
-    pendingOps,
+    setCache,
     addPendingOperation,
-    removePendingOperation,
-    loadPendingOperations,
+    clearPendingOperation,
+    clearAllPendingOperations,
+    pendingOps,
   };
 };
