@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, AlertTriangle, TrendingDown, TrendingUp, Trash2 } from 'lucide-react';
+import { Plus, Package, AlertTriangle, Trash2 } from 'lucide-react';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { Product } from '../types';
 import RestockModal from './inventory/RestockModal';
@@ -71,11 +71,6 @@ const InventoryPage = () => {
     setIsDialogOpen(true);
   };
 
-  const handleStockUpdate = async (product: Product, change: number) => {
-    const newStock = Math.max(0, product.currentStock + change);
-    await updateProduct(product.id, { currentStock: newStock });
-  };
-
   // Fixed restock function to properly integrate with unified products
   const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
     if (!product) return;
@@ -84,7 +79,7 @@ const InventoryPage = () => {
     setIsRestocking(true);
     
     try {
-      // Use the unified updateProduct function with proper offline/online handling
+      // Use the unified updateProduct function - it handles both online and offline scenarios
       await updateProduct(product.id, {
         currentStock: product.currentStock + quantity,
         costPrice: buyingPrice, // Update cost price with latest buying price
@@ -306,26 +301,6 @@ const InventoryPage = () => {
                       }`}>
                         {product.currentStock}
                       </span>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleStockUpdate(product, -1)}
-                        disabled={product.currentStock <= 0}
-                      >
-                        <TrendingDown className="w-3 h-3 mr-1" />
-                        -1
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleStockUpdate(product, 1)}
-                      >
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        +1
-                      </Button>
                     </div>
                   </div>
 

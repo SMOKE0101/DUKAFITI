@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -244,8 +243,9 @@ export const useUnifiedProducts = () => {
         }
       });
 
-      // Refresh products after sync
+      // Refresh products after sync to get the latest state
       if (syncedCount > 0) {
+        console.log('[UnifiedProducts] Refreshing products after successful sync');
         await loadProducts(true);
         
         toast({
@@ -274,7 +274,9 @@ export const useUnifiedProducts = () => {
     console.log('[UnifiedProducts] Creating product:', newProduct.name);
 
     // Optimistically update UI
-    setProducts(prev => [newProduct, ...prev]);
+    const updatedProducts = [newProduct, ...products];
+    setProducts(updatedProducts);
+    setCache('products', updatedProducts);
 
     if (isOnline) {
       try {
@@ -297,13 +299,9 @@ export const useUnifiedProducts = () => {
         const formattedProduct = transformToLocal(data);
         
         // Replace temp product with real one
-        setProducts(prev => 
-          prev.map(p => p.id === newProduct.id ? formattedProduct : p)
-        );
-
-        // Update cache
-        const updatedProducts = products.map(p => p.id === newProduct.id ? formattedProduct : p);
-        setCache('products', updatedProducts);
+        const finalProducts = products.map(p => p.id === newProduct.id ? formattedProduct : p);
+        setProducts(finalProducts);
+        setCache('products', finalProducts);
         
         toast({
           title: "Product Created",
@@ -313,7 +311,10 @@ export const useUnifiedProducts = () => {
         return formattedProduct;
       } catch (error) {
         // Revert optimistic update and queue for sync
-        setProducts(prev => prev.filter(p => p.id !== newProduct.id));
+        const revertedProducts = products.filter(p => p.id !== newProduct.id);
+        setProducts(revertedProducts);
+        setCache('products', revertedProducts);
+        
         addPendingOperation({
           type: 'product',
           operation: 'create',
@@ -322,9 +323,8 @@ export const useUnifiedProducts = () => {
         console.error('[UnifiedProducts] Create failed, queued for sync:', error);
         
         toast({
-          title: "Error",
-          description: "Failed to create product. Will retry when online.",
-          variant: "destructive",
+          title: "Offline Mode",
+          description: "Product will be created when connection is restored.",
         });
         
         return newProduct;
@@ -352,17 +352,18 @@ export const useUnifiedProducts = () => {
 
     console.log('[UnifiedProducts] Updating product:', id, updates);
 
-    // Optimistically update UI
+    // Find the original product
     const originalProduct = products.find(p => p.id === id);
     if (!originalProduct) {
       console.error('[UnifiedProducts] Product not found for update:', id);
       return;
     }
 
+    // Optimistically update UI and cache
     const updatedProduct = { ...originalProduct, ...updates, updatedAt: new Date().toISOString() };
-    setProducts(prev => 
-      prev.map(p => p.id === id ? updatedProduct : p)
-    );
+    const updatedProducts = products.map(p => p.id === id ? updatedProduct : p);
+    setProducts(updatedProducts);
+    setCache('products', updatedProducts);
 
     if (isOnline) {
       try {
@@ -382,21 +383,15 @@ export const useUnifiedProducts = () => {
 
         if (error) throw error;
 
-        // Update cache
-        const updatedProducts = products.map(p => p.id === id ? updatedProduct : p);
-        setCache('products', updatedProducts);
-
         toast({
           title: "Product Updated",
           description: "Product has been updated successfully.",
         });
       } catch (error) {
         // Revert optimistic update and queue for sync
-        if (originalProduct) {
-          setProducts(prev => 
-            prev.map(p => p.id === id ? originalProduct : p)
-          );
-        }
+        const revertedProducts = products.map(p => p.id === id ? originalProduct : p);
+        setProducts(revertedProducts);
+        setCache('products', revertedProducts);
         
         addPendingOperation({
           type: 'product',
@@ -406,9 +401,8 @@ export const useUnifiedProducts = () => {
         console.error('[UnifiedProducts] Update failed, queued for sync:', error);
         
         toast({
-          title: "Error",
-          description: "Failed to update product. Will retry when online.",
-          variant: "destructive",
+          title: "Offline Mode",
+          description: "Changes will sync when connection is restored.",
         });
       }
     } else {
@@ -439,8 +433,10 @@ export const useUnifiedProducts = () => {
       return;
     }
     
-    // Optimistically remove from UI
-    setProducts(prev => prev.filter(p => p.id !== id));
+    // Optimistically remove from UI and cache
+    const updatedProducts = products.filter(p => p.id !== id);
+    setProducts(updatedProducts);
+    setCache('products', updatedProducts);
 
     if (isOnline) {
       try {
@@ -452,17 +448,15 @@ export const useUnifiedProducts = () => {
 
         if (error) throw error;
 
-        // Update cache - remove the deleted product
-        const updatedProducts = products.filter(p => p.id !== id);
-        setCache('products', updatedProducts);
-
         toast({
           title: "Product Deleted",
           description: `${productToDelete.name} has been removed from your inventory.`,
         });
       } catch (error) {
         // Revert optimistic update
-        setProducts(prev => [...prev, productToDelete]);
+        const revertedProducts = [...products, productToDelete];
+        setProducts(revertedProducts);
+        setCache('products', revertedProducts);
         
         addPendingOperation({
           type: 'product',
@@ -472,9 +466,8 @@ export const useUnifiedProducts = () => {
         console.error('[UnifiedProducts] Delete failed, queued for sync:', error);
         
         toast({
-          title: "Error",
-          description: "Failed to delete product. Will retry when online.",
-          variant: "destructive",
+          title: "Offline Mode",
+          description: "Product will be deleted when connection is restored.",
         });
       }
     } else {

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -5,8 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Package, Loader2, WifiOff } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
-import { useUnifiedOfflineManager } from '../../hooks/useUnifiedOfflineManager';
-import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
 
@@ -23,9 +22,10 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
   const [buyingPrice, setBuyingPrice] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const { isOnline, addOfflineOperation } = useUnifiedOfflineManager();
-  const { user } = useAuth();
   const { toast } = useToast();
+
+  // Get network status from navigator
+  const isOnline = navigator.onLine;
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -47,32 +47,22 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
     if (!validateForm()) return;
 
     try {
+      console.log('[RestockModal] Submitting restock with:', {
+        quantity: parseInt(quantity),
+        buyingPrice: parseFloat(buyingPrice),
+        isOnline
+      });
+
+      // Use the onSave callback which handles both online and offline scenarios
+      await onSave(parseInt(quantity), parseFloat(buyingPrice));
+      
+      // Show appropriate success message
       if (isOnline) {
-        // Online - use existing onSave function
-        await onSave(parseInt(quantity), parseFloat(buyingPrice));
-        
         toast({
           title: "Stock Updated",
           description: `Added ${quantity} units to ${product?.name}`,
         });
       } else {
-        // Offline - queue for sync
-        const stockUpdateData = {
-          id: product?.id,
-          updates: {
-            current_stock: (product?.currentStock || 0) + parseInt(quantity),
-            updated_at: new Date().toISOString()
-          },
-          metadata: {
-            operation: 'add_stock',
-            quantity: parseInt(quantity),
-            buying_price: parseFloat(buyingPrice),
-            supplier: undefined
-          }
-        };
-
-        await addOfflineOperation('product', 'update', stockUpdateData, 'medium');
-        
         toast({
           title: "Saved Offline ⏳",
           description: `Stock update for ${product?.name} will sync when online.`,
@@ -87,7 +77,7 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
       // Close modal
       handleClose();
     } catch (error) {
-      console.error('Error restocking product:', error);
+      console.error('[RestockModal] Error restocking product:', error);
       toast({
         title: "Error",
         description: "Failed to update stock. Please try again.",
