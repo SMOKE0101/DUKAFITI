@@ -38,6 +38,7 @@ export const useUnifiedSyncManager = () => {
         window.dispatchEvent(new CustomEvent('sales-synced'));
         window.dispatchEvent(new CustomEvent('products-synced')); 
         window.dispatchEvent(new CustomEvent('customers-synced'));
+        window.dispatchEvent(new CustomEvent('transactions-synced'));
         
         // Also dispatch after a delay to ensure all components receive the events
         setTimeout(() => {
@@ -47,6 +48,7 @@ export const useUnifiedSyncManager = () => {
           window.dispatchEvent(new CustomEvent('sales-synced'));
           window.dispatchEvent(new CustomEvent('products-synced')); 
           window.dispatchEvent(new CustomEvent('customers-synced'));
+          window.dispatchEvent(new CustomEvent('transactions-synced'));
         }, 500);
         
         return true;

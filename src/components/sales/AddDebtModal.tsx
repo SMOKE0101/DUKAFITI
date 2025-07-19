@@ -11,6 +11,7 @@ import { useUnifiedCustomers } from '@/hooks/useUnifiedCustomers';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useCacheManager } from '@/hooks/useCacheManager';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/currency';
 import { DollarSign, UserPlus, AlertTriangle, TrendingUp, WifiOff } from 'lucide-react';
@@ -26,6 +27,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
+  const { addPendingOperation } = useCacheManager();
 
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [debtAmount, setDebtAmount] = useState('');
@@ -81,23 +83,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
         paid: false,
       };
 
-      if (isOnline) {
-        // Online - direct to database
-        const { error: transactionError } = await supabase
-          .from('transactions')
-          .insert(transactionData);
-
-        if (transactionError) {
-          throw new Error('Failed to create transaction record');
-        }
-
-        toast({
-          title: "Cash Lending Recorded",
-          description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}`,
-        });
-      }
-
-      // Update customer debt using the hook method (it handles offline updates)
+      // Update customer debt using the unified hook (handles both online/offline)
       if (selectedCustomer) {
         const currentDebt = selectedCustomer.outstandingDebt || 0;
         const updatedDebt = currentDebt + totalAmount;
@@ -108,12 +94,45 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
         });
       }
 
-      if (!isOnline) {
-        toast({
-          title: "Cash Lending Recorded",
-          description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name} (will sync when online)`,
+      // Handle transaction creation through unified system
+      if (isOnline) {
+        try {
+          // Online - direct to database
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert(transactionData);
+
+          if (transactionError) {
+            console.error('Transaction creation failed, queuing for sync:', transactionError);
+            // Queue for sync if direct insert fails
+            addPendingOperation({
+              type: 'transaction',
+              operation: 'create',
+              data: transactionData,
+            });
+          }
+        } catch (error) {
+          console.error('Transaction creation failed, queuing for sync:', error);
+          // Queue for sync if network request fails
+          addPendingOperation({
+            type: 'transaction',
+            operation: 'create',
+            data: transactionData,
+          });
+        }
+      } else {
+        // Offline - queue for sync
+        addPendingOperation({
+          type: 'transaction',
+          operation: 'create',
+          data: transactionData,
         });
       }
+
+      toast({
+        title: "Cash Lending Recorded",
+        description: `Debt of ${formatCurrency(totalAmount)} recorded for ${selectedCustomer?.name}${!isOnline ? ' (will sync when online)' : ''}`,
+      });
 
       // Reset form and close
       setSelectedCustomerId('');

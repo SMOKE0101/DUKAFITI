@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 interface PendingOperation {
   id: string;
-  type: 'sale' | 'product' | 'customer';
+  type: 'sale' | 'product' | 'customer' | 'transaction';
   operation: 'create' | 'update' | 'delete';
   data: any;
 }

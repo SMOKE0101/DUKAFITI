@@ -170,9 +170,37 @@ export const useUnifiedCustomers = () => {
             if (!fetchError && data) {
               const serverData = data.map(transformDbCustomer);
               
-              // Merge local unsynced data with server data
+              // Get local customers that might have unsynced changes
               const unsyncedLocal = cached.filter(customer => customer.id.startsWith('temp_'));
-              const mergedData = [...unsyncedLocal, ...serverData];
+              
+              // For synced customers, check if local version has newer data than server
+              const mergedData: typeof cached = [];
+              
+              // Add unsynced local customers first
+              mergedData.push(...unsyncedLocal);
+              
+              // For each server customer, check if we have local changes
+              for (const serverCustomer of serverData) {
+                const localCustomer = cached.find(c => c.id === serverCustomer.id);
+                
+                if (localCustomer) {
+                  // Compare timestamps or specific fields to determine which is newer
+                  // For debt updates, always trust the local version if it's different from server
+                  const hasLocalChanges = localCustomer.outstandingDebt !== serverCustomer.outstandingDebt ||
+                                        localCustomer.totalPurchases !== serverCustomer.totalPurchases ||
+                                        localCustomer.lastPurchaseDate !== serverCustomer.lastPurchaseDate;
+                  
+                  if (hasLocalChanges) {
+                    console.log('[UnifiedCustomers] Preserving local changes for customer:', localCustomer.name);
+                    mergedData.push(localCustomer);
+                  } else {
+                    mergedData.push(serverCustomer);
+                  }
+                } else {
+                  // New customer from server
+                  mergedData.push(serverCustomer);
+                }
+              }
               
               // Remove duplicates and sort
               const uniqueData = mergedData.filter((customer, index, self) => 
@@ -181,7 +209,7 @@ export const useUnifiedCustomers = () => {
               
               // Only update if data actually changed
               if (JSON.stringify(uniqueData) !== JSON.stringify(cached)) {
-                console.log('[UnifiedCustomers] Background refresh: updating cache');
+                console.log('[UnifiedCustomers] Background refresh: updating cache with merged data');
                 setCache('customers', uniqueData);
                 setCustomers(uniqueData);
               }
