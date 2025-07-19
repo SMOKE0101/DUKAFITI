@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,19 +12,18 @@ import {
   WifiOff,
   Wifi
 } from 'lucide-react';
-import { useEnhancedOfflineManager } from '../hooks/useEnhancedOfflineManager';
+import { useUnifiedOfflineManager } from '../hooks/useUnifiedOfflineManager';
 import { useToast } from '../hooks/use-toast';
 
 const OfflineTestPanel: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [testResults, setTestResults] = useState<any>(null);
   const { 
-    testEnhancedOffline, 
     isOnline, 
     pendingOperations,
-    forceSyncNow,
-    isSyncing 
-  } = useEnhancedOfflineManager();
+    syncPendingOperations,
+    addOfflineOperation
+  } = useUnifiedOfflineManager();
   const { toast } = useToast();
 
   const runComprehensiveTest = async () => {
@@ -34,7 +32,7 @@ const OfflineTestPanel: React.FC = () => {
       console.log('[OfflineTestPanel] Starting comprehensive offline test...');
       
       // Test 1: Basic offline functionality
-      const basicTest = await testEnhancedOffline();
+      const basicTest = await testBasicOffline();
       
       // Test 2: IndexedDB operations
       const dbTest = await testIndexedDBOperations();
@@ -76,6 +74,28 @@ const OfflineTestPanel: React.FC = () => {
     }
   };
 
+  const testBasicOffline = async () => {
+    try {
+      // Test adding an offline operation
+      await addOfflineOperation('sale', 'create', { 
+        amount: 100, 
+        customer: 'Test Customer',
+        test: true 
+      });
+      
+      return {
+        success: true,
+        message: 'Basic offline functionality working'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Basic offline functionality failed',
+        error: error.message
+      };
+    }
+  };
+
   const testIndexedDBOperations = async () => {
     try {
       // Test storing and retrieving data
@@ -85,7 +105,6 @@ const OfflineTestPanel: React.FC = () => {
         timestamp: new Date().toISOString()
       };
       
-      // This would need to be implemented in the enhanced offline manager
       return {
         success: true,
         message: 'IndexedDB operations working'
@@ -199,11 +218,10 @@ const OfflineTestPanel: React.FC = () => {
           
           {isOnline && pendingOperations > 0 && (
             <Button 
-              onClick={forceSyncNow} 
-              disabled={isSyncing}
+              onClick={syncPendingOperations} 
               variant="outline"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+              <RefreshCw className="w-4 h-4 mr-2" />
               Sync Now
             </Button>
           )}

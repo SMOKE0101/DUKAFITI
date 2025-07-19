@@ -7,7 +7,7 @@ import {
   Bell, 
   Moon, 
   Sun, 
-  Sync,
+  RefreshCw,
   Wifi,
   WifiOff
 } from 'lucide-react';
@@ -17,10 +17,10 @@ import UserMenu from '../UserMenu';
 
 export function TopBar() {
   const { theme, setTheme } = useTheme();
-  const { isOnline, pendingOperations, syncPendingOperations, isSyncing } = useUnifiedOfflineManager();
+  const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedOfflineManager();
 
   const handleSync = () => {
-    if (isOnline && !isSyncing) {
+    if (isOnline) {
       syncPendingOperations();
     }
   };
@@ -60,12 +60,12 @@ export function TopBar() {
               variant="outline"
               size="sm"
               onClick={handleSync}
-              disabled={!isOnline || isSyncing}
+              disabled={!isOnline}
               className="gap-2"
             >
-              <Sync className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              <RefreshCw className="w-4 h-4" />
               <span className="hidden md:inline">
-                {isSyncing ? 'Syncing...' : 'Sync'}
+                Sync
               </span>
             </Button>
           )}

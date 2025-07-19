@@ -74,26 +74,27 @@ const navigationItems = [
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { collapsed } = useSidebar();
+  const { open } = useSidebar();
   const { isOnline, pendingOperations } = useUnifiedOfflineManager();
 
   const isActive = (path: string) => location.pathname === path;
+  const isCollapsed = !open;
 
   return (
     <Sidebar className={cn(
       "border-r border-border/50 bg-card/50 backdrop-blur-sm",
-      collapsed ? "w-16" : "w-64"
+      isCollapsed ? "w-16" : "w-64"
     )}>
       <SidebarContent className="p-4">
         {/* Brand */}
         <div className={cn(
           "flex items-center gap-3 mb-8 px-2",
-          collapsed && "justify-center"
+          isCollapsed && "justify-center"
         )}>
           <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">D</span>
           </div>
-          {!collapsed && (
+          {!isCollapsed && (
             <div>
               <h1 className="font-bold text-lg text-foreground">DukaFiti</h1>
               <p className="text-xs text-muted-foreground">Business Manager</p>
@@ -104,14 +105,14 @@ export function AppSidebar() {
         {/* Network Status */}
         <div className={cn(
           "flex items-center gap-2 mb-6 px-2",
-          collapsed && "justify-center"
+          isCollapsed && "justify-center"
         )}>
           {isOnline ? (
             <Wifi className="w-4 h-4 text-green-500" />
           ) : (
             <WifiOff className="w-4 h-4 text-red-500" />
           )}
-          {!collapsed && (
+          {!isCollapsed && (
             <div className="flex items-center gap-2">
               <span className={cn(
                 "text-xs font-medium",
@@ -129,7 +130,7 @@ export function AppSidebar() {
         </div>
 
         <SidebarGroup>
-          <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
+          <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
             Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -153,19 +154,19 @@ export function AppSidebar() {
                         onClick={() => navigate(item.path)}
                         className={cn(
                           "flex items-center gap-3 w-full px-3",
-                          collapsed && "justify-center"
+                          isCollapsed && "justify-center"
                         )}
                       >
                         <Icon className={cn(
                           "w-5 h-5 transition-colors",
                           active ? "text-current" : item.color
                         )} />
-                        {!collapsed && (
+                        {!isCollapsed && (
                           <span className="font-medium text-sm">
                             {item.label}
                           </span>
                         )}
-                        {active && !collapsed && (
+                        {active && !isCollapsed && (
                           <div className="ml-auto w-2 h-2 rounded-full bg-current opacity-60" />
                         )}
                       </button>

@@ -10,7 +10,7 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
-    <SidebarProvider defaultOpen={true} collapsedWidth={64}>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen w-full bg-background flex">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
