@@ -1,22 +1,29 @@
 
-const CACHE_VERSION = 'dukafiti-unified-v1';
-const STATIC_CACHE = 'dukafiti-static-v1';
-const DYNAMIC_CACHE = 'dukafiti-dynamic-v1';
-const API_CACHE = 'dukafiti-api-v1';
+const CACHE_VERSION = 'dukafiti-unified-v2';
+const STATIC_CACHE = 'dukafiti-static-v2';
+const DYNAMIC_CACHE = 'dukafiti-dynamic-v2';
+const API_CACHE = 'dukafiti-api-v2';
 
 // Critical app shell files - these MUST be cached for offline operation
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/src/main.tsx',
+  '/src/App.tsx',
+  '/src/index.css',
+  '/manifest.json'
+];
+
+// SPA routes that should serve the main index.html
+const SPA_ROUTES = [
+  '/',
   '/app',
   '/app/dashboard',
-  '/app/sales',
+  '/app/sales', 
   '/app/inventory',
   '/app/customers',
   '/app/reports',
-  '/app/settings',
-  '/offline',
-  '/manifest.json'
+  '/app/settings'
 ];
 
 // API patterns to cache
@@ -27,24 +34,26 @@ const API_PATTERNS = [
   /rest\/v1\//
 ];
 
-// Install - Aggressively cache app shell
+// Install - Cache essential files
 self.addEventListener('install', (event) => {
-  console.log('[UnifiedSW] Installing Unified Service Worker v1');
+  console.log('[UnifiedSW] Installing Unified Service Worker v2');
   
   event.waitUntil(
     Promise.all([
-      // Cache static assets
+      // Cache static assets with more permissive error handling
       caches.open(STATIC_CACHE).then(cache => {
         console.log('[UnifiedSW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS.map(url => 
-          new Request(url, { 
-            credentials: 'same-origin',
-            cache: 'no-cache'
-          })
-        )).catch(error => {
-          console.warn('[UnifiedSW] Failed to cache some static assets:', error);
-          // Continue installation even if some assets fail
-        });
+        return Promise.allSettled(
+          STATIC_ASSETS.map(url => 
+            cache.add(new Request(url, { 
+              credentials: 'same-origin',
+              cache: 'reload' // Force fresh cache
+            })).catch(error => {
+              console.warn(`[UnifiedSW] Failed to cache ${url}:`, error);
+              return null;
+            })
+          )
+        );
       }),
       // Initialize other caches
       caches.open(DYNAMIC_CACHE),
@@ -58,7 +67,7 @@ self.addEventListener('install', (event) => {
 
 // Activate - Clean up and claim clients
 self.addEventListener('activate', (event) => {
-  console.log('[UnifiedSW] Activating Unified Service Worker v1');
+  console.log('[UnifiedSW] Activating Unified Service Worker v2');
   
   event.waitUntil(
     Promise.all([
@@ -79,12 +88,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch - Smart caching strategy
+// Fetch - Improved routing logic
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests for caching
+  // Skip non-GET requests for caching (except handle write operations)
   if (request.method !== 'GET') {
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
       event.respondWith(handleWriteRequest(request));
@@ -92,7 +101,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle different request types
+  // Handle different request types with improved logic
   if (isStaticAsset(request)) {
     event.respondWith(handleStaticAsset(request));
   } else if (isAPIRequest(request)) {
@@ -104,35 +113,32 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Handle static assets - Cache first with network fallback
+// Handle static assets - Network first, then cache
 async function handleStaticAsset(request) {
   try {
+    // Try network first for better performance when online
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+      console.log('[UnifiedSW] Updated cache for static asset:', request.url);
+      return networkResponse;
+    }
+    throw new Error('Network response not ok');
+  } catch (error) {
+    console.log('[UnifiedSW] Network failed for static asset, trying cache:', request.url);
+    
     const cache = await caches.open(STATIC_CACHE);
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
-      console.log('[UnifiedSW] Serving static asset from cache:', request.url);
-      // Update cache in background
-      updateCacheInBackground(request, cache);
+      console.log('[UnifiedSW] Serving static asset from cache');
       return cachedResponse;
     }
     
-    // Not in cache, fetch from network
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-    
-  } catch (error) {
-    console.error('[UnifiedSW] Static asset fetch failed:', error);
-    
-    // Try to serve the main app shell as fallback
-    const cache = await caches.open(STATIC_CACHE);
-    const appShell = await cache.match('/') || await cache.match('/index.html');
-    if (appShell) {
-      console.log('[UnifiedSW] Serving app shell as fallback for static asset');
-      return appShell;
+    // Final fallback for critical files
+    if (request.url.includes('main.tsx') || request.url.includes('index.html')) {
+      return createOfflineAppShell();
     }
     
     return createOfflineResponse();
@@ -167,7 +173,7 @@ async function handleAPIRequest(request) {
       return response;
     }
     
-    // No cache available
+    // Return offline API response
     return new Response(
       JSON.stringify({ 
         error: 'Offline', 
@@ -186,11 +192,22 @@ async function handleAPIRequest(request) {
   }
 }
 
-// Handle SPA routes - CRITICAL for offline navigation
+// Handle SPA routes - CRITICAL: Always serve cached index.html
 async function handleSPARoute(request) {
+  const url = new URL(request.url);
+  console.log('[UnifiedSW] Handling SPA route:', url.pathname);
+  
   try {
-    // Try network first
-    const networkResponse = await fetch(request);
+    // For SPA routes, always try to serve the cached index.html first when offline
+    if (!navigator.onLine) {
+      throw new Error('Offline - serve from cache');
+    }
+    
+    // Try network first when online
+    const networkResponse = await fetch(request, { 
+      credentials: 'same-origin',
+      cache: 'no-cache'
+    });
     
     if (networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
@@ -201,27 +218,24 @@ async function handleSPARoute(request) {
     throw new Error('Network response not ok');
     
   } catch (error) {
-    console.log('[UnifiedSW] SPA route failed, serving app shell:', request.url);
+    console.log('[UnifiedSW] SPA route network failed, serving from cache:', url.pathname);
     
-    // CRITICAL: Always serve the main app shell for SPA navigation
+    // CRITICAL: For SPA routes, always serve the main index.html
     const staticCache = await caches.open(STATIC_CACHE);
     
-    // Try multiple fallbacks for the app shell
-    let appShell = await staticCache.match('/');
+    // Try to get the main index.html
+    let appShell = await staticCache.match('/index.html');
     if (!appShell) {
-      appShell = await staticCache.match('/index.html');
-    }
-    if (!appShell) {
-      appShell = await staticCache.match('/app');
+      appShell = await staticCache.match('/');
     }
     
     if (appShell) {
-      console.log('[UnifiedSW] Serving cached app shell for SPA route');
+      console.log('[UnifiedSW] Serving cached index.html for SPA route');
       return appShell;
     }
     
-    // Final fallback - create a minimal working app shell
-    return createMinimalAppShell();
+    // If no cached index.html, create a basic one that will load the React app
+    return createOfflineAppShell();
   }
 }
 
@@ -287,8 +301,8 @@ async function handleWriteRequest(request) {
   }
 }
 
-// Create minimal app shell that preserves the React app structure
-function createMinimalAppShell() {
+// Create a proper offline app shell that loads the React app
+function createOfflineAppShell() {
   return new Response(`
     <!DOCTYPE html>
     <html lang="en">
@@ -296,6 +310,8 @@ function createMinimalAppShell() {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>DukaFiti - Business Manager</title>
+        <meta name="theme-color" content="#3b82f6">
+        <link rel="manifest" href="/manifest.json">
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
@@ -303,7 +319,7 @@ function createMinimalAppShell() {
             background: #f8fafc;
             min-height: 100vh;
           }
-          .offline-indicator {
+          .offline-banner {
             position: fixed;
             top: 0;
             left: 0;
@@ -316,122 +332,45 @@ function createMinimalAppShell() {
             z-index: 1000;
           }
           #root {
-            padding-top: 2rem;
+            padding-top: 2.5rem;
             min-height: 100vh;
-          }
-          .loading-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 80vh;
-            padding: 2rem;
-          }
-          .logo {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(45deg, #8b5cf6, #3b82f6);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 1rem;
-          }
-          .spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid #e5e7eb;
-            border-top: 3px solid #8b5cf6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 1rem;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          .retry-btn {
-            background: linear-gradient(45deg, #8b5cf6, #3b82f6);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 1rem;
-          }
-          .retry-btn:hover {
-            opacity: 0.9;
           }
         </style>
       </head>
       <body>
-        <div class="offline-indicator">
+        <div class="offline-banner">
           📵 Offline Mode - Your data will sync when you're back online
         </div>
         
-        <div id="root">
-          <div class="loading-container">
-            <div class="logo">D</div>
-            <h1 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1e293b;">DukaFiti</h1>
-            <p style="color: #64748b; margin-bottom: 2rem;">Loading your business data...</p>
-            <div class="spinner"></div>
-            <p style="color: #64748b; text-align: center; max-width: 400px; line-height: 1.5;">
-              Working offline with cached data. All changes will sync when you're back online.
-            </p>
-            <button onclick="window.location.reload()" class="retry-btn">
-              Reload App
-            </button>
-          </div>
-        </div>
+        <div id="root"></div>
         
         <script type="module" src="/src/main.tsx"></script>
         
         <script>
-          // Try to load the main app after a short delay
-          setTimeout(function() {
-            console.log('[AppShell] Attempting to load main app...');
-            
-            // Check if the main app has loaded
-            const checkAppLoaded = setInterval(function() {
-              const app = document.querySelector('#root > div:not(.loading-container)');
-              if (app) {
-                console.log('[AppShell] Main app loaded successfully');
-                clearInterval(checkAppLoaded);
-              }
-            }, 1000);
-            
-            // Stop checking after 10 seconds
-            setTimeout(function() {
-              clearInterval(checkAppLoaded);
-            }, 10000);
-          }, 1000);
+          console.log('[OfflineAppShell] Loading React app in offline mode...');
           
           // Handle online/offline events
           window.addEventListener('online', function() {
-            console.log('[AppShell] Network reconnected');
-            const indicator = document.querySelector('.offline-indicator');
-            if (indicator) {
-              indicator.style.background = '#dcfce7';
-              indicator.style.color = '#166534';
-              indicator.textContent = '🟢 Back Online - Syncing data...';
+            console.log('[OfflineAppShell] Network reconnected');
+            const banner = document.querySelector('.offline-banner');
+            if (banner) {
+              banner.style.background = '#dcfce7';
+              banner.style.color = '#166534';
+              banner.textContent = '🟢 Back Online - Syncing data...';
               
               setTimeout(function() {
                 window.location.reload();
-              }, 2000);
+              }, 1500);
             }
           });
           
           window.addEventListener('offline', function() {
-            console.log('[AppShell] Network lost');
-            const indicator = document.querySelector('.offline-indicator');
-            if (indicator) {
-              indicator.style.background = '#fee2e2';
-              indicator.style.color = '#dc2626';
-              indicator.textContent = '📵 Offline Mode - Your data will sync when you\'re back online';
+            console.log('[OfflineAppShell] Network lost');
+            const banner = document.querySelector('.offline-banner');
+            if (banner) {
+              banner.style.background = '#fee2e2';
+              banner.style.color = '#dc2626';
+              banner.textContent = '📵 Offline Mode - Your data will sync when you\'re back online';
             }
           });
         </script>
@@ -446,7 +385,7 @@ function createMinimalAppShell() {
   });
 }
 
-// Create basic offline response
+// Create basic offline response for non-critical resources
 function createOfflineResponse() {
   return new Response(`
     <!DOCTYPE html>
@@ -485,8 +424,8 @@ function createOfflineResponse() {
       </head>
       <body>
         <div class="offline-container">
-          <h1>🔌 Connection Lost</h1>
-          <p>DukaFiti is working offline. Your data is safe and will sync when you're back online.</p>
+          <h1>🔌 Resource Unavailable</h1>
+          <p>This resource is not available offline. Please check your connection and try again.</p>
           <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
         </div>
       </body>
@@ -502,7 +441,9 @@ function isStaticAsset(request) {
   const url = new URL(request.url);
   return url.pathname.match(/\.(js|jsx|ts|tsx|css|png|jpg|jpeg|gif|svg|woff|woff2|ico|webp)$/) ||
          url.pathname === '/manifest.json' ||
-         url.pathname === '/favicon.ico';
+         url.pathname === '/favicon.ico' ||
+         url.pathname.includes('/src/') ||
+         url.pathname === '/index.html';
 }
 
 function isAPIRequest(request) {
@@ -511,22 +452,12 @@ function isAPIRequest(request) {
 
 function isSPARoute(request) {
   const url = new URL(request.url);
-  // These are SPA routes that should serve the app shell
-  return (url.pathname.startsWith('/app') || url.pathname === '/' || url.pathname === '/offline') && 
-         request.headers.get('accept')?.includes('text/html') &&
-         !isStaticAsset(request);
-}
-
-async function updateCacheInBackground(request, cache) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response);
-      console.log('[UnifiedSW] Updated cache in background for:', request.url);
-    }
-  } catch (error) {
-    console.log('[UnifiedSW] Background update failed:', error);
-  }
+  // Check if it's a SPA route that should serve the app shell
+  return SPA_ROUTES.some(route => {
+    if (route === '/' && url.pathname === '/') return true;
+    if (route !== '/' && url.pathname.startsWith(route)) return true;
+    return false;
+  }) && request.headers.get('accept')?.includes('text/html') && !isStaticAsset(request);
 }
 
 // IndexedDB operations for offline requests
@@ -565,4 +496,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[UnifiedSW] Unified Service Worker v1 loaded successfully');
+console.log('[UnifiedSW] Unified Service Worker v2 loaded successfully');

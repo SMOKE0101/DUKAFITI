@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Register unified service worker for comprehensive offline functionality
+// Enhanced service worker registration for robust offline functionality
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
@@ -15,10 +15,15 @@ if ('serviceWorker' in navigator) {
       
       // Register the unified service worker
       const registration = await navigator.serviceWorker.register('/unified-offline-sw.js', {
-        scope: '/'
+        scope: '/',
+        updateViaCache: 'none' // Always check for updates
       });
       
       console.log('[Main] Unified Service worker registered:', registration.scope);
+      
+      // Wait for the service worker to be ready
+      await navigator.serviceWorker.ready;
+      console.log('[Main] Service worker is ready');
       
       // Handle service worker updates
       registration.addEventListener('updatefound', () => {
@@ -27,10 +32,9 @@ if ('serviceWorker' in navigator) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               console.log('[Main] New service worker available');
-              // Auto-reload if there's an update
-              if (confirm('New version available! Reload to update?')) {
-                window.location.reload();
-              }
+              // Auto-reload for updates
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+              window.location.reload();
             }
           });
         }
@@ -43,6 +47,22 @@ if ('serviceWorker' in navigator) {
           registration.active.postMessage({ type: 'SYNC_NOW' });
         }
       });
+      
+      // Preload critical resources
+      if ('caches' in window) {
+        const cache = await caches.open('dukafiti-static-v2');
+        try {
+          await cache.addAll([
+            '/',
+            '/index.html',
+            '/src/main.tsx',
+            '/manifest.json'
+          ]);
+          console.log('[Main] Critical resources preloaded');
+        } catch (error) {
+          console.warn('[Main] Failed to preload some resources:', error);
+        }
+      }
       
     } catch (error) {
       console.error('[Main] Service worker registration failed:', error);

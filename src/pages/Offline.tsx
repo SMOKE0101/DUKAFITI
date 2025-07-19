@@ -1,17 +1,87 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { WifiOff, RefreshCw, Database, AlertCircle } from 'lucide-react';
+import { WifiOff, RefreshCw, Database, AlertCircle, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const OfflinePage = () => {
+  const navigate = useNavigate();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[OfflinePage] Network reconnected');
+      setIsOnline(true);
+      setIsReconnecting(true);
+      
+      // Auto-redirect after a short delay
+      setTimeout(() => {
+        navigate('/app/dashboard', { replace: true });
+      }, 2000);
+    };
+
+    const handleOffline = () => {
+      console.log('[OfflinePage] Network lost');
+      setIsOnline(false);
+      setIsReconnecting(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [navigate]);
+
   const handleRetry = () => {
-    window.location.reload();
+    if (navigator.onLine) {
+      window.location.reload();
+    } else {
+      // Force a connection check
+      fetch('/manifest.json', { cache: 'no-cache' })
+        .then(() => {
+          window.location.reload();
+        })
+        .catch(() => {
+          console.log('Still offline');
+        });
+    }
   };
 
-  const handleGoBack = () => {
-    window.history.back();
+  const handleContinueOffline = () => {
+    navigate('/app/dashboard', { replace: true });
   };
+
+  if (isReconnecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl border-green-200">
+          <CardHeader className="text-center pb-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <CardTitle className="text-xl font-bold text-green-900">
+              Back Online!
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+            <p className="text-green-700">
+              Connection restored. Syncing your data...
+            </p>
+            <p className="text-sm text-green-600">
+              Redirecting to your dashboard...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4">
@@ -21,7 +91,7 @@ const OfflinePage = () => {
             <WifiOff className="w-8 h-8 text-red-600 dark:text-red-400" />
           </div>
           <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
-            You're Offline
+            {isOnline ? 'Connection Issues' : 'You\'re Offline'}
           </CardTitle>
         </CardHeader>
         
@@ -80,15 +150,15 @@ const OfflinePage = () => {
               variant="default"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Check Connection
+              {isOnline ? 'Reload App' : 'Check Connection'}
             </Button>
             
             <Button 
-              onClick={handleGoBack} 
+              onClick={handleContinueOffline} 
               className="w-full"
               variant="outline"
             >
-              Continue Offline
+              Continue to App
             </Button>
           </div>
 
