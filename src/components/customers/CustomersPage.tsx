@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, User, Users, TrendingUp, DollarSign } from 'lucide-react';
+import { Plus, Search, User, Users, DollarSign } from 'lucide-react';
 import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
@@ -50,7 +49,6 @@ const CustomersPage = () => {
 
   // Calculate stats
   const totalCustomers = customers.length;
-  const totalSales = customers.reduce((sum, c) => sum + (c.totalPurchases || 0), 0);
   const totalOutstandingDebt = customers.reduce((sum, c) => sum + (c.outstandingDebt || 0), 0);
 
   const handleAddCustomer = () => {
@@ -163,173 +161,161 @@ const CustomersPage = () => {
 
   return (
     <TooltipWrapper>
-      <div className="container mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              Customers
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
-              Manage your customer relationships and credit limits
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {pendingOperations > 0 && (
-              <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
-                {pendingOperations} pending sync
-              </Badge>
-            )}
-            {!isOnline && (
-              <Badge variant="secondary" className="bg-red-50 text-red-800 border-red-200">
-                Working Offline
-              </Badge>
-            )}
-            <Button onClick={handleAddCustomer}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Customer
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">{totalCustomers}</div>
-                  <div className="text-sm text-blue-700">Total Customers</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(totalSales)}
-                  </div>
-                  <div className="text-sm text-green-700">Total Sales</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-orange-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(totalOutstandingDebt)}
-                  </div>
-                  <div className="text-sm text-orange-700">Outstanding Debt</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search customers by name, phone, or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Customer List */}
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-slate-600 dark:text-slate-400">Loading customers...</p>
-          </div>
-        ) : filteredCustomers.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <User className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                {searchQuery ? 'No customers found' : 'No customers yet'}
-              </h3>
-              <p className="text-slate-600 dark:text-slate-400">
-                {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
+      <div className="min-h-screen bg-[#F4F6F8] font-['Inter']">
+        <div className="container mx-auto px-6 py-8 space-y-8">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900 font-['Inter']">
+                Customer Management
+              </h1>
+              <p className="text-base text-gray-700 mt-2 font-['Inter']">
+                Manage your customer relationships and credit limits
               </p>
-              {!searchQuery && (
-                <Button onClick={handleAddCustomer} className="mt-4">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Customer
-                </Button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {pendingOperations > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-amber-700">
+                    {pendingOperations} pending sync
+                  </span>
+                </div>
               )}
+              {!isOnline && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-full">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-red-700">
+                    Working Offline
+                  </span>
+                </div>
+              )}
+              <Button 
+                onClick={handleAddCustomer}
+                className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 font-['Inter']"
+              >
+                <Plus className="w-5 h-5 mr-2" strokeWidth={2} />
+                Add Customer
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
+              <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center mr-4">
+                <Users className="w-6 h-6 text-purple-600" strokeWidth={1.5} />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-gray-900 font-['Inter']">{totalCustomers}</div>
+                <div className="text-base text-gray-700 font-['Inter']">Total Customers</div>
+              </div>
+            </Card>
+
+            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
+              <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mr-4">
+                <DollarSign className="w-6 h-6 text-red-600" strokeWidth={1.5} />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-gray-900 font-['Inter']">
+                  {formatCurrency(totalOutstandingDebt)}
+                </div>
+                <div className="text-base text-gray-700 font-['Inter']">Outstanding Debt</div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Search Bar */}
+          <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" strokeWidth={1.5} />
+                <Input
+                  type="search"
+                  placeholder="Search customers by name, phone, or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-gray-100 rounded-xl pl-12 pr-4 py-4 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 border-0 text-base font-['Inter']"
+                />
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredCustomers.map((customer) => (
-              <CustomerCard
-                key={customer.id}
-                customer={customer}
-                onEdit={handleEditCustomer}
-                onDelete={handleDeleteCustomer}
-                onRecordPayment={handleRecordPayment}
-                isDeleting={operationsInProgress.deleting === customer.id}
-                isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
-              />
-            ))}
-          </div>
-        )}
 
-        {/* Modals */}
-        <CustomerFormModal
-          isOpen={showFormModal}
-          onClose={() => {
-            setShowFormModal(false);
-            setSelectedCustomer(null);
-          }}
-          customer={selectedCustomer}
-          isEditing={isEditing}
-          onSave={handleSaveCustomer}
-        />
+          {/* Customer List */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+              <p className="mt-4 text-base text-gray-700 font-['Inter']">Loading customers...</p>
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm">
+              <CardContent className="text-center py-12">
+                <User className="mx-auto h-12 w-12 text-gray-400 mb-4" strokeWidth={1.5} />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2 font-['Inter']">
+                  {searchQuery ? 'No customers found' : 'No customers yet'}
+                </h3>
+                <p className="text-base text-gray-700 font-['Inter']">
+                  {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
+                </p>
+                {!searchQuery && (
+                  <Button onClick={handleAddCustomer} className="mt-6 bg-purple-600 hover:bg-purple-700 font-['Inter']">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Customer
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredCustomers.map((customer) => (
+                <CustomerCard
+                  key={customer.id}
+                  customer={customer}
+                  onEdit={handleEditCustomer}
+                  onDelete={handleDeleteCustomer}
+                  onRecordPayment={handleRecordPayment}
+                  isDeleting={operationsInProgress.deleting === customer.id}
+                  isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
+                />
+              ))}
+            </div>
+          )}
 
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setSelectedCustomer(null);
-          }}
-          customer={selectedCustomer}
-          onPayment={handlePaymentComplete}
-          isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
-        />
+          {/* Modals */}
+          <CustomerFormModal
+            isOpen={showFormModal}
+            onClose={() => {
+              setShowFormModal(false);
+              setSelectedCustomer(null);
+            }}
+            customer={selectedCustomer}
+            isEditing={isEditing}
+            onSave={handleSaveCustomer}
+          />
 
-        <DeleteCustomerModal
-          isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setSelectedCustomer(null);
-          }}
-          customer={selectedCustomer}
-          onDelete={handleConfirmDelete}
-          isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
-        />
+          <PaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => {
+              setShowPaymentModal(false);
+              setSelectedCustomer(null);
+            }}
+            customer={selectedCustomer}
+            onPayment={handlePaymentComplete}
+            isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
+          />
+
+          <DeleteCustomerModal
+            isOpen={showDeleteModal}
+            onClose={() => {
+              setShowDeleteModal(false);
+              setSelectedCustomer(null);
+            }}
+            customer={selectedCustomer}
+            onDelete={handleConfirmDelete}
+            isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
+          />
+        </div>
       </div>
     </TooltipWrapper>
   );
