@@ -10,10 +10,12 @@ const AppearanceSettings = () => {
   const { theme: currentTheme } = useTheme();
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    console.log('Theme change initiated:', newTheme, 'Current theme:', currentTheme);
+    console.log('Manual theme change initiated:', newTheme, 'Current settings theme:', settings.theme);
     
-    // Update settings - this will handle both local state and theme provider sync
-    saveSettings({ theme: newTheme });
+    // Only save if it's actually different
+    if (settings.theme !== newTheme) {
+      saveSettings({ theme: newTheme });
+    }
   };
 
   if (loading) {
@@ -33,8 +35,8 @@ const AppearanceSettings = () => {
     );
   }
 
-  // Use settings theme as the source of truth, with fallback to current theme
-  const activeTheme = settings.theme || currentTheme || 'light';
+  // Use settings.theme as the primary source of truth, fallback to system
+  const activeTheme = settings.theme || 'system';
   
   console.log('Rendering AppearanceSettings - Settings theme:', settings.theme, 'Current theme:', currentTheme, 'Active theme:', activeTheme);
 

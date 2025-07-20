@@ -25,6 +25,13 @@ export function TopBar() {
     }
   };
 
+  const handleThemeToggle = () => {
+    console.log('TopBar theme toggle - current theme:', theme);
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    console.log('TopBar setting theme to:', newTheme);
+    setTheme(newTheme);
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="flex h-16 items-center justify-between px-6">
@@ -82,7 +89,7 @@ export function TopBar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={handleThemeToggle}
           >
             {theme === 'dark' ? (
               <Sun className="w-4 h-4" />

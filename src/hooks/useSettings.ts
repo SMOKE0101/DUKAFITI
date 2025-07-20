@@ -76,8 +76,8 @@ export const useSettings = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
-  const [initialized, setInitialized] = useState(false);
+  const { setTheme } = useTheme();
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Load settings from Supabase
   const loadSettings = async () => {
@@ -127,12 +127,14 @@ export const useSettings = () => {
         theme: currentTheme as 'light' | 'dark' | 'system',
       };
 
+      console.log('Loading settings - theme from DB:', currentTheme, 'hasInitialized:', hasInitialized);
       setSettings(loadedSettings);
       
-      // Only set theme if not initialized to prevent auto-switching
-      if (!initialized) {
+      // Only set theme on first initialization to prevent auto-switching
+      if (!hasInitialized) {
+        console.log('First initialization - setting theme to:', currentTheme);
         setTheme(currentTheme);
-        setInitialized(true);
+        setHasInitialized(true);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -147,6 +149,9 @@ export const useSettings = () => {
 
     try {
       const updatedSettings = { ...settings, ...newSettings };
+      console.log('Saving settings:', newSettings);
+      
+      // Update local state first
       setSettings(updatedSettings);
 
       // Update profile data
@@ -171,10 +176,11 @@ export const useSettings = () => {
         }
       }
 
-      // Update theme setting
-      if (newSettings.theme !== undefined) {
-        setTheme(newSettings.theme);
+      // Update theme setting - only set theme if explicitly requested
+      if (newSettings.theme !== undefined && newSettings.theme !== settings.theme) {
+        console.log('Theme change requested:', newSettings.theme, 'Previous:', settings.theme);
         
+        // Save to database first
         const { error: themeError } = await supabase
           .from('shop_settings')
           .upsert({
@@ -189,6 +195,10 @@ export const useSettings = () => {
           console.error('Error updating theme:', themeError);
           throw themeError;
         }
+
+        // Only apply theme change after successful database save
+        console.log('Applying theme change to:', updatedSettings.theme);
+        setTheme(updatedSettings.theme);
       }
 
       toast({
@@ -197,6 +207,8 @@ export const useSettings = () => {
       });
     } catch (error) {
       console.error('Error saving settings:', error);
+      // Revert local state on error
+      setSettings(settings);
       toast({
         title: "Error",
         description: "Failed to save settings. Please try again.",
@@ -205,9 +217,15 @@ export const useSettings = () => {
     }
   };
 
-  // Load settings on mount
+  // Load settings on mount and when user changes
   useEffect(() => {
-    loadSettings();
+    if (user) {
+      loadSettings();
+    } else {
+      setSettings(defaultSettings);
+      setLoading(false);
+      setHasInitialized(false);
+    }
   }, [user]);
 
   // Legacy methods for backward compatibility
