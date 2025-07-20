@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
@@ -11,20 +10,18 @@ import { Customer } from '../types';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
+import SalesHeader from './sales/SalesHeader';
+import SalesFilters from './sales/SalesFilters';
+import ProductsGrid from './sales/ProductsGrid';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
 import { 
-  Search, 
   ShoppingCart, 
   Plus, 
   Minus, 
   UserPlus, 
-  WifiOff, 
-  Wifi,
-  RefreshCw,
   CreditCard,
-  Receipt,
   AlertCircle
 } from 'lucide-react';
 
@@ -41,28 +38,30 @@ const OptimizedModernSalesPage = () => {
 
   const { toast } = useToast();
 
-  // Initialize hooks with error handling
-  const productsHook = useUnifiedProducts();
-  const customersHook = useUnifiedCustomers();
-  const syncHook = useUnifiedSyncManager();
+  // Initialize hooks with proper error handling
+  let productsHook, customersHook, syncHook;
+  
+  try {
+    productsHook = useUnifiedProducts();
+    customersHook = useUnifiedCustomers();
+    syncHook = useUnifiedSyncManager();
+  } catch (error) {
+    console.error('[OptimizedModernSalesPage] Hook initialization error:', error);
+    setComponentError('Failed to initialize sales system');
+  }
 
-  const {
-    products = [],
-    loading: productsLoading = true,
-    error: productsError
-  } = productsHook || {};
+  // Safely extract hook data with fallbacks
+  const products = productsHook?.products || [];
+  const productsLoading = productsHook?.loading ?? true;
+  const productsError = productsHook?.error;
 
-  const {
-    customers = [],
-    loading: customersLoading = true,
-    error: customersError
-  } = customersHook || {};
+  const customers = customersHook?.customers || [];
+  const customersLoading = customersHook?.loading ?? true;
+  const customersError = customersHook?.error;
 
-  const {
-    isOnline = false,
-    pendingOperations = 0,
-    syncPendingOperations
-  } = syncHook || {};
+  const isOnline = syncHook?.isOnline ?? false;
+  const pendingOperations = syncHook?.pendingOperations ?? 0;
+  const syncPendingOperations = syncHook?.syncPendingOperations;
 
   // Error handling effect
   useEffect(() => {
@@ -308,146 +307,33 @@ const OptimizedModernSalesPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-slate-800">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
-                <Receipt className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sales Point</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Process sales and manage customers</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {/* Network Status & Sync */}
-              <div className="flex items-center gap-2">
-                {isOnline ? (
-                  <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                    <Wifi className="w-4 h-4" />
-                    <span className="text-sm font-medium">Online</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                    <WifiOff className="w-4 h-4" />
-                    <span className="text-sm font-medium">Offline</span>
-                  </div>
-                )}
-                
-                {pendingOperations > 0 && (
-                  <Button
-                    onClick={handleSync}
-                    disabled={!isOnline}
-                    size="sm"
-                    variant="outline"
-                    className="gap-1"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Sync ({pendingOperations})
-                  </Button>
-                )}
-              </div>
-
-              {/* Cart Summary */}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-full">
-                <ShoppingCart className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                  {cart.length} items • {formatCurrency(total)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SalesHeader
+        isOnline={isOnline}
+        pendingOperations={pendingOperations}
+        onSync={handleSync}
+        cartLength={cart.length}
+        total={total}
+        formatCurrency={formatCurrency}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {/* Search and Filters */}
-            <Card className="border-0 shadow-md bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Search products..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                    />
-                  </div>
-                  
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full sm:w-48 border-gray-200 dark:border-slate-600 rounded-xl">
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
-                      {categories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            <SalesFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+              categories={categories}
+            />
 
             {/* Products Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredProducts.length === 0 ? (
-                <div className="col-span-full text-center py-12">
-                  <div className="text-gray-400 dark:text-slate-500 mb-2">
-                    <Search className="w-12 h-12 mx-auto mb-3" />
-                    <p className="text-lg font-medium">No products found</p>
-                    <p className="text-sm">Try adjusting your search or filters</p>
-                  </div>
-                </div>
-              ) : (
-                filteredProducts.map(product => (
-                  <Card 
-                    key={product.id} 
-                    className="group hover:shadow-lg transition-all duration-200 cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
-                    onClick={() => addToCart(product)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="aspect-square bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <div className="text-2xl">📦</div>
-                      </div>
-                      
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 line-clamp-2">
-                        {product.name}
-                      </h3>
-                      
-                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
-                        <span className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
-                          {product.category}
-                        </span>
-                        <span className={`font-medium ${(product.currentStock || 0) <= 5 ? 'text-red-500' : 'text-green-600'}`}>
-                          Stock: {product.currentStock || 0}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                          {formatCurrency(product.sellingPrice)}
-                        </span>
-                        <Button 
-                          size="sm" 
-                          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg"
-                          disabled={(product.currentStock || 0) <= 0}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+              <ProductsGrid
+                products={filteredProducts}
+                onAddToCart={addToCart}
+              />
             </div>
           </div>
 
@@ -467,24 +353,18 @@ const OptimizedModernSalesPage = () => {
                       Customer (Optional)
                     </label>
                     <div className="flex gap-2">
-                      <Select value={selectedCustomerId || ''} onValueChange={(value) => setSelectedCustomerId(value || null)}>
-                        <SelectTrigger className="flex-1 border-gray-200 dark:border-slate-600 rounded-xl">
-                          <SelectValue placeholder="Select customer..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">No customer</SelectItem>
-                          {customers.map(customer => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              <div className="flex items-center justify-between w-full">
-                                <span>{customer.name}</span>
-                                <span className="text-xs text-gray-500 ml-2">
-                                  {customer.phone}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <select
+                        value={selectedCustomerId || ''}
+                        onChange={(e) => setSelectedCustomerId(e.target.value || null)}
+                        className="flex-1 border border-gray-200 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                      >
+                        <option value="">No customer</option>
+                        {customers.map(customer => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.name} - {customer.phone}
+                          </option>
+                        ))}
+                      </select>
                       <Button
                         onClick={() => setIsAddCustomerModalOpen(true)}
                         size="sm"
