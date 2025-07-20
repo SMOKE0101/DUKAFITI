@@ -349,7 +349,7 @@ const OptimizedModernSalesPage = () => {
               </div>
             </div>
           </CardContent>
-        </div>
+        </Card>
       </div>
     );
   }
