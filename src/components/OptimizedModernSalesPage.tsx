@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -103,6 +102,7 @@ const OptimizedModernSalesPage = () => {
             phone: '123456789',
             email: '',
             address: '',
+            createdDate: new Date().toISOString(),
             totalPurchases: 0,
             outstandingDebt: 0,
             creditLimit: 1000,
