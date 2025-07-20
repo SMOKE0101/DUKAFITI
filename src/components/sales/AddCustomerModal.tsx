@@ -8,11 +8,12 @@ import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
 import { useToast } from '../../hooks/use-toast';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { UserPlus, Loader2, WifiOff } from 'lucide-react';
+import { Customer } from '../../types';
 
 interface AddCustomerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCustomerAdded?: (customer: any) => void;
+  onCustomerAdded?: (customer: Customer) => void;
 }
 
 const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerModalProps) => {
@@ -139,15 +140,12 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
       });
       setErrors({});
 
-      // Close modal first
+      // Close modal
       onOpenChange(false);
       
       // Notify parent component with the new customer
-      // Use timeout to ensure modal closes before selecting customer
-      setTimeout(() => {
-        console.log('[AddCustomerModal] Notifying parent with new customer:', newCustomer);
-        onCustomerAdded?.(newCustomer);
-      }, 100);
+      console.log('[AddCustomerModal] Notifying parent with new customer:', newCustomer);
+      onCustomerAdded?.(newCustomer);
 
     } catch (error) {
       console.error('[AddCustomerModal] Error creating customer:', error);

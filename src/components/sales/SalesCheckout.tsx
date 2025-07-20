@@ -67,12 +67,18 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       return;
     }
 
-    // Remove offline check - sales should work offline
-
     setIsProcessing(true);
 
     try {
-      console.log('[SalesCheckout] Starting checkout process...');
+      console.log('[SalesCheckout] Starting checkout process...', {
+        cart,
+        paymentMethod,
+        selectedCustomerId,
+        customer
+      });
+
+      // Calculate total debt amount for this transaction
+      let totalDebtAmount = 0;
 
       // Process each item in the cart as a separate sale
       for (const item of cart) {
@@ -98,7 +104,12 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           timestamp: new Date().toISOString(),
         };
 
-        console.log('[SalesCheckout] Processing sale for item:', item.name);
+        // Add to total debt if this is a debt transaction
+        if (paymentMethod === 'debt') {
+          totalDebtAmount += itemTotal;
+        }
+
+        console.log('[SalesCheckout] Processing sale for item:', item.name, saleData);
 
         // Create the sale - this will handle both local updates and offline queuing
         await createSale(saleData);
@@ -111,25 +122,31 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           currentStock: newStock,
           updatedAt: new Date().toISOString()
         });
+        console.log('[SalesCheckout] Product stock updated:', item.name, 'New stock:', newStock);
+      }
 
-        // Update customer debt if applicable - this will handle both local updates and offline queuing
-        if (paymentMethod === 'debt' && selectedCustomerId) {
-          const customerToUpdate = customers.find(c => c.id === selectedCustomerId);
-          if (customerToUpdate) {
-            const updates = {
-              outstandingDebt: (customerToUpdate.outstandingDebt || 0) + itemTotal,
-              totalPurchases: (customerToUpdate.totalPurchases || 0) + itemTotal,
-              lastPurchaseDate: new Date().toISOString(),
-            };
-            
-            await updateCustomer(selectedCustomerId, updates);
-          }
-        }
+      // Update customer debt if this is a debt transaction
+      if (paymentMethod === 'debt' && selectedCustomerId && customer && totalDebtAmount > 0) {
+        console.log('[SalesCheckout] Updating customer debt:', {
+          customerId: selectedCustomerId,
+          currentDebt: customer.outstandingDebt,
+          additionalDebt: totalDebtAmount,
+          newTotalDebt: (customer.outstandingDebt || 0) + totalDebtAmount
+        });
+
+        const updates = {
+          outstandingDebt: (customer.outstandingDebt || 0) + totalDebtAmount,
+          totalPurchases: (customer.totalPurchases || 0) + totalDebtAmount,
+          lastPurchaseDate: new Date().toISOString(),
+        };
+        
+        await updateCustomer(selectedCustomerId, updates);
+        console.log('[SalesCheckout] Customer debt updated successfully');
       }
 
       toast({
         title: "Sale Completed!",
-        description: `Successfully processed ${cart.length} item(s) for ${formatCurrency(total)}${!isOnline ? ' (will sync when online)' : ''}.`,
+        description: `Successfully processed ${cart.length} item(s) for ${formatCurrency(total)}${!isOnline ? ' (will sync when online)' : ''}.${paymentMethod === 'debt' ? ` Customer debt increased by ${formatCurrency(totalDebtAmount)}.` : ''}`,
       });
 
       console.log('[SalesCheckout] Checkout completed successfully');

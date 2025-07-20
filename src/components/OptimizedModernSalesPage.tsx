@@ -26,7 +26,8 @@ import {
   Wifi,
   RefreshCw,
   CreditCard,
-  Receipt
+  Receipt,
+  DollarSign
 } from 'lucide-react';
 
 const OptimizedModernSalesPage = () => {
@@ -37,14 +38,14 @@ const OptimizedModernSalesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
-  const [customerToAddDebt, setCustomerToAddDebt] = useState<Customer | null>(null);
 
   const { products, loading: productsLoading } = useUnifiedProducts();
-  const { customers, loading: customersLoading } = useUnifiedCustomers();
+  const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
   const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
+  const selectedCustomer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
 
   const categories = useMemo(() => {
     const categorySet = new Set<string>();
@@ -130,17 +131,20 @@ const OptimizedModernSalesPage = () => {
   const handleCustomerAdded = useCallback((newCustomer: Customer) => {
     console.log('[OptimizedModernSalesPage] Customer added:', newCustomer);
     
-    // Automatically select the newly created customer
-    setSelectedCustomerId(newCustomer.id);
+    // Refetch customers to ensure we have the latest data
+    refetchCustomers();
     
-    toast({
-      title: "Customer Added & Selected",
-      description: `${newCustomer.name} has been added and selected for this sale.`,
-    });
-  }, [toast]);
+    // Set a small delay to ensure the customer list is updated
+    setTimeout(() => {
+      setSelectedCustomerId(newCustomer.id);
+      toast({
+        title: "Customer Added & Selected",
+        description: `${newCustomer.name} has been added and selected for this sale.`,
+      });
+    }, 500);
+  }, [toast, refetchCustomers]);
 
-  const handleAddDebt = useCallback((customer: Customer) => {
-    setCustomerToAddDebt(customer);
+  const handleAddDebt = useCallback(() => {
     setIsAddDebtModalOpen(true);
   }, []);
 
@@ -168,6 +172,12 @@ const OptimizedModernSalesPage = () => {
       });
     }
   };
+
+  const handleCheckoutComplete = useCallback(() => {
+    // Refetch customers after checkout to update debt amounts
+    refetchCustomers();
+    clearCart();
+  }, [clearCart, refetchCustomers]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-slate-800">
@@ -337,7 +347,13 @@ const OptimizedModernSalesPage = () => {
                       Customer (Optional)
                     </label>
                     <div className="flex gap-2">
-                      <Select value={selectedCustomerId || 'none'} onValueChange={(value) => setSelectedCustomerId(value === 'none' ? null : value)}>
+                      <Select 
+                        value={selectedCustomerId || 'none'} 
+                        onValueChange={(value) => {
+                          console.log('Customer selection changed:', value);
+                          setSelectedCustomerId(value === 'none' ? null : value);
+                        }}
+                      >
                         <SelectTrigger className="flex-1 border-gray-200 dark:border-slate-600 rounded-xl">
                           <SelectValue placeholder="Select customer..." />
                         </SelectTrigger>
@@ -364,6 +380,23 @@ const OptimizedModernSalesPage = () => {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Selected Customer Info */}
+                  {selectedCustomer && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-blue-800 dark:text-blue-200">{selectedCustomer.name}</p>
+                          <p className="text-sm text-blue-600 dark:text-blue-300">{selectedCustomer.phone}</p>
+                        </div>
+                        {selectedCustomer.outstandingDebt > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Payment Method */}
                   <div>
@@ -469,7 +502,7 @@ const OptimizedModernSalesPage = () => {
                         selectedCustomerId={selectedCustomerId}
                         paymentMethod={paymentMethod}
                         customers={customers}
-                        onCheckoutComplete={clearCart}
+                        onCheckoutComplete={handleCheckoutComplete}
                         isOnline={isOnline}
                       />
 
@@ -499,18 +532,13 @@ const OptimizedModernSalesPage = () => {
                     Add Customer
                   </Button>
                   
-                  {selectedCustomerId && (
-                    <Button
-                      onClick={() => {
-                        const customer = customers.find(c => c.id === selectedCustomerId);
-                        if (customer) handleAddDebt(customer);
-                      }}
-                      className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Record Debt
-                    </Button>
-                  )}
+                  <Button
+                    onClick={handleAddDebt}
+                    className="w-full justify-start bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Record Debt
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -527,10 +555,7 @@ const OptimizedModernSalesPage = () => {
 
       <AddDebtModal
         isOpen={isAddDebtModalOpen}
-        onClose={() => {
-          setIsAddDebtModalOpen(false);
-          setCustomerToAddDebt(null);
-        }}
+        onClose={() => setIsAddDebtModalOpen(false)}
       />
     </div>
   );
