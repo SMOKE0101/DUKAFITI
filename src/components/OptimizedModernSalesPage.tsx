@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +11,6 @@ import { CartItem } from '../types/cart';
 import { Customer } from '../types';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
@@ -128,10 +128,7 @@ const OptimizedModernSalesPage = () => {
 
   const handleCustomerAdded = useCallback((newCustomer: Customer) => {
     console.log('[OptimizedModernSalesPage] Customer added:', newCustomer);
-    
-    // Automatically select the newly created customer
     setSelectedCustomerId(newCustomer.id);
-    
     toast({
       title: "Customer Added & Selected",
       description: `${newCustomer.name} has been added and selected for this sale.`,
@@ -142,6 +139,14 @@ const OptimizedModernSalesPage = () => {
     setCustomerToAddDebt(customer);
     setIsAddDebtModalOpen(true);
   }, []);
+
+  const handleDebtAdded = useCallback(() => {
+    // Refresh data after debt is added
+    toast({
+      title: "Debt Added",
+      description: "Customer debt has been updated successfully.",
+    });
+  }, [toast]);
 
   const handleSync = async () => {
     if (!isOnline) {
@@ -170,6 +175,7 @@ const OptimizedModernSalesPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-slate-800">
+      {/* Header */}
       <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -321,6 +327,7 @@ const OptimizedModernSalesPage = () => {
             </div>
           </div>
 
+          {/* Checkout Panel */}
           <div className="space-y-6">
             <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm sticky top-24">
               <CardContent className="p-6">
@@ -530,6 +537,8 @@ const OptimizedModernSalesPage = () => {
           setIsAddDebtModalOpen(false);
           setCustomerToAddDebt(null);
         }}
+        customer={customerToAddDebt}
+        onDebtAdded={handleDebtAdded}
       />
     </div>
   );
