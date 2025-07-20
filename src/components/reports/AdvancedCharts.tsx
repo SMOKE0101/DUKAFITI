@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { formatCurrency } from '@/utils/currency';
 import { cn } from '@/lib/utils';
 import { TimeFrameData } from './TimeFramePicker';
 import { Sale } from '@/types';
-import { formatDateForBucket, addHours, addDays, startOfHour, startOfDay, isValidNumber, safeNumber } from '@/utils/dateUtils';
+import { formatDateForBucket, addHours, addDays, startOfHour, startOfDay, startOfWeek, isValidNumber, safeNumber } from '@/utils/dateUtils';
 
 interface ChartDataPoint {
   label: string;
@@ -84,6 +83,8 @@ const AdvancedCharts: React.FC<AdvancedChartsProps> = ({
       
       if (granularity === 'hour') {
         bucketDate = startOfHour(saleDate);
+      } else if (granularity === 'week') {
+        bucketDate = startOfWeek(saleDate);
       } else {
         bucketDate = startOfDay(saleDate);
       }
@@ -100,7 +101,7 @@ const AdvancedCharts: React.FC<AdvancedChartsProps> = ({
     // Convert to chart data
     return bucketKeys.map(key => {
       const bucket = buckets.get(key) || { sales: 0, orders: 0 };
-      const date = new Date(key);
+      const date = new Date(key.replace('-week', ''));
       
       let label: string;
       if (granularity === 'hour') {

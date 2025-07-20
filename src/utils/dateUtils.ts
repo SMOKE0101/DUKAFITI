@@ -36,7 +36,16 @@ export const startOfHour = (date: Date): Date => {
   return result;
 };
 
-export const formatDateForBucket = (date: Date, format: 'hour' | 'day' | 'month'): string => {
+export const startOfWeek = (date: Date): Date => {
+  const result = new Date(date);
+  const day = result.getDay();
+  const diff = result.getDate() - day;
+  result.setDate(diff);
+  result.setHours(0, 0, 0, 0);
+  return result;
+};
+
+export const formatDateForBucket = (date: Date, format: 'hour' | 'day' | 'month' | 'week'): string => {
   switch (format) {
     case 'hour':
       return date.toISOString().substring(0, 13) + ':00:00.000Z';
@@ -44,6 +53,9 @@ export const formatDateForBucket = (date: Date, format: 'hour' | 'day' | 'month'
       return date.toISOString().substring(0, 10);
     case 'month':
       return date.toISOString().substring(0, 7);
+    case 'week':
+      const startOfWeekDate = startOfWeek(date);
+      return startOfWeekDate.toISOString().substring(0, 10) + '-week';
     default:
       return date.toISOString();
   }
