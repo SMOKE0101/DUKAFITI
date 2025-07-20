@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -183,7 +182,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           Processing Sale...
         </div>
       ) : (
-        `💳 Complete Sale - ${formatCurrency(total)}`
+        `Complete Sale - ${formatCurrency(total)}`
       )}
     </Button>
   );

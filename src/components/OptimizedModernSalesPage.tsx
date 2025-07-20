@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,7 +28,8 @@ import {
   Receipt,
   DollarSign,
   User,
-  Banknote
+  Banknote,
+  X
 } from 'lucide-react';
 
 const OptimizedModernSalesPage = () => {
@@ -123,6 +123,10 @@ const OptimizedModernSalesPage = () => {
       })
     );
   }, [products, toast]);
+
+  const removeFromCart = useCallback((productId: string) => {
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  }, []);
 
   const clearCart = useCallback(() => {
     setCart([]);
@@ -419,6 +423,15 @@ const OptimizedModernSalesPage = () => {
                             {formatCurrency(item.sellingPrice * item.quantity)}
                           </p>
                         </div>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeFromCart(item.id)}
+                          className="w-8 h-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))
                   )}
