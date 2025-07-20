@@ -13,6 +13,20 @@ import { useIsMobile } from '../../hooks/use-mobile';
 
 type DateRange = 'today' | 'week' | 'month';
 
+const formatDateLabel = (dateStr: string, format: string): string => {
+  const date = new Date(dateStr);
+  switch (format) {
+    case 'hour':
+      return date.getHours().toString().padStart(2, '0') + ':00';
+    case 'day':
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    case 'month':
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    default:
+      return date.toLocaleDateString();
+  }
+};
+
 const CleanReportsPage = () => {
   const [globalDateRange, setGlobalDateRange] = useState<DateRange>('today');
   const [salesChartResolution, setSalesChartResolution] = useState<'hourly' | 'daily' | 'monthly'>('daily');
@@ -64,7 +78,7 @@ const CleanReportsPage = () => {
     const totalOrders = summaryCardsSales.length;
     const activeCustomers = new Set(summaryCardsSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
-      product.currentStock <= (product.lowStockThreshold || 10)
+      (product.currentStock || 0) <= (product.lowStockThreshold || 10)
     ).length;
 
     const revenueByCash = summaryCardsSales
@@ -128,6 +142,11 @@ const CleanReportsPage = () => {
       default:
         chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         bucketFormat = 'day';
+        for (let i = 0; i < 30; i++) {
+          const day = new Date(chartFromDate);
+          day.setDate(day.getDate() + i);
+          timePoints.push(day.toISOString().substring(0, 10));
+        }
     }
 
     const chartSales = sales.filter(sale => {
@@ -289,24 +308,12 @@ const CleanReportsPage = () => {
     return [];
   }, [debtPaymentsSearchTerm]);
 
-  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
-  const overdueCustomers = customers.filter(c => c.outstandingDebt > 0);
-
-  const formatDateLabel = (dateStr: string, format: string): string => {
-    const date = new Date(dateStr);
-    switch (format) {
-      case 'hour':
-        return date.getHours().toString().padStart(2, '0') + ':00';
-      case 'day':
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      case 'month':
-        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      default:
-        return date.toLocaleDateString();
-    }
-  };
+  const lowStockProducts = products.filter(p => (p.currentStock || 0) <= (p.lowStockThreshold || 10));
+  const overdueCustomers = customers.filter(c => (c.outstandingDebt || 0) > 0);
 
   const handleDownloadCSV = (data: any[], filename: string) => {
+    if (data.length === 0) return;
+    
     const csvContent = [
       Object.keys(data[0] || {}),
       ...data.map(row => Object.values(row))
