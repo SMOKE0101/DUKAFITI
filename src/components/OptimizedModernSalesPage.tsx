@@ -150,7 +150,7 @@ const OptimizedModernSalesPage = () => {
       return products.filter(product => {
         if (!product) return false;
         const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
-        const matchesCategory = !selectedCategory || product.category === selectedCategory;
+        const matchesCategory = !selectedCategory || selectedCategory === '' || product.category === selectedCategory;
         return matchesSearch && matchesCategory;
       });
     } catch (error) {

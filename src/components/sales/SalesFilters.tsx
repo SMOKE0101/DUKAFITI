@@ -34,12 +34,12 @@ const SalesFilters = ({
             />
           </div>
           
-          <Select value={selectedCategory} onValueChange={onCategoryChange}>
+          <Select value={selectedCategory || "all"} onValueChange={(value) => onCategoryChange(value === "all" ? "" : value)}>
             <SelectTrigger className="w-full sm:w-48 border-gray-200 dark:border-slate-600 rounded-xl">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories.map(category => (
                 <SelectItem key={category} value={category}>
                   {category}
