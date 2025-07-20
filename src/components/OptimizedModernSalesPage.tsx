@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -120,11 +121,11 @@ const OptimizedModernSalesPage = () => {
       return [...prevCart, { ...product, quantity: 1 }];
     });
 
-    // Auto-switch to cart panel on mobile after adding item
-    if (isMobile) {
-      setActivePanel('cart');
-    }
-  }, [toast, isMobile]);
+    // Remove the automatic panel switch - let user stay on search panel
+    // if (isMobile) {
+    //   setActivePanel('cart');
+    // }
+  }, [toast]);
 
   const updateQuantity = useCallback((productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -209,10 +210,10 @@ const OptimizedModernSalesPage = () => {
     clearCart();
   }, [clearCart, refetchCustomers]);
 
-  // Toggle between panels on mobile
-  const togglePanel = () => {
+  // Toggle between panels on mobile with improved handling
+  const togglePanel = useCallback(() => {
     setActivePanel(prev => prev === 'search' ? 'cart' : 'search');
-  };
+  }, []);
 
   // Search Panel Component
   const SearchPanel = () => (
@@ -626,10 +627,10 @@ const OptimizedModernSalesPage = () => {
             <CartPanel />
           </div>
 
-          {/* Floating Toggle Button */}
+          {/* Floating Toggle Button - Fixed positioning and single click handling */}
           <button
             onClick={togglePanel}
-            className={`fixed top-1/2 transform -translate-y-1/2 z-20 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg transition-all duration-200 ease-out flex items-center justify-center ${
+            className={`fixed top-1/2 transform -translate-y-1/2 z-20 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg transition-all duration-200 ease-out flex items-center justify-center touch-manipulation ${
               activePanel === 'search' ? 'right-4' : 'left-4'
             }`}
             aria-label={activePanel === 'search' ? 'Go to Cart' : 'Go to Search'}
