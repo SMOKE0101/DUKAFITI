@@ -11,15 +11,15 @@ import { formatCurrency } from '../../utils/currency';
 import { CreditCard, Loader2 } from 'lucide-react';
 
 interface AddDebtModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   customer?: Customer;
   onDebtAdded?: () => void;
 }
 
 const AddDebtModal: React.FC<AddDebtModalProps> = ({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   customer,
   onDebtAdded
 }) => {
@@ -68,7 +68,7 @@ const AddDebtModal: React.FC<AddDebtModalProps> = ({
       setAmount('');
       setDescription('');
       onDebtAdded?.();
-      onClose();
+      onOpenChange(false);
     } catch (error) {
       console.error('Error adding debt:', error);
       toast({
@@ -85,11 +85,11 @@ const AddDebtModal: React.FC<AddDebtModalProps> = ({
     if (loading) return;
     setAmount('');
     setDescription('');
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

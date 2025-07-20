@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -41,23 +42,27 @@ const OptimizedModernSalesPage = () => {
   const { toast } = useToast();
 
   // Initialize hooks with error handling
+  const productsHook = useUnifiedProducts();
+  const customersHook = useUnifiedCustomers();
+  const syncHook = useUnifiedSyncManager();
+
   const {
     products = [],
     loading: productsLoading = true,
     error: productsError
-  } = useUnifiedProducts() || {};
+  } = productsHook || {};
 
   const {
     customers = [],
     loading: customersLoading = true,
     error: customersError
-  } = useUnifiedCustomers() || {};
+  } = customersHook || {};
 
   const {
     isOnline = false,
     pendingOperations = 0,
     syncPendingOperations
-  } = useUnifiedSyncManager() || {};
+  } = syncHook || {};
 
   // Error handling effect
   useEffect(() => {
@@ -651,11 +656,8 @@ const OptimizedModernSalesPage = () => {
       />
 
       <AddDebtModal
-        isOpen={isAddDebtModalOpen}
-        onClose={() => {
-          setIsAddDebtModalOpen(false);
-          setCustomerToAddDebt(null);
-        }}
+        open={isAddDebtModalOpen}
+        onOpenChange={setIsAddDebtModalOpen}
         customer={customerToAddDebt}
         onDebtAdded={handleDebtAdded}
       />
