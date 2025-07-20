@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,7 +34,7 @@ const OptimizedModernSalesPage = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
   const [customerToAddDebt, setCustomerToAddDebt] = useState<Customer | null>(null);
@@ -58,7 +59,7 @@ const OptimizedModernSalesPage = () => {
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = !selectedCategory || product.category === selectedCategory;
+      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, selectedCategory]);
@@ -247,7 +248,7 @@ const OptimizedModernSalesPage = () => {
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
                       {categories.map(category => (
                         <SelectItem key={category} value={category}>
                           {category}
@@ -336,12 +337,12 @@ const OptimizedModernSalesPage = () => {
                       Customer (Optional)
                     </label>
                     <div className="flex gap-2">
-                      <Select value={selectedCustomerId || ''} onValueChange={(value) => setSelectedCustomerId(value || null)}>
+                      <Select value={selectedCustomerId || 'none'} onValueChange={(value) => setSelectedCustomerId(value === 'none' ? null : value)}>
                         <SelectTrigger className="flex-1 border-gray-200 dark:border-slate-600 rounded-xl">
                           <SelectValue placeholder="Select customer..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No customer</SelectItem>
+                          <SelectItem value="none">No customer</SelectItem>
                           {customers.map(customer => (
                             <SelectItem key={customer.id} value={customer.id}>
                               <div className="flex items-center justify-between w-full">
