@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
@@ -25,7 +24,8 @@ import {
   Wifi,
   RefreshCw,
   CreditCard,
-  Receipt
+  Receipt,
+  AlertCircle
 } from 'lucide-react';
 
 const OptimizedModernSalesPage = () => {
@@ -37,87 +37,160 @@ const OptimizedModernSalesPage = () => {
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
   const [customerToAddDebt, setCustomerToAddDebt] = useState<Customer | null>(null);
+  const [componentError, setComponentError] = useState<string | null>(null);
 
-  const { products, loading: productsLoading } = useUnifiedProducts();
-  const { customers, loading: customersLoading } = useUnifiedCustomers();
-  const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
 
-  const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
+  // Initialize hooks with error handling
+  const {
+    products = [],
+    loading: productsLoading = true,
+    error: productsError
+  } = useUnifiedProducts() || {};
+
+  const {
+    customers = [],
+    loading: customersLoading = true,
+    error: customersError
+  } = useUnifiedCustomers() || {};
+
+  const {
+    isOnline = false,
+    pendingOperations = 0,
+    syncPendingOperations
+  } = useUnifiedSyncManager() || {};
+
+  // Error handling effect
+  useEffect(() => {
+    if (productsError || customersError) {
+      const error = productsError || customersError;
+      setComponentError(error);
+      console.error('[OptimizedModernSalesPage] Component error:', error);
+    }
+  }, [productsError, customersError]);
+
+  const total = useMemo(() => {
+    try {
+      return cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
+    } catch (error) {
+      console.error('[OptimizedModernSalesPage] Error calculating total:', error);
+      return 0;
+    }
+  }, [cart]);
 
   const categories = useMemo(() => {
-    const categorySet = new Set<string>();
-    products.forEach(product => {
-      if (product.category) {
-        categorySet.add(product.category);
-      }
-    });
-    return Array.from(categorySet).sort();
+    try {
+      if (!Array.isArray(products)) return [];
+      const categorySet = new Set<string>();
+      products.forEach(product => {
+        if (product?.category) {
+          categorySet.add(product.category);
+        }
+      });
+      return Array.from(categorySet).sort();
+    } catch (error) {
+      console.error('[OptimizedModernSalesPage] Error processing categories:', error);
+      return [];
+    }
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = !selectedCategory || product.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
+    try {
+      if (!Array.isArray(products)) return [];
+      return products.filter(product => {
+        if (!product) return false;
+        const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
+        const matchesCategory = !selectedCategory || product.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      });
+    } catch (error) {
+      console.error('[OptimizedModernSalesPage] Error filtering products:', error);
+      return [];
+    }
   }, [products, searchTerm, selectedCategory]);
 
   const addToCart = useCallback((product: any) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
-      if (existingItem) {
-        if (existingItem.quantity >= product.currentStock) {
+    try {
+      if (!product || !product.id) {
+        toast({
+          title: "Invalid Product",
+          description: "Unable to add product to cart",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCart(prevCart => {
+        const existingItem = prevCart.find(item => item.id === product.id);
+        if (existingItem) {
+          if (existingItem.quantity >= (product.currentStock || 0)) {
+            toast({
+              title: "Insufficient Stock",
+              description: `Only ${product.currentStock || 0} units available`,
+              variant: "destructive",
+            });
+            return prevCart;
+          }
+          return prevCart.map(item =>
+            item.id === product.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          );
+        }
+        
+        if ((product.currentStock || 0) <= 0) {
           toast({
-            title: "Insufficient Stock",
-            description: `Only ${product.currentStock} units available`,
+            title: "Out of Stock",
+            description: `${product.name} is currently out of stock`,
             variant: "destructive",
           });
           return prevCart;
         }
-        return prevCart.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      
-      if (product.currentStock <= 0) {
-        toast({
-          title: "Out of Stock",
-          description: `${product.name} is currently out of stock`,
-          variant: "destructive",
-        });
-        return prevCart;
-      }
 
-      return [...prevCart, { ...product, quantity: 1 }];
-    });
+        return [...prevCart, { ...product, quantity: 1 }];
+      });
+    } catch (error) {
+      console.error('[OptimizedModernSalesPage] Error adding to cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart",
+        variant: "destructive",
+      });
+    }
   }, [toast]);
 
   const updateQuantity = useCallback((productId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      setCart(prevCart => prevCart.filter(item => item.id !== productId));
-      return;
-    }
+    try {
+      if (newQuantity <= 0) {
+        setCart(prevCart => prevCart.filter(item => item.id !== productId));
+        return;
+      }
 
-    setCart(prevCart =>
-      prevCart.map(item => {
-        if (item.id === productId) {
-          const maxQuantity = products.find(p => p.id === productId)?.currentStock || 0;
-          if (newQuantity > maxQuantity) {
-            toast({
-              title: "Insufficient Stock",
-              description: `Only ${maxQuantity} units available`,
-              variant: "destructive",
-            });
-            return item;
+      setCart(prevCart =>
+        prevCart.map(item => {
+          if (item.id === productId) {
+            const maxQuantity = products.find(p => p?.id === productId)?.currentStock || 0;
+            if (newQuantity > maxQuantity) {
+              toast({
+                title: "Insufficient Stock",
+                description: `Only ${maxQuantity} units available`,
+                variant: "destructive",
+              });
+              return item;
+            }
+            return { ...item, quantity: newQuantity };
           }
-          return { ...item, quantity: newQuantity };
-        }
-        return item;
-      })
-    );
+          return item;
+        })
+      );
+    } catch (error) {
+      console.error('[OptimizedModernSalesPage] Error updating quantity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update quantity",
+        variant: "destructive",
+      });
+    }
   }, [products, toast]);
 
   const clearCart = useCallback(() => {
@@ -127,21 +200,28 @@ const OptimizedModernSalesPage = () => {
   }, []);
 
   const handleCustomerAdded = useCallback((newCustomer: Customer) => {
-    console.log('[OptimizedModernSalesPage] Customer added:', newCustomer);
-    setSelectedCustomerId(newCustomer.id);
-    toast({
-      title: "Customer Added & Selected",
-      description: `${newCustomer.name} has been added and selected for this sale.`,
-    });
+    try {
+      console.log('[OptimizedModernSalesPage] Customer added:', newCustomer);
+      setSelectedCustomerId(newCustomer.id);
+      toast({
+        title: "Customer Added & Selected",
+        description: `${newCustomer.name} has been added and selected for this sale.`,
+      });
+    } catch (error) {
+      console.error('[OptimizedModernSalesPage] Error handling customer added:', error);
+    }
   }, [toast]);
 
   const handleAddDebt = useCallback((customer: Customer) => {
-    setCustomerToAddDebt(customer);
-    setIsAddDebtModalOpen(true);
+    try {
+      setCustomerToAddDebt(customer);
+      setIsAddDebtModalOpen(true);
+    } catch (error) {
+      console.error('[OptimizedModernSalesPage] Error opening debt modal:', error);
+    }
   }, []);
 
   const handleDebtAdded = useCallback(() => {
-    // Refresh data after debt is added
     toast({
       title: "Debt Added",
       description: "Customer debt has been updated successfully.",
@@ -149,22 +229,25 @@ const OptimizedModernSalesPage = () => {
   }, [toast]);
 
   const handleSync = async () => {
-    if (!isOnline) {
-      toast({
-        title: "Offline Mode",
-        description: "Please connect to the internet to sync data.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      await syncPendingOperations();
-      toast({
-        title: "Sync Complete",
-        description: "All offline data has been synchronized.",
-      });
+      if (!isOnline) {
+        toast({
+          title: "Offline Mode",
+          description: "Please connect to the internet to sync data.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (syncPendingOperations) {
+        await syncPendingOperations();
+        toast({
+          title: "Sync Complete",
+          description: "All offline data has been synchronized.",
+        });
+      }
     } catch (error) {
+      console.error('[OptimizedModernSalesPage] Sync error:', error);
       toast({
         title: "Sync Failed",
         description: "Failed to sync some data. Please try again.",
@@ -172,6 +255,51 @@ const OptimizedModernSalesPage = () => {
       });
     }
   };
+
+  // Show error state if there's a component error
+  if (componentError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-slate-800">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center gap-4">
+              <AlertCircle className="w-12 h-12 text-red-500" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sales Page Error</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {componentError}
+                </p>
+              </div>
+              <Button onClick={() => window.location.reload()} className="mt-2">
+                Refresh Page
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (productsLoading || customersLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-slate-800">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Loading Sales Page</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Loading products and customers...
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-slate-800">
@@ -267,15 +395,7 @@ const OptimizedModernSalesPage = () => {
 
             {/* Products Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {productsLoading ? (
-                Array.from({ length: 8 }).map((_, index) => (
-                  <div key={index} className="bg-white dark:bg-slate-800 rounded-xl p-4 animate-pulse">
-                    <div className="w-full h-24 bg-gray-200 dark:bg-slate-700 rounded-lg mb-3"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-2/3"></div>
-                  </div>
-                ))
-              ) : filteredProducts.length === 0 ? (
+              {filteredProducts.length === 0 ? (
                 <div className="col-span-full text-center py-12">
                   <div className="text-gray-400 dark:text-slate-500 mb-2">
                     <Search className="w-12 h-12 mx-auto mb-3" />
@@ -303,8 +423,8 @@ const OptimizedModernSalesPage = () => {
                         <span className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
                           {product.category}
                         </span>
-                        <span className={`font-medium ${product.currentStock <= 5 ? 'text-red-500' : 'text-green-600'}`}>
-                          Stock: {product.currentStock}
+                        <span className={`font-medium ${(product.currentStock || 0) <= 5 ? 'text-red-500' : 'text-green-600'}`}>
+                          Stock: {product.currentStock || 0}
                         </span>
                       </div>
                       
@@ -315,7 +435,7 @@ const OptimizedModernSalesPage = () => {
                         <Button 
                           size="sm" 
                           className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg"
-                          disabled={product.currentStock <= 0}
+                          disabled={(product.currentStock || 0) <= 0}
                         >
                           <Plus className="w-3 h-3" />
                         </Button>
@@ -526,8 +646,8 @@ const OptimizedModernSalesPage = () => {
 
       {/* Modals */}
       <AddCustomerModal
-        open={isAddCustomerModalOpen}
-        onOpenChange={setIsAddCustomerModalOpen}
+        isOpen={isAddCustomerModalOpen}
+        onClose={() => setIsAddCustomerModalOpen(false)}
         onCustomerAdded={handleCustomerAdded}
       />
 
