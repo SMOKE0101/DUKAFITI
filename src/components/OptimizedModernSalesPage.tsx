@@ -19,10 +19,10 @@ import {
   UserPlus, 
   CreditCard,
   AlertCircle,
-  Loader2
+  Loader2,
+  Search
 } from 'lucide-react';
 
-// Safe hook imports with error handling
 const OptimizedModernSalesPage = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -34,6 +34,9 @@ const OptimizedModernSalesPage = () => {
   const [customerToAddDebt, setCustomerToAddDebt] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Mobile POS panel state
+  const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
 
   // Safe data states with defaults
   const [products, setProducts] = useState<any[]>([]);
@@ -150,7 +153,7 @@ const OptimizedModernSalesPage = () => {
       return products.filter(product => {
         if (!product) return false;
         const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
-        const matchesCategory = !selectedCategory || selectedCategory === '' || product.category === selectedCategory;
+        const matchesCategory = !selectedCategory || selectedCategory === '' || selectedCategory === 'all' || product.category === selectedCategory;
         return matchesSearch && matchesCategory;
       });
     } catch (error) {
@@ -199,6 +202,9 @@ const OptimizedModernSalesPage = () => {
 
         return [...prevCart, { ...product, quantity: 1 }];
       });
+
+      // Auto-switch to cart panel when item is added
+      setActivePanel('cart');
     } catch (error) {
       console.error('[OptimizedModernSalesPage] Error adding to cart:', error);
       toast({
@@ -343,7 +349,7 @@ const OptimizedModernSalesPage = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -360,9 +366,15 @@ const OptimizedModernSalesPage = () => {
         formatCurrency={formatCurrency}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+      {/* Mobile POS Interface */}
+      <div className="relative overflow-hidden">
+        {/* Panel A: Search & Quick-Select */}
+        <div 
+          className={`w-full h-[calc(100vh-80px)] transition-transform duration-200 ease-in-out ${
+            activePanel === 'search' ? 'translate-x-0' : '-translate-x-full'
+          } absolute top-0 left-0`}
+        >
+          <div className="h-full overflow-y-auto px-4 py-6">
             {/* Search and Filters */}
             <SalesFilters
               searchTerm={searchTerm}
@@ -373,17 +385,23 @@ const OptimizedModernSalesPage = () => {
             />
 
             {/* Products Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4 pb-20">
               <ProductsGrid
                 products={filteredProducts}
                 onAddToCart={addToCart}
               />
             </div>
           </div>
+        </div>
 
-          {/* Checkout Panel */}
-          <div className="space-y-6">
-            <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm sticky top-24">
+        {/* Panel B: Cart & Checkout */}
+        <div 
+          className={`w-full h-[calc(100vh-80px)] transition-transform duration-200 ease-in-out ${
+            activePanel === 'cart' ? 'translate-x-0' : 'translate-x-full'
+          } absolute top-0 left-0`}
+        >
+          <div className="h-full overflow-y-auto px-4 py-6">
+            <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center gap-2 mb-6">
                   <ShoppingCart className="w-5 h-5 text-purple-600" />
@@ -433,14 +451,14 @@ const OptimizedModernSalesPage = () => {
                         <button
                           key={method.value}
                           onClick={() => setPaymentMethod(method.value as any)}
-                          className={`p-3 rounded-xl border-2 transition-all text-center ${
+                          className={`p-3 rounded-xl border-2 transition-all text-center min-h-[72px] ${
                             paymentMethod === method.value
                               ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
                               : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 text-gray-600 dark:text-gray-400'
                           }`}
                         >
-                          <div className="text-lg mb-1">{method.icon}</div>
-                          <div className="text-xs font-medium">{method.label}</div>
+                          <div className="text-2xl mb-1">{method.icon}</div>
+                          <div className="text-sm font-medium">{method.label}</div>
                         </button>
                       ))}
                     </div>
@@ -452,36 +470,36 @@ const OptimizedModernSalesPage = () => {
                   {cart.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Your cart is empty</p>
-                      <p className="text-xs">Add products to get started</p>
+                      <p className="text-lg font-medium">Your cart is empty</p>
+                      <p className="text-sm">Add products to get started</p>
                     </div>
                   ) : (
                     cart.map(item => (
-                      <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center text-sm">
+                      <div key={item.id} className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center text-lg">
                           📦
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-base truncate">
                             {item.name}
                           </h4>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {formatCurrency(item.sellingPrice || 0)} each
                           </p>
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
-                            className="w-8 h-8 p-0 rounded-lg"
+                            className="w-10 h-10 p-0 rounded-lg"
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-4 h-4" />
                           </Button>
                           
-                          <span className="w-8 text-center text-sm font-medium text-gray-900 dark:text-white">
+                          <span className="w-8 text-center text-lg font-bold text-gray-900 dark:text-white">
                             {item.quantity || 0}
                           </span>
                           
@@ -489,14 +507,14 @@ const OptimizedModernSalesPage = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.id, (item.quantity || 0) + 1)}
-                            className="w-8 h-8 p-0 rounded-lg"
+                            className="w-10 h-10 p-0 rounded-lg"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-4 h-4" />
                           </Button>
                         </div>
                         
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                          <p className="font-bold text-gray-900 dark:text-white text-lg">
                             {formatCurrency((item.sellingPrice || 0) * (item.quantity || 0))}
                           </p>
                         </div>
@@ -508,12 +526,12 @@ const OptimizedModernSalesPage = () => {
                 {/* Total and Actions */}
                 {cart.length > 0 && (
                   <>
-                    <Separator className="my-4" />
+                    <Separator className="my-6" />
                     
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">Total:</span>
-                        <span className="text-2xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">Total:</span>
+                        <span className="text-3xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                           {formatCurrency(total)}
                         </span>
                       </div>
@@ -530,7 +548,7 @@ const OptimizedModernSalesPage = () => {
                       <Button
                         onClick={clearCart}
                         variant="outline"
-                        className="w-full border-2 border-gray-300 hover:border-gray-400 rounded-xl"
+                        className="w-full border-2 border-gray-300 hover:border-gray-400 rounded-xl h-12 text-base"
                       >
                         Clear Cart
                       </Button>
@@ -539,37 +557,23 @@ const OptimizedModernSalesPage = () => {
                 )}
               </CardContent>
             </Card>
-
-            {/* Quick Actions */}
-            <Card className="border-0 shadow-md bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Quick Actions</h3>
-                <div className="space-y-2">
-                  <Button
-                    onClick={() => setIsAddCustomerModalOpen(true)}
-                    className="w-full justify-start bg-green-600 hover:bg-green-700 text-white rounded-xl"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Add Customer
-                  </Button>
-                  
-                  {selectedCustomerId && (
-                    <Button
-                      onClick={() => {
-                        const customer = customers.find(c => c.id === selectedCustomerId);
-                        if (customer) handleAddDebt(customer);
-                      }}
-                      className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Record Debt
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
+
+        {/* Floating Toggle Button */}
+        <button
+          onClick={() => setActivePanel(activePanel === 'search' ? 'cart' : 'search')}
+          className={`fixed top-1/2 -translate-y-1/2 z-50 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 active:scale-95 ${
+            activePanel === 'search' ? 'right-4' : 'left-4'
+          }`}
+          aria-label={activePanel === 'search' ? 'Go to Cart' : 'Go to Search'}
+        >
+          {activePanel === 'search' ? (
+            <ShoppingCart className="w-6 h-6" />
+          ) : (
+            <Search className="w-6 h-6" />
+          )}
+        </button>
       </div>
 
       {/* Modals */}
