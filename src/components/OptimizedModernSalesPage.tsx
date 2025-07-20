@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -646,8 +645,8 @@ const OptimizedModernSalesPage = () => {
 
       {/* Modals */}
       <AddCustomerModal
-        isOpen={isAddCustomerModalOpen}
-        onClose={() => setIsAddCustomerModalOpen(false)}
+        open={isAddCustomerModalOpen}
+        onOpenChange={setIsAddCustomerModalOpen}
         onCustomerAdded={handleCustomerAdded}
       />
 
