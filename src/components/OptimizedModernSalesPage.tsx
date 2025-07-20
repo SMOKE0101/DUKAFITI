@@ -12,6 +12,8 @@ import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
+import { useUnifiedSales } from '../hooks/useUnifiedSales';
+import { useIsMobile } from '../hooks/use-mobile';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
@@ -24,7 +26,6 @@ import {
   WifiOff, 
   Wifi,
   RefreshCw,
-  CreditCard,
   Receipt,
   DollarSign,
   User,
@@ -40,9 +41,14 @@ const OptimizedModernSalesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
+  
+  // Mobile panel state
+  const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
+  const isMobile = useIsMobile();
 
   const { products, loading: productsLoading } = useUnifiedProducts();
   const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
+  const { sales } = useUnifiedSales();
   const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
 
@@ -59,13 +65,29 @@ const OptimizedModernSalesPage = () => {
     return Array.from(categorySet).sort();
   }, [products]);
 
+  // Calculate product sales frequency for sorting
+  const productSalesFrequency = useMemo(() => {
+    const frequency: Record<string, number> = {};
+    sales.forEach(sale => {
+      frequency[sale.productId] = (frequency[sale.productId] || 0) + sale.quantity;
+    });
+    return frequency;
+  }, [sales]);
+
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    const filtered = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchTerm, selectedCategory]);
+
+    // Sort by sales frequency (most sold first)
+    return filtered.sort((a, b) => {
+      const aFreq = productSalesFrequency[a.id] || 0;
+      const bFreq = productSalesFrequency[b.id] || 0;
+      return bFreq - aFreq;
+    });
+  }, [products, searchTerm, selectedCategory, productSalesFrequency]);
 
   const addToCart = useCallback((product: any) => {
     setCart(prevCart => {
@@ -97,7 +119,12 @@ const OptimizedModernSalesPage = () => {
 
       return [...prevCart, { ...product, quantity: 1 }];
     });
-  }, [toast]);
+
+    // Auto-switch to cart panel on mobile after adding item
+    if (isMobile) {
+      setActivePanel('cart');
+    }
+  }, [toast, isMobile]);
 
   const updateQuantity = useCallback((productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -182,6 +209,343 @@ const OptimizedModernSalesPage = () => {
     clearCart();
   }, [clearCart, refetchCustomers]);
 
+  // Toggle between panels on mobile
+  const togglePanel = () => {
+    setActivePanel(prev => prev === 'search' ? 'cart' : 'search');
+  };
+
+  // Search Panel Component
+  const SearchPanel = () => (
+    <div className="flex flex-col h-full">
+      {/* Search and Filters */}
+      <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm mb-6">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search products by name or category…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all"
+              />
+            </div>
+            
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-48 bg-gray-100 border-0 rounded-xl py-4 focus:ring-2 focus:ring-purple-300">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products Grid */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+          {/* Record Debt Card - First Card */}
+          <Card 
+            className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
+            onClick={handleAddDebt}
+          >
+            <CardContent className="p-6 text-center">
+              <div className="mb-4">
+                <div className="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto group-hover:bg-emerald-700 transition-colors">
+                  <DollarSign className="w-8 h-8" />
+                </div>
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Record Debt</h3>
+              <p className="text-sm text-gray-500 mb-4">Add customer debt transaction</p>
+              
+              <div className="flex justify-center">
+                <div className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-2 transition-colors">
+                  <Plus className="w-4 h-4" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Product Cards */}
+          {productsLoading ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <Card key={index} className="bg-white rounded-3xl border border-gray-200 shadow-sm animate-pulse">
+                <CardContent className="p-6">
+                  <div className="w-full h-24 bg-gray-200 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3 mb-4"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                </CardContent>
+              </Card>
+            ))
+          ) : filteredProducts.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <div className="text-gray-400 mb-2">
+                <Search className="w-12 h-12 mx-auto mb-3" />
+                <p className="text-lg font-medium">No products found</p>
+                <p className="text-sm">Try adjusting your search or filters</p>
+              </div>
+            </div>
+          ) : (
+            filteredProducts.map(product => (
+              <Card 
+                key={product.id} 
+                className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
+              >
+                <CardContent className="p-6">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
+                      {product.name}
+                    </h3>
+                    <span className="text-sm text-gray-500 uppercase tracking-wide">
+                      {product.category}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
+                      product.currentStock <= 5 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      Stock: {product.currentStock}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl font-bold text-purple-600">
+                      {formatCurrency(product.sellingPrice)}
+                    </span>
+                    <Button 
+                      onClick={() => addToCart(product)}
+                      disabled={product.currentStock <= 0}
+                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 transition-colors"
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Cart Panel Component
+  const CartPanel = () => (
+    <div className="flex flex-col h-full">
+      {/* Cart Summary */}
+      <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm mb-6">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <ShoppingCart className="w-5 h-5 text-purple-600" />
+            <h2 className="text-lg font-bold text-gray-900">Cart ({cart.length})</h2>
+          </div>
+
+          {/* Cart Items */}
+          <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
+            {cart.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Your cart is empty</p>
+                <p className="text-xs">Add products to get started</p>
+              </div>
+            ) : (
+              cart.map(item => (
+                <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 text-sm truncate">
+                      {item.name}
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      {formatCurrency(item.sellingPrice)} each
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="w-8 h-8 p-0 rounded-lg"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </Button>
+                    
+                    <span className="w-8 text-center text-sm font-medium text-gray-900">
+                      {item.quantity}
+                    </span>
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="w-8 h-8 p-0 rounded-lg"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {formatCurrency(item.sellingPrice * item.quantity)}
+                    </p>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeFromCart(item.id)}
+                    className="w-8 h-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {cart.length > 0 && (
+            <>
+              <Separator className="my-4" />
+              
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-lg font-bold text-gray-900">Total:</span>
+                <span className="text-2xl font-black text-purple-600">
+                  {formatCurrency(total)}
+                </span>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Customer Selection & Payment */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-6">
+          {/* Customer Selection */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Customer (Optional)
+            </label>
+            <div className="flex gap-2">
+              <Select 
+                value={selectedCustomerId || 'none'} 
+                onValueChange={(value) => {
+                  setSelectedCustomerId(value === 'none' ? null : value);
+                }}
+              >
+                <SelectTrigger className="flex-1 bg-gray-100 border-0 rounded-xl py-4 focus:ring-2 focus:ring-purple-300">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <SelectValue placeholder="Select customer..." />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No customer</SelectItem>
+                  {customers.map(customer => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{customer.name}</span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {customer.phone}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={() => setIsAddCustomerModalOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2"
+              >
+                <UserPlus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Selected Customer Info */}
+          {selectedCustomer && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-blue-800">{selectedCustomer.name}</p>
+                  <p className="text-sm text-blue-600">{selectedCustomer.phone}</p>
+                </div>
+                {selectedCustomer.outstandingDebt > 0 && (
+                  <Badge variant="destructive" className="text-xs">
+                    Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Payment Method */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Payment Method
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: 'cash', label: 'Cash', icon: Banknote },
+                { value: 'mpesa', label: 'M-Pesa', icon: Receipt },
+                { value: 'debt', label: 'Debt', icon: DollarSign }
+              ].map(method => (
+                <button
+                  key={method.value}
+                  onClick={() => setPaymentMethod(method.value as any)}
+                  className={`p-3 rounded-xl border-2 transition-all text-center ${
+                    paymentMethod === method.value
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                  }`}
+                >
+                  <method.icon className="w-5 h-5 mx-auto mb-1" />
+                  <div className="text-xs font-medium">{method.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {cart.length > 0 && (
+            <div className="space-y-3 pb-20">
+              <SalesCheckout
+                cart={cart}
+                selectedCustomerId={selectedCustomerId}
+                paymentMethod={paymentMethod}
+                customers={customers}
+                onCheckoutComplete={handleCheckoutComplete}
+                isOnline={isOnline}
+              />
+
+              <Button
+                onClick={clearCart}
+                variant="outline"
+                className="w-full border-2 border-gray-300 hover:border-gray-400 rounded-xl"
+              >
+                Clear Cart
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with Network Status */}
@@ -227,342 +591,78 @@ const OptimizedModernSalesPage = () => {
                 )}
               </div>
 
-              {/* Cart Summary */}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 rounded-full">
-                <ShoppingCart className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-700">
-                  {cart.length} items • {formatCurrency(total)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Search and Filters */}
-            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="Search products by name or category…"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all"
-                    />
-                  </div>
-                  
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full sm:w-48 bg-gray-100 border-0 rounded-xl py-4 focus:ring-2 focus:ring-purple-300">
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {categories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Cart Summary - Hidden on mobile */}
+              {!isMobile && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 rounded-full">
+                  <ShoppingCart className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-700">
+                    {cart.length} items • {formatCurrency(total)}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Record Debt Card - First Card */}
-              <Card 
-                className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
-                onClick={handleAddDebt}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="mb-4">
-                    <div className="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto group-hover:bg-emerald-700 transition-colors">
-                      <DollarSign className="w-8 h-8" />
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Record Debt</h3>
-                  <p className="text-sm text-gray-500 mb-4">Add customer debt transaction</p>
-                  
-                  <div className="flex justify-center">
-                    <div className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-2 transition-colors">
-                      <Plus className="w-4 h-4" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Product Cards */}
-              {productsLoading ? (
-                Array.from({ length: 8 }).map((_, index) => (
-                  <Card key={index} className="bg-white rounded-3xl border border-gray-200 shadow-sm animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="w-full h-24 bg-gray-200 rounded-lg mb-4"></div>
-                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3 mb-4"></div>
-                      <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : filteredProducts.length === 0 ? (
-                <div className="col-span-full text-center py-12">
-                  <div className="text-gray-400 mb-2">
-                    <Search className="w-12 h-12 mx-auto mb-3" />
-                    <p className="text-lg font-medium">No products found</p>
-                    <p className="text-sm">Try adjusting your search or filters</p>
-                  </div>
-                </div>
-              ) : (
-                filteredProducts.map(product => (
-                  <Card 
-                    key={product.id} 
-                    className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
-                  >
-                    <CardContent className="p-6">
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
-                          {product.name}
-                        </h3>
-                        <span className="text-sm text-gray-500 uppercase tracking-wide">
-                          {product.category}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                          product.currentStock <= 5 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          Stock: {product.currentStock}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-xl font-bold text-purple-600">
-                          {formatCurrency(product.sellingPrice)}
-                        </span>
-                        <Button 
-                          onClick={() => addToCart(product)}
-                          disabled={product.currentStock <= 0}
-                          className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 transition-colors"
-                          size="sm"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
               )}
             </div>
           </div>
-
-          <div className="space-y-6">
-            {/* Cart Summary - Moved Above */}
-            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm sticky top-24">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <ShoppingCart className="w-5 h-5 text-purple-600" />
-                  <h2 className="text-lg font-bold text-gray-900">Cart ({cart.length})</h2>
-                </div>
-
-                {/* Cart Items */}
-                <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
-                  {cart.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Your cart is empty</p>
-                      <p className="text-xs">Add products to get started</p>
-                    </div>
-                  ) : (
-                    cart.map(item => (
-                      <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 text-sm truncate">
-                            {item.name}
-                          </h4>
-                          <p className="text-xs text-gray-500">
-                            {formatCurrency(item.sellingPrice)} each
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-8 h-8 p-0 rounded-lg"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          
-                          <span className="w-8 text-center text-sm font-medium text-gray-900">
-                            {item.quantity}
-                          </span>
-                          
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-8 h-8 p-0 rounded-lg"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                        
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900 text-sm">
-                            {formatCurrency(item.sellingPrice * item.quantity)}
-                          </p>
-                        </div>
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeFromCart(item.id)}
-                          className="w-8 h-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {cart.length > 0 && (
-                  <>
-                    <Separator className="my-4" />
-                    
-                    <div className="flex justify-between items-center mb-6">
-                      <span className="text-lg font-bold text-gray-900">Total:</span>
-                      <span className="text-2xl font-black text-purple-600">
-                        {formatCurrency(total)}
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {/* Customer Selection - Moved Below Cart */}
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Customer (Optional)
-                    </label>
-                    <div className="flex gap-2">
-                      <Select 
-                        value={selectedCustomerId || 'none'} 
-                        onValueChange={(value) => {
-                          setSelectedCustomerId(value === 'none' ? null : value);
-                        }}
-                      >
-                        <SelectTrigger className="flex-1 bg-gray-100 border-0 rounded-xl py-4 focus:ring-2 focus:ring-purple-300">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-gray-400" />
-                            <SelectValue placeholder="Select customer..." />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No customer</SelectItem>
-                          {customers.map(customer => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              <div className="flex items-center justify-between w-full">
-                                <span>{customer.name}</span>
-                                <span className="text-xs text-gray-500 ml-2">
-                                  {customer.phone}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        onClick={() => setIsAddCustomerModalOpen(true)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2"
-                      >
-                        <UserPlus className="w-4 h-4 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Selected Customer Info */}
-                  {selectedCustomer && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-blue-800">{selectedCustomer.name}</p>
-                          <p className="text-sm text-blue-600">{selectedCustomer.phone}</p>
-                        </div>
-                        {selectedCustomer.outstandingDebt > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Payment Method - Below Customer */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Payment Method
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: 'cash', label: 'Cash', icon: Banknote },
-                        { value: 'mpesa', label: 'M-Pesa', icon: CreditCard },
-                        { value: 'debt', label: 'Debt', icon: DollarSign }
-                      ].map(method => (
-                        <button
-                          key={method.value}
-                          onClick={() => setPaymentMethod(method.value as any)}
-                          className={`p-3 rounded-xl border-2 transition-all text-center ${
-                            paymentMethod === method.value
-                              ? 'border-purple-500 bg-purple-50 text-purple-700'
-                              : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                          }`}
-                        >
-                          <method.icon className="w-5 h-5 mx-auto mb-1" />
-                          <div className="text-xs font-medium">{method.label}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {cart.length > 0 && (
-                  <div className="space-y-3">
-                    <SalesCheckout
-                      cart={cart}
-                      selectedCustomerId={selectedCustomerId}
-                      paymentMethod={paymentMethod}
-                      customers={customers}
-                      onCheckoutComplete={handleCheckoutComplete}
-                      isOnline={isOnline}
-                    />
-
-                    <Button
-                      onClick={clearCart}
-                      variant="outline"
-                      className="w-full border-2 border-gray-300 hover:border-gray-400 rounded-xl"
-                    >
-                      Clear Cart
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
+
+      {/* Mobile Two-Panel Layout */}
+      {isMobile ? (
+        <div className="relative h-[calc(100vh-64px)] overflow-hidden">
+          {/* Search Panel */}
+          <div 
+            className={`absolute inset-0 p-6 transition-transform duration-200 ease-out ${
+              activePanel === 'search' ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <SearchPanel />
+          </div>
+
+          {/* Cart Panel */}
+          <div 
+            className={`absolute inset-0 p-6 transition-transform duration-200 ease-out ${
+              activePanel === 'cart' ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
+            <CartPanel />
+          </div>
+
+          {/* Floating Toggle Button */}
+          <button
+            onClick={togglePanel}
+            className={`fixed top-1/2 transform -translate-y-1/2 z-20 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg transition-all duration-200 ease-out flex items-center justify-center ${
+              activePanel === 'search' ? 'right-4' : 'left-4'
+            }`}
+            aria-label={activePanel === 'search' ? 'Go to Cart' : 'Go to Search'}
+          >
+            {activePanel === 'search' ? (
+              <ShoppingCart className="w-6 h-6" />
+            ) : (
+              <Search className="w-6 h-6" />
+            )}
+            {cart.length > 0 && activePanel === 'search' && (
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">
+                {cart.length}
+              </div>
+            )}
+          </button>
+        </div>
+      ) : (
+        /* Desktop Layout - Keep existing two-column layout */
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <SearchPanel />
+            </div>
+            <div>
+              <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm sticky top-24">
+                <CardContent className="p-6">
+                  <CartPanel />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       <AddCustomerModal
