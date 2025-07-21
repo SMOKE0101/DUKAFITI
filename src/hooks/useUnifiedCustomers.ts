@@ -365,11 +365,12 @@ export const useUnifiedCustomers = () => {
   const updateCustomer = useCallback(async (id: string, updates: Partial<Customer>) => {
     if (!user) throw new Error('User not authenticated');
 
-    console.log('[UnifiedCustomers] Starting customer update:', {
+    console.log('[UnifiedCustomers] updateCustomer called with:', {
       customerId: id,
       updates,
       isOnline,
-      pendingOpsCount: pendingOps.length
+      pendingOpsCount: pendingOps.length,
+      userAuthenticated: !!user
     });
 
     // Find the current customer for reference

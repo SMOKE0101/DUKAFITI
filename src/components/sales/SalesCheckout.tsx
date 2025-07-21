@@ -39,6 +39,15 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
 
   const handleCheckout = async () => {
+    console.log('[SalesCheckout] handleCheckout called with:', {
+      cart: cart.length,
+      selectedCustomerId,
+      paymentMethod,
+      customer,
+      total,
+      isOnline,
+      pendingOperations
+    });
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -159,6 +168,12 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
             newDebt: updates.outstandingDebt,
             newTotalPurchases: updates.totalPurchases
           });
+          
+          // Dispatch event to notify that customer data has changed
+          window.dispatchEvent(new CustomEvent('customer-debt-updated', {
+            detail: { customerId: selectedCustomerId, newDebt: updates.outstandingDebt }
+          }));
+          
         } catch (error) {
           console.error('[SalesCheckout] Customer debt update failed:', error);
           // Don't throw error here as sale was already completed successfully
@@ -201,11 +216,28 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
     (paymentMethod === 'debt' && !selectedCustomerId);
 
   return (
-    <Button
-      onClick={handleCheckout}
-      disabled={isDisabled}
-      className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:transform-none active:scale-95 min-h-[56px]"
-    >
+    <div className="space-y-2">
+      {/* Debug information - only show in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <details className="text-xs text-gray-500 bg-gray-50 rounded p-2">
+          <summary className="cursor-pointer">Debug Info</summary>
+          <div className="mt-1 space-y-1">
+            <div>Customer: {customer?.name || 'none'}</div>
+            <div>Current Debt: {customer?.outstandingDebt || 0}</div>
+            <div>Payment Method: {paymentMethod}</div>
+            <div>Cart Items: {cart.length}</div>
+            <div>Total: {total}</div>
+            <div>Online: {isOnline ? 'Yes' : 'No'}</div>
+            <div>Pending Ops: {pendingOperations}</div>
+          </div>
+        </details>
+      )}
+      
+      <Button
+        onClick={handleCheckout}
+        disabled={isDisabled}
+        className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:transform-none active:scale-95 min-h-[56px]"
+      >
       {isProcessing ? (
         <div className="flex items-center justify-center gap-2">
           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -214,7 +246,8 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       ) : (
         `Complete Sale - ${formatCurrency(total)}`
       )}
-    </Button>
+      </Button>
+    </div>
   );
 };
 

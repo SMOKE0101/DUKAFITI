@@ -217,9 +217,24 @@ const OptimizedModernSalesPage = () => {
   };
 
   const handleCheckoutComplete = useCallback(() => {
+    console.log('[OptimizedModernSalesPage] Checkout completed, refreshing customer data');
     refetchCustomers();
     clearCart();
   }, [clearCart, refetchCustomers]);
+
+  // Listen for customer debt updates and refresh data immediately
+  useEffect(() => {
+    const handleCustomerDebtUpdate = (event: CustomEvent) => {
+      console.log('[OptimizedModernSalesPage] Customer debt updated event received:', event.detail);
+      refetchCustomers();
+    };
+
+    window.addEventListener('customer-debt-updated', handleCustomerDebtUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('customer-debt-updated', handleCustomerDebtUpdate as EventListener);
+    };
+  }, [refetchCustomers]);
 
   // Toggle between panels on mobile with improved handling
   const togglePanel = useCallback(() => {
