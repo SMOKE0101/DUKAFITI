@@ -21,6 +21,7 @@ import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
+import AccurateDashboardStats from './dashboard/AccurateDashboardStats';
 
 const ColoredCardDashboard = () => {
   const { sales } = useUnifiedSales();
@@ -29,16 +30,19 @@ const ColoredCardDashboard = () => {
   const { pendingOperations } = useUnifiedSyncManager();
   const navigate = useNavigate();
 
-  // Calculate today's metrics
-  const today = new Date().toDateString();
-  const todaySales = sales.filter(sale => 
-    new Date(sale.timestamp).toDateString() === today
-  );
-  const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-  const ordersToday = todaySales.length;
-  const activeCustomers = customers.filter(c => c.totalPurchases > 0).length;
-  
-  // Low stock products (excluding unspecified stock)
+  console.log('[ColoredCardDashboard] Data loaded:', {
+    salesCount: sales.length,
+    productsCount: products.length,
+    customersCount: customers.length,
+    sampleSales: sales.slice(0, 3).map(s => ({
+      id: s.id,
+      timestamp: s.timestamp,
+      total: s.total,
+      productName: s.productName
+    }))
+  });
+
+  // Calculate low stock products (excluding unspecified stock)
   const lowStockProducts = products.filter(p => 
     p.currentStock !== -1 && p.currentStock <= p.lowStockThreshold
   );
@@ -77,58 +81,12 @@ const ColoredCardDashboard = () => {
       </div>
 
       <div className="p-6 space-y-8 max-w-7xl mx-auto">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              title: 'Total Sales Today',
-              value: formatCurrency(totalSalesToday),
-              icon: DollarSign,
-              color: 'border-green-600',
-              iconColor: 'text-green-600 dark:text-green-400'
-            },
-            {
-              title: 'Orders Today',
-              value: ordersToday.toString(),
-              icon: ShoppingCart,
-              color: 'border-blue-600',
-              iconColor: 'text-blue-600 dark:text-blue-400'
-            },
-            {
-              title: 'Active Customers',
-              value: activeCustomers.toString(),
-              icon: Users,
-              color: 'border-purple-600',
-              iconColor: 'text-purple-600 dark:text-purple-400'
-            },
-            {
-              title: 'Low Stock Products',
-              value: lowStockProducts.length.toString(),
-              icon: Package,
-              color: 'border-orange-600',
-              iconColor: 'text-orange-600 dark:text-orange-400'
-            }
-          ].map((metric, index) => {
-            const Icon = metric.icon;
-            return (
-              <div key={index} className={`border-2 ${metric.color} rounded-xl p-6 bg-transparent`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-mono text-xs font-black uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-3">
-                      {metric.title}
-                    </h3>
-                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                      {metric.value}
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
-                    <Icon className={`w-5 h-5 ${metric.iconColor}`} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {/* Accurate Summary Cards */}
+        <AccurateDashboardStats 
+          sales={sales}
+          products={products}
+          customers={customers}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Low Stock Alerts */}
