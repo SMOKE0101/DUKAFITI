@@ -8,24 +8,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, ShoppingCart, DollarSign, Calendar, RefreshCw } from 'lucide-react';
+import { Plus, ShoppingCart, DollarSign, Calendar } from 'lucide-react';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
-import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useToast } from '@/hooks/use-toast';
 import { Sale } from '../types';
 
 const ModernSalesPage = () => {
-  const { sales, loading, createSale } = useUnifiedSales();
+  const { sales, loading, createSale, isOnline, pendingOperations } = useUnifiedSales();
   const { products } = useUnifiedProducts();
   const { customers, updateCustomer, refetch: refetchCustomers } = useUnifiedCustomers();
-  const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [formData, setFormData] = useState({
     productId: '',
     customerId: '',
@@ -39,16 +36,11 @@ const ModernSalesPage = () => {
   const totalAmount = selectedProduct ? selectedProduct.sellingPrice * formData.quantity : 0;
   const profit = selectedProduct ? (selectedProduct.sellingPrice - selectedProduct.costPrice) * formData.quantity : 0;
 
-  // Listen for customer updates and pending operations changes
+  // Listen for customer updates and refresh data
   useEffect(() => {
-    const handleDataRefresh = () => {
-      console.log('[ModernSalesPage] Data refresh event received');
+    const handleCustomerUpdate = () => {
+      console.log('[ModernSalesPage] Customer updated, refreshing data');
       refetchCustomers();
-    };
-
-    const handlePendingOpsChange = (event: any) => {
-      console.log('[ModernSalesPage] Pending operations changed:', event.detail);
-      // Force re-render to show updated pending count
     };
 
     const events = [
@@ -56,60 +48,19 @@ const ModernSalesPage = () => {
       'customer-updated-locally',
       'customer-updated-server',
       'sale-completed',
-      'checkout-completed',
-      'pending-operations-changed',
-      'pending-operations-added',
-      'pending-operations-removed',
-      'pending-operations-cleared'
+      'checkout-completed'
     ];
 
     events.forEach(event => {
-      if (event.startsWith('pending-operations')) {
-        window.addEventListener(event, handlePendingOpsChange);
-      } else {
-        window.addEventListener(event, handleDataRefresh);
-      }
+      window.addEventListener(event, handleCustomerUpdate);
     });
     
     return () => {
       events.forEach(event => {
-        if (event.startsWith('pending-operations')) {
-          window.removeEventListener(event, handlePendingOpsChange);
-        } else {
-          window.removeEventListener(event, handleDataRefresh);
-        }
+        window.removeEventListener(event, handleCustomerUpdate);
       });
     };
   }, [refetchCustomers]);
-
-  const handleManualSync = async () => {
-    if (!isOnline || pendingOperations === 0 || isSyncing) return;
-    
-    setIsSyncing(true);
-    try {
-      const success = await syncPendingOperations();
-      if (success) {
-        toast({
-          title: "Sync Successful",
-          description: "All pending operations have been synced.",
-        });
-      } else {
-        toast({
-          title: "Sync Failed",
-          description: "Some operations failed to sync. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Sync Error",
-        description: "An error occurred during sync.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,26 +213,12 @@ const ModernSalesPage = () => {
 
         <div className="flex items-center gap-3">
           {pendingOperations > 0 && (
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-yellow-50 border-yellow-200 text-yellow-800">
-                {pendingOperations} pending sync
-              </Badge>
-              {isOnline && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleManualSync}
-                  disabled={isSyncing}
-                  className="h-8"
-                >
-                  <RefreshCw className={`w-4 h-4 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Syncing...' : 'Sync'}
-                </Button>
-              )}
-            </div>
+            <Badge variant="outline" className="bg-yellow-50 border-yellow-200">
+              {pendingOperations} pending sync
+            </Badge>
           )}
           {!isOnline && (
-            <Badge variant="secondary" className="bg-orange-50 border-orange-200 text-orange-800">
+            <Badge variant="secondary" className="bg-orange-50 border-orange-200">
               Working Offline
             </Badge>
           )}

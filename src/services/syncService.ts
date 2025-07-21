@@ -1,12 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
-import { ProductSyncService } from './productSyncService';
 
 export interface PendingOperation {
   id: string;
   type: 'sale' | 'product' | 'customer' | 'transaction';
   operation: 'create' | 'update' | 'delete';
   data: any;
-  timestamp: string;
 }
 
 export class SyncService {
@@ -16,51 +14,31 @@ export class SyncService {
     console.log(`[SyncService] Starting sync of ${operations.length} operations`);
     let allSuccess = true;
 
-    // Group operations by type for better handling
-    const operationsByType = operations.reduce((acc, op) => {
-      if (!acc[op.type]) acc[op.type] = [];
-      acc[op.type].push(op);
-      return acc;
-    }, {} as Record<string, PendingOperation[]>);
-
-    // Sync products first (they might be referenced by other operations)
-    if (operationsByType.product) {
+    for (const operation of operations) {
       try {
-        const productSuccess = await ProductSyncService.syncProductOperations(operationsByType.product, userId);
-        if (!productSuccess) allSuccess = false;
-      } catch (error) {
-        console.error('[SyncService] Product sync failed:', error);
-        allSuccess = false;
-      }
-    }
-
-    // Sync other operations
-    for (const [type, ops] of Object.entries(operationsByType)) {
-      if (type === 'product') continue; // Already handled
-
-      for (const operation of ops) {
-        try {
-          console.log(`[SyncService] Syncing ${operation.type} ${operation.operation}:`, operation.id);
-          
-          switch (operation.type) {
-            case 'sale':
-              await this.syncSaleOperation(operation, userId);
-              break;
-            case 'customer':
-              await this.syncCustomerOperation(operation, userId);
-              break;
-            case 'transaction':
-              await this.syncTransactionOperation(operation, userId);
-              break;
-            default:
-              console.warn('[SyncService] Unknown operation type:', operation.type);
-          }
-          
-          console.log(`[SyncService] Successfully synced operation:`, operation.id);
-        } catch (error) {
-          console.error(`[SyncService] Failed to sync operation ${operation.id}:`, error);
-          allSuccess = false;
+        console.log(`[SyncService] Syncing ${operation.type} ${operation.operation}:`, operation.id);
+        
+        switch (operation.type) {
+          case 'sale':
+            await this.syncSaleOperation(operation, userId);
+            break;
+          case 'product':
+            await this.syncProductOperation(operation, userId);
+            break;
+          case 'customer':
+            await this.syncCustomerOperation(operation, userId);
+            break;
+          case 'transaction':
+            await this.syncTransactionOperation(operation, userId);
+            break;
+          default:
+            console.warn('[SyncService] Unknown operation type:', operation.type);
         }
+        
+        console.log(`[SyncService] Successfully synced operation:`, operation.id);
+      } catch (error) {
+        console.error(`[SyncService] Failed to sync operation ${operation.id}:`, error);
+        allSuccess = false;
       }
     }
 
@@ -101,6 +79,46 @@ export class SyncService {
         break;
       default:
         throw new Error(`Unsupported sale operation: ${operation.operation}`);
+    }
+  }
+
+  private static async syncProductOperation(operation: PendingOperation, userId: string): Promise<void> {
+    const { data } = operation;
+    
+    switch (operation.operation) {
+      case 'create':
+        await supabase
+          .from('products')
+          .insert([{
+            user_id: userId,
+            name: data.name,
+            category: data.category,
+            cost_price: data.costPrice,
+            selling_price: data.sellingPrice,
+            current_stock: data.currentStock || 0,
+            low_stock_threshold: data.lowStockThreshold || 10,
+          }]);
+        break;
+      case 'update':
+        const updateData: any = {};
+        const updates = data.updates;
+        
+        if (updates.name !== undefined) updateData.name = updates.name;
+        if (updates.category !== undefined) updateData.category = updates.category;
+        if (updates.costPrice !== undefined) updateData.cost_price = updates.costPrice;
+        if (updates.sellingPrice !== undefined) updateData.selling_price = updates.sellingPrice;
+        if (updates.currentStock !== undefined) updateData.current_stock = updates.currentStock;
+        if (updates.lowStockThreshold !== undefined) updateData.low_stock_threshold = updates.lowStockThreshold;
+        if (updates.updatedAt !== undefined) updateData.updated_at = updates.updatedAt;
+        
+        await supabase
+          .from('products')
+          .update(updateData)
+          .eq('id', data.id)
+          .eq('user_id', userId);
+        break;
+      default:
+        throw new Error(`Unsupported product operation: ${operation.operation}`);
     }
   }
 
