@@ -1,4 +1,5 @@
-import { useEffect, useCallback } from 'react';
+
+import { useEffect, useCallback, useState } from 'react';
 import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
@@ -8,6 +9,7 @@ export const useUnifiedSyncManager = () => {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const { pendingOps, clearAllPendingOperations } = useCacheManager();
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
   const syncPendingOperations = useCallback(async () => {
     if (!isOnline || pendingOps.length === 0 || !user) return false;
@@ -29,6 +31,7 @@ export const useUnifiedSyncManager = () => {
       if (success) {
         // Clear all pending operations after successful sync
         clearAllPendingOperations();
+        setLastSyncTime(new Date());
         console.log('[UnifiedSyncManager] Sync completed successfully - operations cleared');
         
         // Dispatch sync events to notify all components immediately and after a delay
@@ -39,6 +42,7 @@ export const useUnifiedSyncManager = () => {
         window.dispatchEvent(new CustomEvent('products-synced')); 
         window.dispatchEvent(new CustomEvent('customers-synced'));
         window.dispatchEvent(new CustomEvent('transactions-synced'));
+        window.dispatchEvent(new CustomEvent('pending-operations-cleared'));
         
         // Also dispatch after a delay to ensure all components receive the events
         setTimeout(() => {
@@ -49,6 +53,7 @@ export const useUnifiedSyncManager = () => {
           window.dispatchEvent(new CustomEvent('products-synced')); 
           window.dispatchEvent(new CustomEvent('customers-synced'));
           window.dispatchEvent(new CustomEvent('transactions-synced'));
+          window.dispatchEvent(new CustomEvent('pending-operations-cleared'));
         }, 500);
         
         return true;
@@ -74,9 +79,23 @@ export const useUnifiedSyncManager = () => {
     }
   }, [isOnline, user?.id, pendingOps.length, syncPendingOperations]);
 
+  // Listen for manual sync triggers
+  useEffect(() => {
+    const handleManualSync = () => {
+      if (isOnline && pendingOps.length > 0) {
+        console.log('[UnifiedSyncManager] Manual sync triggered');
+        syncPendingOperations();
+      }
+    };
+
+    window.addEventListener('trigger-manual-sync', handleManualSync);
+    return () => window.removeEventListener('trigger-manual-sync', handleManualSync);
+  }, [isOnline, pendingOps.length, syncPendingOperations]);
+
   return {
     isOnline,
     pendingOperations: pendingOps.length,
     syncPendingOperations,
+    lastSyncTime,
   };
 };
