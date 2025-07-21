@@ -24,6 +24,7 @@ export const useSupabaseDebtPayments = () => {
 
   const fetchDebtPayments = async () => {
     if (!user) {
+      setDebtPayments([]);
       setLoading(false);
       return;
     }
@@ -39,6 +40,7 @@ export const useSupabaseDebtPayments = () => {
       if (error) {
         console.error('Error fetching debt payments:', error);
         setError(error.message);
+        setDebtPayments([]);
       } else {
         setDebtPayments(data || []);
         setError(null);
@@ -46,6 +48,7 @@ export const useSupabaseDebtPayments = () => {
     } catch (err) {
       console.error('Error in fetchDebtPayments:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
+      setDebtPayments([]);
     } finally {
       setLoading(false);
     }
@@ -69,6 +72,7 @@ export const useSupabaseDebtPayments = () => {
       throw error;
     }
 
+    // Refresh the debt payments list
     await fetchDebtPayments();
     return data;
   };

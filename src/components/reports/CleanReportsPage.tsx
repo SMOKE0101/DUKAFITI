@@ -523,15 +523,19 @@ const CleanReportsPage = () => {
       }));
   }, [sales, debtTransactionsTableDateRange, debtTransactionsSearchTerm]);
 
-  // Ultra-accurate debt payments data with independent date range
+  // Ultra-accurate debt payments data with independent date range - FIXED
   const debtPaymentsData = useMemo(() => {
+    if (!debtPayments || debtPayments.length === 0) return [];
+    
     const { from: tableFromDate, to: tableToDate } = getTableDateRange(debtPaymentsTableDateRange);
     
     return debtPayments
       .filter(payment => {
+        // Use the payment timestamp for accurate date filtering
         const paymentDate = new Date(payment.timestamp);
         const isInDateRange = paymentDate >= tableFromDate && paymentDate <= tableToDate;
         
+        // Apply search filter
         const matchesSearch = !debtPaymentsSearchTerm || 
           payment.customer_name?.toLowerCase().includes(debtPaymentsSearchTerm.toLowerCase());
         
@@ -552,6 +556,7 @@ const CleanReportsPage = () => {
         }),
         customer: payment.customer_name || 'Unknown Customer',
         amount: payment.amount || 0,
+        method: payment.payment_method?.charAt(0).toUpperCase() + payment.payment_method?.slice(1) || 'Unknown',
         notes: payment.reference || 'No notes',
         timestamp: payment.timestamp // Keep for accurate sorting
       }));
@@ -642,16 +647,17 @@ const CleanReportsPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Ultra-accurate debt payments CSV download
+  // Ultra-accurate debt payments CSV download - FIXED
   const handleDownloadDebtPaymentsCSV = () => {
     if (debtPaymentsData.length === 0) return;
     
-    const csvHeaders = ['Date', 'Time', 'Customer', 'Amount', 'Notes'];
+    const csvHeaders = ['Date', 'Time', 'Customer', 'Amount', 'Method', 'Notes'];
     const csvRows = debtPaymentsData.map(row => [
       row.date,
       row.time,
       row.customer,
       row.amount.toString(),
+      row.method,
       row.notes
     ]);
     
@@ -1010,7 +1016,7 @@ const CleanReportsPage = () => {
             </div>
           </div>
 
-          {/* Debt Payments */}
+          {/* Debt Payments - FIXED AND ULTRA ACCURATE */}
           <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-800">Debt Payments</h3>
@@ -1059,6 +1065,7 @@ const CleanReportsPage = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
                   </tr>
                 </thead>
@@ -1069,6 +1076,7 @@ const CleanReportsPage = () => {
                       <td className="px-4 py-3 text-sm text-gray-600">{row.time}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{row.customer}</td>
                       <td className="px-4 py-3 text-sm font-medium text-green-600">{formatCurrency(row.amount)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{row.method}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{row.notes}</td>
                     </tr>
                   ))}
