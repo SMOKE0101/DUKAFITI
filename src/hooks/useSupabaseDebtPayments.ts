@@ -24,7 +24,6 @@ export const useSupabaseDebtPayments = () => {
 
   const fetchDebtPayments = async () => {
     if (!user) {
-      setDebtPayments([]);
       setLoading(false);
       return;
     }
@@ -40,7 +39,6 @@ export const useSupabaseDebtPayments = () => {
       if (error) {
         console.error('Error fetching debt payments:', error);
         setError(error.message);
-        setDebtPayments([]);
       } else {
         setDebtPayments(data || []);
         setError(null);
@@ -48,7 +46,6 @@ export const useSupabaseDebtPayments = () => {
     } catch (err) {
       console.error('Error in fetchDebtPayments:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
-      setDebtPayments([]);
     } finally {
       setLoading(false);
     }
@@ -126,23 +123,4 @@ export const useSupabaseDebtPayments = () => {
     deleteDebtPayment,
     refetch: fetchDebtPayments,
   };
-};
-
-// Export the createDebtPayment function as a standalone function
-export const createDebtPayment = async (paymentData: Omit<DebtPayment, 'id' | 'created_at' | 'synced'>) => {
-  const { data, error } = await supabase
-    .from('debt_payments')
-    .insert({
-      ...paymentData,
-      synced: true,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating debt payment:', error);
-    throw error;
-  }
-
-  return data;
 };
