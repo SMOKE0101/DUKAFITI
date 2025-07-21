@@ -1,107 +1,114 @@
 
-import React from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useSettings } from '../../hooks/useSettings';
-import { useTheme } from 'next-themes';
-import { Palette, Sun, Moon } from 'lucide-react';
+import { Save, Moon, Sun, Monitor } from 'lucide-react';
 
 const AppearanceSettings = () => {
-  const { settings, saveSettings, loading } = useSettings();
-  const { theme: currentTheme } = useTheme();
+  const { settings, saveSettings } = useSettings();
+  const [formData, setFormData] = useState({
+    theme: settings.theme,
+    emailNotifications: settings.emailNotifications,
+    smsNotifications: settings.smsNotifications,
+  });
 
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    console.log('Manual theme change initiated:', newTheme, 'Current settings theme:', settings.theme);
-    
-    // Only save if it's actually different
-    if (settings.theme !== newTheme) {
-      saveSettings({ theme: newTheme });
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveSettings(formData);
   };
 
-  if (loading) {
-    return (
-      <div className="w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8">
-        <div className="flex justify-center">
-          <div className="animate-pulse space-y-4 w-full max-w-md">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
-            <div className="grid grid-cols-2 gap-4">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Use settings.theme as the primary source of truth, fallback to system
-  const activeTheme = settings.theme || 'system';
-  
-  console.log('Rendering AppearanceSettings - Settings theme:', settings.theme, 'Current theme:', currentTheme, 'Active theme:', activeTheme);
+  const themeOptions = [
+    { value: 'light', label: 'Light', icon: Sun },
+    { value: 'dark', label: 'Dark', icon: Moon },
+    { value: 'system', label: 'System', icon: Monitor },
+  ];
 
   return (
-    <div className="w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl p-8">
-      {/* Theme Selection */}
-      <div className="max-w-2xl mx-auto space-y-8">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <Palette className="w-5 h-5 text-primary" />
-            </div>
-            <Label className="text-lg font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-              Choose how you want the application to look
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="theme" className="block text-sm font-medium text-gray-700">
+          Theme Preference
+        </Label>
+        <Select
+          value={formData.theme}
+          onValueChange={(value: 'light' | 'dark' | 'system') => 
+            setFormData({ ...formData, theme: value })
+          }
+        >
+          <SelectTrigger className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200">
+            <SelectValue placeholder="Select theme" />
+          </SelectTrigger>
+          <SelectContent className="bg-white rounded-xl shadow-lg border border-gray-200">
+            {themeOptions.map(option => {
+              const Icon = option.icon;
+              return (
+                <SelectItem 
+                  key={option.value} 
+                  value={option.value}
+                  className="hover:bg-gray-50 rounded-lg flex items-center gap-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-4 h-4" />
+                    {option.label}
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-6 pt-4">
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div className="flex-1">
+            <Label className="text-sm font-medium text-gray-700">
+              Email Notifications
             </Label>
+            <p className="text-xs text-gray-500 mt-1">
+              Receive updates and alerts via email
+            </p>
           </div>
+          <Switch
+            checked={formData.emailNotifications}
+            onCheckedChange={(checked) => 
+              setFormData({ ...formData, emailNotifications: checked })
+            }
+            className="data-[state=checked]:bg-purple-600 focus:ring-purple-300"
+          />
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button
-            type="button"
-            onClick={() => handleThemeChange('light')}
-            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
-              activeTheme === 'light'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              activeTheme === 'light'
-                ? 'bg-yellow-100 dark:bg-yellow-900/20' 
-                : 'bg-gray-100 dark:bg-gray-800'
-            }`}>
-              <Sun className="w-8 h-8 text-yellow-500" />
-            </div>
-            <div className="text-center">
-              <span className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">LIGHT</span>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Clean and bright interface</p>
-            </div>
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => handleThemeChange('dark')}
-            className={`p-6 rounded-xl border-2 flex flex-col items-center gap-4 transition-all duration-200 hover:scale-105 bg-background ${
-              activeTheme === 'dark'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg ring-2 ring-blue-500/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
-              activeTheme === 'dark'
-                ? 'bg-blue-100 dark:bg-blue-900/20' 
-                : 'bg-gray-100 dark:bg-gray-800'
-            }`}>
-              <Moon className="w-8 h-8 text-blue-500" />
-            </div>
-            <div className="text-center">
-              <span className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">DARK</span>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Easy on the eyes</p>
-            </div>
-          </button>
+
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div className="flex-1">
+            <Label className="text-sm font-medium text-gray-700">
+              SMS Notifications
+            </Label>
+            <p className="text-xs text-gray-500 mt-1">
+              Receive alerts and updates via SMS
+            </p>
+          </div>
+          <Switch
+            checked={formData.smsNotifications}
+            onCheckedChange={(checked) => 
+              setFormData({ ...formData, smsNotifications: checked })
+            }
+            className="data-[state=checked]:bg-purple-600 focus:ring-purple-300"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="flex justify-end pt-4">
+        <Button 
+          type="submit" 
+          className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2"
+        >
+          <Save className="w-4 h-4" />
+          Save Settings
+        </Button>
+      </div>
+    </form>
   );
 };
 

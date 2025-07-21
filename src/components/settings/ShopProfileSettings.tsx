@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSettings } from '../../hooks/useSettings';
 import { Save } from 'lucide-react';
 
@@ -35,85 +34,94 @@ const ShopProfileSettings = () => {
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Shop Profile</CardTitle>
-        <CardDescription>
-          Update your shop information and contact details
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="shopName">Shop Name</Label>
-              <Input
-                id="shopName"
-                value={formData.shopName}
-                onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
-                placeholder="Enter your shop name"
-              />
-            </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="shopName" className="block text-sm font-medium text-gray-700">
+            Shop Name
+          </Label>
+          <Input
+            id="shopName"
+            value={formData.shopName}
+            onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+            placeholder="Enter your shop name"
+            className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="businessType">Business Type</Label>
-              <Select
-                value={formData.businessType}
-                onValueChange={(value) => setFormData({ ...formData, businessType: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select business type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {businessTypes.map(type => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="businessType" className="block text-sm font-medium text-gray-700">
+            Business Type
+          </Label>
+          <Select
+            value={formData.businessType}
+            onValueChange={(value) => setFormData({ ...formData, businessType: value })}
+          >
+            <SelectTrigger className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200">
+              <SelectValue placeholder="Select business type" />
+            </SelectTrigger>
+            <SelectContent className="bg-white rounded-xl shadow-lg border border-gray-200">
+              {businessTypes.map(type => (
+                <SelectItem key={type} value={type} className="hover:bg-gray-50 rounded-lg">
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="contactPhone">Contact Phone</Label>
-              <Input
-                id="contactPhone"
-                value={formData.contactPhone}
-                onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                placeholder="+254 XXX XXX XXX"
-              />
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700">
+            Contact Phone
+          </Label>
+          <Input
+            id="contactPhone"
+            value={formData.contactPhone}
+            onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+            placeholder="+254 XXX XXX XXX"
+            className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="City, County"
-              />
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="location" className="block text-sm font-medium text-gray-700">
+            Location
+          </Label>
+          <Input
+            id="location"
+            value={formData.location}
+            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            placeholder="City, County"
+            className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
+          />
+        </div>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="shopAddress">Shop Address</Label>
-            <Input
-              id="shopAddress"
-              value={formData.shopAddress}
-              onChange={(e) => setFormData({ ...formData, shopAddress: e.target.value })}
-              placeholder="Street address, building details"
-            />
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="shopAddress" className="block text-sm font-medium text-gray-700">
+          Shop Address
+        </Label>
+        <Input
+          id="shopAddress"
+          value={formData.shopAddress}
+          onChange={(e) => setFormData({ ...formData, shopAddress: e.target.value })}
+          placeholder="Street address, building details"
+          className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
+        />
+      </div>
 
-          <Button type="submit" className="w-full md:w-auto">
-            <Save className="mr-2 h-4 w-4" />
-            Save Profile
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <div className="flex justify-end pt-4">
+        <Button 
+          type="submit" 
+          className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2"
+        >
+          <Save className="w-4 h-4" />
+          Save Profile
+        </Button>
+      </div>
+    </form>
   );
 };
 
