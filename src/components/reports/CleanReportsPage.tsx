@@ -544,6 +544,33 @@ const CleanReportsPage = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Generic CSV download function for debt tables
+  const handleDownloadCSV = (data: any[], filename: string) => {
+    if (data.length === 0) return;
+    
+    const headers = Object.keys(data[0]);
+    const csvHeaders = headers.map(header => 
+      header.charAt(0).toUpperCase() + header.slice(1)
+    );
+    
+    const csvRows = data.map(row => 
+      headers.map(header => row[header]?.toString() || '')
+    );
+    
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (salesLoading || productsLoading || customersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
