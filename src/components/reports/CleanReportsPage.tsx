@@ -112,26 +112,27 @@ const CleanReportsPage = () => {
     
     switch (salesChartResolution) {
       case 'hourly':
-        // Last 24 hours from current time
-        chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        // Last 24 hours with precise hour boundaries
+        chartFromDate = new Date(now);
+        chartFromDate.setHours(chartFromDate.getHours() - 23, 0, 0, 0); // 24 hours ago, start of hour
         bucketFormat = 'hour';
         
-        // Generate 24 hour buckets starting from 24 hours ago
+        // Generate 24 precise hour buckets
         for (let i = 0; i < 24; i++) {
-          const hourTime = new Date(chartFromDate.getTime() + (i * 60 * 60 * 1000));
-          hourTime.setMinutes(0, 0, 0); // Set to exact hour
+          const hourTime = new Date(chartFromDate);
+          hourTime.setHours(chartFromDate.getHours() + i, 0, 0, 0);
           timePoints.push(hourTime.toISOString().substring(0, 13) + ':00:00.000Z');
         }
         break;
         
       case 'daily':
-        // Last 30 days from today
+        // Last 30 days with precise day boundaries
         chartFromDate = new Date(now);
-        chartFromDate.setDate(chartFromDate.getDate() - 29); // 30 days including today
-        chartFromDate.setHours(0, 0, 0, 0); // Start of day
+        chartFromDate.setDate(chartFromDate.getDate() - 29);
+        chartFromDate.setHours(0, 0, 0, 0);
         bucketFormat = 'day';
         
-        // Generate 30 day buckets
+        // Generate 30 precise day buckets
         for (let i = 0; i < 30; i++) {
           const dayTime = new Date(chartFromDate);
           dayTime.setDate(chartFromDate.getDate() + i);
@@ -140,11 +141,11 @@ const CleanReportsPage = () => {
         break;
         
       case 'monthly':
-        // Last 12 months from current month
-        chartFromDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        // Last 12 months with precise month boundaries
+        chartFromDate = new Date(now.getFullYear(), now.getMonth() - 11, 1, 0, 0, 0, 0);
         bucketFormat = 'month';
         
-        // Generate 12 month buckets
+        // Generate 12 precise month buckets
         for (let i = 0; i < 12; i++) {
           const monthTime = new Date(chartFromDate.getFullYear(), chartFromDate.getMonth() + i, 1);
           const monthKey = monthTime.getFullYear() + '-' + String(monthTime.getMonth() + 1).padStart(2, '0');
@@ -162,7 +163,7 @@ const CleanReportsPage = () => {
         }
     }
 
-    // Filter sales within the timeframe
+    // Filter sales within the precise timeframe
     const chartSales = sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
       return saleDate >= chartFromDate && saleDate <= now;
@@ -174,26 +175,26 @@ const CleanReportsPage = () => {
       groupedData[point] = 0;
     });
     
-    // Aggregate sales into proper time buckets
+    // Aggregate sales into precise time buckets
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
       let bucketKey: string;
       
       switch (bucketFormat) {
         case 'hour':
-          // Round down to the exact hour
+          // Round down to exact hour boundary
           const hourBucket = new Date(saleDate);
           hourBucket.setMinutes(0, 0, 0);
           bucketKey = hourBucket.toISOString().substring(0, 13) + ':00:00.000Z';
           break;
           
         case 'day':
-          // Use just the date part (YYYY-MM-DD)
+          // Use precise date boundary (YYYY-MM-DD)
           bucketKey = saleDate.toISOString().substring(0, 10);
           break;
           
         case 'month':
-          // Use year-month format (YYYY-MM)
+          // Use precise year-month boundary (YYYY-MM)
           bucketKey = saleDate.getFullYear() + '-' + String(saleDate.getMonth() + 1).padStart(2, '0');
           break;
           
@@ -207,7 +208,7 @@ const CleanReportsPage = () => {
       }
     });
     
-    // Convert to chart format with proper labels
+    // Convert to chart format with precise labels
     return timePoints.map(timePoint => {
       const revenue = groupedData[timePoint] || 0;
       let displayLabel: string;
@@ -244,67 +245,119 @@ const CleanReportsPage = () => {
     return salesTrendData.reduce((sum, item) => sum + item.revenue, 0);
   }, [salesTrendData]);
 
-  // Orders per hour data calculation
+  // Ultra-accurate orders per hour/day data calculation
   const ordersPerHourData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
+    let bucketFormat: 'hour' | 'day';
+    let timePoints: string[] = [];
     
     switch (ordersChartView) {
       case 'daily':
-        chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        // Today's hours with precise hour boundaries
+        chartFromDate = new Date(now);
+        chartFromDate.setHours(0, 0, 0, 0); // Start of today
+        bucketFormat = 'hour';
+        
+        // Generate 24 precise hour buckets for today
+        for (let i = 0; i < 24; i++) {
+          const hourTime = new Date(chartFromDate);
+          hourTime.setHours(i, 0, 0, 0);
+          timePoints.push(hourTime.toISOString().substring(0, 13) + ':00:00.000Z');
+        }
         break;
+        
       case '2weeks':
-        chartFromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        // Last 14 days with precise day boundaries
+        chartFromDate = new Date(now);
+        chartFromDate.setDate(chartFromDate.getDate() - 13); // 14 days including today
+        chartFromDate.setHours(0, 0, 0, 0);
+        bucketFormat = 'day';
+        
+        // Generate 14 precise day buckets
+        for (let i = 0; i < 14; i++) {
+          const dayTime = new Date(chartFromDate);
+          dayTime.setDate(chartFromDate.getDate() + i);
+          timePoints.push(dayTime.toISOString().substring(0, 10));
+        }
         break;
+        
       default:
-        chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        chartFromDate = new Date(now);
+        chartFromDate.setHours(0, 0, 0, 0);
+        bucketFormat = 'hour';
+        for (let i = 0; i < 24; i++) {
+          const hourTime = new Date(chartFromDate);
+          hourTime.setHours(i, 0, 0, 0);
+          timePoints.push(hourTime.toISOString().substring(0, 13) + ':00:00.000Z');
+        }
     }
 
+    // Filter sales within the precise timeframe
     const chartSales = sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
-    if (ordersChartView === 'daily') {
-      const hourlyData: Record<number, number> = {};
-      for (let i = 0; i < 24; i++) {
-        hourlyData[i] = 0;
+    // Initialize all time buckets with zero
+    const groupedData: Record<string, number> = {};
+    timePoints.forEach(point => {
+      groupedData[point] = 0;
+    });
+    
+    // Aggregate orders into precise time buckets
+    chartSales.forEach(sale => {
+      const saleDate = new Date(sale.timestamp);
+      let bucketKey: string;
+      
+      switch (bucketFormat) {
+        case 'hour':
+          // Round down to exact hour boundary
+          const hourBucket = new Date(saleDate);
+          hourBucket.setMinutes(0, 0, 0);
+          bucketKey = hourBucket.toISOString().substring(0, 13) + ':00:00.000Z';
+          break;
+          
+        case 'day':
+          // Use precise date boundary
+          bucketKey = saleDate.toISOString().substring(0, 10);
+          break;
+          
+        default:
+          bucketKey = saleDate.toISOString().substring(0, 10);
       }
       
-      chartSales.forEach(sale => {
-        const hour = new Date(sale.timestamp).getHours();
-        hourlyData[hour]++;
-      });
+      // Only count if bucket exists in our time points
+      if (groupedData.hasOwnProperty(bucketKey)) {
+        groupedData[bucketKey]++;
+      }
+    });
+    
+    // Convert to chart format with precise labels
+    return timePoints.map(timePoint => {
+      const orders = groupedData[timePoint] || 0;
+      let displayLabel: string;
       
-      return Object.entries(hourlyData).map(([hour, orders]) => ({
-        hour: `${hour.padStart(2, '0')}:00`,
+      switch (bucketFormat) {
+        case 'hour':
+          const hourDate = new Date(timePoint);
+          displayLabel = hourDate.getHours().toString().padStart(2, '0') + ':00';
+          break;
+          
+        case 'day':
+          const dayDate = new Date(timePoint + 'T00:00:00Z');
+          displayLabel = dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          break;
+          
+        default:
+          displayLabel = timePoint;
+      }
+      
+      return {
+        hour: displayLabel,
         orders
-      }));
-    } else {
-      const dailyData: Record<string, number> = {};
-      
-      for (let i = 0; i < 14; i++) {
-        const date = new Date(chartFromDate);
-        date.setDate(date.getDate() + i);
-        const dateKey = date.toISOString().substring(0, 10);
-        dailyData[dateKey] = 0;
-      }
-      
-      chartSales.forEach(sale => {
-        const saleDate = new Date(sale.timestamp);
-        const dateKey = saleDate.toISOString().substring(0, 10);
-        if (dailyData.hasOwnProperty(dateKey)) {
-          dailyData[dateKey]++;
-        }
-      });
-      
-      return Object.entries(dailyData)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, orders]) => ({
-          hour: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          orders
-        }));
-    }
+      };
+    });
   }, [sales, ordersChartView]);
 
   // Table data preparation
