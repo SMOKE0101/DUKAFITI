@@ -24,6 +24,7 @@ export const useUnifiedSyncManager = () => {
         type: op.type as 'sale' | 'product' | 'customer' | 'transaction',
         operation: op.operation as 'create' | 'update' | 'delete',
         data: op.data,
+        timestamp: op.timestamp, // Include the timestamp from the cached operation
       }));
 
       const success = await SyncService.syncPendingOperations(syncOperations, user.id);
