@@ -124,6 +124,7 @@ export class SyncService {
 
   private static async syncCustomerOperation(operation: PendingOperation, userId: string): Promise<void> {
     const { data } = operation;
+    console.log('[SyncService] Syncing customer operation:', operation.operation, data);
     
     switch (operation.operation) {
       case 'create':
@@ -141,7 +142,7 @@ export class SyncService {
           return;
         }
 
-        await supabase
+        const createResult = await supabase
           .from('customers')
           .insert([{
             user_id: userId,
@@ -155,8 +156,31 @@ export class SyncService {
             risk_rating: data.riskRating || 'low',
             last_purchase_date: data.lastPurchaseDate,
           }]);
+          
+        if (createResult.error) {
+          throw new Error(`Customer create failed: ${createResult.error.message}`);
+        }
+        console.log('[SyncService] Customer created successfully');
         break;
+        
       case 'update':
+        console.log('[SyncService] Updating customer:', data.id, 'with updates:', data.updates);
+        
+        // First, verify the customer exists
+        const { data: customerExists } = await supabase
+          .from('customers')
+          .select('id, outstanding_debt, total_purchases')
+          .eq('id', data.id)
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (!customerExists) {
+          console.error('[SyncService] Customer not found for update:', data.id);
+          throw new Error(`Customer ${data.id} not found for update`);
+        }
+        
+        console.log('[SyncService] Current customer data before update:', customerExists);
+        
         const updateData: any = {};
         const updates = data.updates;
         
@@ -170,12 +194,31 @@ export class SyncService {
         if (updates.riskRating !== undefined) updateData.risk_rating = updates.riskRating;
         if (updates.lastPurchaseDate !== undefined) updateData.last_purchase_date = updates.lastPurchaseDate;
         
-        await supabase
+        console.log('[SyncService] Preparing to update customer with data:', updateData);
+        
+        const updateResult = await supabase
           .from('customers')
           .update(updateData)
           .eq('id', data.id)
           .eq('user_id', userId);
+          
+        if (updateResult.error) {
+          throw new Error(`Customer update failed: ${updateResult.error.message}`);
+        }
+        
+        console.log('[SyncService] Customer updated successfully in database');
+        
+        // Verify the update was applied
+        const { data: updatedCustomer } = await supabase
+          .from('customers')
+          .select('id, outstanding_debt, total_purchases')
+          .eq('id', data.id)
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        console.log('[SyncService] Customer data after update:', updatedCustomer);
         break;
+        
       default:
         throw new Error(`Unsupported customer operation: ${operation.operation}`);
     }

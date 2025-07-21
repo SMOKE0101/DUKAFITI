@@ -126,11 +126,16 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
       // Update customer debt if this is a debt transaction
       if (paymentMethod === 'debt' && selectedCustomerId && customer && totalDebtAmount > 0) {
-        console.log('[SalesCheckout] Updating customer debt:', {
+        console.log('[SalesCheckout] Starting customer debt update:', {
           customerId: selectedCustomerId,
+          customerName: customer.name,
           currentDebt: customer.outstandingDebt,
+          currentTotalPurchases: customer.totalPurchases,
           additionalDebt: totalDebtAmount,
-          newTotalDebt: (customer.outstandingDebt || 0) + totalDebtAmount
+          newTotalDebt: (customer.outstandingDebt || 0) + totalDebtAmount,
+          newTotalPurchases: (customer.totalPurchases || 0) + totalDebtAmount,
+          isOnline,
+          pendingOperationsCount: pendingOperations
         });
 
         const updates = {
@@ -139,8 +144,26 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           lastPurchaseDate: new Date().toISOString(),
         };
         
-        await updateCustomer(selectedCustomerId, updates);
-        console.log('[SalesCheckout] Customer debt updated successfully');
+        try {
+          await updateCustomer(selectedCustomerId, updates);
+          console.log('[SalesCheckout] Customer debt updated successfully:', {
+            customerId: selectedCustomerId,
+            updates,
+            newDebt: updates.outstandingDebt,
+            newTotalPurchases: updates.totalPurchases
+          });
+        } catch (error) {
+          console.error('[SalesCheckout] Customer debt update failed:', error);
+          // Don't throw error here as sale was already completed successfully
+          // The updateCustomer hook should handle queuing for offline sync
+        }
+      } else if (paymentMethod === 'debt') {
+        console.error('[SalesCheckout] Debt payment validation failed:', {
+          paymentMethod,
+          selectedCustomerId,
+          customer: customer ? 'found' : 'not found',
+          totalDebtAmount
+        });
       }
 
       toast({

@@ -365,10 +365,22 @@ export const useUnifiedCustomers = () => {
   const updateCustomer = useCallback(async (id: string, updates: Partial<Customer>) => {
     if (!user) throw new Error('User not authenticated');
 
+    console.log('[UnifiedCustomers] Starting customer update:', {
+      customerId: id,
+      updates,
+      isOnline,
+      pendingOpsCount: pendingOps.length
+    });
+
+    // Find the current customer for reference
+    const currentCustomer = customers.find(c => c.id === id);
+    console.log('[UnifiedCustomers] Current customer data:', currentCustomer);
+
     // Optimistically update UI
     setCustomers(prev => {
       const updated = prev.map(c => c.id === id ? { ...c, ...updates } : c);
       setCache('customers', updated);
+      console.log('[UnifiedCustomers] Optimistically updated customer in UI');
       return updated;
     });
 
@@ -385,6 +397,8 @@ export const useUnifiedCustomers = () => {
         if (updates.riskRating !== undefined) dbUpdates.risk_rating = updates.riskRating;
         if (updates.lastPurchaseDate !== undefined) dbUpdates.last_purchase_date = updates.lastPurchaseDate;
 
+        console.log('[UnifiedCustomers] Preparing database update:', dbUpdates);
+
         const { error } = await supabase
           .from('customers')
           .update(dbUpdates)
@@ -393,24 +407,37 @@ export const useUnifiedCustomers = () => {
 
         if (error) throw error;
 
-        console.log('[UnifiedCustomers] Customer updated successfully');
+        console.log('[UnifiedCustomers] Customer updated successfully in database');
+        
+        // Refresh customers data to ensure consistency
+        await loadCustomers();
       } catch (error) {
         console.error('[UnifiedCustomers] Update failed, queuing for sync:', error);
+        
+        // Add pending operation for offline sync
+        const operationData = { id, updates };
         addPendingOperation({
           type: 'customer',
           operation: 'update',
-          data: { id, updates },
+          data: operationData,
         });
+        
+        console.log('[UnifiedCustomers] Added pending operation for customer update:', operationData);
       }
     } else {
+      console.log('[UnifiedCustomers] Offline mode - queuing customer update for sync');
+      
       // Queue for sync when online
+      const operationData = { id, updates };
       addPendingOperation({
         type: 'customer',
         operation: 'update',
-        data: { id, updates },
+        data: operationData,
       });
+      
+      console.log('[UnifiedCustomers] Added pending operation for offline customer update:', operationData);
     }
-  }, [user, isOnline, addPendingOperation, setCache]);
+  }, [user, isOnline, addPendingOperation, setCache, customers, pendingOps.length, loadCustomers]);
 
   // Delete customer
   const deleteCustomer = useCallback(async (id: string) => {
