@@ -6,7 +6,6 @@ interface PendingOperation {
   type: 'sale' | 'product' | 'customer' | 'transaction';
   operation: 'create' | 'update' | 'delete';
   data: any;
-  timestamp: string;
 }
 
 export const useCacheManager = () => {
@@ -20,11 +19,6 @@ export const useCacheManager = () => {
         const operations = JSON.parse(stored);
         console.log('[CacheManager] Loaded pending operations:', operations.length);
         setPendingOps(operations);
-        
-        // Dispatch event to notify components about loaded operations
-        window.dispatchEvent(new CustomEvent('pending-operations-loaded', {
-          detail: { count: operations.length }
-        }));
       }
     } catch (error) {
       console.error('[CacheManager] Failed to load pending operations:', error);
@@ -40,11 +34,6 @@ export const useCacheManager = () => {
     try {
       localStorage.setItem('pendingOperations', JSON.stringify(pendingOps));
       console.log('[CacheManager] Saved pending operations:', pendingOps.length);
-      
-      // Dispatch event to notify components about operation count changes
-      window.dispatchEvent(new CustomEvent('pending-operations-changed', {
-        detail: { count: pendingOps.length }
-      }));
     } catch (error) {
       console.error('[CacheManager] Failed to save pending operations:', error);
     }
@@ -85,11 +74,10 @@ export const useCacheManager = () => {
     }
   }, []);
 
-  const addPendingOperation = useCallback((operation: Omit<PendingOperation, 'id' | 'timestamp'>): void => {
-    const operationWithId: PendingOperation = {
+  const addPendingOperation = useCallback((operation: Omit<PendingOperation, 'id'>): void => {
+    const operationWithId = {
       ...operation,
-      id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date().toISOString()
+      id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
 
     console.log('[CacheManager] Adding pending operation:', operationWithId);
@@ -121,55 +109,24 @@ export const useCacheManager = () => {
         return prev;
       }
       
-      const newOps = [...prev, operationWithId];
-      console.log('[CacheManager] Added new pending operation. Total pending:', newOps.length);
-      
-      // Immediately dispatch event for UI updates
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('pending-operations-added', {
-          detail: { 
-            operation: operationWithId,
-            totalCount: newOps.length 
-          }
-        }));
-      }, 0);
-      
-      return newOps;
+      console.log('[CacheManager] Added new pending operation. Total pending:', prev.length + 1);
+      return [...prev, operationWithId];
     });
   }, []);
 
   const removePendingOperation = useCallback((operationId: string): void => {
     console.log('[CacheManager] Removing pending operation:', operationId);
-    setPendingOps(prev => {
-      const filtered = prev.filter(op => op.id !== operationId);
-      
-      // Dispatch event about operation removal
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('pending-operations-removed', {
-          detail: { 
-            operationId,
-            remainingCount: filtered.length 
-          }
-        }));
-      }, 0);
-      
-      return filtered;
-    });
+    setPendingOps(prev => prev.filter(op => op.id !== operationId));
   }, []);
 
   const clearPendingOperation = useCallback((operationId: string): void => {
     console.log('[CacheManager] Clearing pending operation:', operationId);
-    removePendingOperation(operationId);
-  }, [removePendingOperation]);
+    setPendingOps(prev => prev.filter(op => op.id !== operationId));
+  }, []);
 
   const clearAllPendingOperations = useCallback((): void => {
     console.log('[CacheManager] Clearing all pending operations');
     setPendingOps([]);
-    
-    // Dispatch event about all operations being cleared
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('pending-operations-cleared'));
-    }, 0);
   }, []);
 
   const getPendingOperationsByType = useCallback((type: string) => {
