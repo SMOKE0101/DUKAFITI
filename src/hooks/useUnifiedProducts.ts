@@ -521,6 +521,35 @@ export const useUnifiedProducts = () => {
     };
   }, []);
 
+  // Set up real-time subscription for immediate updates
+  useEffect(() => {
+    if (!user || !isOnline) return;
+
+    console.log('[UnifiedProducts] Setting up real-time subscription');
+    
+    const channel = supabase
+      .channel('products-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'products',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('[UnifiedProducts] Real-time update received:', payload);
+        
+        // Refresh products when changes occur
+        setTimeout(() => {
+          loadProducts(true);
+        }, 100);
+      })
+      .subscribe();
+
+    return () => {
+      console.log('[UnifiedProducts] Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, isOnline, loadProducts]);
+
   return {
     products,
     loading,

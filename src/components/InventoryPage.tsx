@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Package, AlertTriangle, Trash2, Edit, Box, Search, Layers, DollarSign } from 'lucide-react';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { Product } from '../types';
+import { PRODUCT_CATEGORIES } from '../constants/categories';
 import RestockModal from './inventory/RestockModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 
@@ -202,13 +204,18 @@ const InventoryPage = () => {
                     </div>
                     <div>
                       <Label htmlFor="category" className="text-base font-medium text-gray-700 font-['Inter']">Category *</Label>
-                      <Input
-                        id="category"
-                        value={formData.category}
-                        onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                        required
-                        className="mt-1"
-                      />
+                      <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {PRODUCT_CATEGORIES.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
