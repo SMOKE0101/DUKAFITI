@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,6 +37,7 @@ const ProductManagement = () => {
     currentStock: '',
     lowStockThreshold: '',
   });
+  const [unspecifiedQuantity, setUnspecifiedQuantity] = useState(false);
 
   const categories = ['all', ...PRODUCT_CATEGORIES];
 
@@ -46,7 +48,7 @@ const ProductManagement = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const lowStockProducts = products.filter(product => product.currentStock <= product.lowStockThreshold);
+  const lowStockProducts = products.filter(product => product.currentStock <= product.lowStockThreshold && product.currentStock !== -1);
 
   const resetForm = () => {
     setFormData({
@@ -57,6 +59,7 @@ const ProductManagement = () => {
       currentStock: '',
       lowStockThreshold: '',
     });
+    setUnspecifiedQuantity(false);
     setEditingProduct(null);
     setShowForm(false);
   };
@@ -73,7 +76,7 @@ const ProductManagement = () => {
       }
     }
 
-    if (!formData.name || !formData.category || !formData.costPrice || !formData.sellingPrice) {
+    if (!formData.name || !formData.category || !formData.sellingPrice) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -82,15 +85,33 @@ const ProductManagement = () => {
       return;
     }
 
-    const costPrice = parseFloat(formData.costPrice);
-    const sellingPrice = parseFloat(formData.sellingPrice);
-    const currentStock = parseInt(formData.currentStock) || 0;
-    const lowStockThreshold = parseInt(formData.lowStockThreshold) || 10;
+    if (!unspecifiedQuantity && (!formData.costPrice || !formData.currentStock)) {
+      toast({
+        title: "Validation Error",
+        description: "Cost price and stock are required unless using unspecified quantity",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (costPrice < 0 || sellingPrice < 0 || currentStock < 0) {
+    const costPrice = unspecifiedQuantity ? 0 : parseFloat(formData.costPrice) || 0;
+    const sellingPrice = parseFloat(formData.sellingPrice);
+    const currentStock = unspecifiedQuantity ? -1 : parseInt(formData.currentStock) || 0;
+    const lowStockThreshold = unspecifiedQuantity ? 0 : parseInt(formData.lowStockThreshold) || 10;
+
+    if (!unspecifiedQuantity && (costPrice < 0 || currentStock < 0)) {
       toast({
         title: "Validation Error",
         description: "Prices and stock cannot be negative",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (sellingPrice < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Selling price cannot be negative",
         variant: "destructive",
       });
       return;
@@ -139,9 +160,10 @@ const ProductManagement = () => {
       category: product.category,
       costPrice: product.costPrice.toString(),
       sellingPrice: product.sellingPrice.toString(),
-      currentStock: product.currentStock.toString(),
+      currentStock: product.currentStock === -1 ? '' : product.currentStock.toString(),
       lowStockThreshold: product.lowStockThreshold.toString(),
     });
+    setUnspecifiedQuantity(product.currentStock === -1);
     setShowForm(true);
   };
 
@@ -298,14 +320,20 @@ const ProductManagement = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Stock:</span>
-                      <Badge variant={product.currentStock <= product.lowStockThreshold ? "destructive" : "default"}>
-                        {product.currentStock} units
+                      <Badge variant={
+                        product.currentStock === -1 
+                          ? "default" 
+                          : product.currentStock <= product.lowStockThreshold 
+                          ? "destructive" 
+                          : "default"
+                      }>
+                        {product.currentStock === -1 ? 'Unspecified' : `${product.currentStock} units`}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Profit Margin:</span>
                       <span className="font-medium text-green-600">
-                        {formatCurrency(product.sellingPrice - product.costPrice)}
+                        {product.currentStock === -1 ? 'N/A' : formatCurrency(product.sellingPrice - product.costPrice)}
                       </span>
                     </div>
                   </div>
@@ -412,10 +440,12 @@ const ProductManagement = () => {
                     type="number"
                     step="0.01"
                     min="0"
-                    value={formData.costPrice}
+                    value={unspecifiedQuantity ? '' : formData.costPrice}
                     onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                    placeholder="0.00"
-                    className="h-12 text-base"
+                    placeholder={unspecifiedQuantity ? "Unspecified" : "0.00"}
+                    disabled={unspecifiedQuantity}
+                    required={!unspecifiedQuantity}
+                    className={`h-12 text-base ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                 </div>
                 <div className="space-y-2">
@@ -437,11 +467,23 @@ const ProductManagement = () => {
                     id="currentStock"
                     type="number"
                     min="0"
-                    value={formData.currentStock}
+                    value={unspecifiedQuantity ? '' : formData.currentStock}
                     onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                    placeholder="0"
-                    className="h-12 text-base"
+                    placeholder={unspecifiedQuantity ? "Unspecified quantity" : "0"}
+                    disabled={unspecifiedQuantity}
+                    required={!unspecifiedQuantity}
+                    className={`h-12 text-base ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Checkbox 
+                      id="unspecifiedQuantity"
+                      checked={unspecifiedQuantity}
+                      onCheckedChange={(checked) => setUnspecifiedQuantity(checked as boolean)}
+                    />
+                    <Label htmlFor="unspecifiedQuantity" className="text-sm text-gray-600">
+                      Unspecified quantity (sacks, cups, etc.)
+                    </Label>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lowStockThreshold" className="text-sm font-medium">Low Stock Alert</Label>
@@ -449,13 +491,35 @@ const ProductManagement = () => {
                     id="lowStockThreshold"
                     type="number"
                     min="0"
-                    value={formData.lowStockThreshold}
+                    value={unspecifiedQuantity ? '' : formData.lowStockThreshold}
                     onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
-                    placeholder="10"
-                    className="h-12 text-base"
+                    placeholder={unspecifiedQuantity ? "Unspecified" : "10"}
+                    disabled={unspecifiedQuantity}
+                    className={`h-12 text-base ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                 </div>
               </div>
+
+              {/* Profit Calculation */}
+              {!unspecifiedQuantity && formData.costPrice && formData.sellingPrice && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="font-medium text-blue-900 mb-2">Profit Summary</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Profit per unit:</span>
+                      <span className="font-semibold text-green-600">
+                        KSh {(parseFloat(formData.sellingPrice) - parseFloat(formData.costPrice)).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Profit margin:</span>
+                      <span className="font-semibold text-blue-600">
+                        {(((parseFloat(formData.sellingPrice) - parseFloat(formData.costPrice)) / parseFloat(formData.sellingPrice)) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-border">
                 <Button type="submit" className="flex-1 h-12 text-base font-medium">

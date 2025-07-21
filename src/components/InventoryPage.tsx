@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Package, AlertTriangle, Trash2, Edit, Box, Search, Layers, DollarSign } from 'lucide-react';
@@ -28,6 +29,7 @@ const InventoryPage = () => {
     currentStock: 0,
     lowStockThreshold: 10,
   });
+  const [unspecifiedQuantity, setUnspecifiedQuantity] = useState(false);
 
   // Filter products based on search query
   const filteredProducts = products.filter(product =>
@@ -44,10 +46,17 @@ const InventoryPage = () => {
     e.preventDefault();
     
     try {
+      const finalFormData = {
+        ...formData,
+        currentStock: unspecifiedQuantity ? -1 : formData.currentStock,
+        costPrice: unspecifiedQuantity ? 0 : formData.costPrice,
+        lowStockThreshold: unspecifiedQuantity ? 0 : formData.lowStockThreshold
+      };
+      
       if (selectedProduct) {
-        await updateProduct(selectedProduct.id, formData);
+        await updateProduct(selectedProduct.id, finalFormData);
       } else {
-        await createProduct(formData);
+        await createProduct(finalFormData);
       }
       
       setIsDialogOpen(false);
@@ -66,6 +75,7 @@ const InventoryPage = () => {
       currentStock: 0,
       lowStockThreshold: 10,
     });
+    setUnspecifiedQuantity(false);
     setSelectedProduct(null);
   };
 
@@ -76,9 +86,10 @@ const InventoryPage = () => {
       category: product.category,
       costPrice: product.costPrice,
       sellingPrice: product.sellingPrice,
-      currentStock: product.currentStock,
+      currentStock: product.currentStock === -1 ? 0 : product.currentStock,
       lowStockThreshold: product.lowStockThreshold || 10,
     });
+    setUnspecifiedQuantity(product.currentStock === -1);
     setIsDialogOpen(true);
   };
 
@@ -208,10 +219,12 @@ const InventoryPage = () => {
                         id="costPrice"
                         type="number"
                         step="0.01"
-                        value={formData.costPrice}
+                        value={unspecifiedQuantity ? '' : formData.costPrice}
                         onChange={(e) => setFormData(prev => ({ ...prev, costPrice: Number(e.target.value) }))}
-                        required
-                        className="mt-1"
+                        placeholder={unspecifiedQuantity ? "Unspecified" : "0.00"}
+                        disabled={unspecifiedQuantity}
+                        required={!unspecifiedQuantity}
+                        className={`mt-1 ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                     </div>
                     <div>
@@ -234,23 +247,58 @@ const InventoryPage = () => {
                       <Input
                         id="currentStock"
                         type="number"
-                        value={formData.currentStock}
+                        value={unspecifiedQuantity ? '' : formData.currentStock}
                         onChange={(e) => setFormData(prev => ({ ...prev, currentStock: Number(e.target.value) }))}
-                        required
-                        className="mt-1"
+                        placeholder={unspecifiedQuantity ? "Unspecified quantity" : "0"}
+                        disabled={unspecifiedQuantity}
+                        required={!unspecifiedQuantity}
+                        className={`mt-1 ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Checkbox 
+                          id="unspecifiedQuantity"
+                          checked={unspecifiedQuantity}
+                          onCheckedChange={(checked) => setUnspecifiedQuantity(checked as boolean)}
+                        />
+                        <Label htmlFor="unspecifiedQuantity" className="text-sm text-gray-600">
+                          Unspecified quantity (sacks, cups, etc.)
+                        </Label>
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="lowStockThreshold" className="text-base font-medium text-gray-700 font-['Inter']">Low Stock Alert</Label>
                       <Input
                         id="lowStockThreshold"
                         type="number"
-                        value={formData.lowStockThreshold}
+                        value={unspecifiedQuantity ? '' : formData.lowStockThreshold}
                         onChange={(e) => setFormData(prev => ({ ...prev, lowStockThreshold: Number(e.target.value) }))}
-                        className="mt-1"
+                        placeholder={unspecifiedQuantity ? "Unspecified" : "10"}
+                        disabled={unspecifiedQuantity}
+                        className={`mt-1 ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                     </div>
                   </div>
+
+                  {/* Profit Calculation */}
+                  {!unspecifiedQuantity && formData.costPrice > 0 && formData.sellingPrice > 0 && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h3 className="font-medium text-blue-900 mb-2">Profit Summary</h3>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Profit per unit:</span>
+                          <span className="font-semibold text-green-600">
+                            KSh {(formData.sellingPrice - formData.costPrice).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Profit margin:</span>
+                          <span className="font-semibold text-blue-600">
+                            {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="font-['Inter']">
@@ -359,7 +407,7 @@ const InventoryPage = () => {
                           {product.category}
                         </span>
                       </div>
-                      {product.currentStock <= (product.lowStockThreshold || 10) && (
+                      {product.currentStock <= (product.lowStockThreshold || 10) && product.currentStock !== -1 && (
                         <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 ml-2" strokeWidth={1.5} />
                       )}
                     </div>
@@ -370,7 +418,7 @@ const InventoryPage = () => {
                       <div>
                         <span className="block font-medium text-gray-700 mb-1 font-['Inter']">Cost Price</span>
                         <span className="text-xl font-semibold text-gray-900 font-['Inter']">
-                          KSh {product.costPrice.toLocaleString()}
+                          {product.currentStock === -1 ? 'Unspecified' : `KSh ${product.costPrice.toLocaleString()}`}
                         </span>
                       </div>
                       <div>
@@ -384,11 +432,13 @@ const InventoryPage = () => {
                     {/* Stock and Profit Badges */}
                     <div className="flex gap-2 flex-wrap">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-sm font-medium font-['Inter'] ${
-                        product.currentStock <= (product.lowStockThreshold || 10) 
+                        product.currentStock === -1 
+                          ? 'bg-blue-100 text-blue-800'
+                          : product.currentStock <= (product.lowStockThreshold || 10) 
                           ? 'bg-amber-100 text-amber-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        Stock: {product.currentStock}
+                        Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
                       </span>
                       <span className="inline-block bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-sm font-medium font-['Inter']">
                         Profit: KSh {(product.sellingPrice - product.costPrice).toLocaleString()}
@@ -397,7 +447,9 @@ const InventoryPage = () => {
 
                     <div className="pt-2 border-t border-gray-100">
                       <div className="text-sm text-gray-500 font-['Inter']">
-                        <span className="block">Low stock alert: {product.lowStockThreshold || 10} units</span>
+                        <span className="block">
+                          Low stock alert: {product.currentStock === -1 ? 'Unspecified' : `${product.lowStockThreshold || 10} units`}
+                        </span>
                       </div>
                     </div>
 
@@ -415,7 +467,13 @@ const InventoryPage = () => {
                       <Button 
                         size="sm" 
                         onClick={() => openRestockModal(product)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium font-['Inter'] flex items-center justify-center gap-1.5"
+                        disabled={product.currentStock === -1}
+                        className={`rounded-xl font-medium font-['Inter'] flex items-center justify-center gap-1.5 ${
+                          product.currentStock === -1 
+                            ? 'opacity-50 cursor-not-allowed bg-gray-400' 
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        }`}
+                        title={product.currentStock === -1 ? 'Cannot restock unspecified quantity products' : ''}
                       >
                         <Box className="w-4 h-4" strokeWidth={1.5} />
                         Stock
