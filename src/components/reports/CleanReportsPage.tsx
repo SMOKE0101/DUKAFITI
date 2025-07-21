@@ -3,6 +3,7 @@ import { DollarSign, ShoppingCart, Users, Package, Search, CreditCard, Banknote,
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
+import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { formatCurrency } from '../../utils/currency';
 import OutlinedMetricCard from './OutlinedMetricCard';
 import SalesTrendChart from './SalesTrendChart';
@@ -36,17 +37,20 @@ const CleanReportsPage = () => {
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
   const [productProfitsSearchTerm, setProductProfitsSearchTerm] = useState('');
   const [debtTransactionsSearchTerm, setDebtTransactionsSearchTerm] = useState('');
+  const [debtPaymentsSearchTerm, setDebtPaymentsSearchTerm] = useState('');
 
   // Independent table date range states
   const [salesTableDateRange, setSalesTableDateRange] = useState<TableDateRange>('today');
   const [productProfitsTableDateRange, setProductProfitsTableDateRange] = useState<TableDateRange>('today');
   const [debtTransactionsTableDateRange, setDebtTransactionsTableDateRange] = useState<TableDateRange>('today');
+  const [debtPaymentsTableDateRange, setDebtPaymentsTableDateRange] = useState<TableDateRange>('today');
 
   const isMobile = useIsMobile();
 
   const { customers, loading: customersLoading } = useSupabaseCustomers();
   const { products, loading: productsLoading } = useSupabaseProducts();
   const { sales, loading: salesLoading } = useSupabaseSales();
+  const { debtPayments, loading: debtPaymentsLoading } = useSupabaseDebtPayments();
 
   // Global date range for summary cards and charts
   const getGlobalDateRange = () => {
@@ -519,6 +523,40 @@ const CleanReportsPage = () => {
       }));
   }, [sales, debtTransactionsTableDateRange, debtTransactionsSearchTerm]);
 
+  // Ultra-accurate debt payments data with independent date range
+  const debtPaymentsData = useMemo(() => {
+    const { from: tableFromDate, to: tableToDate } = getTableDateRange(debtPaymentsTableDateRange);
+    
+    return debtPayments
+      .filter(payment => {
+        const paymentDate = new Date(payment.timestamp);
+        const isInDateRange = paymentDate >= tableFromDate && paymentDate <= tableToDate;
+        
+        const matchesSearch = !debtPaymentsSearchTerm || 
+          payment.customer_name?.toLowerCase().includes(debtPaymentsSearchTerm.toLowerCase());
+        
+        return isInDateRange && matchesSearch;
+      })
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .map(payment => ({
+        id: payment.id,
+        date: new Date(payment.timestamp).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        time: new Date(payment.timestamp).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        }),
+        customer: payment.customer_name || 'Unknown Customer',
+        amount: payment.amount || 0,
+        notes: payment.reference || 'No notes',
+        timestamp: payment.timestamp // Keep for accurate sorting
+      }));
+  }, [debtPayments, debtPaymentsTableDateRange, debtPaymentsSearchTerm]);
+
   const lowStockProducts = products.filter(p => (p.currentStock || 0) <= (p.lowStockThreshold || 10));
   const overdueCustomers = customers.filter(c => (c.outstandingDebt || 0) > 0);
 
@@ -604,7 +642,34 @@ const CleanReportsPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (salesLoading || productsLoading || customersLoading) {
+  // Ultra-accurate debt payments CSV download
+  const handleDownloadDebtPaymentsCSV = () => {
+    if (debtPaymentsData.length === 0) return;
+    
+    const csvHeaders = ['Date', 'Time', 'Customer', 'Amount', 'Notes'];
+    const csvRows = debtPaymentsData.map(row => [
+      row.date,
+      row.time,
+      row.customer,
+      row.amount.toString(),
+      row.notes
+    ]);
+    
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `debt-payments-report-${debtPaymentsTableDateRange}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (salesLoading || productsLoading || customersLoading || debtPaymentsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
@@ -870,7 +935,7 @@ const CleanReportsPage = () => {
         </div>
 
         {/* Debt Tables Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Debt Transactions */}
           <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
@@ -940,6 +1005,78 @@ const CleanReportsPage = () => {
               {debtTransactionsData.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   No debt transactions found for the selected time period
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Debt Payments */}
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">Debt Payments</h3>
+              <div className="flex items-center gap-3">
+                {/* Independent time frame selector for debt payments table */}
+                <div className="inline-flex bg-gray-100 rounded-lg p-1">
+                  {(['today', 'week', 'month', 'all'] as TableDateRange[]).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setDebtPaymentsTableDateRange(range)}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
+                        debtPaymentsTableDateRange === range
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      {range === 'today' ? 'Today' : 
+                       range === 'week' ? 'Week' : 
+                       range === 'month' ? 'Month' : 'All'}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleDownloadDebtPaymentsCSV}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition"
+                >
+                  Download CSV
+                </button>
+              </div>
+            </div>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by customer..."
+                value={debtPaymentsSearchTerm}
+                onChange={(e) => setDebtPaymentsSearchTerm(e.target.value)}
+                className="bg-gray-100 px-4 py-2 pl-10 rounded-xl w-full max-w-md focus:outline-none focus:ring-2 focus:ring-purple-300"
+              />
+            </div>
+            <div className={`overflow-x-auto ${isMobile ? 'h-64' : 'h-80'}`}>
+              <table className="w-full">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {debtPaymentsData.slice(0, 50).map((row, index) => (
+                    <tr key={row.id} className="hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 text-sm text-gray-900">{row.date}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{row.time}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{row.customer}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-green-600">{formatCurrency(row.amount)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{row.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {debtPaymentsData.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No debt payments found for the selected time period
                 </div>
               )}
             </div>
