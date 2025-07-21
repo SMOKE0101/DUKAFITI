@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { DollarSign, ShoppingCart, Users, Package, Search, CreditCard, Banknote, HandCoins } from 'lucide-react';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
@@ -104,90 +103,141 @@ const CleanReportsPage = () => {
     };
   }, [summaryCardsSales, products]);
 
-  // Sales trend data calculation
+  // Ultra-accurate sales trend data calculation
   const salesTrendData = useMemo(() => {
     const now = new Date();
     let chartFromDate: Date;
-    let bucketFormat: string;
+    let bucketFormat: 'hour' | 'day' | 'month';
     let timePoints: string[] = [];
     
     switch (salesChartResolution) {
       case 'hourly':
+        // Last 24 hours from current time
         chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         bucketFormat = 'hour';
+        
+        // Generate 24 hour buckets starting from 24 hours ago
         for (let i = 0; i < 24; i++) {
-          const hour = new Date(chartFromDate);
-          hour.setHours(i, 0, 0, 0);
-          timePoints.push(hour.toISOString().substring(0, 13) + ':00');
+          const hourTime = new Date(chartFromDate.getTime() + (i * 60 * 60 * 1000));
+          hourTime.setMinutes(0, 0, 0); // Set to exact hour
+          timePoints.push(hourTime.toISOString().substring(0, 13) + ':00:00.000Z');
         }
         break;
+        
       case 'daily':
-        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        // Last 30 days from today
+        chartFromDate = new Date(now);
+        chartFromDate.setDate(chartFromDate.getDate() - 29); // 30 days including today
+        chartFromDate.setHours(0, 0, 0, 0); // Start of day
         bucketFormat = 'day';
+        
+        // Generate 30 day buckets
         for (let i = 0; i < 30; i++) {
-          const day = new Date(chartFromDate);
-          day.setDate(day.getDate() + i);
-          timePoints.push(day.toISOString().substring(0, 10));
+          const dayTime = new Date(chartFromDate);
+          dayTime.setDate(chartFromDate.getDate() + i);
+          timePoints.push(dayTime.toISOString().substring(0, 10));
         }
         break;
+        
       case 'monthly':
-        chartFromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        // Last 12 months from current month
+        chartFromDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
         bucketFormat = 'month';
+        
+        // Generate 12 month buckets
         for (let i = 0; i < 12; i++) {
-          const month = new Date(chartFromDate);
-          month.setMonth(month.getMonth() + i);
-          timePoints.push(month.toISOString().substring(0, 7));
+          const monthTime = new Date(chartFromDate.getFullYear(), chartFromDate.getMonth() + i, 1);
+          const monthKey = monthTime.getFullYear() + '-' + String(monthTime.getMonth() + 1).padStart(2, '0');
+          timePoints.push(monthKey);
         }
         break;
+        
       default:
         chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         bucketFormat = 'day';
         for (let i = 0; i < 30; i++) {
-          const day = new Date(chartFromDate);
-          day.setDate(day.getDate() + i);
-          timePoints.push(day.toISOString().substring(0, 10));
+          const dayTime = new Date(chartFromDate);
+          dayTime.setDate(chartFromDate.getDate() + i);
+          timePoints.push(dayTime.toISOString().substring(0, 10));
         }
     }
 
+    // Filter sales within the timeframe
     const chartSales = sales.filter(sale => {
       const saleDate = new Date(sale.timestamp);
       return saleDate >= chartFromDate && saleDate <= now;
     });
 
+    // Initialize all time buckets with zero
     const groupedData: Record<string, number> = {};
     timePoints.forEach(point => {
       groupedData[point] = 0;
     });
     
+    // Aggregate sales into proper time buckets
     chartSales.forEach(sale => {
       const saleDate = new Date(sale.timestamp);
-      let key: string;
+      let bucketKey: string;
       
       switch (bucketFormat) {
         case 'hour':
-          key = saleDate.toISOString().substring(0, 13) + ':00';
+          // Round down to the exact hour
+          const hourBucket = new Date(saleDate);
+          hourBucket.setMinutes(0, 0, 0);
+          bucketKey = hourBucket.toISOString().substring(0, 13) + ':00:00.000Z';
           break;
+          
         case 'day':
-          key = saleDate.toISOString().substring(0, 10);
+          // Use just the date part (YYYY-MM-DD)
+          bucketKey = saleDate.toISOString().substring(0, 10);
           break;
+          
         case 'month':
-          key = saleDate.toISOString().substring(0, 7);
+          // Use year-month format (YYYY-MM)
+          bucketKey = saleDate.getFullYear() + '-' + String(saleDate.getMonth() + 1).padStart(2, '0');
           break;
+          
         default:
-          key = saleDate.toISOString().substring(0, 10);
+          bucketKey = saleDate.toISOString().substring(0, 10);
       }
       
-      if (groupedData.hasOwnProperty(key)) {
-        groupedData[key] += (sale.total || 0);
+      // Only add to bucket if it exists in our time points
+      if (groupedData.hasOwnProperty(bucketKey)) {
+        groupedData[bucketKey] += (sale.total || 0);
       }
     });
     
-    return Object.entries(groupedData)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, revenue]) => ({
-        date: formatDateLabel(date, bucketFormat),
+    // Convert to chart format with proper labels
+    return timePoints.map(timePoint => {
+      const revenue = groupedData[timePoint] || 0;
+      let displayLabel: string;
+      
+      switch (bucketFormat) {
+        case 'hour':
+          const hourDate = new Date(timePoint);
+          displayLabel = hourDate.getHours().toString().padStart(2, '0') + ':00';
+          break;
+          
+        case 'day':
+          const dayDate = new Date(timePoint + 'T00:00:00Z');
+          displayLabel = dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          break;
+          
+        case 'month':
+          const [year, month] = timePoint.split('-');
+          const monthDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+          displayLabel = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          break;
+          
+        default:
+          displayLabel = timePoint;
+      }
+      
+      return {
+        date: displayLabel,
         revenue
-      }));
+      };
+    });
   }, [sales, salesChartResolution]);
 
   const salesTrendTotal = useMemo(() => {
