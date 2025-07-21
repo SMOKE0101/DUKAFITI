@@ -101,6 +101,45 @@ export type Database = {
         }
         Relationships: []
       }
+      debt_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_id: string
+          customer_name: string
+          id: string
+          payment_method: string
+          reference: string | null
+          synced: boolean
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_id: string
+          customer_name: string
+          id?: string
+          payment_method?: string
+          reference?: string | null
+          synced?: boolean
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_id?: string
+          customer_name?: string
+          id?: string
+          payment_method?: string
+          reference?: string | null
+          synced?: boolean
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
