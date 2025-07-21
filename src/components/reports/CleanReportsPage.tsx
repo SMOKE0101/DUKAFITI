@@ -5,7 +5,7 @@ import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
 import { formatCurrency } from '../../utils/currency';
-import MetricCard from './MetricCard';
+import OutlinedMetricCard from './OutlinedMetricCard';
 import SalesTrendChart from './SalesTrendChart';
 import OrdersPerHourChart from './OrdersPerHourChart';
 import AlertsPanel from './AlertsPanel';
@@ -364,9 +364,9 @@ const CleanReportsPage = () => {
           </div>
         </div>
 
-        {/* Summary Metrics Cards */}
+        {/* Summary Metrics Cards - Updated to use OutlinedMetricCard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-          <MetricCard
+          <OutlinedMetricCard
             title="TOTAL REVENUE"
             value={formatCurrency(summaryMetrics.totalRevenue)}
             icon={DollarSign}
@@ -374,7 +374,7 @@ const CleanReportsPage = () => {
             iconBgColor="bg-green-100"
             delay={0}
           />
-          <MetricCard
+          <OutlinedMetricCard
             title="TOTAL ORDERS"
             value={summaryMetrics.totalOrders}
             icon={ShoppingCart}
@@ -382,7 +382,7 @@ const CleanReportsPage = () => {
             iconBgColor="bg-blue-100"
             delay={100}
           />
-          <MetricCard
+          <OutlinedMetricCard
             title="ACTIVE CUSTOMERS"
             value={summaryMetrics.activeCustomers}
             icon={Users}
@@ -390,7 +390,7 @@ const CleanReportsPage = () => {
             iconBgColor="bg-purple-100"
             delay={200}
           />
-          <MetricCard
+          <OutlinedMetricCard
             title="LOW STOCK"
             value={summaryMetrics.lowStockProducts}
             icon={Package}
@@ -398,7 +398,7 @@ const CleanReportsPage = () => {
             iconBgColor="bg-orange-100"
             delay={300}
           />
-          <MetricCard
+          <OutlinedMetricCard
             title="CASH REVENUE"
             value={formatCurrency(summaryMetrics.revenueByCash)}
             icon={Banknote}
@@ -406,7 +406,7 @@ const CleanReportsPage = () => {
             iconBgColor="bg-emerald-100"
             delay={400}
           />
-          <MetricCard
+          <OutlinedMetricCard
             title="M-PESA REVENUE"
             value={formatCurrency(summaryMetrics.revenueByMpesa)}
             icon={CreditCard}
@@ -414,7 +414,7 @@ const CleanReportsPage = () => {
             iconBgColor="bg-cyan-100"
             delay={500}
           />
-          <MetricCard
+          <OutlinedMetricCard
             title="DEBT REVENUE"
             value={formatCurrency(summaryMetrics.revenueByDebt)}
             icon={HandCoins}
