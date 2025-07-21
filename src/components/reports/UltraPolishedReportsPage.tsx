@@ -1,13 +1,12 @@
-
 import React, { useState, useMemo } from 'react';
-import { DollarSign, ShoppingCart, Users, Package } from 'lucide-react';
+import { DollarSign, ShoppingCart, Users, Package, AlertTriangle, TrendingUp } from 'lucide-react';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { useSupabaseProducts } from '../../hooks/useSupabaseProducts';
 import { useSupabaseSales } from '../../hooks/useSupabaseSales';
 import { formatCurrency } from '../../utils/currency';
 import { addDays, addMonths, addHours, startOfDay, startOfMonth, startOfHour, formatDateForBucket, safeNumber } from '../../utils/dateUtils';
 import ReportsFiltersPanel from './ReportsFiltersPanel';
-import MetricCard from './MetricCard';
+import OutlinedMetricCard from './OutlinedMetricCard';
 import SalesTrendChart from './SalesTrendChart';
 import OrdersPerHourChart from './OrdersPerHourChart';
 import ReportsTable from './ReportsTable';
@@ -96,7 +95,6 @@ const UltraPolishedReportsPage = () => {
     const totalRevenue = summaryCardsSales.reduce((sum, sale) => sum + safeNumber(sale.total), 0);
     const totalOrders = summaryCardsSales.length;
     
-    // Ultra-accurate active customers calculation
     const uniqueCustomerIds = new Set(
       summaryCardsSales
         .map(sale => sale.customerId)
@@ -104,15 +102,32 @@ const UltraPolishedReportsPage = () => {
     );
     const activeCustomers = uniqueCustomerIds.size;
     
-    // Ultra-accurate low stock calculation
     const lowStockProducts = products.filter(product => {
       const currentStock = safeNumber(product.currentStock, 0);
       const threshold = safeNumber(product.lowStockThreshold, 10);
       return currentStock >= 0 && currentStock <= threshold;
     }).length;
 
-    return { totalRevenue, totalOrders, activeCustomers, lowStockProducts };
-  }, [summaryCardsSales, products]);
+    const cashRevenue = summaryCardsSales
+      .filter(s => s.paymentMethod === 'cash')
+      .reduce((sum, sale) => sum + safeNumber(sale.total), 0);
+    
+    const mpesaRevenue = summaryCardsSales
+      .filter(s => s.paymentMethod === 'mpesa')
+      .reduce((sum, sale) => sum + safeNumber(sale.total), 0);
+
+    const totalDebt = customers.reduce((sum, customer) => sum + safeNumber(customer.outstandingDebt, 0), 0);
+
+    return { 
+      totalRevenue, 
+      totalOrders, 
+      activeCustomers, 
+      lowStockProducts,
+      cashRevenue,
+      mpesaRevenue,
+      totalDebt
+    };
+  }, [summaryCardsSales, products, customers]);
 
   const salesTrendData = useMemo(() => {
     const now = new Date();
@@ -339,6 +354,69 @@ const UltraPolishedReportsPage = () => {
     );
   }
 
+  const metricsCards = [
+    {
+      title: 'Total Revenue',
+      value: formatCurrency(summaryMetrics.totalRevenue),
+      icon: DollarSign,
+      color: 'border-green-200 hover:border-green-400 dark:border-green-800 dark:hover:border-green-600',
+      iconBg: 'bg-green-50 dark:bg-green-950',
+      iconColor: 'text-green-600 dark:text-green-400',
+      delay: 0
+    },
+    {
+      title: 'Total Orders',
+      value: summaryMetrics.totalOrders,
+      icon: ShoppingCart,
+      color: 'border-blue-200 hover:border-blue-400 dark:border-blue-800 dark:hover:border-blue-600',
+      iconBg: 'bg-blue-50 dark:bg-blue-950',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      delay: 100
+    },
+    {
+      title: 'Active Customers',
+      value: summaryMetrics.activeCustomers,
+      icon: Users,
+      color: 'border-purple-200 hover:border-purple-400 dark:border-purple-800 dark:hover:border-purple-600',
+      iconBg: 'bg-purple-50 dark:bg-purple-950',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+      delay: 200
+    },
+    {
+      title: 'Low Stock Products',
+      value: summaryMetrics.lowStockProducts,
+      icon: summaryMetrics.lowStockProducts > 0 ? AlertTriangle : Package,
+      color: summaryMetrics.lowStockProducts > 0 
+        ? 'border-orange-200 hover:border-orange-400 dark:border-orange-800 dark:hover:border-orange-600'
+        : 'border-gray-200 hover:border-gray-400 dark:border-gray-800 dark:hover:border-gray-600',
+      iconBg: summaryMetrics.lowStockProducts > 0 
+        ? 'bg-orange-50 dark:bg-orange-950' 
+        : 'bg-gray-50 dark:bg-gray-950',
+      iconColor: summaryMetrics.lowStockProducts > 0 
+        ? 'text-orange-600 dark:text-orange-400'
+        : 'text-gray-600 dark:text-gray-400',
+      delay: 300
+    },
+    {
+      title: 'Cash Revenue',
+      value: formatCurrency(summaryMetrics.cashRevenue),
+      icon: DollarSign,
+      color: 'border-emerald-200 hover:border-emerald-400 dark:border-emerald-800 dark:hover:border-emerald-600',
+      iconBg: 'bg-emerald-50 dark:bg-emerald-950',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      delay: 400
+    },
+    {
+      title: 'M-Pesa Revenue',
+      value: formatCurrency(summaryMetrics.mpesaRevenue),
+      icon: TrendingUp,
+      color: 'border-teal-200 hover:border-teal-400 dark:border-teal-800 dark:hover:border-teal-600',
+      iconBg: 'bg-teal-50 dark:bg-teal-950',
+      iconColor: 'text-teal-600 dark:text-teal-400',
+      delay: 500
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <ReportsFiltersPanel
@@ -353,39 +431,19 @@ const UltraPolishedReportsPage = () => {
       <div className={`max-w-7xl mx-auto space-y-${isMobile ? '2' : '6 md:space-y-8'} ${
         isMobile ? 'px-1 py-2' : isTablet ? 'px-4 py-6' : 'px-6 py-8'
       }`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard
-            title="Total Revenue"
-            value={formatCurrency(summaryMetrics.totalRevenue)}
-            icon={DollarSign}
-            iconColor="text-green-600 dark:text-green-400"
-            iconBgColor="bg-green-100 dark:bg-green-900/20"
-            delay={0}
-          />
-          <MetricCard
-            title="Total Orders"
-            value={summaryMetrics.totalOrders}
-            icon={ShoppingCart}
-            iconColor="text-blue-600 dark:text-blue-400"
-            iconBgColor="bg-blue-100 dark:bg-blue-900/20"
-            delay={100}
-          />
-          <MetricCard
-            title="Active Customers"
-            value={summaryMetrics.activeCustomers}
-            icon={Users}
-            iconColor="text-purple-600 dark:text-purple-400"
-            iconBgColor="bg-purple-100 dark:bg-purple-900/20"
-            delay={200}
-          />
-          <MetricCard
-            title="Low Stock Products"
-            value={summaryMetrics.lowStockProducts}
-            icon={Package}
-            iconColor="text-orange-600 dark:text-orange-400"
-            iconBgColor="bg-orange-100 dark:bg-orange-900/20"
-            delay={300}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          {metricsCards.map((card, index) => (
+            <OutlinedMetricCard
+              key={index}
+              title={card.title}
+              value={card.value}
+              icon={card.icon}
+              color={card.color}
+              iconBg={card.iconBg}
+              iconColor={card.iconColor}
+              delay={card.delay}
+            />
+          ))}
         </div>
 
         <div className={`grid gap-${isMobile ? '2' : '6'} grid-cols-1`}>
