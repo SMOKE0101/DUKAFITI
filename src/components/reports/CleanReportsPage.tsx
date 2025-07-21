@@ -34,13 +34,13 @@ const CleanReportsPage = () => {
   
   // Table search states
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
-  const [paymentsSearchTerm, setPaymentsSearchTerm] = useState('');
+  const [productProfitsSearchTerm, setProductProfitsSearchTerm] = useState('');
   const [debtTransactionsSearchTerm, setDebtTransactionsSearchTerm] = useState('');
   const [debtPaymentsSearchTerm, setDebtPaymentsSearchTerm] = useState('');
 
   // Independent table date range states
   const [salesTableDateRange, setSalesTableDateRange] = useState<TableDateRange>('today');
-  const [paymentsTableDateRange, setPaymentsTableDateRange] = useState<TableDateRange>('today');
+  const [productProfitsTableDateRange, setProductProfitsTableDateRange] = useState<TableDateRange>('today');
 
   const isMobile = useIsMobile();
 
@@ -430,40 +430,57 @@ const CleanReportsPage = () => {
       }));
   }, [sales, salesTableDateRange, salesSearchTerm]);
 
-  // Ultra-accurate payments table data with independent date range
-  const paymentsTableData = useMemo(() => {
-    const { from: tableFromDate, to: tableToDate } = getTableDateRange(paymentsTableDateRange);
+  // Ultra-accurate product profits table data with independent date range
+  const productProfitsTableData = useMemo(() => {
+    const { from: tableFromDate, to: tableToDate } = getTableDateRange(productProfitsTableDateRange);
     
-    return sales
-      .filter(sale => {
-        const saleDate = new Date(sale.timestamp);
-        const isInDateRange = saleDate >= tableFromDate && saleDate <= tableToDate;
-        const hasCustomer = sale.customerName;
-        
-        const matchesSearch = !paymentsSearchTerm || 
-          sale.customerName?.toLowerCase().includes(paymentsSearchTerm.toLowerCase());
-        
-        return isInDateRange && hasCustomer && matchesSearch;
+    // Filter sales within the date range
+    const filteredSales = sales.filter(sale => {
+      const saleDate = new Date(sale.timestamp);
+      return saleDate >= tableFromDate && saleDate <= tableToDate;
+    });
+
+    // Group sales by product
+    const productSalesMap: Record<string, {
+      productName: string;
+      totalQuantity: number;
+      salesAmount: number;
+      profit: number;
+    }> = {};
+
+    filteredSales.forEach(sale => {
+      const productKey = sale.productId;
+      const productName = sale.productName;
+      
+      if (!productSalesMap[productKey]) {
+        productSalesMap[productKey] = {
+          productName,
+          totalQuantity: 0,
+          salesAmount: 0,
+          profit: 0
+        };
+      }
+      
+      productSalesMap[productKey].totalQuantity += sale.quantity || 0;
+      productSalesMap[productKey].salesAmount += sale.total || 0;
+      productSalesMap[productKey].profit += sale.profit || 0;
+    });
+
+    // Convert to array and apply search filter
+    return Object.values(productSalesMap)
+      .filter(product => {
+        if (!productProfitsSearchTerm) return true;
+        return product.productName?.toLowerCase().includes(productProfitsSearchTerm.toLowerCase());
       })
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .map(sale => ({
-        id: sale.id,
-        date: new Date(sale.timestamp).toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric' 
-        }),
-        time: new Date(sale.timestamp).toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: true 
-        }),
-        customer: sale.customerName,
-        amount: sale.total || 0,
-        paymentMethod: sale.paymentMethod,
-        timestamp: sale.timestamp
+      .sort((a, b) => b.profit - a.profit) // Sort by profit descending
+      .map((product, index) => ({
+        id: `product-${index}`,
+        product: product.productName,
+        totalQuantity: product.totalQuantity,
+        salesAmount: product.salesAmount,
+        profit: product.profit
       }));
-  }, [sales, paymentsTableDateRange, paymentsSearchTerm]);
+  }, [sales, productProfitsTableDateRange, productProfitsSearchTerm]);
 
   // Debt transactions - all sales made via debt
   const debtTransactionsData = useMemo(() => 
@@ -518,16 +535,15 @@ const CleanReportsPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleDownloadPaymentsCSV = () => {
-    if (paymentsTableData.length === 0) return;
+  const handleDownloadProductProfitsCSV = () => {
+    if (productProfitsTableData.length === 0) return;
     
-    const csvHeaders = ['Date', 'Time', 'Customer', 'Amount', 'Payment Method'];
-    const csvRows = paymentsTableData.map(row => [
-      row.date,
-      row.time,
-      row.customer,
-      row.amount.toString(),
-      row.paymentMethod
+    const csvHeaders = ['Product', 'Total Quantity', 'Sales Amount', 'Profit'];
+    const csvRows = productProfitsTableData.map(row => [
+      row.product,
+      row.totalQuantity.toString(),
+      row.salesAmount.toString(),
+      row.profit.toString()
     ]);
     
     const csvContent = [
@@ -539,7 +555,7 @@ const CleanReportsPage = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `payments-report-${paymentsTableDateRange}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `product-profits-report-${productProfitsTableDateRange}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -765,19 +781,19 @@ const CleanReportsPage = () => {
             </div>
           </div>
 
-          {/* Regular Payments Report */}
+          {/* Product Profits Report */}
           <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Payments Report</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Product Profits</h3>
               <div className="flex items-center gap-3">
-                {/* Independent time frame selector for payments table */}
+                {/* Independent time frame selector for product profits table */}
                 <div className="inline-flex bg-gray-100 rounded-lg p-1">
                   {(['today', 'week', 'month', 'all'] as TableDateRange[]).map((range) => (
                     <button
                       key={range}
-                      onClick={() => setPaymentsTableDateRange(range)}
+                      onClick={() => setProductProfitsTableDateRange(range)}
                       className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
-                        paymentsTableDateRange === range
+                        productProfitsTableDateRange === range
                           ? 'bg-purple-600 text-white shadow-sm'
                           : 'text-gray-600 hover:text-gray-800'
                       }`}
@@ -789,7 +805,7 @@ const CleanReportsPage = () => {
                   ))}
                 </div>
                 <button
-                  onClick={handleDownloadPaymentsCSV}
+                  onClick={handleDownloadProductProfitsCSV}
                   className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition"
                 >
                   Download CSV
@@ -800,9 +816,9 @@ const CleanReportsPage = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by customer..."
-                value={paymentsSearchTerm}
-                onChange={(e) => setPaymentsSearchTerm(e.target.value)}
+                placeholder="Search by product..."
+                value={productProfitsSearchTerm}
+                onChange={(e) => setProductProfitsSearchTerm(e.target.value)}
                 className="bg-gray-100 px-4 py-2 pl-10 rounded-xl w-full max-w-md focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
@@ -810,28 +826,26 @@ const CleanReportsPage = () => {
               <table className="w-full">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty Sold</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sales Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {paymentsTableData.slice(0, 50).map((row, index) => (
+                  {productProfitsTableData.slice(0, 50).map((row, index) => (
                     <tr key={row.id} className="hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 text-sm text-gray-900">{row.date}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{row.time}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{row.customer}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-green-600">{formatCurrency(row.amount)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 uppercase">{row.paymentMethod}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{row.product}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{row.totalQuantity}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{formatCurrency(row.salesAmount)}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-green-600">{formatCurrency(row.profit)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {paymentsTableData.length === 0 && (
+              {productProfitsTableData.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  No payments found for the selected time period
+                  No product sales found for the selected time period
                 </div>
               )}
             </div>
@@ -845,7 +859,7 @@ const CleanReportsPage = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-800">Debt Transactions</h3>
               <button
-                onClick={() => handleDownloadCSV(debtTransactionsData, 'debt-transactions.csv')}
+                onClick={() => handleDownloadCSV(debtTransactionsData, 'debt-transactions')}
                 className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-medium hover:bg-amber-700 transition"
               >
                 Download CSV
@@ -892,7 +906,7 @@ const CleanReportsPage = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-800">Debt Payments</h3>
               <button
-                onClick={() => handleDownloadCSV(debtPaymentsData, 'debt-payments.csv')}
+                onClick={() => handleDownloadCSV(debtPaymentsData, 'debt-payments')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition"
               >
                 Download CSV
