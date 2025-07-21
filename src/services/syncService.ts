@@ -127,6 +127,20 @@ export class SyncService {
     
     switch (operation.operation) {
       case 'create':
+        // Check if customer already exists to prevent duplicates
+        const { data: existingCustomer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('name', data.name)
+          .eq('phone', data.phone)
+          .maybeSingle();
+
+        if (existingCustomer) {
+          console.log('[SyncService] Customer already exists, skipping creation:', data.name);
+          return;
+        }
+
         await supabase
           .from('customers')
           .insert([{

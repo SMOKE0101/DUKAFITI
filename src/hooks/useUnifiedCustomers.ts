@@ -44,6 +44,8 @@ export const useUnifiedCustomers = () => {
     console.log('[UnifiedCustomers] Syncing', customerOps.length, 'pending customer operations');
     syncInProgressRef.current = true;
 
+    const syncedCreates: Array<{tempId: string, realCustomer: Customer}> = [];
+
     for (const operation of customerOps) {
       try {
         let success = false;
@@ -64,15 +66,25 @@ export const useUnifiedCustomers = () => {
               user_id: user.id,
             };
 
-            const { error: createError } = await supabase
+            const { data: createdData, error: createError } = await supabase
               .from('customers')
-              .insert([createData]);
+              .insert([createData])
+              .select()
+              .single();
 
             success = !createError;
             if (createError) {
               console.error('[UnifiedCustomers] Create sync failed:', createError);
             } else {
               console.log('[UnifiedCustomers] Create synced successfully');
+              // Track temp ID to real customer mapping for replacement
+              const tempId = operation.data.tempId || `temp_${operation.data.name}_${operation.data.phone}`;
+              if (createdData) {
+                syncedCreates.push({
+                  tempId,
+                  realCustomer: transformDbCustomer(createdData)
+                });
+              }
             }
             break;
 
@@ -130,6 +142,28 @@ export const useUnifiedCustomers = () => {
       }
     }
 
+    // Replace temp customers with real ones from sync
+    if (syncedCreates.length > 0) {
+      setCustomers(prev => {
+        let updated = [...prev];
+        
+        for (const {tempId, realCustomer} of syncedCreates) {
+          // Remove temp customer and add real one
+          updated = updated.filter(c => !c.id.startsWith('temp_') || 
+            !(c.name === realCustomer.name && c.phone === realCustomer.phone));
+          updated.unshift(realCustomer);
+        }
+        
+        // Remove duplicates and sort
+        const uniqueCustomers = updated.filter((customer, index, self) => 
+          index === self.findIndex(c => c.id === customer.id)
+        ).sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+        
+        setCache('customers', uniqueCustomers);
+        return uniqueCustomers;
+      });
+    }
+
     syncInProgressRef.current = false;
     
     // Refresh data after sync
@@ -170,8 +204,11 @@ export const useUnifiedCustomers = () => {
             if (!fetchError && data) {
               const serverData = data.map(transformDbCustomer);
               
-              // Get local customers that might have unsynced changes
-              const unsyncedLocal = cached.filter(customer => customer.id.startsWith('temp_'));
+              // Get local customers that might have unsynced changes (excluding temp customers from completed syncs)
+              const unsyncedLocal = cached.filter(customer => 
+                customer.id.startsWith('temp_') && 
+                !serverData.some(s => s.name === customer.name && s.phone === customer.phone)
+              );
               
               // For synced customers, check if local version has newer data than server
               const mergedData: typeof cached = [];
@@ -309,7 +346,7 @@ export const useUnifiedCustomers = () => {
         addPendingOperation({
           type: 'customer',
           operation: 'create',
-          data: customerData,
+          data: { ...customerData, tempId: newCustomer.id },
         });
         return newCustomer;
       }
@@ -318,7 +355,7 @@ export const useUnifiedCustomers = () => {
       addPendingOperation({
         type: 'customer',
         operation: 'create',
-        data: customerData,
+        data: { ...customerData, tempId: newCustomer.id },
       });
       return newCustomer;
     }
