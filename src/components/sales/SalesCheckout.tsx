@@ -33,7 +33,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const { createSale } = useUnifiedSales();
   const { updateProduct } = useUnifiedProducts();
   const { updateCustomer } = useUnifiedCustomers();
-  const { pendingOperations, isOnline: syncManagerOnline } = useUnifiedSyncManager();
+  const { pendingOperations } = useUnifiedSyncManager();
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
@@ -130,8 +130,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           customerId: selectedCustomerId,
           currentDebt: customer.outstandingDebt,
           additionalDebt: totalDebtAmount,
-          newTotalDebt: (customer.outstandingDebt || 0) + totalDebtAmount,
-          isOnline: isOnline
+          newTotalDebt: (customer.outstandingDebt || 0) + totalDebtAmount
         });
 
         const updates = {
@@ -140,18 +139,13 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           lastPurchaseDate: new Date().toISOString(),
         };
         
-        try {
-          await updateCustomer(selectedCustomerId, updates);
-          console.log('[SalesCheckout] Customer debt updated successfully');
-        } catch (error) {
-          console.error('[SalesCheckout] Failed to update customer debt:', error);
-          // Don't throw error here as the sale was already created
-        }
+        await updateCustomer(selectedCustomerId, updates);
+        console.log('[SalesCheckout] Customer debt updated successfully');
       }
 
       toast({
         title: "Sale Completed!",
-        description: `Successfully processed ${cart.length} item(s) for ${formatCurrency(total)}${!isOnline ? ' (queued for sync when online)' : ''}.${paymentMethod === 'debt' ? ` Customer debt increased by ${formatCurrency(totalDebtAmount)}.` : ''}`,
+        description: `Successfully processed ${cart.length} item(s) for ${formatCurrency(total)}${!isOnline ? ' (will sync when online)' : ''}.${paymentMethod === 'debt' ? ` Customer debt increased by ${formatCurrency(totalDebtAmount)}.` : ''}`,
       });
 
       console.log('[SalesCheckout] Checkout completed successfully');

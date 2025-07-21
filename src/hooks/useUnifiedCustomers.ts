@@ -365,25 +365,12 @@ export const useUnifiedCustomers = () => {
   const updateCustomer = useCallback(async (id: string, updates: Partial<Customer>) => {
     if (!user) throw new Error('User not authenticated');
 
-    console.log('[UnifiedCustomers] Updating customer:', { id, updates, isOnline });
-
     // Optimistically update UI
     setCustomers(prev => {
       const updated = prev.map(c => c.id === id ? { ...c, ...updates } : c);
       setCache('customers', updated);
       return updated;
     });
-
-    // For temporary customer IDs, always queue for sync
-    if (id.startsWith('temp_') || !isOnline) {
-      console.log('[UnifiedCustomers] Queueing customer update for sync:', { id, updates });
-      addPendingOperation({
-        type: 'customer',
-        operation: 'update',
-        data: { id, updates },
-      });
-      return;
-    }
 
     if (isOnline) {
       try {
@@ -415,6 +402,13 @@ export const useUnifiedCustomers = () => {
           data: { id, updates },
         });
       }
+    } else {
+      // Queue for sync when online
+      addPendingOperation({
+        type: 'customer',
+        operation: 'update',
+        data: { id, updates },
+      });
     }
   }, [user, isOnline, addPendingOperation, setCache]);
 

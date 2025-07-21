@@ -89,9 +89,7 @@ export const useCacheManager = () => {
         console.log('[CacheManager] Operation already exists, skipping');
         return prev;
       }
-      const updated = [...prev, operationWithId];
-      console.log('[CacheManager] Total pending operations after add:', updated.length);
-      return updated;
+      return [...prev, operationWithId];
     });
   }, []);
 

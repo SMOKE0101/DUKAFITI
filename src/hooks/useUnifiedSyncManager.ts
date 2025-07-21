@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
@@ -8,7 +8,6 @@ export const useUnifiedSyncManager = () => {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const { pendingOps, clearAllPendingOperations } = useCacheManager();
-  const [operationsCount, setOperationsCount] = useState(0);
 
   const syncPendingOperations = useCallback(async () => {
     if (!isOnline || pendingOps.length === 0 || !user) return false;
@@ -63,15 +62,6 @@ export const useUnifiedSyncManager = () => {
     }
   }, [isOnline, pendingOps, user, clearAllPendingOperations]);
 
-  // Track total pending operations count
-  useEffect(() => {
-    const totalCount = pendingOps.length;
-    if (totalCount !== operationsCount) {
-      console.log('[UnifiedSyncManager] Pending operations count changed:', totalCount);
-      setOperationsCount(totalCount);
-    }
-  }, [pendingOps.length, operationsCount]);
-
   // Auto-sync when coming online
   useEffect(() => {
     if (isOnline && pendingOps.length > 0 && user) {
@@ -86,7 +76,7 @@ export const useUnifiedSyncManager = () => {
 
   return {
     isOnline,
-    pendingOperations: operationsCount,
+    pendingOperations: pendingOps.length,
     syncPendingOperations,
   };
 };
