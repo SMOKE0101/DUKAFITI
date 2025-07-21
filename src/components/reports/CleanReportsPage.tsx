@@ -36,11 +36,11 @@ const CleanReportsPage = () => {
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
   const [productProfitsSearchTerm, setProductProfitsSearchTerm] = useState('');
   const [debtTransactionsSearchTerm, setDebtTransactionsSearchTerm] = useState('');
-  const [debtPaymentsSearchTerm, setDebtPaymentsSearchTerm] = useState('');
 
   // Independent table date range states
   const [salesTableDateRange, setSalesTableDateRange] = useState<TableDateRange>('today');
   const [productProfitsTableDateRange, setProductProfitsTableDateRange] = useState<TableDateRange>('today');
+  const [debtTransactionsTableDateRange, setDebtTransactionsTableDateRange] = useState<TableDateRange>('today');
 
   const isMobile = useIsMobile();
 
@@ -482,26 +482,42 @@ const CleanReportsPage = () => {
       }));
   }, [sales, productProfitsTableDateRange, productProfitsSearchTerm]);
 
-  // Debt transactions - all sales made via debt
-  const debtTransactionsData = useMemo(() => 
-    summaryCardsSales
-      .filter(sale => sale.paymentMethod === 'debt' && (!debtTransactionsSearchTerm || 
-        sale.customerName?.toLowerCase().includes(debtTransactionsSearchTerm.toLowerCase())))
+  // Ultra-accurate debt transactions data with independent date range
+  const debtTransactionsData = useMemo(() => {
+    const { from: tableFromDate, to: tableToDate } = getTableDateRange(debtTransactionsTableDateRange);
+    
+    return sales
+      .filter(sale => {
+        const saleDate = new Date(sale.timestamp);
+        const isInDateRange = saleDate >= tableFromDate && saleDate <= tableToDate;
+        const isDebtSale = sale.paymentMethod === 'debt';
+        
+        const matchesSearch = !debtTransactionsSearchTerm || 
+          sale.customerName?.toLowerCase().includes(debtTransactionsSearchTerm.toLowerCase()) ||
+          sale.productName?.toLowerCase().includes(debtTransactionsSearchTerm.toLowerCase());
+        
+        return isInDateRange && isDebtSale && matchesSearch;
+      })
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .map(sale => ({
-        date: new Date(sale.timestamp).toLocaleDateString(),
-        time: new Date(sale.timestamp).toLocaleTimeString(),
+        id: sale.id,
+        date: new Date(sale.timestamp).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        time: new Date(sale.timestamp).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        }),
         customer: sale.customerName || 'Unknown Customer',
+        product: sale.productName,
         amount: sale.total || 0,
-        type: 'Debt Sale'
-      })), [summaryCardsSales, debtTransactionsSearchTerm]
-  );
-
-  // Debt payments - actual payments made against debt (from customers page)
-  const debtPaymentsData = useMemo(() => {
-    // This would need to be implemented based on actual debt payment records
-    // For now, returning empty array as this requires new data structure
-    return [];
-  }, [debtPaymentsSearchTerm]);
+        type: 'Debt Sale',
+        timestamp: sale.timestamp // Keep for accurate sorting
+      }));
+  }, [sales, debtTransactionsTableDateRange, debtTransactionsSearchTerm]);
 
   const lowStockProducts = products.filter(p => (p.currentStock || 0) <= (p.lowStockThreshold || 10));
   const overdueCustomers = customers.filter(c => (c.outstandingDebt || 0) > 0);
@@ -560,18 +576,19 @@ const CleanReportsPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Generic CSV download function for debt tables
-  const handleDownloadCSV = (data: any[], filename: string) => {
-    if (data.length === 0) return;
+  // Ultra-accurate debt transactions CSV download
+  const handleDownloadDebtTransactionsCSV = () => {
+    if (debtTransactionsData.length === 0) return;
     
-    const headers = Object.keys(data[0]);
-    const csvHeaders = headers.map(header => 
-      header.charAt(0).toUpperCase() + header.slice(1)
-    );
-    
-    const csvRows = data.map(row => 
-      headers.map(header => row[header]?.toString() || '')
-    );
+    const csvHeaders = ['Date', 'Time', 'Customer', 'Product', 'Amount', 'Type'];
+    const csvRows = debtTransactionsData.map(row => [
+      row.date,
+      row.time,
+      row.customer,
+      row.product,
+      row.amount.toString(),
+      row.type
+    ]);
     
     const csvContent = [
       csvHeaders.join(','),
@@ -582,7 +599,7 @@ const CleanReportsPage = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `debt-transactions-report-${debtTransactionsTableDateRange}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -853,23 +870,43 @@ const CleanReportsPage = () => {
         </div>
 
         {/* Debt Tables Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
           {/* Debt Transactions */}
           <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-800">Debt Transactions</h3>
-              <button
-                onClick={() => handleDownloadCSV(debtTransactionsData, 'debt-transactions')}
-                className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-medium hover:bg-amber-700 transition"
-              >
-                Download CSV
-              </button>
+              <div className="flex items-center gap-3">
+                {/* Independent time frame selector for debt transactions table */}
+                <div className="inline-flex bg-gray-100 rounded-lg p-1">
+                  {(['today', 'week', 'month', 'all'] as TableDateRange[]).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setDebtTransactionsTableDateRange(range)}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
+                        debtTransactionsTableDateRange === range
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      {range === 'today' ? 'Today' : 
+                       range === 'week' ? 'Week' : 
+                       range === 'month' ? 'Month' : 'All'}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleDownloadDebtTransactionsCSV}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-medium hover:bg-amber-700 transition"
+                >
+                  Download CSV
+                </button>
+              </div>
             </div>
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by customer..."
+                placeholder="Search by customer or product..."
                 value={debtTransactionsSearchTerm}
                 onChange={(e) => setDebtTransactionsSearchTerm(e.target.value)}
                 className="bg-gray-100 px-4 py-2 pl-10 rounded-xl w-full max-w-md focus:outline-none focus:ring-2 focus:ring-purple-300"
@@ -882,77 +919,29 @@ const CleanReportsPage = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {debtTransactionsData.slice(0, 20).map((row, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition">
+                  {debtTransactionsData.slice(0, 50).map((row, index) => (
+                    <tr key={row.id} className="hover:bg-gray-50 transition">
                       <td className="px-4 py-3 text-sm text-gray-900">{row.date}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{row.time}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{row.customer}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{row.product}</td>
                       <td className="px-4 py-3 text-sm font-medium text-red-600">{formatCurrency(row.amount)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{row.type}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-
-          {/* Debt Payments */}
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Debt Payments</h3>
-              <button
-                onClick={() => handleDownloadCSV(debtPaymentsData, 'debt-payments')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition"
-              >
-                Download CSV
-              </button>
-            </div>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search by customer..."
-                value={debtPaymentsSearchTerm}
-                onChange={(e) => setDebtPaymentsSearchTerm(e.target.value)}
-                className="bg-gray-100 px-4 py-2 pl-10 rounded-xl w-full max-w-md focus:outline-none focus:ring-2 focus:ring-purple-300"
-              />
-            </div>
-            <div className={`overflow-x-auto ${isMobile ? 'h-64' : 'h-80'}`}>
-              <table className="w-full">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Method</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {debtPaymentsData.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                        No debt payments recorded yet
-                      </td>
-                    </tr>
-                  ) : (
-                    debtPaymentsData.slice(0, 20).map((row, index) => (
-                      <tr key={index} className="hover:bg-gray-50 transition">
-                        <td className="px-4 py-3 text-sm text-gray-900">{row.date}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{row.time}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{row.paymentMethod}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-green-600">{formatCurrency(row.amount)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{row.customer}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              {debtTransactionsData.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No debt transactions found for the selected time period
+                </div>
+              )}
             </div>
           </div>
         </div>
