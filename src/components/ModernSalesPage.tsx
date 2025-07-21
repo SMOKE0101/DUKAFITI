@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,10 +18,11 @@ import { Sale } from '../types';
 const ModernSalesPage = () => {
   const { sales, loading, createSale, isOnline, pendingOperations } = useUnifiedSales();
   const { products } = useUnifiedProducts();
-  const { customers, updateCustomer } = useUnifiedCustomers();
+  const { customers, updateCustomer, refetch: refetchCustomers } = useUnifiedCustomers();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     productId: '',
     customerId: '',
@@ -35,10 +36,41 @@ const ModernSalesPage = () => {
   const totalAmount = selectedProduct ? selectedProduct.sellingPrice * formData.quantity : 0;
   const profit = selectedProduct ? (selectedProduct.sellingPrice - selectedProduct.costPrice) * formData.quantity : 0;
 
+  // Listen for customer updates and refresh data
+  useEffect(() => {
+    const handleCustomerUpdate = () => {
+      console.log('[ModernSalesPage] Customer updated, refreshing data');
+      refetchCustomers();
+    };
+
+    const events = [
+      'customer-debt-updated',
+      'customer-updated-locally',
+      'customer-updated-server',
+      'sale-completed',
+      'checkout-completed'
+    ];
+
+    events.forEach(event => {
+      window.addEventListener(event, handleCustomerUpdate);
+    });
+    
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handleCustomerUpdate);
+      });
+    };
+  }, [refetchCustomers]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedProduct) return;
+
+    // Prevent double submission
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
 
     try {
       console.log('[ModernSalesPage] Starting sale creation:', {
@@ -49,9 +81,53 @@ const ModernSalesPage = () => {
         quantity: formData.quantity,
         paymentMethod: formData.paymentMethod,
         totalAmount,
-        isDebtSale: formData.paymentMethod === 'debt'
+        isDebtSale: formData.paymentMethod === 'debt',
+        currentCustomerDebt: selectedCustomer?.outstandingDebt
       });
 
+      // For debt sales, validate customer exists
+      if (formData.paymentMethod === 'debt' && (!formData.customerId || !selectedCustomer)) {
+        toast({
+          title: "Customer Required",
+          description: "Please select a customer for debt transactions.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For debt sales, update customer debt FIRST
+      if (formData.paymentMethod === 'debt' && formData.customerId && selectedCustomer) {
+        console.log('[ModernSalesPage] Processing debt sale - updating customer debt first');
+        
+        const debtUpdates = {
+          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + totalAmount,
+          totalPurchases: (selectedCustomer.totalPurchases || 0) + totalAmount,
+          lastPurchaseDate: new Date().toISOString(),
+        };
+        
+        console.log('[ModernSalesPage] Customer debt update:', {
+          customerId: formData.customerId,
+          currentDebt: selectedCustomer.outstandingDebt,
+          additionalDebt: totalAmount,
+          newDebt: debtUpdates.outstandingDebt,
+          updates: debtUpdates
+        });
+
+        try {
+          await updateCustomer(formData.customerId, debtUpdates);
+          console.log('[ModernSalesPage] Customer debt updated successfully');
+        } catch (error) {
+          console.error('[ModernSalesPage] Customer debt update failed:', error);
+          toast({
+            title: "Customer Update Failed",
+            description: "Unable to update customer debt. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Create the sale
       const saleData = {
         productId: selectedProduct.id,
         productName: selectedProduct.name,
@@ -71,67 +147,37 @@ const ModernSalesPage = () => {
         total: totalAmount,
       };
 
-      // Create the sale first
       await createSale(saleData);
       console.log('[ModernSalesPage] Sale created successfully');
 
-      // Update customer debt if this is a debt transaction
-      if (formData.paymentMethod === 'debt' && formData.customerId && selectedCustomer) {
-        console.log('[ModernSalesPage] Starting customer debt update:', {
-          customerId: formData.customerId,
-          customerName: selectedCustomer.name,
-          currentDebt: selectedCustomer.outstandingDebt,
-          currentTotalPurchases: selectedCustomer.totalPurchases,
-          additionalDebt: totalAmount,
-          newTotalDebt: (selectedCustomer.outstandingDebt || 0) + totalAmount,
-          newTotalPurchases: (selectedCustomer.totalPurchases || 0) + totalAmount,
-          isOnline,
-          pendingOperationsCount: pendingOperations
-        });
+      // Show appropriate success message
+      const message = formData.paymentMethod === 'debt' 
+        ? `Sale recorded and customer debt increased by KSh ${totalAmount.toLocaleString()}${!isOnline ? ' (will sync when online)' : ''}.`
+        : `Successfully recorded sale for KSh ${totalAmount.toLocaleString()}${!isOnline ? ' (will sync when online)' : ''}.`;
 
-        const updates = {
-          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + totalAmount,
-          totalPurchases: (selectedCustomer.totalPurchases || 0) + totalAmount,
-          lastPurchaseDate: new Date().toISOString(),
-        };
-        
-        try {
-          await updateCustomer(formData.customerId, updates);
-          console.log('[ModernSalesPage] Customer debt updated successfully:', {
-            customerId: formData.customerId,
-            updates,
-            newDebt: updates.outstandingDebt,
-            newTotalPurchases: updates.totalPurchases
-          });
-          
-          toast({
-            title: "Sale & Debt Updated!",
-            description: `Sale recorded and customer debt increased by KSh ${totalAmount.toLocaleString()}${!isOnline ? ' (will sync when online)' : ''}.`,
-          });
-        } catch (error) {
-          console.error('[ModernSalesPage] Customer debt update failed:', error);
-          // Don't throw error here as sale was already completed successfully
-          // The updateCustomer hook should handle queuing for offline sync
-        }
-      } else if (formData.paymentMethod === 'debt') {
-        console.error('[ModernSalesPage] Debt payment validation failed:', {
-          paymentMethod: formData.paymentMethod,
-          customerId: formData.customerId,
-          customer: selectedCustomer ? 'found' : 'not found',
-          totalAmount
-        });
-      } else {
-        // Show success message for non-debt sales
-        toast({
-          title: "Sale Recorded!",
-          description: `Successfully recorded sale for KSh ${totalAmount.toLocaleString()}${!isOnline ? ' (will sync when online)' : ''}.`,
-        });
-      }
+      toast({
+        title: "Sale Recorded!",
+        description: message,
+      });
 
+      // Dispatch events to ensure UI updates
+      window.dispatchEvent(new CustomEvent('sale-completed'));
+      
       setIsDialogOpen(false);
       resetForm();
+      
+      // Refresh customer data to show updated debt
+      refetchCustomers();
+      
     } catch (error) {
       console.error('[ModernSalesPage] Failed to create sale:', error);
+      toast({
+        title: "Sale Failed",
+        description: "Unable to record sale. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -226,7 +272,7 @@ const ModernSalesPage = () => {
                       <SelectItem value="">No customer</SelectItem>
                       {customers.map((customer) => (
                         <SelectItem key={customer.id} value={customer.id}>
-                          {customer.name} - {customer.phone}
+                          {customer.name} - {customer.phone} (Debt: KSh {customer.outstandingDebt.toLocaleString()})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -287,6 +333,18 @@ const ModernSalesPage = () => {
                         <span className="text-slate-600 dark:text-slate-400">Profit:</span>
                         <span className="ml-2 font-medium text-green-600">KSh {profit.toLocaleString()}</span>
                       </div>
+                      {formData.paymentMethod === 'debt' && selectedCustomer && (
+                        <>
+                          <div>
+                            <span className="text-slate-600 dark:text-slate-400">Current Debt:</span>
+                            <span className="ml-2 font-medium">KSh {selectedCustomer.outstandingDebt.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-600 dark:text-slate-400">New Debt:</span>
+                            <span className="ml-2 font-medium text-orange-600">KSh {(selectedCustomer.outstandingDebt + totalAmount).toLocaleString()}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -297,9 +355,9 @@ const ModernSalesPage = () => {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={!selectedProduct || (formData.paymentMethod === 'debt' && !formData.customerId)}
+                    disabled={!selectedProduct || (formData.paymentMethod === 'debt' && !formData.customerId) || isSubmitting}
                   >
-                    Record Sale
+                    {isSubmitting ? 'Recording...' : 'Record Sale'}
                   </Button>
                 </div>
               </form>

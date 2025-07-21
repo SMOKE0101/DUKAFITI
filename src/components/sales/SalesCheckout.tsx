@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -43,11 +44,17 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       cart: cart.length,
       selectedCustomerId,
       paymentMethod,
-      customer,
+      customer: customer ? {
+        id: customer.id,
+        name: customer.name,
+        currentDebt: customer.outstandingDebt,
+        totalPurchases: customer.totalPurchases
+      } : null,
       total,
       isOnline,
       pendingOperations
     });
+
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -78,24 +85,49 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
     setIsProcessing(true);
 
     try {
-      console.log('[SalesCheckout] Starting checkout process...', {
-        cart,
-        paymentMethod,
-        selectedCustomerId,
-        customer: customer ? {
-          id: customer.id,
-          name: customer.name,
-          currentDebt: customer.outstandingDebt,
-          currentTotalPurchases: customer.totalPurchases
-        } : null,
-        isOnline,
-        pendingOperationsCount: pendingOperations
-      });
+      console.log('[SalesCheckout] Starting checkout process...');
 
-      // Calculate total debt amount for this transaction
-      let totalDebtAmount = 0;
+      // For debt sales, update customer debt FIRST to ensure it's processed
+      if (paymentMethod === 'debt' && selectedCustomerId && customer) {
+        console.log('[SalesCheckout] Processing debt sale - updating customer first:', {
+          customerId: selectedCustomerId,
+          customerName: customer.name,
+          currentDebt: customer.outstandingDebt,
+          currentTotalPurchases: customer.totalPurchases,
+          additionalDebt: total,
+          newTotalDebt: (customer.outstandingDebt || 0) + total,
+          newTotalPurchases: (customer.totalPurchases || 0) + total
+        });
+
+        const customerUpdates = {
+          outstandingDebt: (customer.outstandingDebt || 0) + total,
+          totalPurchases: (customer.totalPurchases || 0) + total,
+          lastPurchaseDate: new Date().toISOString(),
+        };
+        
+        try {
+          // Update customer debt first and wait for it to complete
+          await updateCustomer(selectedCustomerId, customerUpdates);
+          console.log('[SalesCheckout] Customer debt updated successfully before sale creation');
+          
+          // Dispatch immediate event to update UI
+          window.dispatchEvent(new CustomEvent('customer-debt-updated', {
+            detail: { 
+              customerId: selectedCustomerId, 
+              newDebt: customerUpdates.outstandingDebt,
+              newTotalPurchases: customerUpdates.totalPurchases
+            }
+          }));
+          
+        } catch (error) {
+          console.error('[SalesCheckout] Customer debt update failed:', error);
+          // For debt sales, if customer update fails, we should not proceed
+          throw new Error(`Failed to update customer debt: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
 
       // Process each item in the cart as a separate sale
+      let salesProcessed = 0;
       for (const item of cart) {
         const itemTotal = item.sellingPrice * item.quantity;
         const profit = (item.sellingPrice - item.costPrice) * item.quantity;
@@ -119,18 +151,13 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           timestamp: new Date().toISOString(),
         };
 
-        // Add to total debt if this is a debt transaction
-        if (paymentMethod === 'debt') {
-          totalDebtAmount += itemTotal;
-        }
+        console.log('[SalesCheckout] Processing sale for item:', item.name);
 
-        console.log('[SalesCheckout] Processing sale for item:', item.name, saleData);
-
-        // Create the sale - this will handle both local updates and offline queuing
+        // Create the sale
         await createSale(saleData);
         console.log('[SalesCheckout] Sale created for item:', item.name);
 
-        // Update product stock - this will handle both local updates and offline queuing
+        // Update product stock
         const currentStock = item.currentStock || 0;
         const newStock = Math.max(0, currentStock - item.quantity);
         await updateProduct(item.id, { 
@@ -138,62 +165,26 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           updatedAt: new Date().toISOString()
         });
         console.log('[SalesCheckout] Product stock updated:', item.name, 'New stock:', newStock);
+
+        salesProcessed++;
       }
 
-      // Update customer debt if this is a debt transaction
-      if (paymentMethod === 'debt' && selectedCustomerId && customer && totalDebtAmount > 0) {
-        console.log('[SalesCheckout] Starting customer debt update:', {
-          customerId: selectedCustomerId,
-          customerName: customer.name,
-          currentDebt: customer.outstandingDebt,
-          currentTotalPurchases: customer.totalPurchases,
-          additionalDebt: totalDebtAmount,
-          newTotalDebt: (customer.outstandingDebt || 0) + totalDebtAmount,
-          newTotalPurchases: (customer.totalPurchases || 0) + totalDebtAmount,
-          isOnline,
-          pendingOperationsCount: pendingOperations
-        });
-
-        const updates = {
-          outstandingDebt: (customer.outstandingDebt || 0) + totalDebtAmount,
-          totalPurchases: (customer.totalPurchases || 0) + totalDebtAmount,
-          lastPurchaseDate: new Date().toISOString(),
-        };
-        
-        try {
-          await updateCustomer(selectedCustomerId, updates);
-          console.log('[SalesCheckout] Customer debt updated successfully:', {
-            customerId: selectedCustomerId,
-            updates,
-            newDebt: updates.outstandingDebt,
-            newTotalPurchases: updates.totalPurchases
-          });
-          
-          // Dispatch event to notify that customer data has changed
-          window.dispatchEvent(new CustomEvent('customer-debt-updated', {
-            detail: { customerId: selectedCustomerId, newDebt: updates.outstandingDebt }
-          }));
-          
-        } catch (error) {
-          console.error('[SalesCheckout] Customer debt update failed:', error);
-          // Don't throw error here as sale was already completed successfully
-          // The updateCustomer hook should handle queuing for offline sync
-        }
-      } else if (paymentMethod === 'debt') {
-        console.error('[SalesCheckout] Debt payment validation failed:', {
-          paymentMethod,
-          selectedCustomerId,
-          customer: customer ? 'found' : 'not found',
-          totalDebtAmount
-        });
-      }
+      // Show success message
+      const successMessage = paymentMethod === 'debt' 
+        ? `Sale completed! Customer debt increased by ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`
+        : `Successfully processed ${salesProcessed} item(s) for ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`;
 
       toast({
         title: "Sale Completed!",
-        description: `Successfully processed ${cart.length} item(s) for ${formatCurrency(total)}${!isOnline ? ' (will sync when online)' : ''}.${paymentMethod === 'debt' ? ` Customer debt increased by ${formatCurrency(totalDebtAmount)}.` : ''}`,
+        description: successMessage,
       });
 
       console.log('[SalesCheckout] Checkout completed successfully');
+      
+      // Dispatch final events to ensure all components are notified
+      window.dispatchEvent(new CustomEvent('sale-completed'));
+      window.dispatchEvent(new CustomEvent('checkout-completed'));
+      
       onCheckoutComplete();
 
     } catch (error) {
@@ -229,6 +220,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
             <div>Total: {total}</div>
             <div>Online: {isOnline ? 'Yes' : 'No'}</div>
             <div>Pending Ops: {pendingOperations}</div>
+            <div>Will Add Debt: {paymentMethod === 'debt' ? total : 0}</div>
           </div>
         </details>
       )}
@@ -238,14 +230,14 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         disabled={isDisabled}
         className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:transform-none active:scale-95 min-h-[56px]"
       >
-      {isProcessing ? (
-        <div className="flex items-center justify-center gap-2">
-          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          Processing Sale...
-        </div>
-      ) : (
-        `Complete Sale - ${formatCurrency(total)}`
-      )}
+        {isProcessing ? (
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Processing Sale...
+          </div>
+        ) : (
+          `Complete Sale - ${formatCurrency(total)}`
+        )}
       </Button>
     </div>
   );

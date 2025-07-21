@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -30,7 +29,6 @@ export const useUnifiedCustomers = () => {
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache, addPendingOperation, pendingOps, clearPendingOperation, debugPendingOperations } = useCacheManager();
   
-  // Track if we're currently loading to prevent multiple simultaneous loads
   const isLoadingRef = useRef(false);
   const syncInProgressRef = useRef(false);
 
@@ -185,14 +183,14 @@ export const useUnifiedCustomers = () => {
     setError(null);
 
     try {
-      // Try cache first
+      // Always try cache first for fast UI
       const cached = getCache<Customer[]>('customers');
       if (cached && Array.isArray(cached)) {
         console.log('[UnifiedCustomers] Using cached data:', cached.length, 'customers');
         setCustomers(cached);
         setLoading(false);
         
-        // If online, merge with server data instead of replacing
+        // If online, fetch fresh data in background and merge intelligently
         if (isOnline) {
           try {
             const { data, error: fetchError } = await supabase
@@ -204,30 +202,25 @@ export const useUnifiedCustomers = () => {
             if (!fetchError && data) {
               const serverData = data.map(transformDbCustomer);
               
-              // Get local customers that might have unsynced changes (excluding temp customers from completed syncs)
+              // Get local customers that might have unsynced changes
               const unsyncedLocal = cached.filter(customer => 
                 customer.id.startsWith('temp_') && 
                 !serverData.some(s => s.name === customer.name && s.phone === customer.phone)
               );
               
-              // For synced customers, check if local version has newer data than server
-              const mergedData: typeof cached = [];
+              // For each server customer, check if we should preserve local changes
+              const mergedData: Customer[] = [...unsyncedLocal];
               
-              // Add unsynced local customers first
-              mergedData.push(...unsyncedLocal);
-              
-              // For each server customer, check if we have local changes
               for (const serverCustomer of serverData) {
                 const localCustomer = cached.find(c => c.id === serverCustomer.id);
                 
                 if (localCustomer) {
-                  // Compare timestamps or specific fields to determine which is newer
-                  // For debt updates, always trust the local version if it's different from server
-                  const hasLocalChanges = localCustomer.outstandingDebt !== serverCustomer.outstandingDebt ||
-                                        localCustomer.totalPurchases !== serverCustomer.totalPurchases ||
-                                        localCustomer.lastPurchaseDate !== serverCustomer.lastPurchaseDate;
+                  // Always prefer local data if it's been recently updated
+                  const localUpdateTime = new Date(localCustomer.lastPurchaseDate || 0).getTime();
+                  const serverUpdateTime = new Date(serverCustomer.lastPurchaseDate || 0).getTime();
                   
-                  if (hasLocalChanges) {
+                  // If local data is newer or equal, keep it; otherwise use server data
+                  if (localUpdateTime >= serverUpdateTime) {
                     console.log('[UnifiedCustomers] Preserving local changes for customer:', localCustomer.name);
                     mergedData.push(localCustomer);
                   } else {
@@ -244,9 +237,9 @@ export const useUnifiedCustomers = () => {
                 index === self.findIndex(c => c.id === customer.id)
               ).sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
               
-              // Only update if data actually changed
+              // Update cache and state if data changed
               if (JSON.stringify(uniqueData) !== JSON.stringify(cached)) {
-                console.log('[UnifiedCustomers] Background refresh: updating cache with merged data');
+                console.log('[UnifiedCustomers] Background refresh: updating with merged data');
                 setCache('customers', uniqueData);
                 setCustomers(uniqueData);
               }
@@ -361,32 +354,62 @@ export const useUnifiedCustomers = () => {
     }
   }, [user, isOnline, addPendingOperation, setCache]);
 
-  // Update customer
+  // Update customer with improved immediate feedback
   const updateCustomer = useCallback(async (id: string, updates: Partial<Customer>) => {
-    if (!user) throw new Error('User not authenticated');
+    if (!user) {
+      console.error('[UnifiedCustomers] User not authenticated');
+      throw new Error('User not authenticated');
+    }
 
-    console.log('[UnifiedCustomers] updateCustomer called with:', {
+    console.log('[UnifiedCustomers] updateCustomer called:', {
       customerId: id,
       updates,
       isOnline,
-      pendingOpsCount: pendingOps.length,
+      currentCustomers: customers.length,
       userAuthenticated: !!user
     });
 
-    // Find the current customer for reference
+    // Find the current customer
     const currentCustomer = customers.find(c => c.id === id);
-    console.log('[UnifiedCustomers] Current customer data:', currentCustomer);
+    if (!currentCustomer) {
+      console.error('[UnifiedCustomers] Customer not found:', id);
+      throw new Error(`Customer ${id} not found`);
+    }
 
-    // Optimistically update UI
+    console.log('[UnifiedCustomers] Current customer before update:', {
+      id: currentCustomer.id,
+      name: currentCustomer.name,
+      outstandingDebt: currentCustomer.outstandingDebt,
+      totalPurchases: currentCustomer.totalPurchases
+    });
+
+    // Calculate new values
+    const updatedCustomer = { ...currentCustomer, ...updates };
+    console.log('[UnifiedCustomers] New customer values:', {
+      id: updatedCustomer.id,
+      name: updatedCustomer.name,
+      outstandingDebt: updatedCustomer.outstandingDebt,
+      totalPurchases: updatedCustomer.totalPurchases
+    });
+
+    // Immediately update local state for instant UI feedback
     setCustomers(prev => {
-      const updated = prev.map(c => c.id === id ? { ...c, ...updates } : c);
+      const updated = prev.map(c => c.id === id ? updatedCustomer : c);
+      // Also immediately update cache
       setCache('customers', updated);
-      console.log('[UnifiedCustomers] Optimistically updated customer in UI');
+      console.log('[UnifiedCustomers] Immediately updated customer in UI and cache');
       return updated;
     });
 
+    // Dispatch immediate event for UI updates
+    window.dispatchEvent(new CustomEvent('customer-updated-locally', {
+      detail: { customerId: id, customer: updatedCustomer }
+    }));
+
+    // Handle server sync
     if (isOnline) {
       try {
+        // Prepare database update object
         const dbUpdates: any = {};
         if (updates.name !== undefined) dbUpdates.name = updates.name;
         if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
@@ -398,7 +421,7 @@ export const useUnifiedCustomers = () => {
         if (updates.riskRating !== undefined) dbUpdates.risk_rating = updates.riskRating;
         if (updates.lastPurchaseDate !== undefined) dbUpdates.last_purchase_date = updates.lastPurchaseDate;
 
-        console.log('[UnifiedCustomers] Preparing database update:', dbUpdates);
+        console.log('[UnifiedCustomers] Updating database with:', dbUpdates);
 
         const { error } = await supabase
           .from('customers')
@@ -406,45 +429,49 @@ export const useUnifiedCustomers = () => {
           .eq('id', id)
           .eq('user_id', user.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('[UnifiedCustomers] Database update failed:', error);
+          throw error;
+        }
 
         console.log('[UnifiedCustomers] Customer updated successfully in database');
         
-        // Refresh customers data to ensure consistency
-        await loadCustomers();
-      } catch (error) {
-        console.error('[UnifiedCustomers] Update failed, queuing for sync:', error);
+        // Dispatch success event
+        window.dispatchEvent(new CustomEvent('customer-updated-server', {
+          detail: { customerId: id, customer: updatedCustomer }
+        }));
         
-        // Add pending operation for offline sync
-        const operationData = { id, updates };
+      } catch (error) {
+        console.error('[UnifiedCustomers] Server update failed, queuing for sync:', error);
+        
+        // Add to pending operations for later sync
         addPendingOperation({
           type: 'customer',
           operation: 'update',
-          data: operationData,
+          data: { id, updates },
         });
         
-        console.log('[UnifiedCustomers] Added pending operation for customer update:', operationData);
+        console.log('[UnifiedCustomers] Added pending operation for customer update');
       }
     } else {
-      console.log('[UnifiedCustomers] Offline mode - queuing customer update for sync');
+      console.log('[UnifiedCustomers] Offline mode - queuing customer update');
       
       // Queue for sync when online
-      const operationData = { id, updates };
       addPendingOperation({
         type: 'customer',
         operation: 'update',
-        data: operationData,
+        data: { id, updates },
       });
-      
-      console.log('[UnifiedCustomers] Added pending operation for offline customer update:', operationData);
     }
-  }, [user, isOnline, addPendingOperation, setCache, customers, pendingOps.length, loadCustomers]);
+
+    console.log('[UnifiedCustomers] Customer update completed');
+    return updatedCustomer;
+  }, [user, isOnline, addPendingOperation, setCache, customers]);
 
   // Delete customer
   const deleteCustomer = useCallback(async (id: string) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Store original data for potential rollback
     const originalCustomer = customers.find(c => c.id === id);
 
     // Optimistically update UI
@@ -503,37 +530,31 @@ export const useUnifiedCustomers = () => {
     }
   }, [user?.id]);
 
-  // Listen for network reconnection and sync events
+  // Listen for various events to refresh customer data
   useEffect(() => {
-    const handleReconnect = async () => {
-      if (user && isOnline) {
-        console.log('[UnifiedCustomers] Network reconnected, syncing pending operations');
-        await syncPendingOperations();
-      }
-    };
-
-    const handleSyncComplete = () => {
-      console.log('[UnifiedCustomers] Sync completed, refreshing data');
+    const handleDataRefresh = () => {
+      console.log('[UnifiedCustomers] Data refresh event received');
       loadCustomers();
     };
 
-    const handleCustomersSync = () => {
-      console.log('[UnifiedCustomers] Customers sync event received, refreshing data');
-      loadCustomers();
-    };
+    const events = [
+      'sync-completed',
+      'data-synced', 
+      'customers-synced',
+      'sale-completed',
+      'checkout-completed'
+    ];
 
-    window.addEventListener('network-reconnected', handleReconnect);
-    window.addEventListener('sync-completed', handleSyncComplete);
-    window.addEventListener('data-synced', handleSyncComplete);
-    window.addEventListener('customers-synced', handleCustomersSync);
+    events.forEach(event => {
+      window.addEventListener(event, handleDataRefresh);
+    });
     
     return () => {
-      window.removeEventListener('network-reconnected', handleReconnect);
-      window.removeEventListener('sync-completed', handleSyncComplete);
-      window.removeEventListener('data-synced', handleSyncComplete);
-      window.removeEventListener('customers-synced', handleCustomersSync);
+      events.forEach(event => {
+        window.removeEventListener(event, handleDataRefresh);
+      });
     };
-  }, [user?.id, isOnline, syncPendingOperations, loadCustomers]);
+  }, [loadCustomers]);
 
   // Sync pending operations when coming online
   useEffect(() => {
