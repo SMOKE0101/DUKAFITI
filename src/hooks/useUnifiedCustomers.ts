@@ -28,7 +28,7 @@ export const useUnifiedCustomers = () => {
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
-  const { getCache, setCache, addPendingOperation, pendingOps, clearPendingOperation } = useCacheManager();
+  const { getCache, setCache, addPendingOperation, pendingOps, clearPendingOperation, debugPendingOperations } = useCacheManager();
   
   // Track if we're currently loading to prevent multiple simultaneous loads
   const isLoadingRef = useRef(false);

@@ -12,12 +12,14 @@ import { Plus, ShoppingCart, DollarSign, Calendar } from 'lucide-react';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
+import { useToast } from '@/hooks/use-toast';
 import { Sale } from '../types';
 
 const ModernSalesPage = () => {
   const { sales, loading, createSale, isOnline, pendingOperations } = useUnifiedSales();
   const { products } = useUnifiedProducts();
-  const { customers } = useUnifiedCustomers();
+  const { customers, updateCustomer } = useUnifiedCustomers();
+  const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -39,6 +41,17 @@ const ModernSalesPage = () => {
     if (!selectedProduct) return;
 
     try {
+      console.log('[ModernSalesPage] Starting sale creation:', {
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        customerId: formData.customerId,
+        customerName: selectedCustomer?.name,
+        quantity: formData.quantity,
+        paymentMethod: formData.paymentMethod,
+        totalAmount,
+        isDebtSale: formData.paymentMethod === 'debt'
+      });
+
       const saleData = {
         productId: selectedProduct.id,
         productName: selectedProduct.name,
@@ -58,11 +71,67 @@ const ModernSalesPage = () => {
         total: totalAmount,
       };
 
+      // Create the sale first
       await createSale(saleData);
+      console.log('[ModernSalesPage] Sale created successfully');
+
+      // Update customer debt if this is a debt transaction
+      if (formData.paymentMethod === 'debt' && formData.customerId && selectedCustomer) {
+        console.log('[ModernSalesPage] Starting customer debt update:', {
+          customerId: formData.customerId,
+          customerName: selectedCustomer.name,
+          currentDebt: selectedCustomer.outstandingDebt,
+          currentTotalPurchases: selectedCustomer.totalPurchases,
+          additionalDebt: totalAmount,
+          newTotalDebt: (selectedCustomer.outstandingDebt || 0) + totalAmount,
+          newTotalPurchases: (selectedCustomer.totalPurchases || 0) + totalAmount,
+          isOnline,
+          pendingOperationsCount: pendingOperations
+        });
+
+        const updates = {
+          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + totalAmount,
+          totalPurchases: (selectedCustomer.totalPurchases || 0) + totalAmount,
+          lastPurchaseDate: new Date().toISOString(),
+        };
+        
+        try {
+          await updateCustomer(formData.customerId, updates);
+          console.log('[ModernSalesPage] Customer debt updated successfully:', {
+            customerId: formData.customerId,
+            updates,
+            newDebt: updates.outstandingDebt,
+            newTotalPurchases: updates.totalPurchases
+          });
+          
+          toast({
+            title: "Sale & Debt Updated!",
+            description: `Sale recorded and customer debt increased by KSh ${totalAmount.toLocaleString()}${!isOnline ? ' (will sync when online)' : ''}.`,
+          });
+        } catch (error) {
+          console.error('[ModernSalesPage] Customer debt update failed:', error);
+          // Don't throw error here as sale was already completed successfully
+          // The updateCustomer hook should handle queuing for offline sync
+        }
+      } else if (formData.paymentMethod === 'debt') {
+        console.error('[ModernSalesPage] Debt payment validation failed:', {
+          paymentMethod: formData.paymentMethod,
+          customerId: formData.customerId,
+          customer: selectedCustomer ? 'found' : 'not found',
+          totalAmount
+        });
+      } else {
+        // Show success message for non-debt sales
+        toast({
+          title: "Sale Recorded!",
+          description: `Successfully recorded sale for KSh ${totalAmount.toLocaleString()}${!isOnline ? ' (will sync when online)' : ''}.`,
+        });
+      }
+
       setIsDialogOpen(false);
       resetForm();
     } catch (error) {
-      console.error('Failed to create sale:', error);
+      console.error('[ModernSalesPage] Failed to create sale:', error);
     }
   };
 
@@ -98,12 +167,12 @@ const ModernSalesPage = () => {
 
         <div className="flex items-center gap-3">
           {pendingOperations > 0 && (
-            <Badge variant="outline">
+            <Badge variant="outline" className="bg-yellow-50 border-yellow-200">
               {pendingOperations} pending sync
             </Badge>
           )}
           {!isOnline && (
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="bg-orange-50 border-orange-200">
               Working Offline
             </Badge>
           )}
@@ -139,13 +208,19 @@ const ModernSalesPage = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="customer">Customer (Optional)</Label>
+                  <Label htmlFor="customer">
+                    Customer {formData.paymentMethod === 'debt' ? '*' : '(Optional)'}
+                  </Label>
                   <Select 
                     value={formData.customerId} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a customer (optional)" />
+                      <SelectValue placeholder={
+                        formData.paymentMethod === 'debt' 
+                          ? "Select a customer (required for credit)" 
+                          : "Select a customer (optional)"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No customer</SelectItem>
@@ -220,7 +295,10 @@ const ModernSalesPage = () => {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={!selectedProduct}>
+                  <Button 
+                    type="submit" 
+                    disabled={!selectedProduct || (formData.paymentMethod === 'debt' && !formData.customerId)}
+                  >
                     Record Sale
                   </Button>
                 </div>

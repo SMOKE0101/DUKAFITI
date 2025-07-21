@@ -129,6 +129,23 @@ export const useCacheManager = () => {
     setPendingOps([]);
   }, []);
 
+  const getPendingOperationsByType = useCallback((type: string) => {
+    return pendingOps.filter(op => op.type === type);
+  }, [pendingOps]);
+
+  const debugPendingOperations = useCallback(() => {
+    console.log('[CacheManager] Current pending operations:', {
+      total: pendingOps.length,
+      byType: {
+        sale: pendingOps.filter(op => op.type === 'sale').length,
+        customer: pendingOps.filter(op => op.type === 'customer').length,
+        product: pendingOps.filter(op => op.type === 'product').length,
+        transaction: pendingOps.filter(op => op.type === 'transaction').length,
+      },
+      operations: pendingOps
+    });
+  }, [pendingOps]);
+
   return {
     getCache,
     setCache,
@@ -137,6 +154,8 @@ export const useCacheManager = () => {
     clearPendingOperation,
     clearAllPendingOperations,
     loadPendingOperations,
+    getPendingOperationsByType,
+    debugPendingOperations,
     pendingOps,
   };
 };

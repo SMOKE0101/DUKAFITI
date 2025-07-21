@@ -73,7 +73,14 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         cart,
         paymentMethod,
         selectedCustomerId,
-        customer
+        customer: customer ? {
+          id: customer.id,
+          name: customer.name,
+          currentDebt: customer.outstandingDebt,
+          currentTotalPurchases: customer.totalPurchases
+        } : null,
+        isOnline,
+        pendingOperationsCount: pendingOperations
       });
 
       // Calculate total debt amount for this transaction
