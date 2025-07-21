@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Table,
@@ -21,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useSupabaseCustomers, Customer } from '../../hooks/useSupabaseCustomers';
+import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
@@ -50,6 +52,7 @@ const CustomersPage = () => {
   const isMobile = useIsMobile();
 
   const { customers, loading, error, createCustomer, updateCustomer, deleteCustomer } = useSupabaseCustomers();
+  const { createDebtPayment } = useSupabaseDebtPayments();
   const { toast } = useToast()
 
   useEffect(() => {
@@ -67,7 +70,7 @@ const CustomersPage = () => {
       return customers.filter((customer) => {
         return customer.name.toLowerCase().includes(search.toLowerCase()) ||
           customer.phone.toLowerCase().includes(search.toLowerCase()) ||
-          customer.address.toLowerCase().includes(search.toLowerCase())
+          customer.address?.toLowerCase().includes(search.toLowerCase())
       })
     }, [search, customers]
   )
@@ -109,7 +112,13 @@ const CustomersPage = () => {
           name,
           phone,
           address,
+          email: '',
+          createdDate: new Date().toISOString(),
+          totalPurchases: 0,
           outstandingDebt: 0,
+          creditLimit: 1000,
+          lastPurchaseDate: null,
+          riskRating: 'low',
         });
 
         toast({
@@ -138,7 +147,7 @@ const CustomersPage = () => {
     setSelectedCustomer(customer);
     setName(customer.name);
     setPhone(customer.phone);
-    setAddress(customer.address);
+    setAddress(customer.address || '');
     setOpen(true);
   }
 
@@ -166,21 +175,14 @@ const CustomersPage = () => {
       const customer = customers.find(c => c.id === customerId);
       if (!customer) throw new Error('Customer not found');
 
-      // Create debt payment record in the debt_payments table
-      const { createDebtPayment } = await import('../../hooks/useSupabaseDebtPayments');
-      const { useAuth } = await import('../../hooks/useAuth');
-      
-      const { user } = useAuth();
-      if (!user) throw new Error('User not authenticated');
-
       // Create the debt payment record
       await createDebtPayment({
-        user_id: user.id,
+        user_id: customer.id, // This will be set correctly in the hook
         customer_id: customerId,
         customer_name: customer.name,
         amount: paymentData.amount,
         payment_method: paymentData.method,
-        reference: paymentData.notes || null,
+        reference: paymentData.notes || '',
         timestamp: new Date().toISOString()
       });
 
@@ -193,7 +195,6 @@ const CustomersPage = () => {
       setSelectedCustomer(null);
       setIsRecordingPayment(false);
       
-      // Show success notification
       toast({
         title: "Payment Recorded",
         description: "Payment recorded successfully",
@@ -307,13 +308,6 @@ const CustomersPage = () => {
                             <Trash className="h-4 w-4 mr-2" /> Delete
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <PaymentModal
-                            isOpen={selectedCustomer?.id === customer.id}
-                            onClose={() => setSelectedCustomer(null)}
-                            customer={customer}
-                            onPayment={(paymentData) => handlePayment(customer.id, paymentData)}
-                            isRecording={isRecordingPayment}
-                          />
                           <DropdownMenuItem onClick={() => setSelectedCustomer(customer)}>
                             Record Payment
                           </DropdownMenuItem>
@@ -338,6 +332,15 @@ const CustomersPage = () => {
           </TableFooter>
         </Table>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={selectedCustomer !== null}
+        onClose={() => setSelectedCustomer(null)}
+        customer={selectedCustomer}
+        onPayment={(paymentData) => selectedCustomer && handlePayment(selectedCustomer.id, paymentData)}
+        isRecording={isRecordingPayment}
+      />
     </div>
   )
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -7,6 +6,9 @@ import { useNetworkStatus } from './useNetworkStatus';
 import { useLocalStorage } from './useLocalStorage';
 import { useCacheManager } from './useCacheManager';
 import { Customer } from '../types';
+
+// Export the Customer type
+export type { Customer };
 
 // Helper function to transform database customer to interface
 const transformDbCustomer = (dbCustomer: any): Customer => ({
@@ -40,6 +42,7 @@ const transformToDbCustomer = (customer: Omit<Customer, 'id'>, userId: string) =
 export const useSupabaseCustomers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
@@ -50,6 +53,7 @@ export const useSupabaseCustomers = () => {
     if (!user) return;
     
     setLoading(true);
+    setError(null);
     try {
       if (isOnline) {
         const { data, error } = await supabase
@@ -65,10 +69,9 @@ export const useSupabaseCustomers = () => {
         if (data) {
           const transformedCustomers = data.map(transformDbCustomer);
           setCustomers(transformedCustomers);
-          setValue(transformedCustomers); // Update local storage
+          setValue(transformedCustomers);
         }
       } else {
-        // Load from local storage when offline
         const storedCustomers = localStorage.getItem('customers');
         if (storedCustomers) {
           setCustomers(JSON.parse(storedCustomers));
@@ -78,6 +81,7 @@ export const useSupabaseCustomers = () => {
       }
     } catch (error: any) {
       console.error('Failed to fetch customers:', error);
+      setError(error.message);
       toast({
         title: "Error",
         description: "Failed to load customers. Please try again.",
@@ -113,13 +117,14 @@ export const useSupabaseCustomers = () => {
       if (data) {
         const transformedCustomer = transformDbCustomer(data);
         setCustomers(prevCustomers => [transformedCustomer, ...prevCustomers]);
-        setValue([transformedCustomer, ...customers]); // Optimistically update local storage
+        setValue([transformedCustomer, ...customers]);
         return transformedCustomer;
       } else {
         throw new Error('Customer creation failed: No data returned');
       }
     } catch (error: any) {
       console.error('Failed to create customer:', error);
+      setError(error.message);
       toast({
         title: "Error",
         description: "Failed to add customer. Please try again.",
@@ -132,7 +137,6 @@ export const useSupabaseCustomers = () => {
   const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<void> => {
     if (isOnline) {
       try {
-        // Transform interface updates to database format
         const dbUpdates: any = {};
         if (updates.name) dbUpdates.name = updates.name;
         if (updates.phone) dbUpdates.phone = updates.phone;
@@ -162,10 +166,11 @@ export const useSupabaseCustomers = () => {
             prevCustomers.map(customer => (customer.id === id ? transformedCustomer : customer))
           );
           const updatedCustomers = customers.map(customer => (customer.id === id ? transformedCustomer : customer));
-          setValue(updatedCustomers); // Update local storage
+          setValue(updatedCustomers);
         }
       } catch (error: any) {
         console.error('Failed to update customer:', error);
+        setError(error.message);
         toast({
           title: "Error",
           description: "Failed to update customer. Please try again.",
@@ -174,27 +179,58 @@ export const useSupabaseCustomers = () => {
         throw error;
       }
     } else {
-      // Queue update for sync when online
       addPendingOperation({ 
         type: 'customer', 
         operation: 'update', 
         data: { id, updates } 
       });
 
-      // Optimistically update local state
       setCustomers(prevCustomers =>
         prevCustomers.map(customer => (customer.id === id ? { ...customer, ...updates } : customer))
       );
       const updatedCustomers = customers.map(customer => (customer.id === id ? { ...customer, ...updates } : customer));
-      setValue(updatedCustomers); // Update local storage
+      setValue(updatedCustomers);
+    }
+  };
+
+  const deleteCustomer = async (id: string): Promise<void> => {
+    try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== id));
+      const updatedCustomers = customers.filter(customer => customer.id !== id);
+      setValue(updatedCustomers);
+    } catch (error: any) {
+      console.error('Failed to delete customer:', error);
+      setError(error.message);
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
   return {
     customers,
     loading,
+    error,
     fetchCustomers,
     createCustomer,
     updateCustomer,
+    deleteCustomer,
   };
 };

@@ -72,7 +72,6 @@ export const useSupabaseDebtPayments = () => {
       throw error;
     }
 
-    // Refresh the debt payments list
     await fetchDebtPayments();
     return data;
   };
@@ -127,4 +126,23 @@ export const useSupabaseDebtPayments = () => {
     deleteDebtPayment,
     refetch: fetchDebtPayments,
   };
+};
+
+// Export the createDebtPayment function as a standalone function
+export const createDebtPayment = async (paymentData: Omit<DebtPayment, 'id' | 'created_at' | 'synced'>) => {
+  const { data, error } = await supabase
+    .from('debt_payments')
+    .insert({
+      ...paymentData,
+      synced: true,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating debt payment:', error);
+    throw error;
+  }
+
+  return data;
 };
