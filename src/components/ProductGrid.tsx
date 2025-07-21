@@ -20,7 +20,7 @@ const ProductGrid = ({ products, onAddToCart, isLoading }: ProductGridProps) => 
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    product.currentStock > 0
+    (product.currentStock > 0 || product.currentStock === -1)
   );
 
   const displayProducts = filteredProducts.slice(0, 12);
@@ -79,7 +79,7 @@ const ProductGrid = ({ products, onAddToCart, isLoading }: ProductGridProps) => 
                       {formatCurrency(product.sellingPrice)}
                     </span>
                     <span className="text-xs text-gray-500">
-                      Stock: {product.currentStock}
+                      Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
                     </span>
                   </div>
                   <div className="flex items-center justify-center mt-1">

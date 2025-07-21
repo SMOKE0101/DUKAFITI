@@ -81,7 +81,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
             <div className="space-y-2 mb-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600 dark:text-gray-400">Cost Price:</span>
-                <span className="font-semibold text-gray-900 dark:text-white text-sm">{formatCurrency(product.costPrice)}</span>
+                <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                  {isUnspecifiedQuantity ? 'Unspecified' : formatCurrency(product.costPrice)}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600 dark:text-gray-400">Selling Price:</span>
@@ -97,12 +99,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                   {isUnspecifiedQuantity ? 'Unspecified' : `${product.currentStock} units`}
                 </span>
               </div>
-              {!isUnspecifiedQuantity && (
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
-                  <span className="font-medium text-gray-900 dark:text-white text-sm">{product.lowStockThreshold} units</span>
-                </div>
-              )}
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
+                <span className="font-medium text-gray-900 dark:text-white text-sm">
+                  {isUnspecifiedQuantity ? 'Unspecified' : `${product.lowStockThreshold} units`}
+                </span>
+              </div>
             </div>
 
             {/* Low Stock Warning - exactly like desktop */}
@@ -183,10 +185,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                 <span className="text-gray-600 dark:text-gray-400">Category:</span>
                 <span className="font-medium text-gray-900 dark:text-white px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">{product.category}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Cost Price:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(product.costPrice)}</span>
-              </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-400">Cost Price:</span>
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {isUnspecifiedQuantity ? 'Unspecified' : formatCurrency(product.costPrice)}
+              </span>
+            </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Selling Price:</span>
                 <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(product.sellingPrice)}</span>
@@ -197,12 +201,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                   {product.currentStock === -1 ? 'Unspecified' : `${product.currentStock} units`}
                 </span>
               </div>
-              {!isUnspecifiedQuantity && (
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{product.lowStockThreshold} units</span>
-                </div>
-              )}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {isUnspecifiedQuantity ? 'Unspecified' : `${product.lowStockThreshold} units`}
+                </span>
+              </div>
             </div>
 
             {isLowStock && !isUnspecifiedQuantity && (
@@ -277,10 +281,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
               <span className="text-gray-600 dark:text-gray-400">Category:</span>
               <span className="font-medium text-gray-900 dark:text-white px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">{product.category}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Cost Price:</span>
-              <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(product.costPrice)}</span>
-            </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Cost Price:</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {isUnspecifiedQuantity ? 'Unspecified' : formatCurrency(product.costPrice)}
+                </span>
+              </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Selling Price:</span>
               <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(product.sellingPrice)}</span>
@@ -291,12 +297,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                 {product.currentStock === -1 ? 'Unspecified' : `${product.currentStock} units`}
               </span>
             </div>
-            {!isUnspecifiedQuantity && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
-                <span className="font-medium text-gray-900 dark:text-white">{product.lowStockThreshold} units</span>
-              </div>
-            )}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-400">Low Stock Alert:</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {isUnspecifiedQuantity ? 'Unspecified' : `${product.lowStockThreshold} units`}
+              </span>
+            </div>
           </div>
 
           {isLowStock && !isUnspecifiedQuantity && (

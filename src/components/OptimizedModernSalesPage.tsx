@@ -93,8 +93,11 @@ const OptimizedModernSalesPage = () => {
   const addToCart = useCallback((product: any) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
+      const isUnspecifiedQuantity = product.currentStock === -1;
+      
       if (existingItem) {
-        if (existingItem.quantity >= product.currentStock) {
+        // For unspecified quantity products, allow unlimited additions
+        if (!isUnspecifiedQuantity && existingItem.quantity >= product.currentStock) {
           toast({
             title: "Insufficient Stock",
             description: `Only ${product.currentStock} units available`,
@@ -109,7 +112,8 @@ const OptimizedModernSalesPage = () => {
         );
       }
       
-      if (product.currentStock <= 0) {
+      // Allow adding unspecified quantity products to cart
+      if (!isUnspecifiedQuantity && product.currentStock <= 0) {
         toast({
           title: "Out of Stock",
           description: `${product.name} is currently out of stock`,
@@ -136,15 +140,22 @@ const OptimizedModernSalesPage = () => {
     setCart(prevCart =>
       prevCart.map(item => {
         if (item.id === productId) {
-          const maxQuantity = products.find(p => p.id === productId)?.currentStock || 0;
-          if (newQuantity > maxQuantity) {
-            toast({
-              title: "Insufficient Stock",
-              description: `Only ${maxQuantity} units available`,
-              variant: "destructive",
-            });
-            return item;
+          const product = products.find(p => p.id === productId);
+          const isUnspecifiedQuantity = product?.currentStock === -1;
+          
+          // Skip stock validation for unspecified quantity products
+          if (!isUnspecifiedQuantity) {
+            const maxQuantity = product?.currentStock || 0;
+            if (newQuantity > maxQuantity) {
+              toast({
+                title: "Insufficient Stock",
+                description: `Only ${maxQuantity} units available`,
+                variant: "destructive",
+              });
+              return item;
+            }
           }
+          
           return { ...item, quantity: newQuantity };
         }
         return item;
@@ -314,11 +325,13 @@ const OptimizedModernSalesPage = () => {
                   
                   <div className="flex items-center gap-2 mb-4">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                      product.currentStock <= 5 
+                      product.currentStock === -1 
+                        ? 'bg-blue-100 text-blue-800'
+                        : product.currentStock <= 5 
                         ? 'bg-red-100 text-red-800' 
                         : 'bg-green-100 text-green-800'
                     }`}>
-                      Stock: {product.currentStock}
+                      Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
                     </span>
                   </div>
                   
@@ -328,9 +341,10 @@ const OptimizedModernSalesPage = () => {
                     </span>
                     <Button 
                       onClick={() => addToCart(product)}
-                      disabled={product.currentStock <= 0}
-                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 transition-colors"
+                      disabled={product.currentStock <= 0 && product.currentStock !== -1}
+                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       size="sm"
+                      title={product.currentStock === -1 ? 'Add unspecified quantity product' : ''}
                     >
                       <Plus className="w-4 h-4" />
                     </Button>

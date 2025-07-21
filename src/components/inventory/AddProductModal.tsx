@@ -34,7 +34,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     currentStock: 0,
     lowStockThreshold: 10,
   });
-  const [unspecifiedStock, setUnspecifiedStock] = useState(false);
+  const [unspecifiedQuantity, setUnspecifiedQuantity] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
@@ -50,7 +50,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         currentStock: editingProduct.currentStock === -1 ? 0 : editingProduct.currentStock,
         lowStockThreshold: editingProduct.lowStockThreshold,
       });
-      setUnspecifiedStock(editingProduct.currentStock === -1);
+      setUnspecifiedQuantity(editingProduct.currentStock === -1);
       setCustomCategory(isCustom ? editingProduct.category : '');
       setShowCustomInput(isCustom);
     } else {
@@ -63,7 +63,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         currentStock: 0,
         lowStockThreshold: 10,
       });
-      setUnspecifiedStock(false);
+      setUnspecifiedQuantity(false);
       setCustomCategory('');
       setShowCustomInput(false);
     }
@@ -116,7 +116,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
 
-    if (!unspecifiedStock) {
+    if (!unspecifiedQuantity) {
       if (formData.costPrice < 0) {
         toast({
           title: "Validation Error",
@@ -139,9 +139,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     const finalFormData = {
       ...formData,
       category: isCustomCategory(formData.category) ? customCategory : formData.category,
-      currentStock: unspecifiedStock ? -1 : formData.currentStock,
-      costPrice: unspecifiedStock ? 0 : formData.costPrice,
-      lowStockThreshold: unspecifiedStock ? 0 : formData.lowStockThreshold
+      currentStock: unspecifiedQuantity ? -1 : formData.currentStock,
+      costPrice: unspecifiedQuantity ? 0 : formData.costPrice,
+      lowStockThreshold: unspecifiedQuantity ? 0 : formData.lowStockThreshold
     };
     
     onSave(finalFormData);
@@ -164,7 +164,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
-  const showProfitCalculation = !unspecifiedStock && formData.costPrice > 0 && formData.sellingPrice > 0;
+  const showProfitCalculation = !unspecifiedQuantity && formData.costPrice > 0 && formData.sellingPrice > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -264,27 +264,27 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
                           KES
                         </span>
-                        <Input
-                          id="costPrice"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={unspecifiedStock ? '' : formData.costPrice}
-                          onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
-                            unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          disabled={unspecifiedStock}
-                          required={!unspecifiedStock}
-                        />
+                         <Input
+                           id="costPrice"
+                           type="number"
+                           step="0.01"
+                           min="0"
+                           value={unspecifiedQuantity ? '' : formData.costPrice}
+                           onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
+                           placeholder={unspecifiedQuantity ? "Unspecified" : "0.00"}
+                           className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                             unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''
+                           }`}
+                           disabled={unspecifiedQuantity}
+                           required={!unspecifiedQuantity}
+                         />
                       </div>
                     </TooltipTrigger>
-                    {unspecifiedStock && (
-                      <TooltipContent>
-                        <p>Disabled for unspecified-quantity items</p>
-                      </TooltipContent>
-                    )}
+                     {unspecifiedQuantity && (
+                       <TooltipContent>
+                         <p>Disabled for unspecified-quantity items</p>
+                       </TooltipContent>
+                     )}
                   </Tooltip>
                 </div>
                 
@@ -317,30 +317,30 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   <Label htmlFor="currentStock" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
                     Current Stock *
                   </Label>
-                  <Input
-                    id="currentStock"
-                    type="number"
-                    min="0"
-                    value={unspecifiedStock ? '' : formData.currentStock}
-                    onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
-                    placeholder={unspecifiedStock ? "Unspecified quantity" : "0"}
-                    className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
-                      unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    disabled={unspecifiedStock}
-                    required={!unspecifiedStock}
-                  />
-                  <div className="flex items-center space-x-2 mt-3">
-                    <Checkbox 
-                      id="unspecifiedStock"
-                      checked={unspecifiedStock}
-                      onCheckedChange={(checked) => setUnspecifiedStock(checked as boolean)}
-                      className="border-2 border-gray-300 dark:border-gray-600"
-                    />
-                    <Label htmlFor="unspecifiedStock" className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-                      Unspecified quantity (sacks, cups, etc.)
-                    </Label>
-                  </div>
+                   <Input
+                     id="currentStock"
+                     type="number"
+                     min="0"
+                     value={unspecifiedQuantity ? '' : formData.currentStock}
+                     onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
+                     placeholder={unspecifiedQuantity ? "Unspecified quantity" : "0"}
+                     className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                       unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''
+                     }`}
+                     disabled={unspecifiedQuantity}
+                     required={!unspecifiedQuantity}
+                   />
+                   <div className="flex items-center space-x-2 mt-3">
+                     <Checkbox 
+                       id="unspecifiedQuantity"
+                       checked={unspecifiedQuantity}
+                       onCheckedChange={(checked) => setUnspecifiedQuantity(checked as boolean)}
+                       className="border-2 border-gray-300 dark:border-gray-600"
+                     />
+                     <Label htmlFor="unspecifiedQuantity" className="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                       Unspecified quantity (sacks, cups, etc.)
+                     </Label>
+                   </div>
                 </div>
                 
                 <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
@@ -349,24 +349,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   </Label>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Input
-                        id="lowStockThreshold"
-                        type="number"
-                        min="0"
-                        value={unspecifiedStock ? '' : formData.lowStockThreshold}
-                        onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 10)}
-                        placeholder="10"
-                        className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
-                          unspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                        disabled={unspecifiedStock}
-                      />
+                       <Input
+                         id="lowStockThreshold"
+                         type="number"
+                         min="0"
+                         value={unspecifiedQuantity ? '' : formData.lowStockThreshold}
+                         onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 10)}
+                         placeholder={unspecifiedQuantity ? "Unspecified" : "10"}
+                         className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
+                           unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''
+                         }`}
+                         disabled={unspecifiedQuantity}
+                       />
                     </TooltipTrigger>
-                    {unspecifiedStock && (
-                      <TooltipContent>
-                        <p>Disabled for unspecified-quantity items</p>
-                      </TooltipContent>
-                    )}
+                     {unspecifiedQuantity && (
+                       <TooltipContent>
+                         <p>Disabled for unspecified-quantity items</p>
+                       </TooltipContent>
+                     )}
                   </Tooltip>
                 </div>
               </div>
