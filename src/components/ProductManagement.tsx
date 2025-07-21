@@ -8,14 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Search, Package, AlertTriangle, Edit, Trash2, PackagePlus } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, Edit, Trash2, PackagePlus, RefreshCw } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { Product } from '../types';
 import { formatCurrency } from '../utils/currency';
 import FeatureLimitModal from './trial/FeatureLimitModal';
 import InventoryModal from './InventoryModal';
 import { useTrialSystem } from '../hooks/useTrialSystem';
-import { useSupabaseProducts } from '../hooks/useSupabaseProducts';
+import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
+import { useSyncCoordinator } from '../hooks/useSyncCoordinator';
 import { PRODUCT_CATEGORIES } from '../constants/categories';
 
 const ProductManagement = () => {
@@ -27,7 +28,19 @@ const ProductManagement = () => {
   const [showFeatureLimitModal, setShowFeatureLimitModal] = useState(false);
   const { toast } = useToast();
   const { trialInfo, updateFeatureUsage, checkFeatureAccess } = useTrialSystem();
-  const { products, loading, createProduct, updateProduct, deleteProduct } = useSupabaseProducts();
+  const { 
+    products, 
+    loading, 
+    createProduct, 
+    updateProduct, 
+    deleteProduct, 
+    refetch,
+    syncPendingOperations,
+    pendingOperations,
+    syncStatus,
+    isOnline 
+  } = useUnifiedProducts();
+  const { globalSyncInProgress } = useSyncCoordinator();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -220,14 +233,45 @@ const ProductManagement = () => {
     }
   };
 
+  const handleManualSync = async () => {
+    if (pendingOperations > 0) {
+      await syncPendingOperations();
+    } else {
+      await refetch();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
-          <p className="text-gray-600">Manage your inventory and product catalog</p>
+          <div className="flex items-center gap-2">
+            <p className="text-gray-600">Manage your inventory and product catalog</p>
+            {!isOnline && (
+              <Badge variant="outline" className="text-orange-600 border-orange-300">
+                Offline Mode
+              </Badge>
+            )}
+            {pendingOperations > 0 && (
+              <Badge variant="destructive">
+                {pendingOperations} pending sync
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
+          {(pendingOperations > 0 || isOnline) && (
+            <Button 
+              onClick={handleManualSync}
+              variant="outline"
+              disabled={globalSyncInProgress}
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${globalSyncInProgress ? 'animate-spin' : ''}`} />
+              <span>{pendingOperations > 0 ? 'Sync' : 'Refresh'}</span>
+            </Button>
+          )}
           <Button 
             onClick={() => setShowInventoryModal(true)} 
             className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full transition-all hover:shadow-lg"

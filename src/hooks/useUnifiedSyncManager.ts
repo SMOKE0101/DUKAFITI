@@ -1,82 +1,70 @@
+
 import { useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
+import { useSyncCoordinator } from './useSyncCoordinator';
 import { SyncService } from '../services/syncService';
 
 export const useUnifiedSyncManager = () => {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const { pendingOps, clearAllPendingOperations } = useCacheManager();
+  const { requestSync, globalSyncInProgress, pendingOperationsCount } = useSyncCoordinator();
 
   const syncPendingOperations = useCallback(async () => {
-    if (!isOnline || pendingOps.length === 0 || !user) return false;
+    if (!isOnline || pendingOps.length === 0 || !user || globalSyncInProgress) {
+      console.log('[UnifiedSyncManager] Sync conditions not met:', {
+        isOnline,
+        pendingOpsLength: pendingOps.length,
+        hasUser: !!user,
+        globalSyncInProgress
+      });
+      return false;
+    }
 
-    console.log('[UnifiedSyncManager] Starting sync process...');
+    console.log('[UnifiedSyncManager] Starting coordinated sync process...');
     console.log('[UnifiedSyncManager] Pending operations:', pendingOps);
     
     try {
-      // Convert cache manager operations to sync service format
-      const syncOperations = pendingOps.map(op => ({
-        id: op.id,
-        type: op.type as 'sale' | 'product' | 'customer' | 'transaction',
-        operation: op.operation as 'create' | 'update' | 'delete',
-        data: op.data,
-      }));
+      // Group operations by type for coordinated syncing
+      const operationsByType = pendingOps.reduce((acc, op) => {
+        if (!acc[op.type]) acc[op.type] = [];
+        acc[op.type].push(op);
+        return acc;
+      }, {} as Record<string, any[]>);
 
-      const success = await SyncService.syncPendingOperations(syncOperations, user.id);
-      
-      if (success) {
-        // Clear all pending operations after successful sync
-        clearAllPendingOperations();
-        console.log('[UnifiedSyncManager] Sync completed successfully - operations cleared');
-        
-        // Dispatch sync events to notify all components immediately and after a delay
-        console.log('[UnifiedSyncManager] Dispatching immediate refresh events');
-        window.dispatchEvent(new CustomEvent('sync-completed'));
-        window.dispatchEvent(new CustomEvent('data-synced'));
-        window.dispatchEvent(new CustomEvent('sales-synced'));
-        window.dispatchEvent(new CustomEvent('products-synced')); 
-        window.dispatchEvent(new CustomEvent('customers-synced'));
-        window.dispatchEvent(new CustomEvent('transactions-synced'));
-        
-        // Also dispatch after a delay to ensure all components receive the events
-        setTimeout(() => {
-          console.log('[UnifiedSyncManager] Dispatching delayed refresh events');
-          window.dispatchEvent(new CustomEvent('sync-completed'));
-          window.dispatchEvent(new CustomEvent('data-synced'));
-          window.dispatchEvent(new CustomEvent('sales-synced'));
-          window.dispatchEvent(new CustomEvent('products-synced')); 
-          window.dispatchEvent(new CustomEvent('customers-synced'));
-          window.dispatchEvent(new CustomEvent('transactions-synced'));
-        }, 500);
-        
-        return true;
-      } else {
-        console.log('[UnifiedSyncManager] Some operations failed to sync');
-        return false;
+      console.log('[UnifiedSyncManager] Operations by type:', Object.keys(operationsByType));
+
+      // Request coordinated sync for each type that has pending operations
+      for (const type of Object.keys(operationsByType)) {
+        console.log(`[UnifiedSyncManager] Requesting sync for ${type}`);
+        await requestSync(type);
       }
+
+      return true;
     } catch (error) {
       console.error('[UnifiedSyncManager] Sync failed:', error);
       return false;
     }
-  }, [isOnline, pendingOps, user, clearAllPendingOperations]);
+  }, [isOnline, pendingOps, user, globalSyncInProgress, requestSync]);
 
-  // Auto-sync when coming online
+  // Auto-sync when coming online (with coordination)
   useEffect(() => {
-    if (isOnline && pendingOps.length > 0 && user) {
-      console.log('[UnifiedSyncManager] Coming online with pending operations, auto-syncing...');
+    if (isOnline && pendingOps.length > 0 && user && !globalSyncInProgress) {
+      console.log('[UnifiedSyncManager] Coming online with pending operations, initiating coordinated sync...');
       // Use timeout to prevent immediate re-triggering
       const timeout = setTimeout(() => {
         syncPendingOperations();
-      }, 1000);
+      }, 1500);
       return () => clearTimeout(timeout);
     }
-  }, [isOnline, user?.id, pendingOps.length, syncPendingOperations]);
+  }, [isOnline, user?.id, pendingOps.length, globalSyncInProgress, syncPendingOperations]);
 
   return {
     isOnline,
-    pendingOperations: pendingOps.length,
+    pendingOperations: pendingOperationsCount,
     syncPendingOperations,
+    globalSyncInProgress,
   };
 };
