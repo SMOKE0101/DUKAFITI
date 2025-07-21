@@ -193,6 +193,12 @@ export class SalesService {
     console.log('[SalesService] Updating customer debt:', customerId, debtAmount);
 
     try {
+      // Skip temp customer IDs as they will be handled by unified hooks
+      if (customerId.startsWith('temp_')) {
+        console.log('[SalesService] Skipping debt update for temporary customer ID:', customerId);
+        return;
+      }
+
       // Get current customer data
       const { data: customer, error: fetchError } = await supabase
         .from('customers')

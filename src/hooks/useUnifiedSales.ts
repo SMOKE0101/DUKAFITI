@@ -198,7 +198,7 @@ export const useUnifiedSales = () => {
         operation: 'create',
         data: saleData,
       });
-      console.log('[UnifiedSales] Sale created offline and queued for sync');
+      console.log('[UnifiedSales] Sale created offline and queued for sync - payment method:', saleData.paymentMethod);
       return newSale;
     }
   }, [user, isOnline, setCache, addPendingOperation]);
