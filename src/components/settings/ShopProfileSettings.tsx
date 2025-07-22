@@ -14,7 +14,6 @@ const ShopProfileSettings = () => {
     location: '',
     businessType: '',
     contactPhone: '',
-    shopAddress: '',
   });
 
   // Initialize form data when settings are loaded
@@ -26,7 +25,6 @@ const ShopProfileSettings = () => {
         location: settings.location || '',
         businessType: settings.businessType || '',
         contactPhone: settings.contactPhone || '',
-        shopAddress: settings.shopAddress || '',
       });
     }
   }, [loading, settings]);
@@ -139,19 +137,6 @@ const ShopProfileSettings = () => {
             className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
           />
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="shopAddress" className="block text-sm font-medium text-gray-700">
-          Shop Address
-        </Label>
-        <Input
-          id="shopAddress"
-          value={formData.shopAddress}
-          onChange={(e) => handleInputChange('shopAddress', e.target.value)}
-          placeholder="Street address, building details"
-          className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
-        />
       </div>
 
       <div className="flex justify-end pt-4">
