@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSettings } from '../../hooks/useSettings';
-import { Save, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 
 const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
@@ -20,16 +19,15 @@ const AppearanceSettings = () => {
     });
   }, [settings]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Saving appearance settings:', formData);
-    await saveSettings(formData);
-  };
-
-  const handleThemeToggle = (isDark: boolean) => {
+  const handleThemeToggle = async (isDark: boolean) => {
     const newTheme = isDark ? 'dark' : 'light';
     console.log('Theme toggle changed to:', newTheme);
+    
+    // Update local state immediately for instant UI feedback
     setFormData({ ...formData, theme: newTheme });
+    
+    // Save theme change immediately without waiting
+    await saveSettings({ theme: newTheme });
   };
 
   if (loading) {
@@ -44,7 +42,7 @@ const AppearanceSettings = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       {/* Theme Toggle Section */}
       <div className="space-y-4">
         <Label className="block text-sm font-medium text-gray-700">
@@ -72,17 +70,7 @@ const AppearanceSettings = () => {
           </div>
         </div>
       </div>
-
-      <div className="flex justify-end pt-4">
-        <Button 
-          type="submit" 
-          className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2"
-        >
-          <Save className="w-4 h-4" />
-          Save Settings
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 };
 

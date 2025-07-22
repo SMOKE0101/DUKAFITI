@@ -94,7 +94,7 @@ export const useSettings = () => {
       // Load from profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
+        .select('shop_name, location, business_type, sms_notifications_enabled, phone, email, shop_address')
         .eq('id', user.id)
         .single();
 
@@ -136,6 +136,7 @@ export const useSettings = () => {
         location: profile?.location || '',
         businessType: profile?.business_type || '',
         contactPhone: profile?.phone || '',
+        shopAddress: profile?.shop_address || '',
         smsNotifications: profile?.sms_notifications_enabled || smsNotifications,
         emailNotifications: emailNotifications,
         theme: themeValue as 'light' | 'dark' | 'system',
@@ -173,7 +174,7 @@ export const useSettings = () => {
       setSettings(updatedSettings);
 
       // Update profile data if any profile fields changed
-      const profileFields = ['shopName', 'location', 'businessType', 'contactPhone', 'smsNotifications'];
+      const profileFields = ['shopName', 'location', 'businessType', 'contactPhone', 'shopAddress', 'smsNotifications'];
       const hasProfileChanges = profileFields.some(field => newSettings[field as keyof ShopSettings] !== undefined);
       
       if (hasProfileChanges) {
@@ -183,6 +184,7 @@ export const useSettings = () => {
         if (newSettings.location !== undefined) profileUpdate.location = updatedSettings.location;
         if (newSettings.businessType !== undefined) profileUpdate.business_type = updatedSettings.businessType;
         if (newSettings.contactPhone !== undefined) profileUpdate.phone = updatedSettings.contactPhone;
+        if (newSettings.shopAddress !== undefined) profileUpdate.shop_address = updatedSettings.shopAddress;
         if (newSettings.smsNotifications !== undefined) profileUpdate.sms_notifications_enabled = updatedSettings.smsNotifications;
         
         console.log('Updating profile with:', profileUpdate);
