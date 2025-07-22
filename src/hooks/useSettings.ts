@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
@@ -91,12 +92,28 @@ export const useSettings = () => {
     try {
       console.log('Loading settings for user:', user.id);
       
-      // Load from profiles table
-      const { data: profile, error: profileError } = await supabase
+      // Load from profiles table - try with shop_address first, fallback without it
+      let profileQuery = supabase
         .from('profiles')
         .select('shop_name, location, business_type, sms_notifications_enabled, phone, email, shop_address')
         .eq('id', user.id)
         .single();
+
+      let { data: profile, error: profileError } = await profileQuery;
+
+      // If shop_address column doesn't exist, try without it
+      if (profileError && profileError.message?.includes('shop_address')) {
+        console.log('shop_address column not found, trying without it');
+        const fallbackQuery = supabase
+          .from('profiles')
+          .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
+          .eq('id', user.id)
+          .single();
+        
+        const fallbackResult = await fallbackQuery;
+        profile = fallbackResult.data;
+        profileError = fallbackResult.error;
+      }
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error loading profile:', profileError);
@@ -136,7 +153,7 @@ export const useSettings = () => {
         location: profile?.location || '',
         businessType: profile?.business_type || '',
         contactPhone: profile?.phone || '',
-        shopAddress: profile?.shop_address || '',
+        shopAddress: (profile as any)?.shop_address || '',
         smsNotifications: profile?.sms_notifications_enabled || smsNotifications,
         emailNotifications: emailNotifications,
         theme: themeValue as 'light' | 'dark' | 'system',
@@ -184,19 +201,47 @@ export const useSettings = () => {
         if (newSettings.location !== undefined) profileUpdate.location = updatedSettings.location;
         if (newSettings.businessType !== undefined) profileUpdate.business_type = updatedSettings.businessType;
         if (newSettings.contactPhone !== undefined) profileUpdate.phone = updatedSettings.contactPhone;
-        if (newSettings.shopAddress !== undefined) profileUpdate.shop_address = updatedSettings.shopAddress;
         if (newSettings.smsNotifications !== undefined) profileUpdate.sms_notifications_enabled = updatedSettings.smsNotifications;
         
-        console.log('Updating profile with:', profileUpdate);
-        
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update(profileUpdate)
-          .eq('id', user.id);
+        // Only try to update shop_address if it exists in the table
+        if (newSettings.shopAddress !== undefined) {
+          try {
+            // First try to update with shop_address
+            const updateWithAddress = { ...profileUpdate, shop_address: updatedSettings.shopAddress };
+            const { error: addressError } = await supabase
+              .from('profiles')
+              .update(updateWithAddress)
+              .eq('id', user.id);
 
-        if (profileError) {
-          console.error('Error updating profile:', profileError);
-          throw profileError;
+            if (addressError && addressError.message?.includes('shop_address')) {
+              // If shop_address column doesn't exist, update without it
+              console.log('shop_address column not found, updating without it');
+              const { error: fallbackError } = await supabase
+                .from('profiles')
+                .update(profileUpdate)
+                .eq('id', user.id);
+              
+              if (fallbackError) {
+                throw fallbackError;
+              }
+            } else if (addressError) {
+              throw addressError;
+            }
+          } catch (error) {
+            console.error('Error updating profile with address:', error);
+            throw error;
+          }
+        } else {
+          // Update without shop_address
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update(profileUpdate)
+            .eq('id', user.id);
+
+          if (profileError) {
+            console.error('Error updating profile:', profileError);
+            throw profileError;
+          }
         }
       }
 
@@ -335,3 +380,4 @@ export const useSettings = () => {
     resetSettings,
   };
 };
+
