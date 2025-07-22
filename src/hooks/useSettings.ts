@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,7 +91,7 @@ export const useSettings = () => {
     try {
       console.log('Loading settings for user:', user.id);
       
-      // Load from profiles table - try with shop_address first, fallback without it
+      // Load profile data with fallback for shop_address
       let profile: any = null;
       let profileError: any = null;
 
@@ -188,8 +189,7 @@ export const useSettings = () => {
     }
 
     try {
-      const updatedSettings = { ...settings, ...newSettings };
-      console.log('Saving settings:', newSettings, 'Updated settings:', updatedSettings);
+      console.log('Saving settings:', newSettings);
       
       // Update profile data if any profile fields changed
       const profileFields = ['shopName', 'location', 'businessType', 'contactPhone', 'shopAddress', 'smsNotifications'];
@@ -198,16 +198,16 @@ export const useSettings = () => {
       if (hasProfileChanges) {
         const profileUpdate: any = {};
         
-        if (newSettings.shopName !== undefined) profileUpdate.shop_name = updatedSettings.shopName;
-        if (newSettings.location !== undefined) profileUpdate.location = updatedSettings.location;
-        if (newSettings.businessType !== undefined) profileUpdate.business_type = updatedSettings.businessType;
-        if (newSettings.contactPhone !== undefined) profileUpdate.phone = updatedSettings.contactPhone;
-        if (newSettings.smsNotifications !== undefined) profileUpdate.sms_notifications_enabled = updatedSettings.smsNotifications;
+        if (newSettings.shopName !== undefined) profileUpdate.shop_name = newSettings.shopName;
+        if (newSettings.location !== undefined) profileUpdate.location = newSettings.location;
+        if (newSettings.businessType !== undefined) profileUpdate.business_type = newSettings.businessType;
+        if (newSettings.contactPhone !== undefined) profileUpdate.phone = newSettings.contactPhone;
+        if (newSettings.smsNotifications !== undefined) profileUpdate.sms_notifications_enabled = newSettings.smsNotifications;
         
         // Handle shop_address separately with fallback
         if (newSettings.shopAddress !== undefined) {
           try {
-            const updateWithAddress = { ...profileUpdate, shop_address: updatedSettings.shopAddress };
+            const updateWithAddress = { ...profileUpdate, shop_address: newSettings.shopAddress };
             const { error: addressError } = await supabase
               .from('profiles')
               .update(updateWithAddress)
@@ -253,7 +253,7 @@ export const useSettings = () => {
           .upsert({
             user_id: user.id,
             settings_key: 'theme',
-            settings_value: { theme: updatedSettings.theme },
+            settings_value: { theme: newSettings.theme },
           }, {
             onConflict: 'user_id,settings_key'
           });
@@ -264,8 +264,8 @@ export const useSettings = () => {
         }
 
         // Apply theme change immediately
-        console.log('Applying theme change to:', updatedSettings.theme);
-        setTheme(updatedSettings.theme);
+        console.log('Applying theme change to:', newSettings.theme);
+        setTheme(newSettings.theme);
       }
 
       // Update notification settings if changed
@@ -276,8 +276,8 @@ export const useSettings = () => {
             user_id: user.id,
             settings_key: 'notifications',
             settings_value: { 
-              email: updatedSettings.emailNotifications,
-              sms: updatedSettings.smsNotifications 
+              email: newSettings.emailNotifications ?? settings.emailNotifications,
+              sms: newSettings.smsNotifications ?? settings.smsNotifications 
             },
           }, {
             onConflict: 'user_id,settings_key'
@@ -289,7 +289,9 @@ export const useSettings = () => {
         }
       }
 
-      // Update local state after successful save
+      // Update local state immediately after successful save
+      const updatedSettings = { ...settings, ...newSettings };
+      console.log('Updating local settings to:', updatedSettings);
       setSettings(updatedSettings);
 
       toast({
