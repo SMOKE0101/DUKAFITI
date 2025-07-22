@@ -18,7 +18,7 @@ interface RestockModalProps {
 }
 
 const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, product, isLoading = false }) => {
-  const [quantity, setQuantity] = useState('1');
+  const [quantity, setQuantity] = useState('0');
   const [buyingPrice, setBuyingPrice] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -70,7 +70,7 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
       }
       
       // Reset form
-      setQuantity('1');
+      setQuantity('0');
       setBuyingPrice('');
       setErrors({});
       
@@ -87,7 +87,7 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
   };
 
   const handleClose = () => {
-    setQuantity('1');
+    setQuantity('0');
     setBuyingPrice('');
     setErrors({});
     onClose();
