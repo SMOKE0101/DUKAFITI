@@ -9,7 +9,7 @@ import { useToast } from './use-toast';
 export const useBackgroundSync = () => {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
-  const { pendingOps, removePendingOperation, loadPendingOperations } = useCacheManager();
+  const { pendingOps, clearPendingOperation, loadPendingOperations } = useCacheManager();
   const { toast } = useToast();
 
   // Process pending operations
@@ -97,7 +97,7 @@ export const useBackgroundSync = () => {
         }
 
         if (success) {
-          removePendingOperation(operation.id);
+          clearPendingOperation(operation.id);
           console.log('[BackgroundSync] Synced operation:', operation.id);
         } else {
           console.error('[BackgroundSync] Failed to sync operation:', operation.id);
@@ -113,7 +113,7 @@ export const useBackgroundSync = () => {
         description: `Synchronized ${pendingOps.length} offline changes`,
       });
     }
-  }, [user, isOnline, pendingOps, removePendingOperation, toast]);
+  }, [user, isOnline, pendingOps, clearPendingOperation, toast]);
 
   // Load pending operations on mount
   useEffect(() => {
