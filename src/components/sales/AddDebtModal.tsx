@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -72,15 +73,21 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
     setIsProcessing(true);
 
     try {
-      const transactionData = {
+      // Create debt transaction in sales table with negative amount to indicate debt
+      const debtSaleData = {
         user_id: user.id,
         customer_id: selectedCustomerId,
-        item_id: null, // No product for cash lending
+        customer_name: selectedCustomer?.name || 'Unknown Customer',
+        product_id: '00000000-0000-0000-0000-000000000002', // Use a consistent dummy ID for debt transactions
+        product_name: 'Cash Lending (Debt Transaction)',
         quantity: 1,
-        unit_price: totalAmount,
+        selling_price: totalAmount,
+        cost_price: 0,
         total_amount: totalAmount,
-        notes: notes || 'Cash lending transaction',
-        paid: false,
+        profit: 0,
+        payment_method: 'debt',
+        payment_details: { notes: notes || 'Cash lending transaction', type: 'debt_transaction' },
+        timestamp: new Date().toISOString()
       };
 
       // Update customer debt using the unified hook (handles both online/offline)
@@ -94,38 +101,38 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
         });
       }
 
-      // Handle transaction creation through unified system
+      // Handle debt transaction creation through unified system
       if (isOnline) {
         try {
-          // Online - direct to database
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert(transactionData);
+          // Online - direct to database (sales table for debt transactions)
+          const { error: saleError } = await supabase
+            .from('sales')
+            .insert(debtSaleData);
 
-          if (transactionError) {
-            console.error('Transaction creation failed, queuing for sync:', transactionError);
+          if (saleError) {
+            console.error('Debt transaction creation failed, queuing for sync:', saleError);
             // Queue for sync if direct insert fails
             addPendingOperation({
-              type: 'transaction',
+              type: 'sale',
               operation: 'create',
-              data: transactionData,
+              data: debtSaleData,
             });
           }
         } catch (error) {
-          console.error('Transaction creation failed, queuing for sync:', error);
+          console.error('Debt transaction creation failed, queuing for sync:', error);
           // Queue for sync if network request fails
           addPendingOperation({
-            type: 'transaction',
+            type: 'sale',
             operation: 'create',
-            data: transactionData,
+            data: debtSaleData,
           });
         }
       } else {
         // Offline - queue for sync
         addPendingOperation({
-          type: 'transaction',
+          type: 'sale',
           operation: 'create',
-          data: transactionData,
+          data: debtSaleData,
         });
       }
 
