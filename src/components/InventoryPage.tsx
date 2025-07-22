@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Filter, MoreVertical, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import RestockModal from './inventory/RestockModal';
 import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
+import { TooltipWrapper } from './TooltipWrapper';
 import { Product } from '../types';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
@@ -239,122 +241,124 @@ const InventoryPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            Inventory Management
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">
-            Track and manage your product inventory
-            {!isOnline && <span className="text-orange-500 ml-2">(Offline Mode)</span>}
-            {pendingOperations > 0 && (
-              <span className="text-blue-500 ml-2">
-                ({pendingOperations} pending sync{pendingOperations !== 1 ? 's' : ''})
-              </span>
-            )}
-            {globalSyncInProgress && (
-              <span className="text-green-500 ml-2">(Syncing...)</span>
-            )}
-          </p>
-        </div>
-        
-        <Button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
-          disabled={loading}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Product
-        </Button>
-      </div>
-
-      {/* Stats Cards - Pass products and onCardClick as expected by PremiumStatsCards */}
-      <PremiumStatsCards products={products} onCardClick={handleStatsCardClick} />
-
-      {/* Search and Filter Section */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search products by name or category..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
+    <TooltipWrapper>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+              Inventory Management
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
+              Track and manage your product inventory
+              {!isOnline && <span className="text-orange-500 ml-2">(Offline Mode)</span>}
+              {pendingOperations > 0 && (
+                <span className="text-blue-500 ml-2">
+                  ({pendingOperations} pending sync{pendingOperations !== 1 ? 's' : ''})
+                </span>
+              )}
+              {globalSyncInProgress && (
+                <span className="text-green-500 ml-2">(Syncing...)</span>
+              )}
+            </p>
+          </div>
+          
+          <Button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
+            disabled={loading}
           >
-            <Filter className="w-4 h-4" />
-            Filters
+            <Plus className="w-4 h-4 mr-2" />
+            Add Product
           </Button>
         </div>
-      </div>
 
-      {/* Filters Panel */}
-      {showFilters && (
-        <InventoryFilters
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
+        {/* Stats Cards - Pass products and onCardClick as expected by PremiumStatsCards */}
+        <PremiumStatsCards products={products} onCardClick={handleStatsCardClick} />
+
+        {/* Search and Filter Section */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search products by name or category..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+            </Button>
+          </div>
+        </div>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <InventoryFilters
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+          />
+        )}
+
+        {/* Products Grid */}
+        <InventoryProductGrid
+          products={filteredProducts}
+          onEdit={handleEditProduct}
+          onDelete={handleDeleteProduct}
+          onRestock={handleRestock}
         />
-      )}
 
-      {/* Products Grid */}
-      <InventoryProductGrid
-        products={filteredProducts}
-        onEdit={handleEditProduct}
-        onDelete={handleDeleteProduct}
-        onRestock={handleRestock}
-      />
+        {/* Modals */}
+        <AddProductModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleAddProduct}
+        />
 
-      {/* Modals */}
-      <AddProductModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSave={handleAddProduct}
-      />
+        <EditProductModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedProduct(null);
+          }}
+          onSave={handleUpdateProduct}
+          product={selectedProduct}
+        />
 
-      <EditProductModal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedProduct(null);
-        }}
-        onSave={handleUpdateProduct}
-        product={selectedProduct}
-      />
+        <DeleteProductModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedProduct(null);
+          }}
+          onDelete={handleConfirmDelete}
+          product={selectedProduct}
+        />
 
-      <DeleteProductModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setSelectedProduct(null);
-        }}
-        onDelete={handleConfirmDelete}
-        product={selectedProduct}
-      />
-
-      <RestockModal
-        isOpen={showRestockModal}
-        onClose={() => {
-          setShowRestockModal(false);
-          setSelectedProduct(null);
-        }}
-        onSave={handleRestockProduct}
-        product={selectedProduct}
-      />
-    </div>
+        <RestockModal
+          isOpen={showRestockModal}
+          onClose={() => {
+            setShowRestockModal(false);
+            setSelectedProduct(null);
+          }}
+          onSave={handleRestockProduct}
+          product={selectedProduct}
+        />
+      </div>
+    </TooltipWrapper>
   );
 };
 
