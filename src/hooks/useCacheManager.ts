@@ -23,11 +23,11 @@ export const useCacheManager = () => {
       const stored = localStorage.getItem('pendingOperations');
       if (stored) {
         const operations = JSON.parse(stored);
-        console.log('[CacheManager] Loaded pending operations:', operations.length);
+        console.log('[CacheManager] 📋 Loaded pending operations:', operations.length);
         setPendingOps(operations);
       }
     } catch (error) {
-      console.error('[CacheManager] Failed to load pending operations:', error);
+      console.error('[CacheManager] ❌ Failed to load pending operations:', error);
     }
   }, []);
 
@@ -39,9 +39,9 @@ export const useCacheManager = () => {
   useEffect(() => {
     try {
       localStorage.setItem('pendingOperations', JSON.stringify(pendingOps));
-      console.log('[CacheManager] Saved pending operations:', pendingOps.length);
+      console.log('[CacheManager] 💾 Saved pending operations:', pendingOps.length);
     } catch (error) {
-      console.error('[CacheManager] Failed to save pending operations:', error);
+      console.error('[CacheManager] ❌ Failed to save pending operations:', error);
     }
   }, [pendingOps]);
 
@@ -62,7 +62,7 @@ export const useCacheManager = () => {
         }
       }
     } catch (error) {
-      console.error('[CacheManager] Failed to get cache:', error);
+      console.error('[CacheManager] ❌ Failed to get cache:', error);
     }
     return null;
   }, []);
@@ -74,9 +74,9 @@ export const useCacheManager = () => {
         timestamp: new Date().getTime()
       };
       localStorage.setItem(`cache_${key}`, JSON.stringify(cacheData));
-      console.log('[CacheManager] Set cache for key:', key, 'data length:', Array.isArray(data) ? data.length : 'N/A');
+      console.log('[CacheManager] 💾 Set cache for key:', key, '- items:', Array.isArray(data) ? data.length : 'N/A');
     } catch (error) {
-      console.error('[CacheManager] Failed to set cache:', error);
+      console.error('[CacheManager] ❌ Failed to set cache:', error);
     }
   }, []);
 
@@ -89,60 +89,55 @@ export const useCacheManager = () => {
       maxAttempts: 3
     };
 
-    console.log('[CacheManager] Adding pending operation:', operationWithId);
+    console.log('[CacheManager] ➕ Adding pending operation:', operationWithId.id, operationWithId.type, operationWithId.operation);
 
     setPendingOps(prev => {
-      // Enhanced deduplication logic for better conflict resolution
-      if ((operation.type === 'customer' || operation.type === 'product') && operation.operation === 'update' && operation.data.id) {
-        // For updates, replace existing operations for the same entity
-        const filtered = prev.filter(op => !(
-          op.type === operation.type && 
+      // Enhanced deduplication with better conflict resolution
+      let filteredOps = [...prev];
+      
+      if (operation.type === 'product' && operation.operation === 'update' && operation.data.id) {
+        // For product updates, replace any existing update for the same product
+        filteredOps = prev.filter(op => !(
+          op.type === 'product' && 
           op.operation === 'update' && 
           op.data.id === operation.data.id
         ));
         
-        if (filtered.length !== prev.length) {
-          console.log(`[CacheManager] Replaced existing ${operation.type} update operation for ID: ${operation.data.id}`);
+        const removedCount = prev.length - filteredOps.length;
+        if (removedCount > 0) {
+          console.log(`[CacheManager] 🔄 Replaced ${removedCount} existing update(s) for product: ${operation.data.id}`);
         }
-        
-        return [...filtered, operationWithId];
       }
       
       // For creates and deletes, avoid exact duplicates
-      const exists = prev.some(op => 
+      const isDuplicate = filteredOps.some(op => 
         op.type === operation.type && 
         op.operation === operation.operation &&
         JSON.stringify(op.data) === JSON.stringify(operation.data)
       );
       
-      if (exists) {
-        console.log('[CacheManager] Similar operation already exists, skipping');
+      if (isDuplicate) {
+        console.log('[CacheManager] ⚠️  Similar operation already exists, skipping duplicate');
         return prev;
       }
       
-      console.log(`[CacheManager] Added new pending operation. Total pending: ${prev.length + 1}`);
-      return [...prev, operationWithId];
+      const newOps = [...filteredOps, operationWithId];
+      console.log(`[CacheManager] ✅ Added pending operation. Total: ${newOps.length}`);
+      return newOps;
     });
   }, []);
 
-  const removePendingOperation = useCallback((operationId: string): void => {
-    console.log('[CacheManager] Removing pending operation:', operationId);
-    setPendingOps(prev => prev.filter(op => op.id !== operationId));
-  }, []);
-
   const clearPendingOperation = useCallback((operationId: string): void => {
-    console.log('[CacheManager] Clearing pending operation:', operationId);
-    setPendingOps(prev => prev.filter(op => op.id !== operationId));
+    console.log('[CacheManager] 🗑️  Clearing pending operation:', operationId);
+    setPendingOps(prev => {
+      const filtered = prev.filter(op => op.id !== operationId);
+      const removed = prev.length - filtered.length;
+      if (removed > 0) {
+        console.log(`[CacheManager] ✅ Removed ${removed} operation(s)`);
+      }
+      return filtered;
+    });
   }, []);
-
-  const clearAllPendingOperations = useCallback((): void => {
-    console.log('[CacheManager] Clearing all pending operations');
-    setPendingOps([]);
-  }, []);
-
-  const getPendingOperationsByType = useCallback((type: string) => {
-    return pendingOps.filter(op => op.type === type);
-  }, [pendingOps]);
 
   const incrementOperationAttempts = useCallback((operationId: string): void => {
     setPendingOps(prev => prev.map(op => 
@@ -152,173 +147,222 @@ export const useCacheManager = () => {
     ));
   }, []);
 
-  // Enhanced sync function with better error handling and state preservation
+  // Enhanced sync function with bulletproof error handling
   const syncPendingOperations = useCallback(async (): Promise<void> => {
     if (!user) {
-      console.log('[CacheManager] No user, skipping sync');
+      console.log('[CacheManager] ❌ No user, skipping sync');
       return;
     }
 
     const operationsToSync = pendingOps.filter(op => op.attempts < op.maxAttempts);
     if (operationsToSync.length === 0) {
-      console.log('[CacheManager] No operations to sync');
+      console.log('[CacheManager] ✅ No operations to sync');
       return;
     }
 
-    console.log('[CacheManager] Starting enhanced sync of pending operations:', operationsToSync.length);
+    console.log('[CacheManager] 🔄 Starting bulletproof sync:', operationsToSync.length, 'operations');
     
     const successfulOps: string[] = [];
     const failedOps: string[] = [];
     
-    for (const operation of operationsToSync) {
-      try {
-        console.log('[CacheManager] Syncing operation:', operation.id, operation.type, operation.operation);
+    // Process operations by type and in chronological order
+    const operationsByType = operationsToSync.reduce((acc, op) => {
+      if (!acc[op.type]) acc[op.type] = [];
+      acc[op.type].push(op);
+      return acc;
+    }, {} as Record<string, PendingOperation[]>);
 
-        let success = false;
-        
-        if (operation.type === 'product') {
-          if (operation.operation === 'create') {
-            // Check if product already exists to prevent duplicates
-            const { data: existingProduct } = await supabase
-              .from('products')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('name', operation.data.name)
-              .eq('category', operation.data.category)
-              .maybeSingle();
+    for (const [type, typeOps] of Object.entries(operationsByType)) {
+      console.log(`[CacheManager] 🔧 Processing ${typeOps.length} ${type} operations`);
+      
+      // Sort by timestamp to maintain order
+      const sortedOps = typeOps.sort((a, b) => 
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
 
-            if (existingProduct) {
-              console.log('[CacheManager] Product already exists, marking as synced:', operation.data.name);
-              success = true;
-            } else {
-              const { data, error } = await supabase
-                .from('products')
-                .insert([{
-                  user_id: user.id,
-                  name: operation.data.name,
-                  category: operation.data.category,
-                  cost_price: operation.data.costPrice,
-                  selling_price: operation.data.sellingPrice,
-                  current_stock: operation.data.currentStock,
-                  low_stock_threshold: operation.data.lowStockThreshold,
-                }])
-                .select()
-                .single();
+      for (const operation of sortedOps) {
+        try {
+          console.log(`[CacheManager] ⚡ Syncing: ${operation.type} ${operation.operation} - ${operation.id}`);
 
-              success = !error;
-              if (success) {
-                console.log('[CacheManager] Product created successfully:', data.id);
-              } else {
-                console.error('[CacheManager] Product create error:', error);
-              }
-            }
-          } else if (operation.operation === 'update') {
-            if (!operation.data.id || operation.data.id.startsWith('temp_')) {
-              console.warn('[CacheManager] Cannot sync temp product update:', operation.data.id);
-              // Mark as successful to remove from pending (can't sync temp products)
-              success = true;
-            } else {
-              // Verify product exists before updating
-              const { data: existingProduct } = await supabase
-                .from('products')
-                .select('id, updated_at')
-                .eq('id', operation.data.id)
-                .eq('user_id', user.id)
-                .maybeSingle();
-                
-              if (!existingProduct) {
-                console.warn('[CacheManager] Product not found for update:', operation.data.id);
-                success = true; // Remove from pending since product doesn't exist
-              } else {
-                const updateData: any = {};
-                const updates = operation.data.updates || operation.data;
-                
-                if (updates.name !== undefined) updateData.name = updates.name;
-                if (updates.category !== undefined) updateData.category = updates.category;
-                if (updates.costPrice !== undefined) updateData.cost_price = updates.costPrice;
-                if (updates.sellingPrice !== undefined) updateData.selling_price = updates.sellingPrice;
-                if (updates.currentStock !== undefined) updateData.current_stock = updates.currentStock;
-                if (updates.lowStockThreshold !== undefined) updateData.low_stock_threshold = updates.lowStockThreshold;
-                updateData.updated_at = new Date().toISOString();
-
-                const { error, data } = await supabase
-                  .from('products')
-                  .update(updateData)
-                  .eq('id', operation.data.id)
-                  .eq('user_id', user.id)
-                  .select()
-                  .single();
-
-                success = !error;
-                if (success) {
-                  console.log('[CacheManager] Product updated successfully:', data.id);
-                } else {
-                  console.error('[CacheManager] Product update error:', error);
-                }
-              }
-            }
-          } else if (operation.operation === 'delete') {
-            if (!operation.data.id || operation.data.id.startsWith('temp_')) {
-              console.warn('[CacheManager] Cannot sync temp product delete:', operation.data.id);
-              success = true; // Remove from pending since temp products don't exist on server
-            } else {
-              const { error } = await supabase
-                .from('products')
-                .delete()
-                .eq('id', operation.data.id)
-                .eq('user_id', user.id);
-
-              success = !error;
-              if (success) {
-                console.log('[CacheManager] Product deleted successfully:', operation.data.id);
-              } else {
-                console.error('[CacheManager] Product delete error:', error);
-              }
-            }
+          let success = false;
+          
+          if (operation.type === 'product') {
+            success = await syncProductOperation(operation, user.id);
           }
-        }
+          // Add other operation types here as needed
 
-        if (success) {
-          successfulOps.push(operation.id);
-        } else {
+          if (success) {
+            successfulOps.push(operation.id);
+            console.log(`[CacheManager] ✅ Successfully synced: ${operation.id}`);
+          } else {
+            failedOps.push(operation.id);
+            incrementOperationAttempts(operation.id);
+            console.log(`[CacheManager] ❌ Failed to sync: ${operation.id}`);
+          }
+        } catch (error) {
+          console.error(`[CacheManager] ❌ Error syncing ${operation.id}:`, error);
           failedOps.push(operation.id);
           incrementOperationAttempts(operation.id);
         }
-      } catch (error) {
-        console.error('[CacheManager] Failed to sync operation:', operation.id, error);
-        failedOps.push(operation.id);
-        incrementOperationAttempts(operation.id);
       }
     }
 
     // Remove successful operations
     if (successfulOps.length > 0) {
       setPendingOps(prev => prev.filter(op => !successfulOps.includes(op.id)));
-      console.log(`[CacheManager] Removed ${successfulOps.length} successful operations`);
+      console.log(`[CacheManager] 🧹 Cleaned up ${successfulOps.length} successful operations`);
     }
 
-    console.log(`[CacheManager] Sync completed: ${successfulOps.length} successful, ${failedOps.length} failed`);
+    console.log(`[CacheManager] 📊 Sync summary: ${successfulOps.length} success, ${failedOps.length} failed`);
 
-    // Dispatch events if all operations were successful
-    if (failedOps.length === 0 && successfulOps.length > 0) {
-      console.log('[CacheManager] All operations synced successfully - dispatching events');
-      window.dispatchEvent(new CustomEvent('sync-completed', {
-        detail: {
-          totalOperations: successfulOps.length,
-          timestamp: new Date().toISOString()
-        }
-      }));
-      window.dispatchEvent(new CustomEvent('data-synced', {
-        detail: {
-          operationTypes: [...new Set(operationsToSync.map(op => op.type))],
-          timestamp: new Date().toISOString()
-        }
-      }));
+    // Dispatch events if any operations were successful
+    if (successfulOps.length > 0) {
+      console.log('[CacheManager] 📡 Dispatching sync completion events');
+      
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('sync-completed', {
+          detail: {
+            totalOperations: successfulOps.length,
+            operationTypes: [...new Set(operationsToSync.map(op => op.type))],
+            timestamp: new Date().toISOString()
+          }
+        }));
+        
+        window.dispatchEvent(new CustomEvent('data-synced', {
+          detail: {
+            operationTypes: [...new Set(operationsToSync.map(op => op.type))],
+            timestamp: new Date().toISOString()
+          }
+        }));
+
+        // Dispatch product-specific event
+        window.dispatchEvent(new CustomEvent('product-synced', {
+          detail: {
+            operationCount: successfulOps.length,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      }, 100);
     }
   }, [user, pendingOps, incrementOperationAttempts]);
 
+  // Helper function to sync product operations
+  const syncProductOperation = async (operation: PendingOperation, userId: string): Promise<boolean> => {
+    const { data } = operation;
+    console.log(`[CacheManager] 🔧 Syncing product ${operation.operation}:`, data?.name || data?.id);
+    
+    try {
+      switch (operation.operation) {
+        case 'create':
+          // Check for existing product to prevent duplicates
+          const { data: existingProduct } = await supabase
+            .from('products')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('name', data.name)
+            .eq('category', data.category)
+            .maybeSingle();
+
+          if (existingProduct) {
+            console.log('[CacheManager] ⚠️  Product already exists, marking as synced:', data.name);
+            return true;
+          }
+
+          const { error: createError } = await supabase
+            .from('products')
+            .insert([{
+              user_id: userId,
+              name: data.name,
+              category: data.category,
+              cost_price: data.costPrice,
+              selling_price: data.sellingPrice,
+              current_stock: data.currentStock || 0,
+              low_stock_threshold: data.lowStockThreshold || 10,
+            }]);
+          
+          if (createError) {
+            console.error('[CacheManager] ❌ Product create error:', createError);
+            return false;
+          }
+          console.log('[CacheManager] ✅ Product created successfully');
+          return true;
+          
+        case 'update':
+          if (!data.id || data.id.startsWith('temp_')) {
+            console.warn('[CacheManager] ⚠️  Cannot update temp product:', data.id);
+            return true; // Remove from pending since temp products can't be synced
+          }
+          
+          // Verify product exists before updating
+          const { data: productExists } = await supabase
+            .from('products')
+            .select('id')
+            .eq('id', data.id)
+            .eq('user_id', userId)
+            .maybeSingle();
+            
+          if (!productExists) {
+            console.warn('[CacheManager] ⚠️  Product not found for update:', data.id);
+            return true; // Remove from pending since product doesn't exist
+          }
+          
+          const updateData: any = {};
+          const updates = data.updates || data;
+          
+          if (updates.name !== undefined) updateData.name = updates.name;
+          if (updates.category !== undefined) updateData.category = updates.category;
+          if (updates.costPrice !== undefined) updateData.cost_price = updates.costPrice;
+          if (updates.sellingPrice !== undefined) updateData.selling_price = updates.sellingPrice;
+          if (updates.currentStock !== undefined) updateData.current_stock = updates.currentStock;
+          if (updates.lowStockThreshold !== undefined) updateData.low_stock_threshold = updates.lowStockThreshold;
+          updateData.updated_at = new Date().toISOString();
+
+          console.log('[CacheManager] 📝 Updating product with data:', { id: data.id, updateData });
+          
+          const { error: updateError } = await supabase
+            .from('products')
+            .update(updateData)
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (updateError) {
+            console.error('[CacheManager] ❌ Product update error:', updateError);
+            return false;
+          }
+          console.log('[CacheManager] ✅ Product updated successfully');
+          return true;
+          
+        case 'delete':
+          if (!data.id || data.id.startsWith('temp_')) {
+            console.warn('[CacheManager] ⚠️  Cannot delete temp product:', data.id);
+            return true; // Remove from pending since temp products can't be synced
+          }
+          
+          const { error: deleteError } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (deleteError) {
+            console.error('[CacheManager] ❌ Product delete error:', deleteError);
+            return false;
+          }
+          console.log('[CacheManager] ✅ Product deleted successfully');
+          return true;
+          
+        default:
+          console.warn(`[CacheManager] ❌ Unsupported product operation: ${operation.operation}`);
+          return false;
+      }
+    } catch (error) {
+      console.error('[CacheManager] ❌ Product operation error:', error);
+      return false;
+    }
+  };
+
   const debugPendingOperations = useCallback(() => {
-    console.log('[CacheManager] Current pending operations:', {
+    console.log('[CacheManager] 🐛 Debug - Current pending operations:', {
       total: pendingOps.length,
       byType: {
         sale: pendingOps.filter(op => op.type === 'sale').length,
@@ -334,11 +378,8 @@ export const useCacheManager = () => {
     getCache,
     setCache,
     addPendingOperation,
-    removePendingOperation,
     clearPendingOperation,
-    clearAllPendingOperations,
     loadPendingOperations,
-    getPendingOperationsByType,
     debugPendingOperations,
     syncPendingOperations,
     incrementOperationAttempts,

@@ -28,53 +28,65 @@ export const useUnifiedProducts = () => {
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache, addPendingOperation, pendingOps, syncPendingOperations } = useCacheManager();
 
-  // Enhanced merge function that preserves offline changes
+  // Enhanced merge function that ALWAYS preserves offline changes
   const mergeWithPendingOperations = useCallback((serverData: Product[], pendingProductOps: any[]) => {
-    console.log('[UnifiedProducts] Merging server data with pending operations');
-    console.log('[UnifiedProducts] Server data count:', serverData.length);
-    console.log('[UnifiedProducts] Pending operations:', pendingProductOps.length);
+    console.log('[UnifiedProducts] 🔄 Starting comprehensive merge');
+    console.log('[UnifiedProducts] 📊 Server data:', serverData.length, 'items');
+    console.log('[UnifiedProducts] 📋 Pending operations:', pendingProductOps.length);
     
-    // Start with server data as base
+    // Start with server data as the foundation
     let mergedData = [...serverData];
+    const productMap = new Map(mergedData.map(p => [p.id, { ...p }]));
     
-    // Create a map for faster lookups
-    const productMap = new Map(mergedData.map(p => [p.id, p]));
-    
-    // Sort pending operations by timestamp to apply them in order
+    // Sort pending operations chronologically to apply in correct order
     const sortedOps = pendingProductOps.sort((a, b) => 
       new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime()
     );
     
+    console.log('[UnifiedProducts] 🔧 Processing operations in chronological order...');
+    
     for (const op of sortedOps) {
-      console.log(`[UnifiedProducts] Processing pending operation:`, op.operation, op.data?.name || op.data?.id);
+      const opId = op.id || `${op.type}_${op.operation}_${Date.now()}`;
+      console.log(`[UnifiedProducts] ⚡ Processing: ${op.operation} - ${op.data?.name || op.data?.id || 'unknown'}`);
       
       if (op.operation === 'create') {
-        // Add new products that don't exist in server data
-        const exists = mergedData.some(p => 
+        // For creates, check if the product already exists by name+category or temp ID
+        const existsInServer = mergedData.find(p => 
           (p.name === op.data.name && p.category === op.data.category) ||
           p.id === op.data.id
         );
         
-        if (!exists) {
+        if (!existsInServer) {
           const tempProduct: Product = {
             ...op.data,
             id: op.data.id || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             createdAt: op.timestamp || new Date().toISOString(),
             updatedAt: op.timestamp || new Date().toISOString(),
           };
-          mergedData.unshift(tempProduct);
-          console.log(`[UnifiedProducts] Added pending create:`, tempProduct.name);
+          
+          mergedData.unshift(tempProduct); // Add to beginning for newest-first order
+          productMap.set(tempProduct.id, tempProduct);
+          console.log(`[UnifiedProducts] ➕ Added offline create: ${tempProduct.name}`);
+        } else {
+          console.log(`[UnifiedProducts] ⚠️  Create already exists: ${op.data.name}`);
         }
+        
       } else if (op.operation === 'update') {
         const productId = op.data.id;
-        const existingProduct = productMap.get(productId);
+        const updates = op.data.updates || op.data;
         
-        if (existingProduct) {
-          // Apply updates to existing product
-          const updates = op.data.updates || op.data;
+        // Find the product to update (either by real ID or temp ID)
+        let targetProduct = productMap.get(productId);
+        if (!targetProduct) {
+          targetProduct = mergedData.find(p => p.id === productId);
+        }
+        
+        if (targetProduct) {
+          // Apply the updates, preserving all fields
           const updatedProduct = { 
-            ...existingProduct, 
+            ...targetProduct,
             ...updates,
+            id: targetProduct.id, // Preserve original ID
             updatedAt: op.timestamp || new Date().toISOString()
           };
           
@@ -83,34 +95,27 @@ export const useUnifiedProducts = () => {
           if (index !== -1) {
             mergedData[index] = updatedProduct;
             productMap.set(productId, updatedProduct);
-            console.log(`[UnifiedProducts] Applied pending update to:`, updatedProduct.name, updates);
+            console.log(`[UnifiedProducts] 📝 Applied update to: ${updatedProduct.name}`, updates);
           }
-        } else if (productId?.startsWith('temp_')) {
-          // Handle updates to temp products
-          const index = mergedData.findIndex(p => p.id === productId);
-          if (index !== -1) {
-            const updates = op.data.updates || op.data;
-            mergedData[index] = { 
-              ...mergedData[index], 
-              ...updates,
-              updatedAt: op.timestamp || new Date().toISOString()
-            };
-            console.log(`[UnifiedProducts] Applied update to temp product:`, productId);
-          }
+        } else {
+          console.warn(`[UnifiedProducts] ❌ Product not found for update: ${productId}`);
         }
+        
       } else if (op.operation === 'delete') {
-        // Remove deleted products
-        mergedData = mergedData.filter(p => p.id !== op.data.id);
-        productMap.delete(op.data.id);
-        console.log(`[UnifiedProducts] Applied pending delete:`, op.data.id);
+        const productId = op.data.id;
+        
+        // Remove from both array and map
+        mergedData = mergedData.filter(p => p.id !== productId);
+        productMap.delete(productId);
+        console.log(`[UnifiedProducts] 🗑️  Applied delete: ${productId}`);
       }
     }
     
-    console.log(`[UnifiedProducts] Merge complete. Final count:`, mergedData.length);
+    console.log(`[UnifiedProducts] ✅ Merge complete: ${mergedData.length} products (${serverData.length} server + pending changes)`);
     return mergedData;
   }, []);
 
-  // Load products with enhanced offline/online handling
+  // Load products with bulletproof offline/online handling
   const loadProducts = useCallback(async () => {
     if (!user) {
       setProducts([]);
@@ -122,109 +127,109 @@ export const useUnifiedProducts = () => {
     setError(null);
 
     try {
-      console.log('[UnifiedProducts] Loading products...');
+      console.log('[UnifiedProducts] 🚀 Loading products...');
       
       const cached = getCache<Product[]>('products');
       const pendingProductOps = pendingOps.filter(op => op.type === 'product');
       
-      console.log('[UnifiedProducts] Cache status:', !!cached);
-      console.log('[UnifiedProducts] Pending operations:', pendingProductOps.length);
+      console.log('[UnifiedProducts] 💾 Cache available:', !!cached, cached?.length || 0, 'items');
+      console.log('[UnifiedProducts] ⏳ Pending operations:', pendingProductOps.length);
       
-      if (cached) {
-        // Apply pending operations to cached data first
+      // ALWAYS start with cached data + pending operations for immediate UI
+      if (cached && cached.length > 0) {
         const cachedWithPending = mergeWithPendingOperations(cached, pendingProductOps);
         setProducts(cachedWithPending);
+        console.log('[UnifiedProducts] 🎯 Set initial state from cache+pending:', cachedWithPending.length);
         setLoading(false);
-        
-        // If online, fetch fresh data and merge
-        if (isOnline) {
-          try {
-            console.log('[UnifiedProducts] Fetching fresh data from server...');
-            const { data, error: fetchError } = await supabase
-              .from('products')
-              .select('*')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false });
-
-            if (!fetchError && data) {
-              const serverData = data.map(transformDbProduct);
-              console.log(`[UnifiedProducts] Server returned ${serverData.length} products`);
-              
-              // Merge server data with current pending operations
-              const finalMergedData = mergeWithPendingOperations(serverData, pendingProductOps);
-              
-              // Update cache with clean server data only
-              setCache('products', serverData);
-              
-              // Display merged data (server + pending changes)
-              setProducts(finalMergedData);
-              console.log(`[UnifiedProducts] Updated with ${finalMergedData.length} merged products`);
-            }
-          } catch (serverError) {
-            console.error('[UnifiedProducts] Server fetch failed:', serverError);
-            // Keep cached data with pending operations on server error
-          }
-        }
-        return;
       }
-
-      // No cache - fetch from server if online
+      
+      // If online, fetch fresh data and merge carefully
       if (isOnline) {
-        console.log('[UnifiedProducts] No cache, fetching from server...');
-        const { data, error: fetchError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+        try {
+          console.log('[UnifiedProducts] 🌐 Fetching fresh server data...');
+          const { data, error: fetchError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
 
-        if (fetchError) {
-          setError('Failed to load products');
-          console.error('[UnifiedProducts] Fetch error:', fetchError);
-        } else {
-          const serverData = (data || []).map(transformDbProduct);
-          const mergedData = mergeWithPendingOperations(serverData, pendingProductOps);
-          
-          console.log(`[UnifiedProducts] Loaded ${serverData.length} from server, ${mergedData.length} after merge`);
-          setCache('products', serverData);
-          setProducts(mergedData);
+          if (!fetchError && data) {
+            const serverData = data.map(transformDbProduct);
+            console.log(`[UnifiedProducts] 📡 Server returned: ${serverData.length} products`);
+            
+            // Get current pending ops (might have changed during fetch)
+            const currentPendingOps = pendingOps.filter(op => op.type === 'product');
+            
+            // Merge server data with ALL pending operations
+            const finalMergedData = mergeWithPendingOperations(serverData, currentPendingOps);
+            
+            // Update cache with CLEAN server data only (no pending ops)
+            setCache('products', serverData);
+            
+            // Update UI with merged data (server + pending changes)
+            setProducts(finalMergedData);
+            console.log(`[UnifiedProducts] 🔄 Updated UI with ${finalMergedData.length} merged products`);
+            
+          } else if (fetchError) {
+            console.error('[UnifiedProducts] ❌ Server fetch error:', fetchError);
+            // Keep current data on server error
+          }
+        } catch (serverError) {
+          console.error('[UnifiedProducts] ❌ Server error:', serverError);
+          // Keep current cached data with pending ops on server error
         }
       } else {
-        setError('No cached data available offline');
-        console.log('[UnifiedProducts] Offline with no cache');
+        console.log('[UnifiedProducts] 📴 Offline mode - using cached data');
+        if (!cached || cached.length === 0) {
+          console.log('[UnifiedProducts] ❌ No cached data available offline');
+          setError('No data available offline');
+        }
       }
+      
+      // If we had no initial cached data, we're done loading
+      if (!cached || cached.length === 0) {
+        setLoading(false);
+      }
+      
     } catch (err) {
+      console.error('[UnifiedProducts] ❌ Load error:', err);
       setError('Failed to load products');
-      console.error('[UnifiedProducts] Load error:', err);
-    } finally {
       setLoading(false);
     }
   }, [user, isOnline, getCache, setCache, pendingOps, mergeWithPendingOperations]);
 
-  // Enhanced create product with better offline handling
+  // Bulletproof create product function
   const createProduct = useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const timestamp = new Date().toISOString();
-    const newProduct: Product = {
+    
+    console.log('[UnifiedProducts] ➕ Creating product:', productData.name);
+
+    // ALWAYS add to pending operations FIRST
+    addPendingOperation({
+      type: 'product',
+      operation: 'create',
+      data: { ...productData, id: tempId },
+    });
+
+    // Create optimistic product for immediate UI update
+    const optimisticProduct: Product = {
       ...productData,
       id: tempId,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
 
-    console.log('[UnifiedProducts] Creating product:', newProduct.name);
-
-    // Always add to pending operations first
-    addPendingOperation({
-      type: 'product',
-      operation: 'create',
-      data: productData,
+    // Optimistically update UI immediately
+    setProducts(prev => {
+      const updated = [optimisticProduct, ...prev];
+      console.log('[UnifiedProducts] 🎯 Optimistic create - UI updated with:', updated.length, 'products');
+      return updated;
     });
 
-    // Optimistically update UI
-    setProducts(prev => [newProduct, ...prev]);
-
+    // Try to sync immediately if online
     if (isOnline) {
       try {
         const { data, error } = await supabase
@@ -241,63 +246,69 @@ export const useUnifiedProducts = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (!error && data) {
+          const realProduct = transformDbProduct(data);
+          console.log('[UnifiedProducts] ✅ Product created online:', realProduct.id);
 
-        const transformedProduct = transformDbProduct(data);
-        console.log('[UnifiedProducts] Product created online:', transformedProduct.id);
+          // Replace temp product with real one in UI
+          setProducts(prev => prev.map(p => 
+            p.id === tempId ? realProduct : p
+          ));
 
-        // Replace temp product with real one
-        setProducts(prev => {
-          const updated = prev.map(p => p.id === tempId ? transformedProduct : p);
-          // Update cache with clean server data
-          const cleanData = updated.filter(p => !p.id.startsWith('temp_'));
-          setCache('products', cleanData);
-          return updated;
-        });
-
-        return transformedProduct;
+          // Update cache
+          const cached = getCache<Product[]>('products') || [];
+          setCache('products', [realProduct, ...cached]);
+          
+          return realProduct;
+        } else {
+          console.error('[UnifiedProducts] ❌ Online create failed:', error);
+        }
       } catch (error) {
-        console.error('[UnifiedProducts] Create failed online:', error);
-        // Keep the pending operation and optimistic update
-        return newProduct;
+        console.error('[UnifiedProducts] ❌ Create error:', error);
       }
-    } else {
-      console.log('[UnifiedProducts] Product created offline, queued for sync');
-      return newProduct;
     }
-  }, [user, isOnline, setCache, addPendingOperation]);
 
-  // Enhanced update product with conflict resolution
+    console.log('[UnifiedProducts] 📴 Product queued for offline sync');
+    return optimisticProduct;
+  }, [user, isOnline, setCache, getCache, addPendingOperation]);
+
+  // Bulletproof update product function
   const updateProduct = useCallback(async (productId: string, updates: Partial<Product>) => {
     if (!user) throw new Error('User not authenticated');
 
     const timestamp = new Date().toISOString();
-    console.log('[UnifiedProducts] Updating product:', productId, updates);
+    console.log('[UnifiedProducts] 📝 Updating product:', productId, updates);
 
-    // Always queue the operation first
+    // ALWAYS queue the operation FIRST
     addPendingOperation({
       type: 'product',
       operation: 'update',
       data: { id: productId, updates },
     });
 
-    // Optimistically update UI immediately
+    // Apply optimistic update to UI IMMEDIATELY
     setProducts(prev => {
       const updated = prev.map(product => 
         product.id === productId 
           ? { ...product, ...updates, updatedAt: timestamp }
           : product
       );
-      
-      // Update cache for real products only
-      const cleanData = updated.filter(p => !p.id.startsWith('temp_'));
-      if (cleanData.length > 0) {
-        setCache('products', cleanData);
-      }
-      
+      console.log('[UnifiedProducts] 🎯 Optimistic update applied to UI');
       return updated;
     });
 
+    // Update cache for real products
+    if (!productId.startsWith('temp_')) {
+      const cached = getCache<Product[]>('products') || [];
+      const updatedCache = cached.map(product =>
+        product.id === productId
+          ? { ...product, ...updates, updatedAt: timestamp }
+          : product
+      );
+      setCache('products', updatedCache);
+    }
+
+    // Try immediate sync if online and not a temp product
     if (isOnline && !productId.startsWith('temp_')) {
       try {
         const updateData: any = {};
@@ -315,23 +326,24 @@ export const useUnifiedProducts = () => {
           .eq('id', productId)
           .eq('user_id', user.id);
 
-        if (error) throw error;
-
-        console.log('[UnifiedProducts] Product updated online:', productId);
+        if (!error) {
+          console.log('[UnifiedProducts] ✅ Product updated online immediately');
+        } else {
+          console.error('[UnifiedProducts] ❌ Immediate online update failed:', error);
+        }
       } catch (error) {
-        console.error('[UnifiedProducts] Update failed online, keeping pending:', error);
-        // Operation already queued, just keep the optimistic update
+        console.error('[UnifiedProducts] ❌ Update error:', error);
       }
-    } else {
-      console.log('[UnifiedProducts] Product update queued for sync:', productId);
     }
-  }, [user, isOnline, setCache, addPendingOperation]);
 
-  // Enhanced delete product
+    console.log('[UnifiedProducts] 📋 Update queued for sync');
+  }, [user, isOnline, setCache, getCache, addPendingOperation]);
+
+  // Bulletproof delete product function
   const deleteProduct = useCallback(async (productId: string) => {
     if (!user) throw new Error('User not authenticated');
 
-    console.log('[UnifiedProducts] Deleting product:', productId);
+    console.log('[UnifiedProducts] 🗑️  Deleting product:', productId);
 
     // Queue operation for non-temp products
     if (!productId.startsWith('temp_')) {
@@ -342,16 +354,21 @@ export const useUnifiedProducts = () => {
       });
     }
 
-    // Optimistically update UI
+    // Optimistically remove from UI immediately
     setProducts(prev => {
       const updated = prev.filter(product => product.id !== productId);
-      const cleanData = updated.filter(p => !p.id.startsWith('temp_'));
-      if (cleanData.length >= 0) {
-        setCache('products', cleanData);
-      }
+      console.log('[UnifiedProducts] 🎯 Optimistic delete - UI updated');
       return updated;
     });
 
+    // Update cache for real products
+    if (!productId.startsWith('temp_')) {
+      const cached = getCache<Product[]>('products') || [];
+      const updatedCache = cached.filter(product => product.id !== productId);
+      setCache('products', updatedCache);
+    }
+
+    // Try immediate sync if online and not a temp product
     if (isOnline && !productId.startsWith('temp_')) {
       try {
         const { error } = await supabase
@@ -360,14 +377,16 @@ export const useUnifiedProducts = () => {
           .eq('id', productId)
           .eq('user_id', user.id);
 
-        if (error) throw error;
-        console.log('[UnifiedProducts] Product deleted online:', productId);
+        if (!error) {
+          console.log('[UnifiedProducts] ✅ Product deleted online immediately');
+        } else {
+          console.error('[UnifiedProducts] ❌ Immediate online delete failed:', error);
+        }
       } catch (error) {
-        console.error('[UnifiedProducts] Delete failed online, keeping pending:', error);
-        // Operation already queued
+        console.error('[UnifiedProducts] ❌ Delete error:', error);
       }
     }
-  }, [user, isOnline, setCache, addPendingOperation]);
+  }, [user, isOnline, setCache, getCache, addPendingOperation]);
 
   // Enhanced sync function
   const handleSyncPendingOperations = useCallback(async () => {
@@ -375,16 +394,16 @@ export const useUnifiedProducts = () => {
 
     setSyncStatus('syncing');
     try {
-      console.log('[UnifiedProducts] Starting enhanced sync...');
+      console.log('[UnifiedProducts] 🔄 Starting enhanced sync...');
       await syncPendingOperations();
       
-      // After sync, reload to get the latest state
+      // Reload data after successful sync
       setTimeout(() => {
         loadProducts();
         setSyncStatus('success');
       }, 500);
     } catch (error) {
-      console.error('[UnifiedProducts] Sync failed:', error);
+      console.error('[UnifiedProducts] ❌ Sync failed:', error);
       setSyncStatus('error');
     }
   }, [isOnline, user, syncPendingOperations, loadProducts]);
@@ -394,16 +413,20 @@ export const useUnifiedProducts = () => {
     loadProducts();
   }, [loadProducts]);
 
-  // Enhanced sync event listeners
+  // Enhanced sync event listeners with debouncing
   useEffect(() => {
+    let reloadTimeout: NodeJS.Timeout;
+    
     const handleNetworkChange = () => {
-      console.log('[UnifiedProducts] Network status changed, reloading...');
-      setTimeout(() => loadProducts(), 1000);
+      console.log('[UnifiedProducts] 🌐 Network status changed');
+      clearTimeout(reloadTimeout);
+      reloadTimeout = setTimeout(() => loadProducts(), 1000);
     };
 
     const handleSyncComplete = () => {
-      console.log('[UnifiedProducts] Sync completed, reloading...');
-      setTimeout(() => loadProducts(), 500);
+      console.log('[UnifiedProducts] ✅ Sync completed');
+      clearTimeout(reloadTimeout);
+      reloadTimeout = setTimeout(() => loadProducts(), 500);
     };
 
     window.addEventListener('online', handleNetworkChange);
@@ -412,6 +435,7 @@ export const useUnifiedProducts = () => {
     window.addEventListener('product-synced', handleSyncComplete);
     
     return () => {
+      clearTimeout(reloadTimeout);
       window.removeEventListener('online', handleNetworkChange);
       window.removeEventListener('sync-completed', handleSyncComplete);
       window.removeEventListener('data-synced', handleSyncComplete);
