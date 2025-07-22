@@ -16,23 +16,41 @@ const ShopProfileSettings = () => {
     contactPhone: '',
     shopAddress: '',
   });
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Update form data when settings are loaded
+  // Update form data when settings are loaded (only once on initial load)
   useEffect(() => {
-    console.log('Settings loaded in ShopProfileSettings:', settings);
-    setFormData({
-      shopName: settings.shopName || '',
-      location: settings.location || '',
-      businessType: settings.businessType || '',
-      contactPhone: settings.contactPhone || '',
-      shopAddress: settings.shopAddress || '',
-    });
-  }, [settings]);
+    if (!loading && !hasInitialized) {
+      console.log('Initializing form data with settings:', settings);
+      setFormData({
+        shopName: settings.shopName || '',
+        location: settings.location || '',
+        businessType: settings.businessType || '',
+        contactPhone: settings.contactPhone || '',
+        shopAddress: settings.shopAddress || '',
+      });
+      setHasInitialized(true);
+    }
+  }, [settings, loading, hasInitialized]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Saving shop profile settings:', formData);
-    await saveSettings(formData);
+    
+    try {
+      await saveSettings(formData);
+      console.log('Shop profile settings saved successfully');
+    } catch (error) {
+      console.error('Error saving shop profile settings:', error);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    console.log(`Updating ${field} to:`, value);
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const businessTypes = [
@@ -69,7 +87,7 @@ const ShopProfileSettings = () => {
           <Input
             id="shopName"
             value={formData.shopName}
-            onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+            onChange={(e) => handleInputChange('shopName', e.target.value)}
             placeholder="Enter your shop name"
             className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
           />
@@ -81,7 +99,7 @@ const ShopProfileSettings = () => {
           </Label>
           <Select
             value={formData.businessType}
-            onValueChange={(value) => setFormData({ ...formData, businessType: value })}
+            onValueChange={(value) => handleInputChange('businessType', value)}
           >
             <SelectTrigger className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200">
               <SelectValue placeholder="Select business type" />
@@ -105,7 +123,7 @@ const ShopProfileSettings = () => {
           <Input
             id="contactPhone"
             value={formData.contactPhone}
-            onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+            onChange={(e) => handleInputChange('contactPhone', e.target.value)}
             placeholder="+254 XXX XXX XXX"
             className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
           />
@@ -118,7 +136,7 @@ const ShopProfileSettings = () => {
           <Input
             id="location"
             value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            onChange={(e) => handleInputChange('location', e.target.value)}
             placeholder="City, County"
             className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
           />
@@ -132,7 +150,7 @@ const ShopProfileSettings = () => {
         <Input
           id="shopAddress"
           value={formData.shopAddress}
-          onChange={(e) => setFormData({ ...formData, shopAddress: e.target.value })}
+          onChange={(e) => handleInputChange('shopAddress', e.target.value)}
           placeholder="Street address, building details"
           className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200"
         />

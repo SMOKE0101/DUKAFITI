@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
@@ -192,9 +191,6 @@ export const useSettings = () => {
       const updatedSettings = { ...settings, ...newSettings };
       console.log('Saving settings:', newSettings, 'Updated settings:', updatedSettings);
       
-      // Update local state first for immediate UI feedback
-      setSettings(updatedSettings);
-
       // Update profile data if any profile fields changed
       const profileFields = ['shopName', 'location', 'businessType', 'contactPhone', 'shopAddress', 'smsNotifications'];
       const hasProfileChanges = profileFields.some(field => newSettings[field as keyof ShopSettings] !== undefined);
@@ -208,10 +204,9 @@ export const useSettings = () => {
         if (newSettings.contactPhone !== undefined) profileUpdate.phone = updatedSettings.contactPhone;
         if (newSettings.smsNotifications !== undefined) profileUpdate.sms_notifications_enabled = updatedSettings.smsNotifications;
         
-        // Only try to update shop_address if it exists in the table
+        // Handle shop_address separately with fallback
         if (newSettings.shopAddress !== undefined) {
           try {
-            // First try to update with shop_address
             const updateWithAddress = { ...profileUpdate, shop_address: updatedSettings.shopAddress };
             const { error: addressError } = await supabase
               .from('profiles')
@@ -219,7 +214,6 @@ export const useSettings = () => {
               .eq('id', user.id);
 
             if (addressError && addressError.message?.includes('shop_address')) {
-              // If shop_address column doesn't exist, update without it
               console.log('shop_address column not found, updating without it');
               const { error: fallbackError } = await supabase
                 .from('profiles')
@@ -295,6 +289,9 @@ export const useSettings = () => {
         }
       }
 
+      // Update local state after successful save
+      setSettings(updatedSettings);
+
       toast({
         title: "Settings Updated",
         description: "Your settings have been saved successfully.",
@@ -303,13 +300,12 @@ export const useSettings = () => {
       console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
-      // Revert local state on error
-      setSettings(settings);
       toast({
         title: "Error",
         description: "Failed to save settings. Please try again.",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
