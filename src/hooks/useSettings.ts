@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,7 +93,7 @@ export const useSettings = () => {
       console.log('Loading settings for user:', user.id);
       setLoading(true);
       
-      // Load profile data
+      // Load profile data including shop address from additional settings
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
@@ -119,6 +118,7 @@ export const useSettings = () => {
       let themeValue = 'light';
       let emailNotifications = false;
       let smsNotifications = false;
+      let shopAddress = '';
       
       if (shopSettingsData) {
         shopSettingsData.forEach(setting => {
@@ -129,6 +129,9 @@ export const useSettings = () => {
             const notifObj = setting.settings_value as { email?: boolean; sms?: boolean };
             emailNotifications = notifObj.email || false;
             smsNotifications = notifObj.sms || false;
+          } else if (setting.settings_key === 'shop_profile' && setting.settings_value) {
+            const profileObj = setting.settings_value as { shopAddress?: string };
+            shopAddress = profileObj.shopAddress || '';
           }
         });
       }
@@ -139,7 +142,7 @@ export const useSettings = () => {
         location: profile?.location || '',
         businessType: profile?.business_type || '',
         contactPhone: profile?.phone || '',
-        shopAddress: '', // We'll handle this separately if needed
+        shopAddress: shopAddress,
         smsNotifications: profile?.sms_notifications_enabled || smsNotifications,
         emailNotifications: emailNotifications,
         theme: themeValue as 'light' | 'dark' | 'system',
@@ -192,6 +195,26 @@ export const useSettings = () => {
         if (profileError) {
           console.error('Error updating profile:', profileError);
           throw profileError;
+        }
+      }
+
+      // Save shop address in shop_settings table
+      if (newSettings.shopAddress !== undefined) {
+        console.log('Updating shop address setting to:', newSettings.shopAddress);
+        
+        const { error: addressError } = await supabase
+          .from('shop_settings')
+          .upsert({
+            user_id: user.id,
+            settings_key: 'shop_profile',
+            settings_value: { shopAddress: newSettings.shopAddress },
+          }, {
+            onConflict: 'user_id,settings_key'
+          });
+
+        if (addressError) {
+          console.error('Error updating shop address:', addressError);
+          throw addressError;
         }
       }
 

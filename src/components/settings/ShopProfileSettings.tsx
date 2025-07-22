@@ -29,7 +29,7 @@ const ShopProfileSettings = () => {
         shopAddress: settings.shopAddress || '',
       });
     }
-  }, [loading, settings.shopName, settings.location, settings.businessType, settings.contactPhone, settings.shopAddress]);
+  }, [loading, settings]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
