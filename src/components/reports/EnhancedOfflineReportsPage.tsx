@@ -78,28 +78,7 @@ const EnhancedOfflineReportsPage = () => {
     });
   }, [activeData.sales, fromDate, toDate]);
 
-  const metrics = useMemo(() => {
-    if (readOnly && cachedSnapshot) {
-      return cachedSnapshot.metrics;
-    }
-
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const totalOrders = filteredSales.length;
-    const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
-    const lowStockProducts = activeData.products.filter(product => 
-      (product.currentStock || 0) <= (product.lowStockThreshold || 10)
-    ).length;
-
-    const calculatedMetrics = { totalRevenue, totalOrders, activeCustomers, lowStockProducts };
-    
-    // Cache metrics when online
-    if (isOnline && !activeData.loading) {
-      cacheSnapshot(activeData.sales, activeData.products, activeData.customers, calculatedMetrics, chartData);
-    }
-
-    return calculatedMetrics;
-  }, [filteredSales, activeData.products, activeData.customers, readOnly, cachedSnapshot, isOnline, activeData.loading]);
-
+  // Define chartData first before using it in metrics
   const chartData = useMemo(() => {
     if (readOnly && cachedSnapshot) {
       return cachedSnapshot.chartData;
@@ -132,6 +111,29 @@ const EnhancedOfflineReportsPage = () => {
       orders: groupedData[key].orders
     })).slice(-7); // Show last 7 days for chart
   }, [filteredSales, fromDate, toDate, readOnly, cachedSnapshot]);
+
+  // Now define metrics after chartData is available
+  const metrics = useMemo(() => {
+    if (readOnly && cachedSnapshot) {
+      return cachedSnapshot.metrics;
+    }
+
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const totalOrders = filteredSales.length;
+    const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
+    const lowStockProducts = activeData.products.filter(product => 
+      (product.currentStock || 0) <= (product.lowStockThreshold || 10)
+    ).length;
+
+    const calculatedMetrics = { totalRevenue, totalOrders, activeCustomers, lowStockProducts };
+    
+    // Cache metrics when online
+    if (isOnline && !activeData.loading) {
+      cacheSnapshot(activeData.sales, activeData.products, activeData.customers, calculatedMetrics, chartData);
+    }
+
+    return calculatedMetrics;
+  }, [filteredSales, activeData.products, activeData.customers, readOnly, cachedSnapshot, isOnline, activeData.loading, cacheSnapshot, activeData.sales, chartData]);
 
   if (activeData.loading && !cachedSnapshot) {
     return (
