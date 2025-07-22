@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +9,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { X, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
-import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
+import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../hooks/useAuth';
 
 interface RepaymentDrawerProps {
@@ -29,7 +28,6 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { updateCustomer } = useSupabaseCustomers();
-  const { createDebtPayment } = useSupabaseDebtPayments();
   const { user } = useAuth();
 
   const handleSavePayment = async () => {
@@ -47,22 +45,40 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       
-      // Create payment record using debt_payments table
-      await createDebtPayment({
-        user_id: user.id,
-        customer_id: customer.id,
-        customer_name: customer.name,
-        amount: paymentAmount,
-        payment_method: method,
-        reference: reference || undefined,
-        timestamp: new Date().toISOString()
-      });
+      // Create payment record using a dummy product ID for payments
+      const { error: salesError } = await supabase
+        .from('sales')
+        .insert({
+          user_id: user.id,
+          customer_id: customer.id,
+          customer_name: customer.name,
+          product_id: '00000000-0000-0000-0000-000000000001', // Use a consistent dummy ID for payments
+          product_name: 'Payment Received',
+          quantity: 1,
+          selling_price: -paymentAmount, // Negative amount to indicate payment
+          cost_price: 0,
+          total_amount: -paymentAmount,
+          profit: 0,
+          payment_method: method,
+          payment_details: reference ? { reference } : {},
+          timestamp: new Date().toISOString()
+        });
+
+      if (salesError) {
+        console.error('Error creating payment record:', salesError);
+        throw new Error(`Failed to record payment: ${salesError.message}`);
+      }
 
       // Update customer balance
-      await updateCustomer(customer.id, {
-        outstandingDebt: newBalance,
-        lastPurchaseDate: new Date().toISOString()
-      });
+      try {
+        await updateCustomer(customer.id, {
+          outstandingDebt: newBalance,
+          lastPurchaseDate: new Date().toISOString()
+        });
+      } catch (updateError) {
+        console.error('Error updating customer balance:', updateError);
+        throw new Error('Failed to update customer balance.');
+      }
 
       // Reset form
       setAmount('');
