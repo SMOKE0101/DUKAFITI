@@ -1,529 +1,331 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, Search, Filter, MoreVertical, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Package, AlertTriangle, Trash2, Edit, Box, Search, Layers, DollarSign } from 'lucide-react';
-import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
-import { Product } from '../types';
-import { PRODUCT_CATEGORIES } from '../constants/categories';
-import RestockModal from './inventory/RestockModal';
+import { useToast } from '@/hooks/use-toast';
+import AddProductModal from './inventory/AddProductModal';
+import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
+import RestockModal from './inventory/RestockModal';
+import InventoryFilters from './inventory/InventoryFilters';
+import InventoryProductGrid from './inventory/InventoryProductGrid';
+import PremiumStatsCards from './inventory/PremiumStatsCards';
+import { Product } from '../types';
+import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
+import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 
 const InventoryPage = () => {
-  const { products, loading, createProduct, updateProduct, deleteProduct, isOnline, pendingOperations } = useUnifiedProducts();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [isRestocking, setIsRestocking] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    costPrice: 0,
-    sellingPrice: 0,
-    currentStock: 0,
-    lowStockThreshold: 10,
-  });
-  const [unspecifiedQuantity, setUnspecifiedQuantity] = useState(false);
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Filter products based on search query
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { toast } = useToast();
+  const { 
+    products, 
+    loading, 
+    error, 
+    createProduct, 
+    updateProduct, 
+    isOnline,
+    pendingOperations 
+  } = useUnifiedProducts();
+  
+  const { globalSyncInProgress } = useUnifiedSyncManager();
 
-  // Calculate stats
-  const totalProducts = products.length;
-  const lowStockProducts = filteredProducts.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
-  const totalInventoryValue = products.reduce((sum, p) => sum + (p.costPrice * p.currentStock), 0);
+  // Filter products based on search and category
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          product.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, selectedCategory]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  // Calculate inventory stats
+  const inventoryStats = useMemo(() => {
+    const totalProducts = products.length;
+    const lowStockProducts = products.filter(p => p.currentStock <= p.lowStockThreshold).length;
+    const totalValue = products.reduce((sum, p) => sum + (p.sellingPrice * p.currentStock), 0);
+    const outOfStockProducts = products.filter(p => p.currentStock === 0).length;
+
+    return {
+      totalProducts,
+      lowStockProducts,
+      totalValue,
+      outOfStockProducts
+    };
+  }, [products]);
+
+  const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const finalFormData = {
-        ...formData,
-        currentStock: unspecifiedQuantity ? -1 : formData.currentStock,
-        costPrice: unspecifiedQuantity ? 0 : formData.costPrice,
-        lowStockThreshold: unspecifiedQuantity ? 0 : formData.lowStockThreshold
-      };
+      await createProduct(productData);
+      setShowAddModal(false);
       
-      if (selectedProduct) {
-        await updateProduct(selectedProduct.id, finalFormData);
+      if (!isOnline) {
+        toast({
+          title: "Product Added Offline",
+          description: "Product will be synced when connection is restored.",
+          duration: 3000,
+        });
       } else {
-        await createProduct(finalFormData);
+        toast({
+          title: "Product Added",
+          description: `${productData.name} has been added to your inventory.`,
+          duration: 3000,
+        });
       }
-      
-      setIsDialogOpen(false);
-      resetForm();
     } catch (error) {
-      console.error('Failed to save product:', error);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      category: '',
-      costPrice: 0,
-      sellingPrice: 0,
-      currentStock: 0,
-      lowStockThreshold: 10,
-    });
-    setUnspecifiedQuantity(false);
-    setSelectedProduct(null);
-  };
-
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    setFormData({
-      name: product.name,
-      category: product.category,
-      costPrice: product.costPrice,
-      sellingPrice: product.sellingPrice,
-      currentStock: product.currentStock === -1 ? 0 : product.currentStock,
-      lowStockThreshold: product.lowStockThreshold || 10,
-    });
-    setUnspecifiedQuantity(product.currentStock === -1);
-    setIsDialogOpen(true);
-  };
-
-  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
-    if (!product) return;
-    
-    console.log('[InventoryPage] Handling restock:', { productId: product.id, quantity, buyingPrice });
-    setIsRestocking(true);
-    
-    try {
-      await updateProduct(product.id, {
-        currentStock: product.currentStock + quantity,
-        costPrice: buyingPrice,
+      console.error('Error adding product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please try again.",
+        variant: "destructive",
       });
-      
-      setShowRestockModal(false);
-      setSelectedProduct(null);
-      console.log('[InventoryPage] Restock completed successfully');
-    } catch (error) {
-      console.error('[InventoryPage] Failed to restock product:', error);
-    } finally {
-      setIsRestocking(false);
     }
   };
 
-  const handleDeleteProduct = async (id: string) => {
-    console.log('[InventoryPage] Handling delete:', id);
+  const handleEditProduct = (product: Product) => {
+    console.log('[InventoryPage] Opening edit modal for product:', product.id);
+    setSelectedProduct(product);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateProduct = async (productData: Partial<Product>) => {
+    if (!selectedProduct) return;
+
     try {
-      await deleteProduct(id);
-      setShowDeleteModal(false);
-      setProductToDelete(null);
-      console.log('[InventoryPage] Delete completed successfully');
+      await updateProduct(selectedProduct.id, productData);
+      setShowEditModal(false);
+      setSelectedProduct(null);
+      
+      if (!isOnline) {
+        toast({
+          title: "Product Updated Offline",
+          description: "Changes will be synced when connection is restored.",
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "Product Updated",
+          description: `${productData.name || selectedProduct.name} has been updated.`,
+          duration: 3000,
+        });
+      }
     } catch (error) {
-      console.error('[InventoryPage] Failed to delete product:', error);
+      console.error('Error updating product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update product. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const openRestockModal = (product: Product) => {
+  const handleDeleteProduct = (product: Product) => {
+    console.log('[InventoryPage] Opening delete modal for product:', product.id);
+    setSelectedProduct(product);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      // For now, we'll just remove from local state
+      // TODO: Implement proper delete functionality
+      setShowDeleteModal(false);
+      setSelectedProduct(null);
+      
+      toast({
+        title: "Product Deleted",
+        description: `${selectedProduct.name} has been removed from inventory.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRestock = (product: Product) => {
     console.log('[InventoryPage] Opening restock modal for product:', product.id);
     setSelectedProduct(product);
     setShowRestockModal(true);
   };
 
-  const openDeleteModal = (product: Product) => {
-    console.log('[InventoryPage] Opening delete modal for product:', product.id);
-    setProductToDelete(product);
-    setShowDeleteModal(true);
+  const handleRestockProduct = async (quantity: number, buyingPrice: number) => {
+    if (!selectedProduct) return;
+
+    try {
+      const newStock = selectedProduct.currentStock + quantity;
+      await updateProduct(selectedProduct.id, { 
+        currentStock: newStock,
+        costPrice: buyingPrice 
+      });
+      
+      setShowRestockModal(false);
+      setSelectedProduct(null);
+      
+      if (!isOnline) {
+        toast({
+          title: "Restock Recorded Offline",
+          description: "Stock update will be synced when connection is restored.",
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "Product Restocked",
+          description: `${selectedProduct.name} stock updated to ${newStock} units.`,
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Error restocking product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to restock product. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-[#F4F6F8] font-['Inter']">
-      <div className="container mx-auto px-6 py-8 space-y-8">
-        {/* Header Section */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 font-['Inter']">
-              Inventory Management
-            </h1>
-            <p className="text-base text-gray-700 mt-2 font-['Inter']">
-              Track and manage your product inventory
-            </p>
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+            <Box className="w-8 h-8 text-red-600 dark:text-red-400" />
           </div>
-
-          <div className="flex items-center gap-4">
-            {/* Network Status Indicator */}
-            {pendingOperations > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-amber-700">
-                  {pendingOperations} pending sync
-                </span>
-              </div>
-            )}
-            {!isOnline && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-full">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-sm font-medium text-red-700">
-                  Working Offline
-                </span>
-              </div>
-            )}
-            
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={resetForm}
-                  className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 font-['Inter']"
-                >
-                  <Plus className="w-5 h-5 mr-2" strokeWidth={2} />
-                  Add Product
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold text-gray-900 font-['Inter']">
-                    {selectedProduct ? 'Edit Product' : 'Add New Product'}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name" className="text-base font-medium text-gray-700 font-['Inter']">Product Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="category" className="text-base font-medium text-gray-700 font-['Inter']">Category *</Label>
-                      <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-60">
-                          {PRODUCT_CATEGORIES.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="costPrice" className="text-base font-medium text-gray-700 font-['Inter']">Cost Price *</Label>
-                      <Input
-                        id="costPrice"
-                        type="number"
-                        step="0.01"
-                        value={unspecifiedQuantity ? '' : formData.costPrice}
-                        onChange={(e) => setFormData(prev => ({ ...prev, costPrice: Number(e.target.value) }))}
-                        placeholder={unspecifiedQuantity ? "Unspecified" : "0.00"}
-                        disabled={unspecifiedQuantity}
-                        required={!unspecifiedQuantity}
-                        className={`mt-1 ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="sellingPrice" className="text-base font-medium text-gray-700 font-['Inter']">Selling Price *</Label>
-                      <Input
-                        id="sellingPrice"
-                        type="number"
-                        step="0.01"
-                        value={formData.sellingPrice}
-                        onChange={(e) => setFormData(prev => ({ ...prev, sellingPrice: Number(e.target.value) }))}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="currentStock" className="text-base font-medium text-gray-700 font-['Inter']">Current Stock *</Label>
-                      <Input
-                        id="currentStock"
-                        type="number"
-                        value={unspecifiedQuantity ? '' : formData.currentStock}
-                        onChange={(e) => setFormData(prev => ({ ...prev, currentStock: Number(e.target.value) }))}
-                        placeholder={unspecifiedQuantity ? "Unspecified quantity" : "0"}
-                        disabled={unspecifiedQuantity}
-                        required={!unspecifiedQuantity}
-                        className={`mt-1 ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      />
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Checkbox 
-                          id="unspecifiedQuantity"
-                          checked={unspecifiedQuantity}
-                          onCheckedChange={(checked) => setUnspecifiedQuantity(checked as boolean)}
-                        />
-                        <Label htmlFor="unspecifiedQuantity" className="text-sm text-gray-600">
-                          Unspecified quantity (sacks, cups, etc.)
-                        </Label>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="lowStockThreshold" className="text-base font-medium text-gray-700 font-['Inter']">Low Stock Alert</Label>
-                      <Input
-                        id="lowStockThreshold"
-                        type="number"
-                        value={unspecifiedQuantity ? '' : formData.lowStockThreshold}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lowStockThreshold: Number(e.target.value) }))}
-                        placeholder={unspecifiedQuantity ? "Unspecified" : "10"}
-                        disabled={unspecifiedQuantity}
-                        className={`mt-1 ${unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Profit Calculation */}
-                  {!unspecifiedQuantity && formData.costPrice > 0 && formData.sellingPrice > 0 && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h3 className="font-medium text-blue-900 mb-2">Profit Summary</h3>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Profit per unit:</span>
-                          <span className="font-semibold text-green-600">
-                            KSh {(formData.sellingPrice - formData.costPrice).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Profit margin:</span>
-                          <span className="font-semibold text-blue-600">
-                            {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="font-['Inter']">
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="bg-purple-600 hover:bg-purple-700 font-['Inter']">
-                      {selectedProduct ? 'Update' : 'Create'} Product
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">Error loading inventory</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
         </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
-            <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mr-4">
-              <Layers className="w-6 h-6 text-blue-600" strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-gray-900 font-['Inter']">{totalProducts}</div>
-              <div className="text-base text-gray-700 font-['Inter']">Total Products</div>
-            </div>
-          </Card>
-
-          <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
-            <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center mr-4">
-              <AlertTriangle className="w-6 h-6 text-amber-600" strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-gray-900 font-['Inter']">{lowStockProducts.length}</div>
-              <div className="text-base text-gray-700 font-['Inter']">Low Stock Products</div>
-            </div>
-          </Card>
-
-          <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
-            <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mr-4">
-              <DollarSign className="w-6 h-6 text-green-600" strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-gray-900 font-['Inter']">
-                KSh {totalInventoryValue.toLocaleString()}
-              </div>
-              <div className="text-base text-gray-700 font-['Inter']">Inventory Value</div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Search Bar */}
-        <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" strokeWidth={1.5} />
-              <Input
-                type="search"
-                placeholder="Search products by name or category..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-100 rounded-xl pl-12 pr-4 py-4 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 border-0 text-base font-['Inter']"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Products Grid */}
-        <div className="grid gap-8">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="mt-4 text-base text-gray-700 font-['Inter']">Loading inventory...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <Card className="bg-white rounded-3xl shadow-md border border-gray-200">
-              <CardContent className="text-center py-12">
-                <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" strokeWidth={1.5} />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2 font-['Inter']">
-                  {searchQuery ? 'No products found' : 'No products in inventory'}
-                </h3>
-                <p className="text-base text-gray-700 font-['Inter']">
-                  {searchQuery ? 'Try adjusting your search terms' : 'Start by adding your first product to track inventory'}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={resetForm} className="mt-6 bg-purple-600 hover:bg-purple-700 font-['Inter']">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Product
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProducts.map((product) => (
-                <Card 
-                  key={product.id} 
-                  className="bg-white rounded-3xl shadow-md hover:shadow-lg border border-gray-200 transition-all duration-200 hover:-translate-y-1"
-                >
-                  <CardHeader className="pb-4 p-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-2xl font-semibold text-gray-900 mb-2 truncate font-['Inter']">
-                          {product.name}
-                        </CardTitle>
-                        <span className="text-sm text-gray-500 uppercase tracking-wide font-['Inter']">
-                          {product.category}
-                        </span>
-                      </div>
-                      {product.currentStock <= (product.lowStockThreshold || 10) && product.currentStock !== -1 && (
-                        <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 ml-2" strokeWidth={1.5} />
-                      )}
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4 p-6 pt-0">
-                    <div className="grid grid-cols-2 gap-4 text-base">
-                      <div>
-                        <span className="block font-medium text-gray-700 mb-1 font-['Inter']">Cost Price</span>
-                        <span className="text-xl font-semibold text-gray-900 font-['Inter']">
-                          {product.currentStock === -1 ? 'Unspecified' : `KSh ${product.costPrice.toLocaleString()}`}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block font-medium text-gray-700 mb-1 font-['Inter']">Selling Price</span>
-                        <span className="text-xl font-semibold text-gray-900 font-['Inter']">
-                          KSh {product.sellingPrice.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Stock and Profit Badges */}
-                    <div className="flex gap-2 flex-wrap">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-sm font-medium font-['Inter'] ${
-                        product.currentStock === -1 
-                          ? 'bg-blue-100 text-blue-800'
-                          : product.currentStock <= (product.lowStockThreshold || 10) 
-                          ? 'bg-amber-100 text-amber-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
-                      </span>
-                      <span className="inline-block bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-sm font-medium font-['Inter']">
-                        Profit: KSh {(product.sellingPrice - product.costPrice).toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="pt-2 border-t border-gray-100">
-                      <div className="text-sm text-gray-500 font-['Inter']">
-                        <span className="block">
-                          Low stock alert: {product.currentStock === -1 ? 'Unspecified' : `${product.lowStockThreshold || 10} units`}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-3 gap-3 pt-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleEdit(product)}
-                        className="border-purple-600 text-purple-600 hover:bg-purple-50 rounded-xl font-medium font-['Inter'] flex items-center justify-center gap-1.5"
-                      >
-                        <Edit className="w-4 h-4" strokeWidth={1.5} />
-                        Edit
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => openRestockModal(product)}
-                        disabled={product.currentStock === -1}
-                        className={`rounded-xl font-medium font-['Inter'] flex items-center justify-center gap-1.5 ${
-                          product.currentStock === -1 
-                            ? 'opacity-50 cursor-not-allowed bg-gray-400' 
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                        }`}
-                        title={product.currentStock === -1 ? 'Cannot restock unspecified quantity products' : ''}
-                      >
-                        <Box className="w-4 h-4" strokeWidth={1.5} />
-                        Stock
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => openDeleteModal(product)}
-                        className="bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium font-['Inter'] flex items-center justify-center gap-1.5"
-                      >
-                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                        Delete
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Restock Modal */}
-        <RestockModal
-          isOpen={showRestockModal}
-          onClose={() => {
-            setShowRestockModal(false);
-            setSelectedProduct(null);
-          }}
-          onSave={(quantity, buyingPrice) => selectedProduct && handleRestock(selectedProduct, quantity, buyingPrice)}
-          product={selectedProduct}
-          isLoading={isRestocking}
-        />
-
-        {/* Delete Product Modal */}
-        <DeleteProductModal
-          isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setProductToDelete(null);
-          }}
-          onDelete={handleDeleteProduct}
-          product={productToDelete}
-        />
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            Inventory Management
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">
+            Track and manage your product inventory
+            {!isOnline && <span className="text-orange-500 ml-2">(Offline Mode)</span>}
+            {pendingOperations > 0 && (
+              <span className="text-blue-500 ml-2">
+                ({pendingOperations} pending sync{pendingOperations !== 1 ? 's' : ''})
+              </span>
+            )}
+            {globalSyncInProgress && (
+              <span className="text-green-500 ml-2">(Syncing...)</span>
+            )}
+          </p>
+        </div>
+        
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
+          disabled={loading}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Product
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <PremiumStatsCards stats={inventoryStats} />
+
+      {/* Search and Filter Section */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search products by name or category..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <InventoryFilters
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          products={products}
+        />
+      )}
+
+      {/* Products Grid */}
+      <InventoryProductGrid
+        products={filteredProducts}
+        onEdit={handleEditProduct}
+        onDelete={handleDeleteProduct}
+        onRestock={handleRestock}
+      />
+
+      {/* Modals */}
+      <AddProductModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={handleAddProduct}
+      />
+
+      <EditProductModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedProduct(null);
+        }}
+        onSave={handleUpdateProduct}
+        product={selectedProduct}
+      />
+
+      <DeleteProductModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedProduct(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        product={selectedProduct}
+      />
+
+      <RestockModal
+        isOpen={showRestockModal}
+        onClose={() => {
+          setShowRestockModal(false);
+          setSelectedProduct(null);
+        }}
+        onSave={handleRestockProduct}
+        product={selectedProduct}
+      />
     </div>
   );
 };

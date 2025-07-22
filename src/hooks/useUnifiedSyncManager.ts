@@ -4,12 +4,11 @@ import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
 import { useSyncCoordinator } from './useSyncCoordinator';
-import { SyncService } from '../services/syncService';
 
 export const useUnifiedSyncManager = () => {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
-  const { pendingOps, clearAllPendingOperations } = useCacheManager();
+  const { pendingOps } = useCacheManager();
   const { requestSync, globalSyncInProgress, pendingOperationsCount } = useSyncCoordinator();
 
   const syncPendingOperations = useCallback(async () => {
@@ -34,15 +33,23 @@ export const useUnifiedSyncManager = () => {
         return acc;
       }, {} as Record<string, any[]>);
 
-      console.log('[UnifiedSyncManager] Operations by type:', Object.keys(operationsByType));
+      console.log('[UnifiedSyncManager] Operations by type:', Object.keys(operationsByType).map(type => `${type}: ${operationsByType[type].length}`));
 
       // Request coordinated sync for each type that has pending operations
-      for (const type of Object.keys(operationsByType)) {
-        console.log(`[UnifiedSyncManager] Requesting sync for ${type}`);
-        await requestSync(type);
-      }
+      const syncPromises = Object.keys(operationsByType).map(async (type) => {
+        console.log(`[UnifiedSyncManager] Requesting sync for ${type} (${operationsByType[type].length} operations)`);
+        return await requestSync(type);
+      });
 
-      return true;
+      const results = await Promise.all(syncPromises);
+      const allSuccessful = results.every(result => result);
+
+      console.log('[UnifiedSyncManager] Sync coordination completed:', {
+        allSuccessful,
+        results
+      });
+
+      return allSuccessful;
     } catch (error) {
       console.error('[UnifiedSyncManager] Sync failed:', error);
       return false;
@@ -60,6 +67,20 @@ export const useUnifiedSyncManager = () => {
       return () => clearTimeout(timeout);
     }
   }, [isOnline, user?.id, pendingOps.length, globalSyncInProgress, syncPendingOperations]);
+
+  // Periodic sync for any remaining operations
+  useEffect(() => {
+    if (!isOnline || pendingOps.length === 0 || globalSyncInProgress) return;
+
+    const interval = setInterval(() => {
+      console.log('[UnifiedSyncManager] Periodic sync check - pending operations:', pendingOps.length);
+      if (pendingOps.length > 0) {
+        syncPendingOperations();
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isOnline, pendingOps.length, globalSyncInProgress, syncPendingOperations]);
 
   return {
     isOnline,

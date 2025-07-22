@@ -83,19 +83,19 @@ export const useCacheManager = () => {
     console.log('[CacheManager] Adding pending operation:', operationWithId);
 
     setPendingOps(prev => {
-      // For customer updates, check if we already have a similar operation to avoid duplicates
-      if (operation.type === 'customer' && operation.operation === 'update') {
+      // For product and customer updates, check if we already have a similar operation to avoid duplicates
+      if ((operation.type === 'customer' || operation.type === 'product') && operation.operation === 'update') {
         const similarExists = prev.some(op => 
-          op.type === 'customer' && 
+          op.type === operation.type && 
           op.operation === 'update' && 
           op.data.id === operation.data.id
         );
         
         if (similarExists) {
-          console.log('[CacheManager] Similar customer update operation exists, replacing with new one');
+          console.log(`[CacheManager] Similar ${operation.type} update operation exists, replacing with new one`);
           // Remove the old operation and add the new one with updated data
           return [...prev.filter(op => !(
-            op.type === 'customer' && 
+            op.type === operation.type && 
             op.operation === 'update' && 
             op.data.id === operation.data.id
           )), operationWithId];
@@ -109,7 +109,7 @@ export const useCacheManager = () => {
         return prev;
       }
       
-      console.log('[CacheManager] Added new pending operation. Total pending:', prev.length + 1);
+      console.log(`[CacheManager] Added new pending operation. Total pending: ${prev.length + 1}`);
       return [...prev, operationWithId];
     });
   }, []);

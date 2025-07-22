@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
+import { SyncService } from '../services/syncService';
 
 interface SyncOperation {
   type: 'product' | 'customer' | 'sale' | 'transaction';
@@ -18,12 +19,19 @@ export const useSyncCoordinator = () => {
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
-  const { pendingOps } = useCacheManager();
+  const { pendingOps, clearPendingOperation } = useCacheManager();
 
   const requestSync = useCallback(async (type: string) => {
     if (!isOnline || !user || processingRef.current) {
       console.log(`[SyncCoordinator] Sync request denied for ${type}:`, { isOnline, hasUser: !!user, processing: processingRef.current });
       return false;
+    }
+
+    // Check if we have pending operations for this type
+    const typeOperations = pendingOps.filter(op => op.type === type);
+    if (typeOperations.length === 0) {
+      console.log(`[SyncCoordinator] No pending operations for ${type}`);
+      return true;
     }
 
     // Add to queue if not already present
@@ -38,7 +46,7 @@ export const useSyncCoordinator = () => {
     }
 
     return true;
-  }, [isOnline, user]);
+  }, [isOnline, user, pendingOps]);
 
   const processSync = useCallback(async () => {
     if (processingRef.current || syncQueueRef.current.length === 0) {
@@ -60,23 +68,45 @@ export const useSyncCoordinator = () => {
         }));
 
         try {
-          // Dispatch type-specific sync event
-          console.log(`[SyncCoordinator] Processing sync for ${type}`);
-          window.dispatchEvent(new CustomEvent(`sync-${type}`, { 
-            detail: { coordinated: true } 
-          }));
+          // Get operations for this specific type
+          const typeOperations = pendingOps.filter(op => op.type === type);
+          
+          if (typeOperations.length > 0) {
+            console.log(`[SyncCoordinator] Syncing ${typeOperations.length} ${type} operations`);
+            
+            // Use SyncService to handle the actual sync
+            const success = await SyncService.syncPendingOperations(typeOperations, user!.id);
+            
+            if (success) {
+              // Clear the synced operations
+              typeOperations.forEach(op => clearPendingOperation(op.id));
+              
+              setSyncStatus(prev => ({
+                ...prev,
+                [type]: { type: type as any, status: 'completed', lastAttempt: Date.now() }
+              }));
 
-          // Wait a bit for the sync to process
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          setSyncStatus(prev => ({
-            ...prev,
-            [type]: { type: type as any, status: 'completed', lastAttempt: Date.now() }
-          }));
-
-          console.log(`[SyncCoordinator] Completed sync for ${type}`);
+              // Dispatch type-specific sync events
+              console.log(`[SyncCoordinator] Dispatching events for ${type}`);
+              window.dispatchEvent(new CustomEvent(`${type}-synced`));
+              window.dispatchEvent(new CustomEvent(`sync-${type}-completed`));
+              
+              console.log(`[SyncCoordinator] Completed sync for ${type}`);
+            } else {
+              setSyncStatus(prev => ({
+                ...prev,
+                [type]: { type: type as any, status: 'failed', lastAttempt: Date.now() }
+              }));
+              console.error(`[SyncCoordinator] Failed to sync ${type} operations`);
+            }
+          } else {
+            setSyncStatus(prev => ({
+              ...prev,
+              [type]: { type: type as any, status: 'completed', lastAttempt: Date.now() }
+            }));
+          }
         } catch (error) {
-          console.error(`[SyncCoordinator] Failed to sync ${type}:`, error);
+          console.error(`[SyncCoordinator] Error syncing ${type}:`, error);
           setSyncStatus(prev => ({
             ...prev,
             [type]: { type: type as any, status: 'failed', lastAttempt: Date.now() }
@@ -96,7 +126,7 @@ export const useSyncCoordinator = () => {
       setGlobalSyncInProgress(false);
       console.log('[SyncCoordinator] Sync process completed');
     }
-  }, []);
+  }, [pendingOps, user, clearPendingOperation]);
 
   const getSyncStatus = useCallback((type: string) => {
     return syncStatus[type] || { type: type as any, status: 'pending' };
