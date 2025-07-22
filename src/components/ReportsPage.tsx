@@ -1,11 +1,11 @@
 
 import React from 'react';
-import CleanReportsPage from './reports/CleanReportsPage';
+import EnhancedOfflineReportsPage from './reports/EnhancedOfflineReportsPage';
 
 const ReportsPage = () => {
   return (
     <div className="w-full h-full">
-      <CleanReportsPage />
+      <EnhancedOfflineReportsPage />
     </div>
   );
 };
