@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,26 +92,32 @@ export const useSettings = () => {
       console.log('Loading settings for user:', user.id);
       
       // Load from profiles table - try with shop_address first, fallback without it
-      let profileQuery = supabase
-        .from('profiles')
-        .select('shop_name, location, business_type, sms_notifications_enabled, phone, email, shop_address')
-        .eq('id', user.id)
-        .single();
+      let profile: any = null;
+      let profileError: any = null;
 
-      let { data: profile, error: profileError } = await profileQuery;
-
-      // If shop_address column doesn't exist, try without it
-      if (profileError && profileError.message?.includes('shop_address')) {
-        console.log('shop_address column not found, trying without it');
-        const fallbackQuery = supabase
+      try {
+        const { data, error } = await supabase
           .from('profiles')
-          .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
+          .select('shop_name, location, business_type, sms_notifications_enabled, phone, email, shop_address')
           .eq('id', user.id)
           .single();
         
-        const fallbackResult = await fallbackQuery;
-        profile = fallbackResult.data;
-        profileError = fallbackResult.error;
+        profile = data;
+        profileError = error;
+      } catch (error: any) {
+        if (error.message?.includes('shop_address')) {
+          console.log('shop_address column not found, trying without it');
+          const { data, error: fallbackError } = await supabase
+            .from('profiles')
+            .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
+            .eq('id', user.id)
+            .single();
+          
+          profile = data;
+          profileError = fallbackError;
+        } else {
+          profileError = error;
+        }
       }
 
       if (profileError && profileError.code !== 'PGRST116') {
@@ -153,7 +158,7 @@ export const useSettings = () => {
         location: profile?.location || '',
         businessType: profile?.business_type || '',
         contactPhone: profile?.phone || '',
-        shopAddress: (profile as any)?.shop_address || '',
+        shopAddress: profile?.shop_address || '',
         smsNotifications: profile?.sms_notifications_enabled || smsNotifications,
         emailNotifications: emailNotifications,
         theme: themeValue as 'light' | 'dark' | 'system',
@@ -380,4 +385,3 @@ export const useSettings = () => {
     resetSettings,
   };
 };
-
