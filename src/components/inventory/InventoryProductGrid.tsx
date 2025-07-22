@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Product } from '../../types';
 import ProductCard from './ProductCard';
@@ -20,9 +19,10 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
 
-  // Create a wrapper function that matches the ProductCard expected signature
-  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
-    // Since we just need to trigger the restock modal, we only need the product
+  // Create a wrapper that matches ProductCard's expected signature but only triggers modal
+  const handleRestockClick = async (product: Product, quantity?: number, buyingPrice?: number) => {
+    // Only trigger the modal opening, ignore the quantity and buyingPrice parameters
+    // The actual restock logic will be handled by the RestockModal in InventoryPage
     onRestock(product);
   };
 
@@ -48,7 +48,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
             product={product}
             onEdit={onEdit}
             onDelete={onDelete}
-            onRestock={handleRestock}
+            onRestock={handleRestockClick}
           />
         ))}
       </div>
@@ -65,7 +65,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
             product={product}
             onEdit={onEdit}
             onDelete={onDelete}
-            onRestock={handleRestock}
+            onRestock={handleRestockClick}
           />
         ))}
       </div>
@@ -81,7 +81,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
           product={product}
           onEdit={onEdit}
           onDelete={onDelete}
-          onRestock={handleRestock}
+          onRestock={handleRestockClick}
         />
       ))}
     </div>
