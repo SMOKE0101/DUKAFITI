@@ -44,7 +44,7 @@ const defaultSettings: ShopSettings = {
   businessType: '',
   smsNotifications: false,
   emailNotifications: false,
-  theme: 'system',
+  theme: 'light',
   currency: 'KES',
   lowStockThreshold: 10,
   businessHours: {
@@ -82,16 +82,19 @@ export const useSettings = () => {
   // Load settings from Supabase
   const loadSettings = async () => {
     if (!user) {
+      console.log('No user found, using default settings');
       setSettings(defaultSettings);
       setLoading(false);
       return;
     }
 
     try {
+      console.log('Loading settings for user:', user.id);
+      
       // Load from profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('shop_name, location, business_type, sms_notifications_enabled')
+        .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
         .eq('id', user.id)
         .single();
 
@@ -99,23 +102,32 @@ export const useSettings = () => {
         console.error('Error loading profile:', profileError);
       }
 
-      // Load theme from shop_settings table
-      const { data: themeData, error: themeError } = await supabase
+      // Load theme and other settings from shop_settings table
+      const { data: shopSettingsData, error: settingsError } = await supabase
         .from('shop_settings')
-        .select('settings_value')
-        .eq('user_id', user.id)
-        .eq('settings_key', 'theme')
-        .maybeSingle();
+        .select('settings_key, settings_value')
+        .eq('user_id', user.id);
 
-      if (themeError) {
-        console.error('Error loading theme:', themeError);
+      if (settingsError) {
+        console.error('Error loading shop settings:', settingsError);
       }
 
-      // Safely extract theme from settings_value
-      let currentTheme = 'system';
-      if (themeData?.settings_value && typeof themeData.settings_value === 'object') {
-        const settingsObj = themeData.settings_value as { theme?: string };
-        currentTheme = settingsObj.theme || 'system';
+      // Process shop settings
+      let themeValue = 'light';
+      let emailNotifications = false;
+      let smsNotifications = false;
+      
+      if (shopSettingsData) {
+        shopSettingsData.forEach(setting => {
+          if (setting.settings_key === 'theme' && setting.settings_value) {
+            const settingsObj = setting.settings_value as { theme?: string };
+            themeValue = settingsObj.theme || 'light';
+          } else if (setting.settings_key === 'notifications' && setting.settings_value) {
+            const notifObj = setting.settings_value as { email?: boolean; sms?: boolean };
+            emailNotifications = notifObj.email || false;
+            smsNotifications = notifObj.sms || false;
+          }
+        });
       }
 
       const loadedSettings: ShopSettings = {
@@ -123,21 +135,24 @@ export const useSettings = () => {
         shopName: profile?.shop_name || '',
         location: profile?.location || '',
         businessType: profile?.business_type || '',
-        smsNotifications: profile?.sms_notifications_enabled || false,
-        theme: currentTheme as 'light' | 'dark' | 'system',
+        contactPhone: profile?.phone || '',
+        smsNotifications: profile?.sms_notifications_enabled || smsNotifications,
+        emailNotifications: emailNotifications,
+        theme: themeValue as 'light' | 'dark' | 'system',
       };
 
-      console.log('Loading settings - theme from DB:', currentTheme, 'hasInitialized:', hasInitialized);
+      console.log('Loaded settings successfully:', loadedSettings);
       setSettings(loadedSettings);
       
-      // Only set theme on first initialization to prevent auto-switching
+      // Only set theme on first initialization
       if (!hasInitialized) {
-        console.log('First initialization - setting theme to:', currentTheme);
-        setTheme(currentTheme);
+        console.log('First initialization - setting theme to:', themeValue);
+        setTheme(themeValue);
         setHasInitialized(true);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
+      setSettings(defaultSettings);
     } finally {
       setLoading(false);
     }
@@ -145,29 +160,36 @@ export const useSettings = () => {
 
   // Save settings to Supabase
   const saveSettings = async (newSettings: Partial<ShopSettings>) => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, cannot save settings');
+      return;
+    }
 
     try {
       const updatedSettings = { ...settings, ...newSettings };
-      console.log('Saving settings:', newSettings);
+      console.log('Saving settings:', newSettings, 'Updated settings:', updatedSettings);
       
-      // Update local state first
+      // Update local state first for immediate UI feedback
       setSettings(updatedSettings);
 
-      // Update profile data
-      if (newSettings.shopName !== undefined || 
-          newSettings.location !== undefined || 
-          newSettings.businessType !== undefined ||
-          newSettings.smsNotifications !== undefined) {
+      // Update profile data if any profile fields changed
+      const profileFields = ['shopName', 'location', 'businessType', 'contactPhone', 'smsNotifications'];
+      const hasProfileChanges = profileFields.some(field => newSettings[field as keyof ShopSettings] !== undefined);
+      
+      if (hasProfileChanges) {
+        const profileUpdate: any = {};
+        
+        if (newSettings.shopName !== undefined) profileUpdate.shop_name = updatedSettings.shopName;
+        if (newSettings.location !== undefined) profileUpdate.location = updatedSettings.location;
+        if (newSettings.businessType !== undefined) profileUpdate.business_type = updatedSettings.businessType;
+        if (newSettings.contactPhone !== undefined) profileUpdate.phone = updatedSettings.contactPhone;
+        if (newSettings.smsNotifications !== undefined) profileUpdate.sms_notifications_enabled = updatedSettings.smsNotifications;
+        
+        console.log('Updating profile with:', profileUpdate);
         
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({
-            shop_name: updatedSettings.shopName,
-            location: updatedSettings.location,
-            business_type: updatedSettings.businessType,
-            sms_notifications_enabled: updatedSettings.smsNotifications,
-          })
+          .update(profileUpdate)
           .eq('id', user.id);
 
         if (profileError) {
@@ -176,11 +198,10 @@ export const useSettings = () => {
         }
       }
 
-      // Update theme setting - only set theme if explicitly requested
+      // Update theme setting if changed
       if (newSettings.theme !== undefined && newSettings.theme !== settings.theme) {
         console.log('Theme change requested:', newSettings.theme, 'Previous:', settings.theme);
         
-        // Save to database first
         const { error: themeError } = await supabase
           .from('shop_settings')
           .upsert({
@@ -196,15 +217,38 @@ export const useSettings = () => {
           throw themeError;
         }
 
-        // Only apply theme change after successful database save
+        // Apply theme change immediately
         console.log('Applying theme change to:', updatedSettings.theme);
         setTheme(updatedSettings.theme);
+      }
+
+      // Update notification settings if changed
+      if (newSettings.emailNotifications !== undefined || newSettings.smsNotifications !== undefined) {
+        const { error: notifError } = await supabase
+          .from('shop_settings')
+          .upsert({
+            user_id: user.id,
+            settings_key: 'notifications',
+            settings_value: { 
+              email: updatedSettings.emailNotifications,
+              sms: updatedSettings.smsNotifications 
+            },
+          }, {
+            onConflict: 'user_id,settings_key'
+          });
+
+        if (notifError) {
+          console.error('Error updating notifications:', notifError);
+          throw notifError;
+        }
       }
 
       toast({
         title: "Settings Updated",
         description: "Your settings have been saved successfully.",
       });
+      
+      console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
       // Revert local state on error
@@ -220,8 +264,10 @@ export const useSettings = () => {
   // Load settings on mount and when user changes
   useEffect(() => {
     if (user) {
+      console.log('User changed, loading settings for:', user.id);
       loadSettings();
     } else {
+      console.log('No user, resetting to defaults');
       setSettings(defaultSettings);
       setLoading(false);
       setHasInitialized(false);

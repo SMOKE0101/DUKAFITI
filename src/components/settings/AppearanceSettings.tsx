@@ -1,66 +1,85 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useSettings } from '../../hooks/useSettings';
-import { Save, Moon, Sun, Monitor } from 'lucide-react';
+import { Save, Moon, Sun } from 'lucide-react';
 
 const AppearanceSettings = () => {
-  const { settings, saveSettings } = useSettings();
+  const { settings, saveSettings, loading } = useSettings();
   const [formData, setFormData] = useState({
-    theme: settings.theme,
-    emailNotifications: settings.emailNotifications,
-    smsNotifications: settings.smsNotifications,
+    theme: 'light' as 'light' | 'dark',
+    emailNotifications: false,
+    smsNotifications: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Update form data when settings are loaded
+  useEffect(() => {
+    console.log('Settings loaded in AppearanceSettings:', settings);
+    setFormData({
+      theme: (settings.theme === 'dark' ? 'dark' : 'light') as 'light' | 'dark',
+      emailNotifications: settings.emailNotifications || false,
+      smsNotifications: settings.smsNotifications || false,
+    });
+  }, [settings]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveSettings(formData);
+    console.log('Saving appearance settings:', formData);
+    await saveSettings(formData);
   };
 
-  const themeOptions = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ];
+  const handleThemeToggle = (isDark: boolean) => {
+    const newTheme = isDark ? 'dark' : 'light';
+    console.log('Theme toggle changed to:', newTheme);
+    setFormData({ ...formData, theme: newTheme });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="theme" className="block text-sm font-medium text-gray-700">
+      {/* Theme Toggle Section */}
+      <div className="space-y-4">
+        <Label className="block text-sm font-medium text-gray-700">
           Theme Preference
         </Label>
-        <Select
-          value={formData.theme}
-          onValueChange={(value: 'light' | 'dark' | 'system') => 
-            setFormData({ ...formData, theme: value })
-          }
-        >
-          <SelectTrigger className="w-full bg-gray-100 rounded-xl p-4 border-0 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:bg-white transition-all duration-200">
-            <SelectValue placeholder="Select theme" />
-          </SelectTrigger>
-          <SelectContent className="bg-white rounded-xl shadow-lg border border-gray-200">
-            {themeOptions.map(option => {
-              const Icon = option.icon;
-              return (
-                <SelectItem 
-                  key={option.value} 
-                  value={option.value}
-                  className="hover:bg-gray-50 rounded-lg flex items-center gap-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className="w-4 h-4" />
-                    {option.label}
-                  </div>
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+        
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div className="flex items-center gap-3">
+            <Sun className="w-5 h-5 text-amber-500" />
+            <span className={`text-sm font-medium transition-colors ${formData.theme === 'light' ? 'text-purple-600' : 'text-gray-600'}`}>
+              Light Mode
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={formData.theme === 'dark'}
+              onCheckedChange={handleThemeToggle}
+              className="data-[state=checked]:bg-purple-600 focus:ring-purple-300"
+            />
+            <span className={`text-sm font-medium transition-colors ${formData.theme === 'dark' ? 'text-purple-600' : 'text-gray-600'}`}>
+              Dark Mode
+            </span>
+            <Moon className="w-5 h-5 text-indigo-500" />
+          </div>
+        </div>
       </div>
 
+      {/* Notification Settings */}
       <div className="space-y-6 pt-4">
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
           <div className="flex-1">

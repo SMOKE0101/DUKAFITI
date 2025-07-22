@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,18 +8,31 @@ import { useSettings } from '../../hooks/useSettings';
 import { Save } from 'lucide-react';
 
 const ShopProfileSettings = () => {
-  const { settings, saveSettings } = useSettings();
+  const { settings, saveSettings, loading } = useSettings();
   const [formData, setFormData] = useState({
-    shopName: settings.shopName,
-    location: settings.location,
-    businessType: settings.businessType,
-    contactPhone: settings.contactPhone,
-    shopAddress: settings.shopAddress,
+    shopName: '',
+    location: '',
+    businessType: '',
+    contactPhone: '',
+    shopAddress: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Update form data when settings are loaded
+  useEffect(() => {
+    console.log('Settings loaded in ShopProfileSettings:', settings);
+    setFormData({
+      shopName: settings.shopName || '',
+      location: settings.location || '',
+      businessType: settings.businessType || '',
+      contactPhone: settings.contactPhone || '',
+      shopAddress: settings.shopAddress || '',
+    });
+  }, [settings]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveSettings(formData);
+    console.log('Saving shop profile settings:', formData);
+    await saveSettings(formData);
   };
 
   const businessTypes = [
@@ -32,6 +45,19 @@ const ShopProfileSettings = () => {
     'Hardware Store',
     'Other'
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
