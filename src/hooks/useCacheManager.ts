@@ -1,5 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 interface PendingOperation {
   id: string;
@@ -10,6 +12,7 @@ interface PendingOperation {
 
 export const useCacheManager = () => {
   const [pendingOps, setPendingOps] = useState<PendingOperation[]>([]);
+  const { user } = useAuth();
 
   // Load pending operations from localStorage on mount
   const loadPendingOperations = useCallback(() => {
@@ -133,6 +136,83 @@ export const useCacheManager = () => {
     return pendingOps.filter(op => op.type === type);
   }, [pendingOps]);
 
+  const syncPendingOperations = useCallback(async (): Promise<void> => {
+    if (!user) {
+      console.log('[CacheManager] No user, skipping sync');
+      return;
+    }
+
+    console.log('[CacheManager] Starting sync of pending operations:', pendingOps.length);
+    
+    const operationsToSync = [...pendingOps];
+    const syncedOperations: string[] = [];
+
+    for (const operation of operationsToSync) {
+      try {
+        console.log('[CacheManager] Syncing operation:', operation.id, operation.type, operation.operation);
+
+        if (operation.type === 'product') {
+          if (operation.operation === 'create') {
+            const { data, error } = await supabase
+              .from('products')
+              .insert([{
+                user_id: user.id,
+                name: operation.data.name,
+                category: operation.data.category,
+                cost_price: operation.data.costPrice,
+                selling_price: operation.data.sellingPrice,
+                current_stock: operation.data.currentStock,
+                low_stock_threshold: operation.data.lowStockThreshold,
+              }])
+              .select()
+              .single();
+
+            if (error) throw error;
+            console.log('[CacheManager] Product created successfully:', data.id);
+          } else if (operation.operation === 'update') {
+            const updateData: any = {};
+            if (operation.data.updates.name !== undefined) updateData.name = operation.data.updates.name;
+            if (operation.data.updates.category !== undefined) updateData.category = operation.data.updates.category;
+            if (operation.data.updates.costPrice !== undefined) updateData.cost_price = operation.data.updates.costPrice;
+            if (operation.data.updates.sellingPrice !== undefined) updateData.selling_price = operation.data.updates.sellingPrice;
+            if (operation.data.updates.currentStock !== undefined) updateData.current_stock = operation.data.updates.currentStock;
+            if (operation.data.updates.lowStockThreshold !== undefined) updateData.low_stock_threshold = operation.data.updates.lowStockThreshold;
+            updateData.updated_at = new Date().toISOString();
+
+            const { error } = await supabase
+              .from('products')
+              .update(updateData)
+              .eq('id', operation.data.id)
+              .eq('user_id', user.id);
+
+            if (error) throw error;
+            console.log('[CacheManager] Product updated successfully:', operation.data.id);
+          } else if (operation.operation === 'delete') {
+            const { error } = await supabase
+              .from('products')
+              .delete()
+              .eq('id', operation.data.id)
+              .eq('user_id', user.id);
+
+            if (error) throw error;
+            console.log('[CacheManager] Product deleted successfully:', operation.data.id);
+          }
+        }
+
+        syncedOperations.push(operation.id);
+      } catch (error) {
+        console.error('[CacheManager] Failed to sync operation:', operation.id, error);
+        // Continue with other operations
+      }
+    }
+
+    // Remove successfully synced operations
+    if (syncedOperations.length > 0) {
+      setPendingOps(prev => prev.filter(op => !syncedOperations.includes(op.id)));
+      console.log('[CacheManager] Synced and removed operations:', syncedOperations.length);
+    }
+  }, [user, pendingOps]);
+
   const debugPendingOperations = useCallback(() => {
     console.log('[CacheManager] Current pending operations:', {
       total: pendingOps.length,
@@ -156,6 +236,7 @@ export const useCacheManager = () => {
     loadPendingOperations,
     getPendingOperationsByType,
     debugPendingOperations,
+    syncPendingOperations,
     pendingOps,
   };
 };

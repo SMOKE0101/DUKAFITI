@@ -265,13 +265,8 @@ const InventoryPage = () => {
         </Button>
       </div>
 
-      {/* Stats Cards - Pass individual props instead of stats object */}
-      <PremiumStatsCards 
-        totalProducts={inventoryStats.totalProducts}
-        lowStockProducts={inventoryStats.lowStockProducts}
-        totalValue={inventoryStats.totalValue}
-        outOfStockProducts={inventoryStats.outOfStockProducts}
-      />
+      {/* Stats Cards - Pass stats object as expected by PremiumStatsCards */}
+      <PremiumStatsCards stats={inventoryStats} />
 
       {/* Search and Filter Section */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -315,7 +310,7 @@ const InventoryPage = () => {
         products={filteredProducts}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
-        onRestock={handleRestock}
+        onRestock={handleRestockProduct}
       />
 
       {/* Modals */}
