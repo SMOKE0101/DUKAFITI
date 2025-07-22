@@ -33,6 +33,7 @@ const InventoryPage = () => {
     error, 
     createProduct, 
     updateProduct, 
+    deleteProduct,
     isOnline,
     pendingOperations 
   } = useUnifiedProducts();
@@ -157,8 +158,7 @@ const InventoryPage = () => {
     if (!selectedProduct) return;
 
     try {
-      // For now, we'll just remove from local state
-      // TODO: Implement proper delete functionality
+      await deleteProduct(selectedProduct.id);
       setShowDeleteModal(false);
       setSelectedProduct(null);
       
@@ -265,7 +265,7 @@ const InventoryPage = () => {
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Pass individual props instead of stats object */}
       <PremiumStatsCards 
         totalProducts={inventoryStats.totalProducts}
         lowStockProducts={inventoryStats.lowStockProducts}
@@ -315,7 +315,7 @@ const InventoryPage = () => {
         products={filteredProducts}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
-        onRestock={handleRestockProduct}
+        onRestock={handleRestock}
       />
 
       {/* Modals */}

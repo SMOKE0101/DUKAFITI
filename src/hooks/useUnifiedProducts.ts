@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -22,10 +23,11 @@ export const useUnifiedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
-  const { getCache, setCache, addPendingOperation, pendingOps } = useCacheManager();
+  const { getCache, setCache, addPendingOperation, pendingOps, syncPendingOperations } = useCacheManager();
 
   // Load products from cache or server
   const loadProducts = useCallback(async () => {
@@ -292,6 +294,21 @@ export const useUnifiedProducts = () => {
     }
   }, [user, isOnline, setCache, addPendingOperation]);
 
+  // Sync pending operations
+  const handleSyncPendingOperations = useCallback(async () => {
+    if (!isOnline || !user) return;
+
+    setSyncStatus('syncing');
+    try {
+      await syncPendingOperations();
+      await loadProducts(); // Refresh data after sync
+      setSyncStatus('success');
+    } catch (error) {
+      console.error('[UnifiedProducts] Sync failed:', error);
+      setSyncStatus('error');
+    }
+  }, [isOnline, user, syncPendingOperations, loadProducts]);
+
   // Load products on mount and when dependencies change
   useEffect(() => {
     loadProducts();
@@ -339,5 +356,7 @@ export const useUnifiedProducts = () => {
     refetch: loadProducts,
     isOnline,
     pendingOperations: pendingOps.filter(op => op.type === 'product').length,
+    syncPendingOperations: handleSyncPendingOperations,
+    syncStatus,
   };
 };
