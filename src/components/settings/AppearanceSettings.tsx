@@ -10,8 +10,6 @@ const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
   const [formData, setFormData] = useState({
     theme: 'light' as 'light' | 'dark',
-    emailNotifications: false,
-    smsNotifications: false,
   });
 
   // Update form data when settings are loaded
@@ -19,8 +17,6 @@ const AppearanceSettings = () => {
     console.log('Settings loaded in AppearanceSettings:', settings);
     setFormData({
       theme: (settings.theme === 'dark' ? 'dark' : 'light') as 'light' | 'dark',
-      emailNotifications: settings.emailNotifications || false,
-      smsNotifications: settings.smsNotifications || false,
     });
   }, [settings]);
 
@@ -40,8 +36,6 @@ const AppearanceSettings = () => {
     return (
       <div className="space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-10 bg-gray-200 rounded"></div>
           <div className="h-4 bg-gray-200 rounded w-1/4"></div>
           <div className="h-10 bg-gray-200 rounded"></div>
         </div>
@@ -76,45 +70,6 @@ const AppearanceSettings = () => {
             </span>
             <Moon className="w-5 h-5 text-indigo-500" />
           </div>
-        </div>
-      </div>
-
-      {/* Notification Settings */}
-      <div className="space-y-6 pt-4">
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-          <div className="flex-1">
-            <Label className="text-sm font-medium text-gray-700">
-              Email Notifications
-            </Label>
-            <p className="text-xs text-gray-500 mt-1">
-              Receive updates and alerts via email
-            </p>
-          </div>
-          <Switch
-            checked={formData.emailNotifications}
-            onCheckedChange={(checked) => 
-              setFormData({ ...formData, emailNotifications: checked })
-            }
-            className="data-[state=checked]:bg-purple-600 focus:ring-purple-300"
-          />
-        </div>
-
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-          <div className="flex-1">
-            <Label className="text-sm font-medium text-gray-700">
-              SMS Notifications
-            </Label>
-            <p className="text-xs text-gray-500 mt-1">
-              Receive alerts and updates via SMS
-            </p>
-          </div>
-          <Switch
-            checked={formData.smsNotifications}
-            onCheckedChange={(checked) => 
-              setFormData({ ...formData, smsNotifications: checked })
-            }
-            className="data-[state=checked]:bg-purple-600 focus:ring-purple-300"
-          />
         </div>
       </div>
 
