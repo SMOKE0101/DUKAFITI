@@ -7,7 +7,7 @@ interface InventoryProductGridProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  onRestock: (product: Product, quantity: number, buyingPrice: number) => Promise<void>;
+  onRestock: (quantity: number, buyingPrice: number) => Promise<void>;
 }
 
 const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
@@ -18,6 +18,11 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
+
+  // Create a wrapper function that matches the ProductCard expected signature
+  const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
+    await onRestock(quantity, buyingPrice);
+  };
 
   if (products.length === 0) {
     return (
@@ -41,7 +46,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
             product={product}
             onEdit={onEdit}
             onDelete={onDelete}
-            onRestock={onRestock}
+            onRestock={handleRestock}
           />
         ))}
       </div>
@@ -58,7 +63,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
             product={product}
             onEdit={onEdit}
             onDelete={onDelete}
-            onRestock={onRestock}
+            onRestock={handleRestock}
           />
         ))}
       </div>
@@ -74,7 +79,7 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
           product={product}
           onEdit={onEdit}
           onDelete={onDelete}
-          onRestock={onRestock}
+          onRestock={handleRestock}
         />
       ))}
     </div>

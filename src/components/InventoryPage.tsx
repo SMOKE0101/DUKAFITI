@@ -24,6 +24,7 @@ const InventoryPage = () => {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
 
   const { toast } = useToast();
   const { 
@@ -38,15 +39,35 @@ const InventoryPage = () => {
   
   const { globalSyncInProgress } = useUnifiedSyncManager();
 
-  // Filter products based on search and category
+  // Get unique categories from products
+  const categories = useMemo(() => {
+    const uniqueCategories = ['all', ...new Set(products.map(p => p.category))];
+    return uniqueCategories;
+  }, [products]);
+
+  // Filter and sort products
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    let filtered = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchTerm, selectedCategory]);
+
+    // Sort products
+    switch (sortBy) {
+      case 'stock':
+        filtered = filtered.sort((a, b) => b.currentStock - a.currentStock);
+        break;
+      case 'price':
+        filtered = filtered.sort((a, b) => b.sellingPrice - a.sellingPrice);
+        break;
+      default: // name
+        filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return filtered;
+  }, [products, searchTerm, selectedCategory, sortBy]);
 
   // Calculate inventory stats
   const inventoryStats = useMemo(() => {
@@ -97,11 +118,9 @@ const InventoryPage = () => {
     setShowEditModal(true);
   };
 
-  const handleUpdateProduct = async (productData: Partial<Product>) => {
-    if (!selectedProduct) return;
-
+  const handleUpdateProduct = async (id: string, productData: Partial<Product>) => {
     try {
-      await updateProduct(selectedProduct.id, productData);
+      await updateProduct(id, productData);
       setShowEditModal(false);
       setSelectedProduct(null);
       
@@ -114,7 +133,7 @@ const InventoryPage = () => {
       } else {
         toast({
           title: "Product Updated",
-          description: `${productData.name || selectedProduct.name} has been updated.`,
+          description: `Product has been updated.`,
           duration: 3000,
         });
       }
@@ -247,7 +266,12 @@ const InventoryPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <PremiumStatsCards stats={inventoryStats} />
+      <PremiumStatsCards 
+        totalProducts={inventoryStats.totalProducts}
+        lowStockProducts={inventoryStats.lowStockProducts}
+        totalValue={inventoryStats.totalValue}
+        outOfStockProducts={inventoryStats.outOfStockProducts}
+      />
 
       {/* Search and Filter Section */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -276,9 +300,13 @@ const InventoryPage = () => {
       {/* Filters Panel */}
       {showFilters && (
         <InventoryFilters
+          categories={categories}
           selectedCategory={selectedCategory}
           onCategoryChange={setSelectedCategory}
-          products={products}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
         />
       )}
 
@@ -287,7 +315,7 @@ const InventoryPage = () => {
         products={filteredProducts}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
-        onRestock={handleRestock}
+        onRestock={handleRestockProduct}
       />
 
       {/* Modals */}
@@ -313,7 +341,7 @@ const InventoryPage = () => {
           setShowDeleteModal(false);
           setSelectedProduct(null);
         }}
-        onConfirm={handleConfirmDelete}
+        onDelete={handleConfirmDelete}
         product={selectedProduct}
       />
 

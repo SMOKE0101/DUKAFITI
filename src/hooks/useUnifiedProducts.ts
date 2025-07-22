@@ -250,6 +250,48 @@ export const useUnifiedProducts = () => {
     }
   }, [user, isOnline, setCache, addPendingOperation]);
 
+  // Delete product
+  const deleteProduct = useCallback(async (productId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    // Optimistically update UI and cache
+    setProducts(prev => {
+      const updated = prev.filter(product => product.id !== productId);
+      setCache('products', updated);
+      return updated;
+    });
+
+    if (isOnline) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        console.log('[UnifiedProducts] Product deleted online:', productId);
+      } catch (error) {
+        console.error('[UnifiedProducts] Delete failed, queuing for sync:', error);
+        // Keep optimistic update and queue for sync
+        addPendingOperation({
+          type: 'product',
+          operation: 'delete',
+          data: { id: productId },
+        });
+      }
+    } else {
+      // Queue for sync when online
+      addPendingOperation({
+        type: 'product',
+        operation: 'delete',
+        data: { id: productId },
+      });
+      console.log('[UnifiedProducts] Product delete queued for sync:', productId);
+    }
+  }, [user, isOnline, setCache, addPendingOperation]);
+
   // Load products on mount and when dependencies change
   useEffect(() => {
     loadProducts();
@@ -293,6 +335,7 @@ export const useUnifiedProducts = () => {
     error,
     createProduct,
     updateProduct,
+    deleteProduct,
     refetch: loadProducts,
     isOnline,
     pendingOperations: pendingOps.filter(op => op.type === 'product').length,
