@@ -21,10 +21,10 @@ const DebtTransactionsTable = () => {
       id: sale.id,
       type: 'debt_transaction' as const,
       customer_name: sale.customerName || 'Unknown Customer',
-      amount: sale.totalAmount || 0,
+      amount: sale.total || 0,
       timestamp: sale.timestamp,
       payment_method: 'debt',
-      reference: sale.paymentDetails?.notes || '',
+      reference: '',
       description: 'Cash lending to customer'
     }));
   }, [sales]);
