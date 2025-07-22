@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Filter, MoreVertical, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -70,20 +69,26 @@ const InventoryPage = () => {
     return filtered;
   }, [products, searchTerm, selectedCategory, sortBy]);
 
-  // Calculate inventory stats
-  const inventoryStats = useMemo(() => {
-    const totalProducts = products.length;
-    const lowStockProducts = products.filter(p => p.currentStock <= p.lowStockThreshold).length;
-    const totalValue = products.reduce((sum, p) => sum + (p.sellingPrice * p.currentStock), 0);
-    const outOfStockProducts = products.filter(p => p.currentStock === 0).length;
-
-    return {
-      totalProducts,
-      lowStockProducts,
-      totalValue,
-      outOfStockProducts
-    };
-  }, [products]);
+  // Handle stats card clicks for filtering
+  const handleStatsCardClick = (filter: string) => {
+    switch (filter) {
+      case 'all':
+        setSelectedCategory('all');
+        setSearchTerm('');
+        break;
+      case 'low-stock':
+        // Show products with low stock
+        setSelectedCategory('all');
+        // Could add a low stock filter here if needed
+        break;
+      case 'value':
+        // Could sort by value or show high-value products
+        setSortBy('price');
+        break;
+      default:
+        break;
+    }
+  };
 
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -265,8 +270,8 @@ const InventoryPage = () => {
         </Button>
       </div>
 
-      {/* Stats Cards - Pass stats object as expected by PremiumStatsCards */}
-      <PremiumStatsCards stats={inventoryStats} />
+      {/* Stats Cards - Pass products and onCardClick as expected by PremiumStatsCards */}
+      <PremiumStatsCards products={products} onCardClick={handleStatsCardClick} />
 
       {/* Search and Filter Section */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -310,7 +315,7 @@ const InventoryPage = () => {
         products={filteredProducts}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
-        onRestock={handleRestockProduct}
+        onRestock={handleRestock}
       />
 
       {/* Modals */}
