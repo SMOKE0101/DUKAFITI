@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Product } from '../../types';
 import ProductCard from './ProductCard';
@@ -7,7 +8,7 @@ interface InventoryProductGridProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  onRestock: (quantity: number, buyingPrice: number) => Promise<void>;
+  onRestock: (product: Product) => void;
 }
 
 const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
@@ -21,7 +22,8 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
 
   // Create a wrapper function that matches the ProductCard expected signature
   const handleRestock = async (product: Product, quantity: number, buyingPrice: number) => {
-    await onRestock(quantity, buyingPrice);
+    // Since we just need to trigger the restock modal, we only need the product
+    onRestock(product);
   };
 
   if (products.length === 0) {
