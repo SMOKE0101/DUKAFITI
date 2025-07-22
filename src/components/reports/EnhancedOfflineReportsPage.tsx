@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -112,7 +111,7 @@ const EnhancedOfflineReportsPage = () => {
     })).slice(-7); // Show last 7 days for chart
   }, [filteredSales, fromDate, toDate, readOnly, cachedSnapshot]);
 
-  // Now define metrics after chartData is available
+  // Calculate metrics separately to avoid circular dependencies
   const metrics = useMemo(() => {
     if (readOnly && cachedSnapshot) {
       return cachedSnapshot.metrics;
@@ -125,15 +124,20 @@ const EnhancedOfflineReportsPage = () => {
       (product.currentStock || 0) <= (product.lowStockThreshold || 10)
     ).length;
 
-    const calculatedMetrics = { totalRevenue, totalOrders, activeCustomers, lowStockProducts };
-    
-    // Cache metrics when online
-    if (isOnline && !activeData.loading) {
-      cacheSnapshot(activeData.sales, activeData.products, activeData.customers, calculatedMetrics, chartData);
-    }
+    return { totalRevenue, totalOrders, activeCustomers, lowStockProducts };
+  }, [filteredSales, activeData.products, readOnly, cachedSnapshot]);
 
-    return calculatedMetrics;
-  }, [filteredSales, activeData.products, activeData.customers, readOnly, cachedSnapshot, isOnline, activeData.loading, cacheSnapshot, activeData.sales, chartData]);
+  // Handle caching separately to avoid re-render loops
+  const handleCaching = useCallback(() => {
+    if (isOnline && !activeData.loading && !readOnly) {
+      cacheSnapshot(activeData.sales, activeData.products, activeData.customers, metrics, chartData);
+    }
+  }, [isOnline, activeData.loading, readOnly, cacheSnapshot, activeData.sales, activeData.products, activeData.customers, metrics, chartData]);
+
+  // Use effect to handle caching instead of doing it in useMemo
+  useEffect(() => {
+    handleCaching();
+  }, [handleCaching]);
 
   if (activeData.loading && !cachedSnapshot) {
     return (
