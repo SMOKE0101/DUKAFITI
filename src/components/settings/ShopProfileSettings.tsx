@@ -17,10 +17,10 @@ const ShopProfileSettings = () => {
     shopAddress: '',
   });
 
-  // Initialize form data only when settings are loaded for the first time
+  // Initialize form data when settings are loaded
   useEffect(() => {
     if (!loading && settings) {
-      console.log('Settings loaded, initializing form data:', settings);
+      console.log('Settings loaded, updating form data:', settings);
       setFormData({
         shopName: settings.shopName || '',
         location: settings.location || '',
@@ -29,20 +29,7 @@ const ShopProfileSettings = () => {
         shopAddress: settings.shopAddress || '',
       });
     }
-  }, [loading]); // Only depend on loading, not settings
-
-  // Watch for external settings changes and update form accordingly
-  useEffect(() => {
-    if (!loading) {
-      setFormData(prev => ({
-        shopName: settings.shopName || prev.shopName,
-        location: settings.location || prev.location,
-        businessType: settings.businessType || prev.businessType,
-        contactPhone: settings.contactPhone || prev.contactPhone,
-        shopAddress: settings.shopAddress || prev.shopAddress,
-      }));
-    }
-  }, [settings.shopName, settings.location, settings.businessType, settings.contactPhone, settings.shopAddress, loading]);
+  }, [loading, settings.shopName, settings.location, settings.businessType, settings.contactPhone, settings.shopAddress]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

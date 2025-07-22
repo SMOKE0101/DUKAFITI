@@ -74,51 +74,32 @@ const defaultSettings: ShopSettings = {
 export const useSettings = () => {
   const [settings, setSettings] = useState<ShopSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const { setTheme } = useTheme();
-  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Load settings from Supabase
+  // Load settings from Supabase only once
   const loadSettings = async () => {
-    if (!user) {
-      console.log('No user found, using default settings');
-      setSettings(defaultSettings);
-      setLoading(false);
+    if (!user || hasLoaded) {
+      console.log('No user or already loaded, skipping settings load');
+      if (!user) {
+        setSettings(defaultSettings);
+        setLoading(false);
+      }
       return;
     }
 
     try {
       console.log('Loading settings for user:', user.id);
+      setLoading(true);
       
-      // Load profile data with fallback for shop_address
-      let profile: any = null;
-      let profileError: any = null;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('shop_name, location, business_type, sms_notifications_enabled, phone, email, shop_address')
-          .eq('id', user.id)
-          .single();
-        
-        profile = data;
-        profileError = error;
-      } catch (error: any) {
-        if (error.message?.includes('shop_address')) {
-          console.log('shop_address column not found, trying without it');
-          const { data, error: fallbackError } = await supabase
-            .from('profiles')
-            .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
-            .eq('id', user.id)
-            .single();
-          
-          profile = data;
-          profileError = fallbackError;
-        } else {
-          profileError = error;
-        }
-      }
+      // Load profile data
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('shop_name, location, business_type, sms_notifications_enabled, phone, email')
+        .eq('id', user.id)
+        .maybeSingle();
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error loading profile:', profileError);
@@ -158,7 +139,7 @@ export const useSettings = () => {
         location: profile?.location || '',
         businessType: profile?.business_type || '',
         contactPhone: profile?.phone || '',
-        shopAddress: profile?.shop_address || '',
+        shopAddress: '', // We'll handle this separately if needed
         smsNotifications: profile?.sms_notifications_enabled || smsNotifications,
         emailNotifications: emailNotifications,
         theme: themeValue as 'light' | 'dark' | 'system',
@@ -166,13 +147,8 @@ export const useSettings = () => {
 
       console.log('Loaded settings successfully:', loadedSettings);
       setSettings(loadedSettings);
-      
-      // Only set theme on first initialization
-      if (!hasInitialized) {
-        console.log('First initialization - setting theme to:', themeValue);
-        setTheme(themeValue);
-        setHasInitialized(true);
-      }
+      setTheme(themeValue);
+      setHasLoaded(true);
     } catch (error) {
       console.error('Error loading settings:', error);
       setSettings(defaultSettings);
@@ -181,7 +157,7 @@ export const useSettings = () => {
     }
   };
 
-  // Save settings to Supabase
+  // Save settings to Supabase and update local state immediately
   const saveSettings = async (newSettings: Partial<ShopSettings>) => {
     if (!user) {
       console.log('No user found, cannot save settings');
@@ -191,8 +167,12 @@ export const useSettings = () => {
     try {
       console.log('Saving settings:', newSettings);
       
+      // Update local state immediately for optimistic UI
+      const updatedSettings = { ...settings, ...newSettings };
+      setSettings(updatedSettings);
+      
       // Update profile data if any profile fields changed
-      const profileFields = ['shopName', 'location', 'businessType', 'contactPhone', 'shopAddress', 'smsNotifications'];
+      const profileFields = ['shopName', 'location', 'businessType', 'contactPhone', 'smsNotifications'];
       const hasProfileChanges = profileFields.some(field => newSettings[field as keyof ShopSettings] !== undefined);
       
       if (hasProfileChanges) {
@@ -203,50 +183,21 @@ export const useSettings = () => {
         if (newSettings.businessType !== undefined) profileUpdate.business_type = newSettings.businessType;
         if (newSettings.contactPhone !== undefined) profileUpdate.phone = newSettings.contactPhone;
         if (newSettings.smsNotifications !== undefined) profileUpdate.sms_notifications_enabled = newSettings.smsNotifications;
-        
-        // Handle shop_address separately with fallback
-        if (newSettings.shopAddress !== undefined) {
-          try {
-            const updateWithAddress = { ...profileUpdate, shop_address: newSettings.shopAddress };
-            const { error: addressError } = await supabase
-              .from('profiles')
-              .update(updateWithAddress)
-              .eq('id', user.id);
 
-            if (addressError && addressError.message?.includes('shop_address')) {
-              console.log('shop_address column not found, updating without it');
-              const { error: fallbackError } = await supabase
-                .from('profiles')
-                .update(profileUpdate)
-                .eq('id', user.id);
-              
-              if (fallbackError) {
-                throw fallbackError;
-              }
-            } else if (addressError) {
-              throw addressError;
-            }
-          } catch (error) {
-            console.error('Error updating profile with address:', error);
-            throw error;
-          }
-        } else {
-          // Update without shop_address
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update(profileUpdate)
-            .eq('id', user.id);
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(profileUpdate)
+          .eq('id', user.id);
 
-          if (profileError) {
-            console.error('Error updating profile:', profileError);
-            throw profileError;
-          }
+        if (profileError) {
+          console.error('Error updating profile:', profileError);
+          throw profileError;
         }
       }
 
       // Update theme setting if changed
-      if (newSettings.theme !== undefined && newSettings.theme !== settings.theme) {
-        console.log('Theme change requested:', newSettings.theme, 'Previous:', settings.theme);
+      if (newSettings.theme !== undefined) {
+        console.log('Updating theme setting to:', newSettings.theme);
         
         const { error: themeError } = await supabase
           .from('shop_settings')
@@ -264,7 +215,6 @@ export const useSettings = () => {
         }
 
         // Apply theme change immediately
-        console.log('Applying theme change to:', newSettings.theme);
         setTheme(newSettings.theme);
       }
 
@@ -289,11 +239,6 @@ export const useSettings = () => {
         }
       }
 
-      // Update local state immediately after successful save
-      const updatedSettings = { ...settings, ...newSettings };
-      console.log('Updating local settings to:', updatedSettings);
-      setSettings(updatedSettings);
-
       toast({
         title: "Settings Updated",
         description: "Your settings have been saved successfully.",
@@ -302,6 +247,8 @@ export const useSettings = () => {
       console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
+      // Revert local state on error
+      setSettings(prev => ({ ...prev }));
       toast({
         title: "Error",
         description: "Failed to save settings. Please try again.",
@@ -311,16 +258,16 @@ export const useSettings = () => {
     }
   };
 
-  // Load settings on mount and when user changes
+  // Load settings only once when user changes
   useEffect(() => {
-    if (user) {
-      console.log('User changed, loading settings for:', user.id);
+    if (user && !hasLoaded) {
+      console.log('User available and not loaded yet, loading settings for:', user.id);
       loadSettings();
-    } else {
+    } else if (!user) {
       console.log('No user, resetting to defaults');
       setSettings(defaultSettings);
       setLoading(false);
-      setHasInitialized(false);
+      setHasLoaded(false);
     }
   }, [user]);
 
@@ -372,12 +319,17 @@ export const useSettings = () => {
     });
   };
 
+  const refreshSettings = () => {
+    setHasLoaded(false);
+    loadSettings();
+  };
+
   return {
     settings,
     loading,
     saveSettings,
     updateSettings,
-    refreshSettings: loadSettings,
+    refreshSettings,
     exportSettings,
     importSettings,
     resetSettings,
