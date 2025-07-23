@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 
 interface PendingOperation {
   id: string;
-  type: 'sale' | 'product' | 'customer' | 'transaction';
+  type: 'sale' | 'product' | 'customer' | 'transaction' | 'debt_payment';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp: string;
@@ -208,6 +208,8 @@ export const useCacheManager = () => {
             success = await syncProductOperation(operation, user.id);
           } else if (operation.type === 'customer') {
             success = await syncCustomerOperation(operation, user.id);
+          } else if (operation.type === 'debt_payment') {
+            success = await syncDebtPaymentOperation(operation, user.id);
           }
 
           if (success) {
@@ -255,6 +257,12 @@ export const useCacheManager = () => {
         if (operationsByType.customer && operationsByType.customer.length > 0) {
           window.dispatchEvent(new CustomEvent('customer-synced', {
             detail: { operationCount: operationsByType.customer.length, timestamp: new Date().toISOString() }
+          }));
+        }
+        
+        if (operationsByType.debt_payment && operationsByType.debt_payment.length > 0) {
+          window.dispatchEvent(new CustomEvent('debt-payment-synced', {
+            detail: { operationCount: operationsByType.debt_payment.length, timestamp: new Date().toISOString() }
           }));
         }
       }, 100);
@@ -449,6 +457,77 @@ export const useCacheManager = () => {
     }
   };
 
+  // Debt payment sync function
+  const syncDebtPaymentOperation = async (operation: PendingOperation, userId: string): Promise<boolean> => {
+    const { data } = operation;
+    console.log(`[CacheManager] Syncing debt payment ${operation.operation}:`, data?.customer_name || data?.id);
+    
+    try {
+      switch (operation.operation) {
+        case 'create':
+          const { error: createError } = await supabase
+            .from('debt_payments')
+            .insert([{
+              user_id: userId,
+              customer_id: data.customer_id,
+              customer_name: data.customer_name,
+              amount: data.amount,
+              payment_method: data.payment_method,
+              reference: data.reference,
+              timestamp: data.timestamp,
+              synced: true,
+            }]);
+          
+          if (createError) {
+            console.error('[CacheManager] Debt payment create error:', createError);
+            return false;
+          }
+          return true;
+          
+        case 'update':
+          const updates = data.updates || data;
+          const dbUpdates: any = {};
+          
+          if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
+          if (updates.payment_method !== undefined) dbUpdates.payment_method = updates.payment_method;
+          if (updates.reference !== undefined) dbUpdates.reference = updates.reference;
+          if (updates.customer_name !== undefined) dbUpdates.customer_name = updates.customer_name;
+
+          const { error: updateError } = await supabase
+            .from('debt_payments')
+            .update(dbUpdates)
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (updateError) {
+            console.error('[CacheManager] Debt payment update error:', updateError);
+            return false;
+          }
+          return true;
+          
+        case 'delete':
+          const { error: deleteError } = await supabase
+            .from('debt_payments')
+            .delete()
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (deleteError) {
+            console.error('[CacheManager] Debt payment delete error:', deleteError);
+            return false;
+          }
+          return true;
+          
+        default:
+          console.warn(`[CacheManager] Unsupported operation: ${operation.operation}`);
+          return false;
+      }
+    } catch (error) {
+      console.error('[CacheManager] Debt payment operation error:', error);
+      return false;
+    }
+  };
+
   const debugPendingOperations = useCallback(() => {
     console.log('[CacheManager] Debug - Current pending operations:', {
       total: pendingOps.length,
@@ -457,6 +536,7 @@ export const useCacheManager = () => {
         customer: pendingOps.filter(op => op.type === 'customer').length,
         product: pendingOps.filter(op => op.type === 'product').length,
         transaction: pendingOps.filter(op => op.type === 'transaction').length,
+        debt_payment: pendingOps.filter(op => op.type === 'debt_payment').length,
       },
       operations: pendingOps
     });

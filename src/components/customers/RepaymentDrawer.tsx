@@ -13,6 +13,8 @@ import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../hooks/useAuth';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useCacheManager } from '../../hooks/useCacheManager';
 
 interface RepaymentDrawerProps {
   isOpen: boolean;
@@ -29,6 +31,8 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
   const { toast } = useToast();
   const { updateCustomer } = useSupabaseCustomers();
   const { user } = useAuth();
+  const { isOnline } = useNetworkStatus();
+  const { addPendingOperation } = useCacheManager();
 
   const handleSavePayment = async () => {
     if (!customer || !amount || parseFloat(amount) <= 0 || !user) {
@@ -44,40 +48,72 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
     try {
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
+      const timestamp = new Date().toISOString();
       
-      // Create payment record using a dummy product ID for payments
-      const { error: salesError } = await supabase
-        .from('sales')
-        .insert({
-          user_id: user.id,
-          customer_id: customer.id,
-          customer_name: customer.name,
-          product_id: '00000000-0000-0000-0000-000000000001', // Use a consistent dummy ID for payments
-          product_name: 'Payment Received',
-          quantity: 1,
-          selling_price: -paymentAmount, // Negative amount to indicate payment
-          cost_price: 0,
-          total_amount: -paymentAmount,
-          profit: 0,
-          payment_method: method,
-          payment_details: reference ? { reference } : {},
-          timestamp: new Date().toISOString()
+      if (isOnline) {
+        // Online mode - direct database operations
+        console.log('[RepaymentDrawer] Online mode - recording payment directly');
+        
+        // Create debt payment record
+        const { error: debtPaymentError } = await supabase
+          .from('debt_payments')
+          .insert({
+            user_id: user.id,
+            customer_id: customer.id,
+            customer_name: customer.name,
+            amount: paymentAmount,
+            payment_method: method,
+            reference: reference || null,
+            timestamp: timestamp,
+            synced: true
+          });
+
+        if (debtPaymentError) {
+          console.error('Error creating debt payment record:', debtPaymentError);
+          throw new Error(`Failed to record payment: ${debtPaymentError.message}`);
+        }
+
+        // Update customer balance
+        try {
+          await updateCustomer(customer.id, {
+            outstandingDebt: newBalance,
+            lastPurchaseDate: timestamp
+          });
+        } catch (updateError) {
+          console.error('Error updating customer balance:', updateError);
+          throw new Error('Failed to update customer balance.');
+        }
+      } else {
+        // Offline mode - queue operations
+        console.log('[RepaymentDrawer] Offline mode - queuing payment operation');
+        
+        // Queue debt payment creation
+        addPendingOperation({
+          type: 'debt_payment',
+          operation: 'create',
+          data: {
+            user_id: user.id,
+            customer_id: customer.id,
+            customer_name: customer.name,
+            amount: paymentAmount,
+            payment_method: method,
+            reference: reference || null,
+            timestamp: timestamp
+          }
         });
 
-      if (salesError) {
-        console.error('Error creating payment record:', salesError);
-        throw new Error(`Failed to record payment: ${salesError.message}`);
-      }
-
-      // Update customer balance
-      try {
-        await updateCustomer(customer.id, {
-          outstandingDebt: newBalance,
-          lastPurchaseDate: new Date().toISOString()
+        // Queue customer balance update
+        addPendingOperation({
+          type: 'customer',
+          operation: 'update',
+          data: {
+            id: customer.id,
+            updates: {
+              outstandingDebt: newBalance,
+              lastPurchaseDate: timestamp
+            }
+          }
         });
-      } catch (updateError) {
-        console.error('Error updating customer balance:', updateError);
-        throw new Error('Failed to update customer balance.');
       }
 
       // Reset form
@@ -87,7 +123,9 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
       
       toast({
         title: "Payment Recorded",
-        description: `Payment of ${formatCurrency(paymentAmount)} recorded for ${customer.name}`,
+        description: isOnline 
+          ? `Payment of ${formatCurrency(paymentAmount)} recorded for ${customer.name}`
+          : `Payment of ${formatCurrency(paymentAmount)} saved offline for ${customer.name}. Will sync when online.`,
       });
 
       onClose();
