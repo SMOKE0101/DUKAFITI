@@ -1,12 +1,12 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Wifi, WifiOff, Clock } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useUnifiedSales } from '@/hooks/useUnifiedSales';
 import { useUnifiedProducts } from '@/hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '@/hooks/useUnifiedCustomers';
-import { useOfflineReports } from '@/hooks/useOfflineReports';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import ModernSummaryCards from './ModernSummaryCards';
 import AlwaysCurrentPanels from './AlwaysCurrentPanels';
 import EnhancedSalesTrendChart from './EnhancedSalesTrendChart';
@@ -20,34 +20,7 @@ const EnhancedOfflineReportsPage = () => {
   const { sales, loading: salesLoading } = useUnifiedSales();
   const { products, loading: productsLoading } = useUnifiedProducts();
   const { customers, loading: customersLoading } = useUnifiedCustomers();
-  const { 
-    isOnline, 
-    cachedSnapshot, 
-    lastSyncedAt, 
-    cacheSnapshot, 
-    isLoadingCache,
-    readOnly 
-  } = useOfflineReports();
-
-  // Cache data when online and data is available
-  useEffect(() => {
-    if (isOnline && sales.length > 0 && products.length > 0 && customers.length > 0) {
-      cacheSnapshot(sales, products, customers);
-    }
-  }, [isOnline, sales, products, customers, cacheSnapshot]);
-
-  // Use cached data when offline, live data when online
-  const effectiveSales = useMemo(() => {
-    return !isOnline && cachedSnapshot ? cachedSnapshot.sales : sales;
-  }, [isOnline, cachedSnapshot, sales]);
-
-  const effectiveProducts = useMemo(() => {
-    return !isOnline && cachedSnapshot ? cachedSnapshot.products : products;
-  }, [isOnline, cachedSnapshot, products]);
-
-  const effectiveCustomers = useMemo(() => {
-    return !isOnline && cachedSnapshot ? cachedSnapshot.customers : customers;
-  }, [isOnline, cachedSnapshot, customers]);
+  const { isOnline } = useNetworkStatus();
 
   // Calculate date range based on timeframe
   const dateRange = useMemo(() => {
@@ -89,16 +62,8 @@ const EnhancedOfflineReportsPage = () => {
     }
   }, [timeframe]);
 
-  const isLoading = isOnline ? (salesLoading || productsLoading || customersLoading) : isLoadingCache;
+  const isLoading = salesLoading || productsLoading || customersLoading;
 
-  // Safe timeframe change handler
-  const handleTimeframeChange = (newTimeframe: 'today' | 'week' | 'month' | 'quarter') => {
-    try {
-      setTimeframe(newTimeframe);
-    } catch (error) {
-      console.error('[Reports] Error changing timeframe:', error);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -137,30 +102,11 @@ const EnhancedOfflineReportsPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* Offline Status Indicator */}
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
-                {!isOnline && (
-                  <>
-                    <WifiOff className="w-4 h-4 text-red-500" />
-                    <Badge variant="outline" className="text-xs">
-                      <Clock className="w-3 h-3 mr-1" />
-                      Cached Data
-                    </Badge>
-                  </>
-                )}
-              </div>
-
-              {/* Last Sync Indicator */}
-              {!isOnline && lastSyncedAt && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Last sync: {new Date(lastSyncedAt).toLocaleTimeString()}
-                </div>
-              )}
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
             </div>
           </div>
         </div>
@@ -180,15 +126,13 @@ const EnhancedOfflineReportsPage = () => {
                 key={option.value}
                 variant="ghost"
                 size="sm"
-                onClick={() => handleTimeframeChange(option.value as any)}
-                disabled={!isOnline && !cachedSnapshot}
+                onClick={() => setTimeframe(option.value as any)}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
                   ${timeframe === option.value
                     ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                   }
-                  ${!isOnline && !cachedSnapshot ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
               >
                 {option.label}
@@ -206,23 +150,16 @@ const EnhancedOfflineReportsPage = () => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Performance Overview
             </h2>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {timeframe === 'today' ? 'Today' : 
-                 timeframe === 'week' ? 'Last 7 days' :
-                 timeframe === 'month' ? 'Last 30 days' : 'Last 90 days'}
-              </Badge>
-              {!isOnline && (
-                <Badge variant="secondary" className="text-xs">
-                  Offline Mode
-                </Badge>
-              )}
-            </div>
+            <Badge variant="outline" className="text-xs">
+              {timeframe === 'today' ? 'Today' : 
+               timeframe === 'week' ? 'Last 7 days' :
+               timeframe === 'month' ? 'Last 30 days' : 'Last 90 days'}
+            </Badge>
           </div>
           <ModernSummaryCards
-            sales={effectiveSales}
-            products={effectiveProducts}
-            customers={effectiveCustomers}
+            sales={sales}
+            products={products}
+            customers={customers}
             dateRange={dateRange}
           />
         </div>
@@ -232,7 +169,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Sales Analytics
           </h2>
-          <EnhancedSalesTrendChart sales={effectiveSales} />
+          <EnhancedSalesTrendChart sales={sales} />
         </div>
 
         {/* Orders Bar Chart */}
@@ -240,7 +177,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Orders Analytics
           </h2>
-          <OrdersBarChart sales={effectiveSales} />
+          <OrdersBarChart sales={sales} />
         </div>
 
         {/* Sales Report Table */}
@@ -248,11 +185,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Detailed Sales Report
           </h2>
-          <SalesReportTable 
-            sales={effectiveSales} 
-            loading={isLoading}
-            readOnly={readOnly}
-          />
+          <SalesReportTable sales={sales} loading={isLoading} />
         </div>
 
         {/* Product Profits Table */}
@@ -260,11 +193,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Product Profits Report
           </h2>
-          <ProductProfitsTable 
-            sales={effectiveSales} 
-            loading={isLoading}
-            readOnly={readOnly}
-          />
+          <ProductProfitsTable sales={sales} loading={isLoading} />
         </div>
 
         {/* Debt Transactions Table */}
@@ -272,11 +201,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Debt Transactions Report
           </h2>
-          <DebtTransactionsTable 
-            sales={effectiveSales} 
-            loading={isLoading}
-            readOnly={readOnly}
-          />
+          <DebtTransactionsTable sales={sales} loading={isLoading} />
         </div>
 
         {/* Always Current Data Panels */}
@@ -285,8 +210,8 @@ const EnhancedOfflineReportsPage = () => {
             Current Status
           </h2>
           <AlwaysCurrentPanels
-            products={effectiveProducts}
-            customers={effectiveCustomers}
+            products={products}
+            customers={customers}
             loading={isLoading}
           />
         </div>

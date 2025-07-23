@@ -1,266 +1,371 @@
-
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Download, Search, ArrowUpDown, WifiOff, CreditCard } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Download, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
+import { useSupabaseDebtPayments, DebtPayment } from '@/hooks/useSupabaseDebtPayments';
+import { useSupabaseTransactions } from '@/hooks/useSupabaseTransactions';
+import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
 
 interface DebtTransactionsTableProps {
   sales: Sale[];
   loading?: boolean;
-  readOnly?: boolean;
 }
 
-const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({ 
-  sales, 
-  loading = false,
-  readOnly = false 
+type TimeFrameType = 'today' | 'week' | 'month';
+
+interface DebtTransaction {
+  id: string;
+  customer: string;
+  amount: number;
+  paymentMethod: string;
+  transactionType: 'cash_lending' | 'debt_sale' | 'payment';
+  timestamp: string;
+  reference?: string;
+}
+
+const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
+  sales,
+  loading = false
 }) => {
+  const [timeFrame, setTimeFrame] = useState<TimeFrameType>('today');
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<keyof Sale>('timestamp');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  const { debtPayments, loading: paymentsLoading } = useSupabaseDebtPayments();
+  const { transactions, loading: transactionsLoading } = useSupabaseTransactions();
+  const { customers, loading: customersLoading } = useSupabaseCustomers();
 
-  const debtTransactions = useMemo(() => {
-    return sales.filter(sale => 
-      sale.paymentMethod === 'debt' || 
-      sale.paymentMethod === 'credit' ||
-      (sale.customerName && sale.customerName.trim() !== '' && sale.paymentMethod !== 'cash' && sale.paymentMethod !== 'mpesa')
-    );
-  }, [sales]);
+  // Combine debt transactions from sales, transactions, and payments
+  const allDebtTransactions = useMemo(() => {
+    const debtTransactionsList: DebtTransaction[] = [];
 
-  const filteredAndSortedTransactions = useMemo(() => {
-    let filtered = debtTransactions.filter(sale => 
-      sale.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    if (sortField) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortField];
-        const bValue = b[sortField];
+    // Add cash lending from transactions table (null itemId indicates cash lending)
+    transactions.forEach(transaction => {
+      // Cash lending transactions have null itemId and are unpaid debt
+      if (!transaction.itemId && !transaction.paid) {
+        const customer = customers.find(c => c.id === transaction.customerId);
+        const customerName = customer ? customer.name : 'Unknown Customer';
         
-        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
+        debtTransactionsList.push({
+          id: `transaction-${transaction.id}`,
+          customer: customerName,
+          amount: transaction.totalAmount,
+          paymentMethod: 'cash', // Cash lending is typically cash
+          transactionType: 'cash_lending',
+          timestamp: transaction.date || new Date().toISOString(),
+          reference: transaction.notes
+        });
+      }
+    });
 
-    return filtered;
-  }, [debtTransactions, searchTerm, sortField, sortDirection]);
-
-  const totalDebtAmount = useMemo(() => {
-    return filteredAndSortedTransactions.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
-  }, [filteredAndSortedTransactions]);
-
-  const handleSort = (field: keyof Sale) => {
-    if (readOnly) return;
-    
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('desc');
-    }
-  };
-
-  const handleExportCSV = () => {
-    if (readOnly) {
-      console.log('[DebtTransactionsTable] CSV export disabled in offline mode');
-      return;
-    }
-
-    try {
-      const csvContent = [
-        ['Date', 'Customer', 'Product', 'Quantity', 'Amount', 'Status'],
-        ...filteredAndSortedTransactions.map(sale => [
-          new Date(sale.timestamp).toLocaleDateString(),
-          sale.customerName || 'Unknown Customer',
-          sale.productName || 'Unknown Product',
-          sale.quantity?.toString() || '0',
-          formatCurrency(sale.total || 0),
-          'Pending'
-        ])
-      ].map(row => row.join(',')).join('\n');
+    // Add debt sales from sales (when payment method includes debt)
+    sales.forEach(sale => {
+      const hasDebt = sale.paymentMethod === 'debt' || 
+                     (sale.paymentMethod === 'partial' && sale.paymentDetails?.debtAmount > 0);
       
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `debt-transactions-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('[DebtTransactionsTable] Error exporting CSV:', error);
+      if (hasDebt) {
+        const debtAmount = sale.paymentMethod === 'debt' 
+          ? sale.total || (sale.sellingPrice * sale.quantity)
+          : (sale.paymentDetails?.debtAmount || 0);
+        
+        if (debtAmount > 0) {
+          debtTransactionsList.push({
+            id: `sale-${sale.id}`,
+            customer: sale.customerName || 'Unknown Customer',
+            amount: debtAmount,
+            paymentMethod: sale.paymentMethod,
+            transactionType: 'debt_sale',
+            timestamp: sale.timestamp
+          });
+        }
+      }
+    });
+
+    // Add debt payments
+    debtPayments.forEach(payment => {
+      debtTransactionsList.push({
+        id: `payment-${payment.id}`,
+        customer: payment.customer_name,
+        amount: payment.amount,
+        paymentMethod: payment.payment_method,
+        transactionType: 'payment',
+        timestamp: payment.timestamp,
+        reference: payment.reference
+      });
+    });
+
+    return debtTransactionsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [sales, debtPayments, transactions, customers]);
+
+  // Filter transactions based on timeframe
+  const filteredTransactionsByTime = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    let startDate: Date;
+    
+    switch (timeFrame) {
+      case 'today':
+        startDate = today;
+        break;
+      case 'week':
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 30);
+        break;
+      default:
+        startDate = today;
     }
+    
+    return allDebtTransactions.filter(transaction => {
+      const transactionDate = new Date(transaction.timestamp);
+      return transactionDate >= startDate;
+    });
+  }, [allDebtTransactions, timeFrame]);
+
+  // Filter by search term
+  const filteredTransactions = useMemo(() => {
+    if (!searchTerm) return filteredTransactionsByTime;
+    
+    return filteredTransactionsByTime.filter(transaction =>
+      transaction.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.paymentMethod.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.transactionType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (transaction.reference && transaction.reference.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [filteredTransactionsByTime, searchTerm]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [timeFrame, searchTerm]);
+
+
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = ['Date', 'Customer', 'Amount', 'Payment Method', 'Transaction Type', 'Reference'];
+    const csvData = filteredTransactions.map(transaction => [
+      new Date(transaction.timestamp).toLocaleDateString(),
+      transaction.customer,
+      transaction.amount,
+      transaction.paymentMethod,
+      transaction.transactionType === 'cash_lending' ? 'Cash Lending' : 
+      transaction.transactionType === 'debt_sale' ? 'Debt Sale' : 'Payment',
+      transaction.reference || ''
+    ]);
+
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `debt-transactions-${timeFrame}-${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  if (loading) {
+  const getTransactionTypeIcon = (type: string) => {
+    if (type === 'payment') return <TrendingDown className="h-4 w-4" />;
+    return <TrendingUp className="h-4 w-4" />;
+  };
+
+  const getTransactionTypeBadge = (type: string) => {
+    const variant = type === 'payment' ? "secondary" : "destructive";
+    const label = type === 'cash_lending' ? 'Cash Lending' : 
+                  type === 'debt_sale' ? 'Debt Sale' : 'Payment';
+    
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-40 animate-pulse"></div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <Badge 
+        variant={variant} 
+        className={`flex items-center gap-1 ${
+          type === 'payment' 
+            ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-300' 
+            : ''
+        }`}
+      >
+        {getTransactionTypeIcon(type)}
+        {label}
+      </Badge>
     );
-  }
+  };
+
+  const isLoading = loading || paymentsLoading || transactionsLoading || customersLoading;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <div className="bg-card rounded-lg shadow-sm border border-border">
+      {/* Header with controls */}
+      <div className="p-6 border-b border-border">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              Debt Transactions
-            </CardTitle>
-            {readOnly && (
-              <Badge variant="secondary" className="text-xs">
-                <WifiOff className="w-3 h-3 mr-1" />
-                Offline
-              </Badge>
-            )}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search debt transactions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full sm:w-64"
-                disabled={readOnly}
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCSV}
-              disabled={readOnly}
-              className={`flex items-center gap-2 ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-          </div>
+          <h3 className="text-xl font-bold text-foreground">
+            Debt Transactions Report
+          </h3>
+          <Button
+            onClick={exportToCSV}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            size="sm"
+            disabled={isLoading || filteredTransactions.length === 0}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download CSV
+          </Button>
         </div>
         
-        {/* Total Debt Summary */}
-        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-red-700 dark:text-red-400">
-              Total Outstanding Debt:
-            </span>
-            <span className="text-lg font-bold text-red-800 dark:text-red-300">
-              {formatCurrency(totalDebtAmount)}
-            </span>
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          {/* Timeframe Selector */}
+          <div className="flex bg-muted rounded-lg p-1">
+            {[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setTimeFrame(option.value as TimeFrameType)}
+                className={`
+                  text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${timeFrame === option.value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background"
+                  }
+                `}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
-          <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-            {filteredAndSortedTransactions.length} transactions
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search by customer, payment method, or reference..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th 
-                  className={`text-left p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('timestamp')}
-                >
-                  <div className="flex items-center gap-1">
-                    Date
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-left p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('customerName')}
-                >
-                  <div className="flex items-center gap-1">
-                    Customer
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-left p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('productName')}
-                >
-                  <div className="flex items-center gap-1">
-                    Product
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-right p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('quantity')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Qty
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-right p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('total')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Amount
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th className="text-center p-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedTransactions.map((sale) => (
-                <tr key={sale.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="p-3 text-sm">
-                    {new Date(sale.timestamp).toLocaleDateString()}
-                  </td>
-                  <td className="p-3 text-sm font-medium">
-                    {sale.customerName || 'Unknown Customer'}
-                  </td>
-                  <td className="p-3 text-sm">
-                    {sale.productName || 'Unknown Product'}
-                  </td>
-                  <td className="p-3 text-sm text-right">
-                    {sale.quantity || 0}
-                  </td>
-                  <td className="p-3 text-sm text-right font-medium text-red-600 dark:text-red-400">
-                    {formatCurrency(sale.total || 0)}
-                  </td>
-                  <td className="p-3 text-center">
-                    <Badge variant="destructive" className="text-xs">
-                      Pending
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          {filteredAndSortedTransactions.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              {debtTransactions.length === 0 
-                ? "No debt transactions found! 🎉" 
-                : "No transactions found matching your criteria"
-              }
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        {isLoading ? (
+          <div className="space-y-4 p-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-12 bg-muted rounded animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                  DATE
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                  CUSTOMER
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  AMOUNT
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  PAYMENT METHOD
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  TYPE
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  REFERENCE
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No debt transactions found for the selected period
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTransactions.map((transaction) => (
+                  <TableRow key={transaction.id} className="border-b border-border hover:bg-muted/50">
+                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                      {new Date(transaction.timestamp).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                      {transaction.customer}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center font-medium text-blue-600 dark:text-blue-400">
+                      {formatCurrency(transaction.amount)}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center">
+                      <Badge variant="outline" className="capitalize">
+                        {transaction.paymentMethod}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center">
+                      {getTransactionTypeBadge(transaction.transactionType)}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center text-muted-foreground">
+                      {transaction.reference || '-'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1 text-sm text-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

@@ -1,273 +1,289 @@
-
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useMemo, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Download, Search, ArrowUpDown, WifiOff } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
 
 interface ProductProfitsTableProps {
   sales: Sale[];
   loading?: boolean;
-  readOnly?: boolean;
 }
 
-interface ProductProfit {
+interface ProductProfitRow {
   productName: string;
-  totalSales: number;
-  totalProfit: number;
-  unitsSold: number;
-  averageProfit: number;
-  profitMargin: number;
+  quantitySold: number;
+  salesAmount: number;
+  profit: number;
 }
 
-const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({ 
-  sales, 
-  loading = false,
-  readOnly = false 
+const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
+  sales,
+  loading = false
 }) => {
+  const [timeFrame, setTimeFrame] = useState<'today' | 'week' | 'month'>('today');
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<keyof ProductProfit>('totalProfit');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  const productProfits = useMemo(() => {
-    const productMap = new Map<string, ProductProfit>();
-
-    sales.forEach(sale => {
-      const productName = sale.productName || 'Unknown Product';
-      const profit = Number(sale.profit) || 0;
-      const total = Number(sale.total) || 0;
-      const quantity = Number(sale.quantity) || 0;
-
-      if (!productMap.has(productName)) {
-        productMap.set(productName, {
-          productName,
-          totalSales: 0,
-          totalProfit: 0,
-          unitsSold: 0,
-          averageProfit: 0,
-          profitMargin: 0
-        });
-      }
-
-      const product = productMap.get(productName)!;
-      product.totalSales += total;
-      product.totalProfit += profit;
-      product.unitsSold += quantity;
-    });
-
-    // Calculate derived values
-    productMap.forEach(product => {
-      product.averageProfit = product.unitsSold > 0 ? product.totalProfit / product.unitsSold : 0;
-      product.profitMargin = product.totalSales > 0 ? (product.totalProfit / product.totalSales) * 100 : 0;
-    });
-
-    return Array.from(productMap.values());
-  }, [sales]);
-
-  const filteredAndSortedProducts = useMemo(() => {
-    let filtered = productProfits.filter(product => 
-      product.productName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    filtered.sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-      
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return filtered;
-  }, [productProfits, searchTerm, sortField, sortDirection]);
-
-  const handleSort = (field: keyof ProductProfit) => {
-    if (readOnly) return;
+  const getTimeFrameRange = (frame: 'today' | 'week' | 'month') => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('desc');
+    switch (frame) {
+      case 'today':
+        return {
+          start: today,
+          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1)
+        };
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        return { start: weekStart, end: weekEnd };
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        monthEnd.setHours(23, 59, 59, 999);
+        return { start: monthStart, end: monthEnd };
+      default:
+        return { start: today, end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1) };
     }
   };
 
-  const handleExportCSV = () => {
-    if (readOnly) {
-      console.log('[ProductProfitsTable] CSV export disabled in offline mode');
-      return;
-    }
+  const filteredSales = useMemo(() => {
+    const { start, end } = getTimeFrameRange(timeFrame);
+    return sales.filter(sale => {
+      const saleDate = new Date(sale.timestamp);
+      return saleDate >= start && saleDate <= end;
+    });
+  }, [sales, timeFrame]);
 
-    try {
-      const csvContent = [
-        ['Product', 'Units Sold', 'Total Sales', 'Total Profit', 'Average Profit', 'Profit Margin %'],
-        ...filteredAndSortedProducts.map(product => [
-          product.productName,
-          product.unitsSold.toString(),
-          formatCurrency(product.totalSales),
-          formatCurrency(product.totalProfit),
-          formatCurrency(product.averageProfit),
-          `${product.profitMargin.toFixed(1)}%`
-        ])
-      ].map(row => row.join(',')).join('\n');
+  const productProfitsData = useMemo((): ProductProfitRow[] => {
+    const productMap = new Map<string, ProductProfitRow>();
+    
+    filteredSales.forEach(sale => {
+      const existing = productMap.get(sale.productName) || {
+        productName: sale.productName,
+        quantitySold: 0,
+        salesAmount: 0,
+        profit: 0
+      };
       
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `product-profits-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('[ProductProfitsTable] Error exporting CSV:', error);
+      productMap.set(sale.productName, {
+        productName: sale.productName,
+        quantitySold: existing.quantitySold + sale.quantity,
+        salesAmount: existing.salesAmount + sale.total,
+        profit: existing.profit + (sale.profit || 0)
+      });
+    });
+
+    return Array.from(productMap.values())
+      .sort((a, b) => b.profit - a.profit);
+  }, [filteredSales]);
+
+  const searchedData = useMemo(() => {
+    if (!searchTerm) return productProfitsData;
+    
+    return productProfitsData.filter(item =>
+      item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [productProfitsData, searchTerm]);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return searchedData.slice(startIndex, startIndex + itemsPerPage);
+  }, [searchedData, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(searchedData.length / itemsPerPage);
+
+  const exportToCSV = () => {
+    const headers = ['Product', 'Quantity Sold', 'Sales Amount', 'Profit'];
+    const csvContent = [
+      headers.join(','),
+      ...searchedData.map(row => [
+        `"${row.productName}"`,
+        row.quantitySold,
+        row.salesAmount.toFixed(2),
+        row.profit.toFixed(2)
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `product-profits-${timeFrame}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getTimeFrameLabel = () => {
+    switch (timeFrame) {
+      case 'today': return 'Today';
+      case 'week': return 'This Week';
+      case 'month': return 'This Month';
+      default: return 'Today';
     }
   };
 
   if (loading) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-40 animate-pulse"></div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-12 bg-muted rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <div className="bg-card rounded-lg shadow-sm border border-border">
+      {/* Header with controls */}
+      <div className="p-6 border-b border-border">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <CardTitle>Product Profits</CardTitle>
-            {readOnly && (
-              <Badge variant="secondary" className="text-xs">
-                <WifiOff className="w-3 h-3 mr-1" />
-                Offline
-              </Badge>
-            )}
+          <h3 className="text-xl font-bold text-foreground">
+            Product Profits Report
+          </h3>
+          <Button
+            onClick={exportToCSV}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            size="sm"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download CSV
+          </Button>
+        </div>
+        
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          {/* Timeframe Selector */}
+          <div className="flex bg-muted rounded-lg p-1">
+            {[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  setTimeFrame(option.value as 'today' | 'week' | 'month');
+                  setCurrentPage(1);
+                }}
+                className={`
+                  text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${timeFrame === option.value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background"
+                  }
+                `}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full sm:w-64"
-                disabled={readOnly}
-              />
-            </div>
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-border">
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                PRODUCT
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                QUANTITY SOLD
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                SALES AMOUNT
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                PROFIT
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? 'No products found matching your search' : `No products found for ${getTimeFrameLabel().toLowerCase()}`}
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedData.map((product, index) => (
+                <TableRow key={`${product.productName}-${index}`} className="border-b border-border hover:bg-muted/50">
+                  <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                    {product.productName}
+                  </TableCell>
+                  <TableCell className="py-4 px-6 text-center font-medium text-card-foreground">
+                    {product.quantitySold}
+                  </TableCell>
+                  <TableCell className="py-4 px-6 text-center font-medium text-blue-600 dark:text-blue-400">
+                    {formatCurrency(product.salesAmount)}
+                  </TableCell>
+                  <TableCell className="py-4 px-6 text-center font-medium text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(product.profit)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {searchedData.length} products for <span className="font-medium">{getTimeFrameLabel()}</span>
+          </div>
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExportCSV}
-              disabled={readOnly}
-              className={`flex items-center gap-2 ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
             >
-              <Download className="w-4 h-4" />
-              Export CSV
+              Previous
+            </Button>
+            <span className="px-3 py-1 text-sm text-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
             </Button>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th 
-                  className={`text-left p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('productName')}
-                >
-                  <div className="flex items-center gap-1">
-                    Product
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-right p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('unitsSold')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Units Sold
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-right p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('totalSales')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Total Sales
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-right p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('totalProfit')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Total Profit
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-                <th 
-                  className={`text-right p-3 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                  onClick={() => handleSort('profitMargin')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Margin %
-                    {!readOnly && <ArrowUpDown className="w-3 h-3" />}
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedProducts.map((product, index) => (
-                <tr key={index} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="p-3 text-sm font-medium">
-                    {product.productName}
-                  </td>
-                  <td className="p-3 text-sm text-right">
-                    {product.unitsSold}
-                  </td>
-                  <td className="p-3 text-sm text-right font-medium">
-                    {formatCurrency(product.totalSales)}
-                  </td>
-                  <td className="p-3 text-sm text-right font-medium text-green-600">
-                    {formatCurrency(product.totalProfit)}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Badge 
-                      variant={product.profitMargin > 20 ? "default" : product.profitMargin > 10 ? "secondary" : "destructive"}
-                      className="text-xs"
-                    >
-                      {product.profitMargin.toFixed(1)}%
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          {filteredAndSortedProducts.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No products found matching your criteria
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 
