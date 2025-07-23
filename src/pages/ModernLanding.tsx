@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
+import DashboardPreview from '@/components/landing/DashboardPreview';
 
 const ModernLanding = () => {
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
@@ -291,19 +292,8 @@ const ModernLanding = () => {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-3xl p-8 relative overflow-hidden">
-                <div className="grid grid-cols-2 gap-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="w-12 h-12 bg-yellow-400 dark:bg-yellow-500 rounded-lg transform rotate-45" />
-                  ))}
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-24 h-24 bg-background rounded-2xl flex items-center justify-center shadow-lg border border-border">
-                    <div className="text-4xl">⌘</div>
-                  </div>
-                </div>
-              </div>
+            <div className="relative group">
+              <DashboardPreview />
             </div>
           </div>
         </div>
