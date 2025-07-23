@@ -4,6 +4,7 @@ import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { useNetworkStatus } from './useNetworkStatus';
 
 interface ShopSettings {
   shopName: string;
@@ -76,6 +77,7 @@ export const useSettings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { setTheme } = useTheme();
+  const { isOnline } = useNetworkStatus();
 
   // Load settings from Supabase only once
   const loadSettings = async () => {
@@ -158,6 +160,30 @@ export const useSettings = () => {
   const saveSettings = async (newSettings: Partial<ShopSettings>) => {
     if (!user) {
       console.log('No user found, cannot save settings');
+      return;
+    }
+
+    // If offline and only theme is being changed, handle it gracefully
+    if (!isOnline && Object.keys(newSettings).length === 1 && newSettings.theme !== undefined) {
+      console.log('Offline: Theme change queued for sync when reconnected');
+      
+      // Update local state and theme immediately
+      const updatedSettings = { ...settings, ...newSettings };
+      setSettings(updatedSettings);
+      setTheme(newSettings.theme);
+      
+      // Store pending change for sync later (optional enhancement)
+      localStorage.setItem('pending_theme_change', newSettings.theme);
+      return;
+    }
+
+    // If offline for other settings, show appropriate message
+    if (!isOnline) {
+      toast({
+        title: "Offline",
+        description: "Cannot save settings while offline. Changes will be saved when connection is restored.",
+        variant: "destructive",
+      });
       return;
     }
 

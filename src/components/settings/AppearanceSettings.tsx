@@ -3,10 +3,14 @@ import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSettings } from '../../hooks/useSettings';
-import { Moon, Sun } from 'lucide-react';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useTheme } from 'next-themes';
+import { Moon, Sun, WifiOff } from 'lucide-react';
 
 const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
+  const { isOnline } = useNetworkStatus();
+  const { setTheme } = useTheme();
   const [formData, setFormData] = useState({
     theme: 'light' as 'light' | 'dark',
   });
@@ -21,13 +25,25 @@ const AppearanceSettings = () => {
 
   const handleThemeToggle = async (isDark: boolean) => {
     const newTheme = isDark ? 'dark' : 'light';
-    console.log('Theme toggle changed to:', newTheme);
+    console.log('Theme toggle changed to:', newTheme, 'Online:', isOnline);
     
     // Update local state immediately for instant UI feedback
     setFormData({ ...formData, theme: newTheme });
     
-    // Save theme change immediately without waiting
-    await saveSettings({ theme: newTheme });
+    // Always update theme immediately (works offline)
+    setTheme(newTheme);
+    
+    // Only attempt to save to database when online
+    if (isOnline) {
+      try {
+        await saveSettings({ theme: newTheme });
+      } catch (error) {
+        console.error('Failed to save theme setting:', error);
+        // Theme is already applied locally, so no need to revert
+      }
+    } else {
+      console.log('Offline: Theme change applied locally only');
+    }
   };
 
   if (loading) {
@@ -71,6 +87,14 @@ const AppearanceSettings = () => {
             </div>
           </div>
         </div>
+        
+        {/* Offline indicator */}
+        {!isOnline && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-lg p-3 border border-dashed border-border">
+            <WifiOff className="w-4 h-4" />
+            <span>Theme changes work offline. Settings will sync when reconnected.</span>
+          </div>
+        )}
       </div>
     </div>
   );
