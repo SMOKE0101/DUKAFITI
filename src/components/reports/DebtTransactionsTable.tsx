@@ -1,11 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Download, ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react';
+import { Search, Download, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
 import { useSupabaseDebtPayments, DebtPayment } from '@/hooks/useSupabaseDebtPayments';
@@ -212,143 +210,162 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   const isLoading = loading || paymentsLoading || transactionsLoading || customersLoading;
 
   return (
-    <Card className="w-full">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-semibold">Debt Transactions</CardTitle>
-          <Button 
-            onClick={exportToCSV} 
-            variant="outline" 
+    <div className="bg-card rounded-lg shadow-sm border border-border">
+      {/* Header with controls */}
+      <div className="p-6 border-b border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h3 className="text-xl font-bold text-foreground">
+            Debt Transactions Report
+          </h3>
+          <Button
+            onClick={exportToCSV}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
             size="sm"
             disabled={isLoading || filteredTransactions.length === 0}
-            className="flex items-center gap-2"
           >
-            <Download className="h-4 w-4" />
-            Export CSV
+            <Download className="w-4 h-4 mr-2" />
+            Download CSV
           </Button>
         </div>
         
-        {/* Time Frame Selector */}
-        <div className="flex flex-wrap gap-2">
-          {(['today', 'week', 'month'] as TimeFrameType[]).map((period) => (
-            <Button
-              key={period}
-              variant={timeFrame === period ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeFrame(period)}
-              className="capitalize"
-            >
-              {period === 'week' ? 'This Week' : period === 'month' ? 'This Month' : 'Today'}
-            </Button>
-          ))}
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          {/* Timeframe Selector */}
+          <div className="flex bg-muted rounded-lg p-1">
+            {[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setTimeFrame(option.value as TimeFrameType)}
+                className={`
+                  text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${timeFrame === option.value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background"
+                  }
+                `}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search by customer, payment method, or reference..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
+      </div>
 
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search by customer, payment method, or reference..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </CardHeader>
-
-      <CardContent>
+      {/* Table */}
+      <div className="overflow-x-auto">
         {isLoading ? (
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+          <div className="space-y-4 p-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-12 bg-muted rounded animate-pulse" />
             ))}
           </div>
         ) : (
-          <>
-            <ScrollArea className="h-[400px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Payment Method</TableHead>
-                    <TableHead>Transaction Type</TableHead>
-                    <TableHead>Reference</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                  DATE
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                  CUSTOMER
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  AMOUNT
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  PAYMENT METHOD
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  TYPE
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  REFERENCE
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No debt transactions found for the selected period
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTransactions.map((transaction) => (
+                  <TableRow key={transaction.id} className="border-b border-border hover:bg-muted/50">
+                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                      {new Date(transaction.timestamp).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                      {transaction.customer}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center font-medium text-blue-600 dark:text-blue-400">
+                      {formatCurrency(transaction.amount)}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center">
+                      <Badge variant="outline" className="capitalize">
+                        {transaction.paymentMethod}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center">
+                      {getTransactionTypeBadge(transaction.transactionType)}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center text-muted-foreground">
+                      {transaction.reference || '-'}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedTransactions.length > 0 ? (
-                    paginatedTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>
-                          {new Date(transaction.timestamp).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {transaction.customer}
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(transaction.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {transaction.paymentMethod}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {getTransactionTypeBadge(transaction.transactionType)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {transaction.reference || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No debt transactions found for the selected period
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  <span className="text-sm">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
+                ))
+              )}
+            </TableBody>
+          </Table>
         )}
-      </CardContent>
-    </Card>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1 text-sm text-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
