@@ -172,53 +172,67 @@ const CustomersHeader: React.FC<CustomersHeaderProps> = ({
 
   // Desktop Layout
   return (
-    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 w-full">
-      <div className="space-y-3 flex-1 min-w-0">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-            <Users className="w-6 h-6 text-white" />
+    <div className="space-y-6 w-full">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 w-full">
+        <div className="space-y-3 flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-4xl font-bold text-white tracking-tight truncate">Customer Management</h1>
+              <p className="text-white/80 text-lg truncate">Manage your customer relationships and credit limits</p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-4xl font-bold text-white tracking-tight truncate">Customer Management</h1>
-            <p className="text-white/80 text-lg truncate">Manage your customer relationships and credit limits</p>
+
+          {/* Status indicators in header for desktop */}
+          <div className="flex items-center gap-4 text-white/90 flex-wrap">
+            {pendingOperations > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/20 rounded-full border border-amber-400/20">
+                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-amber-100">{pendingOperations} Pending</span>
+              </div>
+            )}
+            {!isOnline && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-500/20 rounded-full border border-red-400/20">
+                <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                <span className="text-sm font-medium text-red-100">Offline</span>
+              </div>
+            )}
           </div>
         </div>
         
-        {/* Quick Stats in Header */}
-        <div className="flex items-center gap-6 text-white/90 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm font-medium">{totalCustomers} Customers</span>
+        <Button 
+          onClick={onAddCustomer}
+          className="px-8 py-4 bg-white/20 hover:bg-white/30 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-3 font-semibold text-lg backdrop-blur-sm border border-white/20 hover:border-white/30 hover:scale-105 flex-shrink-0"
+          size="lg"
+        >
+          <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center">
+            <Plus className="w-4 h-4" />
           </div>
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm font-medium">{formatCurrency(totalOutstandingDebt)} Outstanding</span>
+          Add New Customer
+        </Button>
+      </div>
+
+      {/* Desktop Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="w-4 h-4 text-primary flex-shrink-0" />
+            <span className="text-sm font-medium text-muted-foreground">Total Customers</span>
           </div>
-          {pendingOperations > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/20 rounded-full border border-amber-400/20">
-              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-amber-100">{pendingOperations} Pending</span>
-            </div>
-          )}
-          {!isOnline && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-red-500/20 rounded-full border border-red-400/20">
-              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-              <span className="text-sm font-medium text-red-100">Offline</span>
-            </div>
-          )}
+          <p className="text-2xl font-bold text-foreground">{totalCustomers}</p>
+        </div>
+        
+        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className="w-4 h-4 text-destructive flex-shrink-0" />
+            <span className="text-sm font-medium text-muted-foreground">Outstanding Debt</span>
+          </div>
+          <p className="text-2xl font-bold text-destructive">{formatCurrency(totalOutstandingDebt)}</p>
         </div>
       </div>
-      
-      <Button 
-        onClick={onAddCustomer}
-        className="px-8 py-4 bg-white/20 hover:bg-white/30 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-3 font-semibold text-lg backdrop-blur-sm border border-white/20 hover:border-white/30 hover:scale-105 flex-shrink-0"
-        size="lg"
-      >
-        <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center">
-          <Plus className="w-4 h-4" />
-        </div>
-        Add New Customer
-      </Button>
     </div>
   );
 };
