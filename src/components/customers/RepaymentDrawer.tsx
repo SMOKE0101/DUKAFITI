@@ -45,6 +45,7 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
     }
 
     setIsSubmitting(true);
+    
     try {
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
@@ -69,21 +70,25 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
         }
 
         // Update customer balance
-        try {
-          await updateCustomer(customer.id, {
-            outstandingDebt: newBalance,
-            lastPurchaseDate: new Date().toISOString()
-          });
-        } catch (updateError) {
-          console.error('Error updating customer balance:', updateError);
-          throw new Error('Failed to update customer balance.');
-        }
+        await updateCustomer(customer.id, {
+          outstandingDebt: newBalance,
+          lastPurchaseDate: new Date().toISOString()
+        });
       } else {
-        // Offline: Queue payment operation and update local state
+        // Offline: Queue payment operation
+        console.log('[RepaymentDrawer] Adding offline debt payment operation:', {
+          customer_id: customer.id,
+          customer_name: customer.name,
+          amount: paymentAmount,
+          payment_method: method,
+          user_id: user.id
+        });
+
         addPendingOperation({
           type: 'debt_payment',
           operation: 'create',
           data: {
+            user_id: user.id,
             customer_id: customer.id,
             customer_name: customer.name,
             amount: paymentAmount,
