@@ -10,7 +10,7 @@ const SignIn = () => {
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
@@ -118,13 +118,35 @@ const SignIn = () => {
 
           {/* Email Confirmation Message */}
           {confirmationMessage && (
-            <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-lg flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-success/20 flex items-center justify-center">
-                <span className="text-xs">✓</span>
-              </div>
-              <div>
-                <p className="font-medium">Check your email!</p>
-                <p className="text-sm opacity-90">We've sent a confirmation link to {confirmationMessage.email}. Please confirm your email before signing in.</p>
+            <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-2xl p-6 shadow-lg">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/10 dark:to-teal-900/10 rounded-full -translate-y-16 translate-x-16 opacity-50" />
+              <div className="relative flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Mail className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+                      Verification Email Sent
+                    </h3>
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  </div>
+                  <p className="text-emerald-800 dark:text-emerald-200 leading-relaxed">
+                    We've sent a secure confirmation link to{' '}
+                    <span className="font-semibold text-emerald-900 dark:text-emerald-100">
+                      {confirmationMessage.email}
+                    </span>
+                  </p>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                    Please check your email and click the confirmation link to activate your account before signing in.
+                  </p>
+                  <div className="flex items-center gap-2 pt-2">
+                    <div className="w-1 h-1 bg-emerald-400 rounded-full" />
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                      Check your spam folder if you don't see it in your inbox
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -225,26 +247,6 @@ const SignIn = () => {
                   </button>
                 </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 text-sm text-muted-foreground">
-                  Remember me
-                </label>
-              </div>
-
-              <Link to="#" className="text-sm text-primary hover:underline underline-offset-4 font-medium">
-                Forgot Password?
-              </Link>
             </div>
 
             <Button 
