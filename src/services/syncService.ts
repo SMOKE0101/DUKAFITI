@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface PendingOperation {
   id: string;
-  type: 'sale' | 'product' | 'customer' | 'transaction';
+  type: 'sale' | 'product' | 'customer' | 'transaction' | 'debt_payment';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp?: string;
@@ -48,6 +48,9 @@ export class SyncService {
               break;
             case 'transaction':
               success = await this.syncTransactionOperation(operation, userId);
+              break;
+            case 'debt_payment':
+              success = await this.syncDebtPaymentOperation(operation, userId);
               break;
             default:
               console.warn('[SyncService] Unknown operation type:', operation.type);
@@ -395,6 +398,87 @@ export class SyncService {
       }
     } catch (error) {
       console.error('[SyncService] Transaction operation error:', error);
+      return false;
+    }
+  }
+
+  private static async syncDebtPaymentOperation(operation: PendingOperation, userId: string): Promise<boolean> {
+    const { data } = operation;
+    console.log('[SyncService] Syncing debt payment operation:', operation.operation, data);
+    
+    try {
+      switch (operation.operation) {
+        case 'create':
+          const { error: createError } = await supabase
+            .from('debt_payments')
+            .insert([{
+              user_id: userId,
+              customer_id: data.customer_id,
+              customer_name: data.customer_name,
+              amount: data.amount,
+              payment_method: data.payment_method,
+              reference: data.reference,
+              timestamp: data.timestamp,
+              synced: true,
+            }]);
+          
+          if (createError) {
+            console.error('[SyncService] Debt payment create error:', createError);
+            return false;
+          }
+          console.log('[SyncService] Debt payment created successfully');
+          return true;
+          
+        case 'update':
+          if (!data.id || data.id.startsWith('temp_')) {
+            console.warn('[SyncService] Cannot update debt payment with temp ID:', data.id);
+            return true;
+          }
+          
+          const updates = data.updates || data;
+          const updateData: any = {};
+          
+          if (updates.amount !== undefined) updateData.amount = updates.amount;
+          if (updates.payment_method !== undefined) updateData.payment_method = updates.payment_method;
+          if (updates.reference !== undefined) updateData.reference = updates.reference;
+          if (updates.customer_name !== undefined) updateData.customer_name = updates.customer_name;
+
+          const { error: updateError } = await supabase
+            .from('debt_payments')
+            .update(updateData)
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (updateError) {
+            console.error('[SyncService] Debt payment update error:', updateError);
+            return false;
+          }
+          return true;
+          
+        case 'delete':
+          if (!data.id || data.id.startsWith('temp_')) {
+            console.warn('[SyncService] Cannot delete debt payment with temp ID:', data.id);
+            return true;
+          }
+          
+          const { error: deleteError } = await supabase
+            .from('debt_payments')
+            .delete()
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (deleteError) {
+            console.error('[SyncService] Debt payment delete error:', deleteError);
+            return false;
+          }
+          return true;
+          
+        default:
+          console.warn(`[SyncService] Unsupported debt payment operation: ${operation.operation}`);
+          return false;
+      }
+    } catch (error) {
+      console.error('[SyncService] Debt payment operation error:', error);
       return false;
     }
   }
