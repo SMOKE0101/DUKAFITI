@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSettings } from '../../hooks/useSettings';
-import { Save } from 'lucide-react';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { Save, WifiOff } from 'lucide-react';
 
 const ShopProfileSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
+  const { isOnline } = useNetworkStatus();
   const [formData, setFormData] = useState({
     shopName: '',
     location: '',
@@ -142,10 +144,16 @@ const ShopProfileSettings = () => {
       <div className="flex justify-end pt-4">
         <Button 
           type="submit" 
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2"
+          disabled={!isOnline}
+          className={`font-medium py-2 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2 ${
+            isOnline 
+              ? 'bg-primary hover:bg-primary/90 text-primary-foreground' 
+              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+          }`}
+          title={!isOnline ? 'Cannot save profile while offline' : 'Save profile information'}
         >
-          <Save className="w-4 h-4" />
-          Save Profile
+          {isOnline ? <Save className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+          {isOnline ? 'Save Profile' : 'Offline - Cannot Save'}
         </Button>
       </div>
     </form>
