@@ -38,12 +38,16 @@ const RoughBlockyDashboard = () => {
   const lowStockItems = products.filter(product => {
     console.log(`Product: ${product.name}, Stock: ${product.currentStock}, Threshold: ${product.lowStockThreshold}`);
     
-    // Handle different possible field names and ensure proper comparison
-    const currentStock = product.currentStock ?? 0;
+    // Skip products with unspecified quantities
+    if (product.currentStock === -1 || product.currentStock === null || product.currentStock === undefined) {
+      return false;
+    }
+    
+    const currentStock = product.currentStock;
     const threshold = product.lowStockThreshold ?? 10;
     
-    // Only consider items with specified stock (not -1 which means unspecified)
-    const isLowStock = currentStock !== -1 && currentStock <= threshold;
+    // Check if stock is at or below threshold
+    const isLowStock = currentStock <= threshold;
     
     if (isLowStock) {
       console.log(`LOW STOCK DETECTED: ${product.name} - Stock: ${currentStock}, Threshold: ${threshold}`);

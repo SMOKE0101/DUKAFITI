@@ -61,7 +61,12 @@ const ProductManagement = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const lowStockProducts = products.filter(product => product.currentStock <= product.lowStockThreshold && product.currentStock !== -1);
+  const lowStockProducts = products.filter(product => 
+    product.currentStock !== -1 && 
+    product.currentStock !== null && 
+    product.currentStock !== undefined &&
+    product.currentStock <= (product.lowStockThreshold || 10)
+  );
 
   const resetForm = () => {
     setFormData({

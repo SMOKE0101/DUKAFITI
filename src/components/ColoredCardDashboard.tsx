@@ -44,7 +44,10 @@ const ColoredCardDashboard = () => {
 
   // Calculate low stock products (excluding unspecified stock)
   const lowStockProducts = products.filter(p => 
-    p.currentStock !== -1 && p.currentStock <= p.lowStockThreshold
+    p.currentStock !== -1 && // Exclude unspecified quantities
+    p.currentStock !== null && 
+    p.currentStock !== undefined &&
+    p.currentStock <= (p.lowStockThreshold || 10)
   );
 
   // Outstanding debts

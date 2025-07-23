@@ -29,11 +29,16 @@ const PremiumDashboard = () => {
 
   // Calculate enhanced low stock items
   const lowStockItems = products.filter(product => {
-    const currentStock = product.currentStock ?? 0;
+    // Skip products with unspecified quantities
+    if (product.currentStock === -1 || product.currentStock === null || product.currentStock === undefined) {
+      return false;
+    }
+    
+    const currentStock = product.currentStock;
     const threshold = product.lowStockThreshold ?? 10;
     
-    // Only consider items with specified stock (not -1 which means unspecified)
-    return currentStock !== -1 && currentStock <= threshold;
+    // Check if stock is at or below threshold
+    return currentStock <= threshold;
   });
 
   // Recent sales (last 5)

@@ -53,12 +53,16 @@ const DashboardTopbar = () => {
   const lowStockAlerts = products.filter(p => {
     console.log(`Product: ${p.name}, Stock: ${p.currentStock}, Threshold: ${p.lowStockThreshold}`);
     
-    // Handle different possible field names and ensure proper comparison
-    const currentStock = p.currentStock ?? 0;
+    // Skip products with unspecified quantities
+    if (p.currentStock === -1 || p.currentStock === null || p.currentStock === undefined) {
+      return false;
+    }
+    
+    const currentStock = p.currentStock;
     const threshold = p.lowStockThreshold ?? 10;
     
-    // Only consider items with specified stock (not -1 which means unspecified)
-    const isLowStock = currentStock !== -1 && currentStock <= threshold;
+    // Check if stock is at or below threshold
+    const isLowStock = currentStock <= threshold;
     
     if (isLowStock) {
       console.log(`LOW STOCK DETECTED: ${p.name} - Stock: ${currentStock}, Threshold: ${threshold}`);

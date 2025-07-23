@@ -53,11 +53,14 @@ const InventoryPage = () => {
   // Calculate inventory stats
   const { totalProducts, totalValue, lowStockCount } = useMemo(() => {
     const totalProducts = products.length;
-    const totalValue = products.reduce((sum, product) => 
-      sum + (product.sellingPrice * product.currentStock), 0
-    );
+    const totalValue = products.reduce((sum, product) => {
+      // Only count products with specified stock (exclude -1 unspecified quantities)
+      if (product.currentStock === -1) return sum;
+      return sum + (product.sellingPrice * product.currentStock);
+    }, 0);
     const lowStockCount = products.filter(product => 
-      product.currentStock <= 5 // Default low stock threshold
+      product.currentStock !== -1 && // Exclude unspecified quantities
+      product.currentStock <= (product.lowStockThreshold || 5) // Use product's threshold or default
     ).length;
     
     return { totalProducts, totalValue, lowStockCount };
