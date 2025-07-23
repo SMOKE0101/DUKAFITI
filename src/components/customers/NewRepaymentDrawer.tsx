@@ -82,10 +82,19 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
         if (error) throw error;
       } else {
         // Offline: Queue payment operation and update local state
+        console.log('[NewRepaymentDrawer] Adding offline debt payment operation:', {
+          customer_id: customerId,
+          customer_name: customer?.name || '',
+          amount: amount,
+          payment_method: method,
+          user_id: user.id
+        });
+
         addPendingOperation({
           type: 'debt_payment',
           operation: 'create',
           data: {
+            user_id: user.id,
             customer_id: customerId,
             customer_name: customer?.name || '',
             amount: amount,
@@ -95,7 +104,12 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
           }
         });
 
-        // Update customer balance locally (this will be queued as well)
+        // Update customer balance locally using the same structure as other customer updates
+        console.log('[NewRepaymentDrawer] Adding offline customer update operation:', {
+          id: customerId,
+          outstandingDebt: newOutstandingDebt
+        });
+
         addPendingOperation({
           type: 'customer',
           operation: 'update',
