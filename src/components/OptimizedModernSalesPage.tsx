@@ -674,21 +674,31 @@ const OptimizedModernSalesPage = () => {
             <CartPanel />
           </div>
 
-          {/* Floating Toggle Button - Fixed positioning and single click handling */}
+          {/* Floating Toggle Button - Enhanced touch responsiveness */}
           <button
             onClick={togglePanel}
-            className={`fixed top-1/2 transform -translate-y-1/2 z-20 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg transition-all duration-200 ease-out flex items-center justify-center touch-manipulation ${
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.transform = 'translateY(-50%) scale(0.95)';
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+              togglePanel();
+            }}
+            className={`fixed top-1/2 transform -translate-y-1/2 z-20 w-16 h-16 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-full shadow-xl transition-all duration-150 ease-out flex items-center justify-center touch-manipulation select-none ${
               activePanel === 'search' ? 'right-4' : 'left-4'
             }`}
             aria-label={activePanel === 'search' ? 'Go to Cart' : 'Go to Search'}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             {activePanel === 'search' ? (
-              <ShoppingCart className="w-6 h-6" />
+              <ShoppingCart className="w-7 h-7" />
             ) : (
-              <Search className="w-6 h-6" />
+              <Search className="w-7 h-7" />
             )}
             {cart.length > 0 && activePanel === 'search' && (
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">
+              <div className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold shadow-md">
                 {cart.length}
               </div>
             )}

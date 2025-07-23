@@ -38,11 +38,11 @@ const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
       <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
+            <div className="w-12 h-12 bg-destructive/10 dark:bg-destructive/20 rounded-full flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-destructive" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-semibold">
+              <DialogTitle className="text-lg font-semibold text-foreground">
                 Delete Customer
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
@@ -54,27 +54,27 @@ const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
         
         <div className="space-y-4">
           {/* Customer Details */}
-          <div className="border-2 border-red-200 rounded-lg p-4 bg-red-50">
-            <h3 className="font-semibold text-red-900 mb-2">Customer to Delete</h3>
+          <div className="border-2 border-destructive/20 dark:border-destructive/30 rounded-lg p-4 bg-destructive/5 dark:bg-destructive/10">
+            <h3 className="font-semibold text-destructive dark:text-destructive-foreground mb-2">Customer to Delete</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Name:</span>
-                <span className="font-medium">{customer.name}</span>
+                <span className="font-medium text-foreground">{customer.name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Phone:</span>
-                <span>{customer.phone}</span>
+                <span className="text-foreground">{customer.phone}</span>
               </div>
               {customer.email && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Email:</span>
-                  <span>{customer.email}</span>
+                  <span className="text-foreground">{customer.email}</span>
                 </div>
               )}
               {customer.outstandingDebt && customer.outstandingDebt > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Outstanding Debt:</span>
-                  <span className="text-red-600 font-semibold">
+                  <span className="text-destructive dark:text-red-400 font-semibold">
                     {formatCurrency(customer.outstandingDebt)}
                   </span>
                 </div>
@@ -83,8 +83,8 @@ const DeleteCustomerModal: React.FC<DeleteCustomerModalProps> = ({
           </div>
 
           {/* Warning Message */}
-          <div className="border-2 border-yellow-200 rounded-lg p-4 bg-yellow-50">
-            <p className="text-sm text-yellow-800 text-center">
+          <div className="border-2 border-yellow-500/20 dark:border-yellow-400/30 rounded-lg p-4 bg-yellow-500/5 dark:bg-yellow-400/10">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200 text-center">
               <strong>Warning:</strong> This will permanently remove <strong>{customer.name}</strong> from your customer database. All purchase history and debt records will be lost.
             </p>
           </div>
