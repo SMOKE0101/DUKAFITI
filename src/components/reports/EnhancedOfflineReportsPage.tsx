@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import ModernSummaryCards from './ModernSummaryCards';
 import AlwaysCurrentPanels from './AlwaysCurrentPanels';
 import EnhancedSalesTrendChart from './EnhancedSalesTrendChart';
+import OrdersBarChart from './OrdersBarChart';
 
 const EnhancedOfflineReportsPage = () => {
   const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
@@ -208,6 +209,14 @@ const EnhancedOfflineReportsPage = () => {
             Sales Analytics
           </h2>
           <EnhancedSalesTrendChart sales={sales} />
+        </div>
+
+        {/* Orders Bar Chart */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Orders Analytics
+          </h2>
+          <OrdersBarChart sales={sales} />
         </div>
 
         {/* Always Current Data Panels */}
