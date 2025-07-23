@@ -276,15 +276,15 @@ const ModernLanding = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <h1 className="text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                You have the shop, you have the code
+                We've Got Your Duka Covered
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Smart POS for Kenyan Dukashops. We made it beautiful and simple. It combines inventory management, sales tracking, and customer management. It is definitely the tool you need for your shop!
+                DukaFiti ni POS rahisi kabisa kwa maduka ya Kenya. Hakuna maneno mengi—usimamia stoko, uziuze kwa haraka na upokee malipo ya M‑Pesa, na wafuate wateja wako kwa urahisi. DukaFiti ni mshirika wako wa kila siku kwa biashara yako!
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
                   <a href="/signup">
-                    Get Started - Free 14-day Trial
+                    Get Started
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </a>
                 </Button>
