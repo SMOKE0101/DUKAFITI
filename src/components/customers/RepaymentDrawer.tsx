@@ -73,7 +73,7 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
           throw new Error(`Failed to record payment: ${debtPaymentError.message}`);
         }
 
-        // Update customer balance
+        // Update customer balance in online mode
         try {
           await updateCustomer(customer.id, {
             outstandingDebt: newBalance,
@@ -81,39 +81,47 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
           });
         } catch (updateError) {
           console.error('Error updating customer balance:', updateError);
-          throw new Error('Failed to update customer balance.');
+          // Don't throw error for customer update failure, debt payment was recorded
+          console.warn('Debt payment recorded but customer balance update failed. Will be synced later.');
         }
       } else {
-        // Offline mode - queue operations
+        // Offline mode - queue operations and update local state
         console.log('[RepaymentDrawer] Offline mode - queuing payment operation');
         
-        // Queue debt payment creation
-        addPendingOperation({
-          type: 'debt_payment',
-          operation: 'create',
-          data: {
-            user_id: user.id,
-            customer_id: customer.id,
-            customer_name: customer.name,
-            amount: paymentAmount,
-            payment_method: method,
-            reference: reference || null,
-            timestamp: timestamp
-          }
-        });
-
-        // Queue customer balance update
-        addPendingOperation({
-          type: 'customer',
-          operation: 'update',
-          data: {
-            id: customer.id,
-            updates: {
-              outstandingDebt: newBalance,
-              lastPurchaseDate: timestamp
+        try {
+          // Queue debt payment creation
+          addPendingOperation({
+            type: 'debt_payment',
+            operation: 'create',
+            data: {
+              user_id: user.id,
+              customer_id: customer.id,
+              customer_name: customer.name,
+              amount: paymentAmount,
+              payment_method: method,
+              reference: reference || null,
+              timestamp: timestamp
             }
-          }
-        });
+          });
+
+          // Queue customer balance update
+          addPendingOperation({
+            type: 'customer',
+            operation: 'update',
+            data: {
+              id: customer.id,
+              updates: {
+                outstandingDebt: newBalance,
+                lastPurchaseDate: timestamp
+              }
+            }
+          });
+
+          console.log('[RepaymentDrawer] Successfully queued offline operations');
+        } catch (queueError) {
+          console.error('[RepaymentDrawer] Error queuing offline operations:', queueError);
+          throw new Error('Failed to save payment offline.');
+        }
       }
 
       // Reset form
