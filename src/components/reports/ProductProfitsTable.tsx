@@ -9,6 +9,7 @@ import { Sale } from '@/types';
 interface ProductProfitsTableProps {
   sales: Sale[];
   loading?: boolean;
+  isOffline?: boolean;
 }
 
 interface ProductProfitRow {
@@ -20,7 +21,8 @@ interface ProductProfitRow {
 
 const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
   sales,
-  loading = false
+  loading = false,
+  isOffline = false
 }) => {
   const [timeFrame, setTimeFrame] = useState<'today' | 'week' | 'month'>('today');
   const [searchTerm, setSearchTerm] = useState('');
@@ -156,9 +158,12 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
             onClick={exportToCSV}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
             size="sm"
+            disabled={isOffline}
+            title={isOffline ? 'Export not available offline' : 'Export to CSV'}
           >
             <Download className="w-4 h-4 mr-2" />
             Download CSV
+            {isOffline && <span className="text-xs ml-1">(offline)</span>}
           </Button>
         </div>
         
@@ -177,8 +182,10 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
                   setTimeFrame(option.value as 'today' | 'week' | 'month');
                   setCurrentPage(1);
                 }}
+                disabled={isOffline}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
                   ${timeFrame === option.value
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-background"
@@ -194,13 +201,14 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search products..."
+              placeholder={isOffline ? "Search (cached data)" : "Search products..."}
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-10"
+              disabled={isOffline}
+              className={`pl-10 ${isOffline ? 'opacity-50' : ''}`}
             />
           </div>
         </div>

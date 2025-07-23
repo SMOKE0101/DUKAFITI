@@ -1,12 +1,12 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from 'lucide-react';
+import { Calendar, WifiOff, Wifi } from 'lucide-react';
 import { useUnifiedSales } from '@/hooks/useUnifiedSales';
 import { useUnifiedProducts } from '@/hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '@/hooks/useUnifiedCustomers';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useOfflineReports } from '@/hooks/useOfflineReports';
 import ModernSummaryCards from './ModernSummaryCards';
 import AlwaysCurrentPanels from './AlwaysCurrentPanels';
 import EnhancedSalesTrendChart from './EnhancedSalesTrendChart';
@@ -20,7 +20,7 @@ const EnhancedOfflineReportsPage = () => {
   const { sales, loading: salesLoading } = useUnifiedSales();
   const { products, loading: productsLoading } = useUnifiedProducts();
   const { customers, loading: customersLoading } = useUnifiedCustomers();
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, cachedSnapshot, lastSyncedAt, cacheSnapshot, readOnly } = useOfflineReports();
 
   // Calculate date range based on timeframe
   const dateRange = useMemo(() => {
@@ -62,7 +62,33 @@ const EnhancedOfflineReportsPage = () => {
     }
   }, [timeframe]);
 
-  const isLoading = salesLoading || productsLoading || customersLoading;
+  // Use cached data when offline, live data when online
+  const currentSales = readOnly && cachedSnapshot ? cachedSnapshot.sales : sales;
+  const currentProducts = readOnly && cachedSnapshot ? cachedSnapshot.products : products;
+  const currentCustomers = readOnly && cachedSnapshot ? cachedSnapshot.customers : customers;
+
+  const isLoading = !readOnly && (salesLoading || productsLoading || customersLoading);
+
+  // Cache data when online and data is available
+  useEffect(() => {
+    if (isOnline && sales.length > 0 && products.length > 0 && customers.length > 0) {
+      // Calculate metrics for caching
+      const metrics = {
+        totalRevenue: sales.reduce((sum, sale) => sum + sale.total, 0),
+        totalOrders: sales.length,
+        activeCustomers: customers.filter(c => c.createdDate && new Date(c.createdDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
+        lowStockProducts: products.filter(p => p.currentStock < 10).length
+      };
+
+      // Simple chart data for caching
+      const chartData = sales.slice(0, 10).map(sale => ({
+        date: sale.timestamp,
+        amount: sale.total
+      }));
+
+      cacheSnapshot(sales, products, customers, metrics, chartData);
+    }
+  }, [sales, products, customers, isOnline, cacheSnapshot]);
 
 
   if (isLoading) {
@@ -102,11 +128,22 @@ const EnhancedOfflineReportsPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {isOnline ? (
+                  <Wifi className="w-4 h-4 text-green-500" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-red-500" />
+                )}
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              {readOnly && lastSyncedAt && (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Last sync: {new Date(lastSyncedAt).toLocaleTimeString()}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -127,8 +164,10 @@ const EnhancedOfflineReportsPage = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setTimeframe(option.value as any)}
+                disabled={readOnly}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}
                   ${timeframe === option.value
                     ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -157,9 +196,9 @@ const EnhancedOfflineReportsPage = () => {
             </Badge>
           </div>
           <ModernSummaryCards
-            sales={sales}
-            products={products}
-            customers={customers}
+            sales={currentSales}
+            products={currentProducts}
+            customers={currentCustomers}
             dateRange={dateRange}
           />
         </div>
@@ -169,7 +208,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Sales Analytics
           </h2>
-          <EnhancedSalesTrendChart sales={sales} />
+          <EnhancedSalesTrendChart sales={currentSales} />
         </div>
 
         {/* Orders Bar Chart */}
@@ -177,7 +216,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Orders Analytics
           </h2>
-          <OrdersBarChart sales={sales} />
+          <OrdersBarChart sales={currentSales} />
         </div>
 
         {/* Sales Report Table */}
@@ -185,7 +224,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Detailed Sales Report
           </h2>
-          <SalesReportTable sales={sales} loading={isLoading} />
+          <SalesReportTable sales={currentSales} loading={isLoading} isOffline={readOnly} />
         </div>
 
         {/* Product Profits Table */}
@@ -193,7 +232,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Product Profits Report
           </h2>
-          <ProductProfitsTable sales={sales} loading={isLoading} />
+          <ProductProfitsTable sales={currentSales} loading={isLoading} isOffline={readOnly} />
         </div>
 
         {/* Debt Transactions Table */}
@@ -201,7 +240,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Debt Transactions Report
           </h2>
-          <DebtTransactionsTable sales={sales} loading={isLoading} />
+          <DebtTransactionsTable sales={currentSales} loading={isLoading} isOffline={readOnly} />
         </div>
 
         {/* Always Current Data Panels */}
@@ -210,8 +249,8 @@ const EnhancedOfflineReportsPage = () => {
             Current Status
           </h2>
           <AlwaysCurrentPanels
-            products={products}
-            customers={customers}
+            products={currentProducts}
+            customers={currentCustomers}
             loading={isLoading}
           />
         </div>

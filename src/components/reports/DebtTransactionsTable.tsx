@@ -13,6 +13,7 @@ import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
 interface DebtTransactionsTableProps {
   sales: Sale[];
   loading?: boolean;
+  isOffline?: boolean;
 }
 
 type TimeFrameType = 'today' | 'week' | 'month';
@@ -29,7 +30,8 @@ interface DebtTransaction {
 
 const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   sales,
-  loading = false
+  loading = false,
+  isOffline = false
 }) => {
   const [timeFrame, setTimeFrame] = useState<TimeFrameType>('today');
   const [searchTerm, setSearchTerm] = useState('');
@@ -221,10 +223,12 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
             onClick={exportToCSV}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
             size="sm"
-            disabled={isLoading || filteredTransactions.length === 0}
+            disabled={isOffline || isLoading || filteredTransactions.length === 0}
+            title={isOffline ? 'Export not available offline' : 'Export to CSV'}
           >
             <Download className="w-4 h-4 mr-2" />
             Download CSV
+            {isOffline && <span className="text-xs ml-1">(offline)</span>}
           </Button>
         </div>
         
@@ -240,8 +244,10 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
               <button
                 key={option.value}
                 onClick={() => setTimeFrame(option.value as TimeFrameType)}
+                disabled={isOffline}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
                   ${timeFrame === option.value
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-background"
@@ -257,10 +263,11 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search by customer, payment method, or reference..."
+              placeholder={isOffline ? "Search (cached data)" : "Search by customer, payment method, or reference..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              disabled={isOffline}
+              className={`pl-10 ${isOffline ? 'opacity-50' : ''}`}
             />
           </div>
         </div>
