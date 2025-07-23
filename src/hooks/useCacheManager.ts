@@ -93,7 +93,7 @@ export const useCacheManager = () => {
     setPendingOps(prev => {
       let filteredOps = [...prev];
       
-      // Enhanced deduplication logic
+      // Enhanced deduplication logic for better handling
       if (operation.type === 'product') {
         if (operation.operation === 'update' && operation.data.id) {
           // Replace existing updates for the same product
@@ -108,6 +108,24 @@ export const useCacheManager = () => {
             op.type === 'product' && 
             op.operation === 'create' && 
             op.data.id === operation.data.id
+          ));
+        }
+      }
+      
+      if (operation.type === 'customer') {
+        if (operation.operation === 'update' && operation.data.id) {
+          // Replace existing updates for the same customer
+          filteredOps = prev.filter(op => !(
+            op.type === 'customer' && 
+            op.operation === 'update' && 
+            op.data.id === operation.data.id
+          ));
+        } else if (operation.operation === 'create' && operation.data.tempId) {
+          // Remove duplicate creates for the same temp customer
+          filteredOps = prev.filter(op => !(
+            op.type === 'customer' && 
+            op.operation === 'create' && 
+            op.data.tempId === operation.data.tempId
           ));
         }
       }
@@ -147,7 +165,7 @@ export const useCacheManager = () => {
     ));
   }, []);
 
-  // Enhanced sync function with better error handling
+  // Main sync function with improved robustness
   const syncPendingOperations = useCallback(async (): Promise<void> => {
     if (!user) {
       console.log('[CacheManager] ❌ No user, skipping sync');
@@ -189,8 +207,9 @@ export const useCacheManager = () => {
           
           if (operation.type === 'product') {
             success = await syncProductOperation(operation, user.id);
+          } else if (operation.type === 'customer') {
+            success = await syncCustomerOperation(operation, user.id);
           }
-          // Add other types as needed
 
           if (success) {
             successfulOps.push(operation.id);
@@ -227,9 +246,18 @@ export const useCacheManager = () => {
           detail: { timestamp: new Date().toISOString() }
         }));
 
-        window.dispatchEvent(new CustomEvent('product-synced', {
-          detail: { operationCount: successfulOps.length, timestamp: new Date().toISOString() }
-        }));
+        // Dispatch specific events for different types
+        if (operationsByType.product && operationsByType.product.length > 0) {
+          window.dispatchEvent(new CustomEvent('product-synced', {
+            detail: { operationCount: operationsByType.product.length, timestamp: new Date().toISOString() }
+          }));
+        }
+        
+        if (operationsByType.customer && operationsByType.customer.length > 0) {
+          window.dispatchEvent(new CustomEvent('customer-synced', {
+            detail: { operationCount: operationsByType.customer.length, timestamp: new Date().toISOString() }
+          }));
+        }
       }, 100);
     }
   }, [user, pendingOps, incrementOperationAttempts]);
@@ -340,6 +368,84 @@ export const useCacheManager = () => {
       }
     } catch (error) {
       console.error('[CacheManager] ❌ Product operation error:', error);
+      return false;
+    }
+  };
+
+  // Customer sync function
+  const syncCustomerOperation = async (operation: PendingOperation, userId: string): Promise<boolean> => {
+    const { data } = operation;
+    console.log(`[CacheManager] 🔧 Syncing customer ${operation.operation}:`, data?.name || data?.id);
+    
+    try {
+      switch (operation.operation) {
+        case 'create':
+          const { error: createError } = await supabase
+            .from('customers')
+            .insert([{
+              user_id: userId,
+              name: data.name,
+              phone: data.phone,
+              email: data.email,
+              address: data.address,
+              total_purchases: data.totalPurchases || 0,
+              outstanding_debt: data.outstandingDebt || 0,
+              credit_limit: data.creditLimit || 1000,
+              risk_rating: data.riskRating || 'low',
+              last_purchase_date: data.lastPurchaseDate,
+            }]);
+          
+          if (createError) {
+            console.error('[CacheManager] ❌ Customer create error:', createError);
+            return false;
+          }
+          return true;
+          
+        case 'update':
+          const updates = data.updates || data;
+          const dbUpdates: any = {};
+          
+          if (updates.name !== undefined) dbUpdates.name = updates.name;
+          if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+          if (updates.email !== undefined) dbUpdates.email = updates.email;
+          if (updates.address !== undefined) dbUpdates.address = updates.address;
+          if (updates.totalPurchases !== undefined) dbUpdates.total_purchases = updates.totalPurchases;
+          if (updates.outstandingDebt !== undefined) dbUpdates.outstanding_debt = updates.outstandingDebt;
+          if (updates.creditLimit !== undefined) dbUpdates.credit_limit = updates.creditLimit;
+          if (updates.riskRating !== undefined) dbUpdates.risk_rating = updates.riskRating;
+          if (updates.lastPurchaseDate !== undefined) dbUpdates.last_purchase_date = updates.lastPurchaseDate;
+
+          const { error: updateError } = await supabase
+            .from('customers')
+            .update(dbUpdates)
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (updateError) {
+            console.error('[CacheManager] ❌ Customer update error:', updateError);
+            return false;
+          }
+          return true;
+          
+        case 'delete':
+          const { error: deleteError } = await supabase
+            .from('customers')
+            .delete()
+            .eq('id', data.id)
+            .eq('user_id', userId);
+            
+          if (deleteError) {
+            console.error('[CacheManager] ❌ Customer delete error:', deleteError);
+            return false;
+          }
+          return true;
+          
+        default:
+          console.warn(`[CacheManager] ❌ Unsupported operation: ${operation.operation}`);
+          return false;
+      }
+    } catch (error) {
+      console.error('[CacheManager] ❌ Customer operation error:', error);
       return false;
     }
   };
