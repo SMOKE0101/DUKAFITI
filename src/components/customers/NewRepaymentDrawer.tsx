@@ -13,9 +13,6 @@ import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
-import { useAuth } from '../../hooks/useAuth';
-import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import { useCacheManager } from '../../hooks/useCacheManager';
 
 interface NewRepaymentDrawerProps {
   isOpen: boolean;
@@ -29,9 +26,6 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
   customer
 }) => {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { isOnline } = useNetworkStatus();
-  const { addPendingOperation } = useCacheManager();
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -41,92 +35,22 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
   });
 
   const recordPayment = async (customerId: string, amount: number, method: string, notes?: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
     setIsRecordingPayment(true);
     try {
       // Calculate new outstanding debt
       const currentDebt = customer?.outstandingDebt || 0;
       const newOutstandingDebt = Math.max(0, currentDebt - amount);
 
-      if (isOnline) {
-        // Online: Create debt payment record directly
-        const { error: debtPaymentError } = await supabase
-          .from('debt_payments')
-          .insert({
-            user_id: user.id,
-            customer_id: customerId,
-            customer_name: customer?.name || '',
-            amount: amount,
-            payment_method: method,
-            reference: notes || null,
-            timestamp: new Date().toISOString()
-          });
+      // Update customer with new debt amount
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          outstanding_debt: newOutstandingDebt,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', customerId);
 
-        if (debtPaymentError) {
-          console.error('Error creating debt payment record:', debtPaymentError);
-          throw new Error(`Failed to record payment: ${debtPaymentError.message}`);
-        }
-
-        // Update customer with new debt amount
-        const { error } = await supabase
-          .from('customers')
-          .update({
-            outstanding_debt: newOutstandingDebt,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', customerId);
-
-        if (error) throw error;
-      } else {
-        // Offline: Queue payment operation and update local state
-        console.log('[NewRepaymentDrawer] Adding offline debt payment operation:', {
-          customer_id: customerId,
-          customer_name: customer?.name || '',
-          amount: amount,
-          payment_method: method,
-          user_id: user.id
-        });
-
-        addPendingOperation({
-          type: 'debt_payment',
-          operation: 'create',
-          data: {
-            user_id: user.id,
-            customer_id: customerId,
-            customer_name: customer?.name || '',
-            amount: amount,
-            payment_method: method,
-            reference: notes || null,
-            timestamp: new Date().toISOString()
-          }
-        });
-
-        // Update customer balance locally using the same structure as other customer updates
-        console.log('[NewRepaymentDrawer] Adding offline customer update operation:', {
-          id: customerId,
-          outstandingDebt: newOutstandingDebt
-        });
-
-        addPendingOperation({
-          type: 'customer',
-          operation: 'update',
-          data: {
-            id: customerId,
-            updates: {
-              outstandingDebt: newOutstandingDebt,
-              lastPurchaseDate: new Date().toISOString()
-            }
-          }
-        });
-
-        // Update local customer state immediately for UI feedback
-        if (customer) {
-          customer.outstandingDebt = newOutstandingDebt;
-        }
-      }
+      if (error) throw error;
 
       toast({
         title: "Payment Recorded",
@@ -138,7 +62,7 @@ const NewRepaymentDrawer: React.FC<NewRepaymentDrawerProps> = ({
       console.error('Failed to record payment:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to record payment. Please try again.",
+        description: "Failed to record payment. Please try again.",
         variant: "destructive",
       });
       throw error;
