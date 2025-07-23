@@ -91,7 +91,7 @@ const AuthForm = () => {
             </h1>
             <p className="text-lg text-muted-foreground">
               {isSignUp 
-                ? '14-day free trial, no credit card required.' 
+                ? 'Join thousands of shop owners using DukaFiti' 
                 : 'Sign in to your account to continue'
               }
             </p>

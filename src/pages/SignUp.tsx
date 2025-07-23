@@ -108,9 +108,6 @@ const SignUp = () => {
             <p className="text-lg text-muted-foreground">
               Join thousands of shop owners using DukaFiti
             </p>
-            <div className="mt-4 px-4 py-2 bg-success/10 rounded-lg border border-success/20">
-              <p className="text-sm text-success font-medium">✨ 14-day free trial, no credit card required</p>
-            </div>
           </div>
 
           {/* Email Confirmation Message */}
