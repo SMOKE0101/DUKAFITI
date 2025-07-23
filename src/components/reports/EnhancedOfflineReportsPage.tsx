@@ -1,16 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Download, Filter, RefreshCw } from 'lucide-react';
-import { formatCurrency } from '@/utils/currency';
+import { Calendar } from 'lucide-react';
 import { useUnifiedSales } from '@/hooks/useUnifiedSales';
 import { useUnifiedProducts } from '@/hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '@/hooks/useUnifiedCustomers';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { toast } from 'sonner';
 import ModernSummaryCards from './ModernSummaryCards';
 import AlwaysCurrentPanels from './AlwaysCurrentPanels';
 import EnhancedSalesTrendChart from './EnhancedSalesTrendChart';
@@ -68,36 +64,6 @@ const EnhancedOfflineReportsPage = () => {
 
   const isLoading = salesLoading || productsLoading || customersLoading;
 
-  const handleExportData = () => {
-    // Filter sales based on current timeframe
-    const filteredSales = sales.filter(sale => {
-      const saleDate = new Date(sale.timestamp).toISOString().split('T')[0];
-      return saleDate >= dateRange.from && saleDate <= dateRange.to;
-    });
-
-    const csvContent = [
-      ['Date', 'Product', 'Customer', 'Quantity', 'Revenue', 'Profit', 'Payment Method'],
-      ...filteredSales.map(sale => [
-        new Date(sale.timestamp).toLocaleDateString(),
-        sale.productName || 'Unknown',
-        sale.customerName || 'Walk-in',
-        sale.quantity || 0,
-        formatCurrency(sale.total || 0),
-        formatCurrency(sale.profit || 0),
-        sale.paymentMethod || 'Cash'
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sales-report-${timeframe}-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast.success('Report exported successfully!');
-  };
 
   if (isLoading) {
     return (
@@ -136,50 +102,42 @@ const EnhancedOfflineReportsPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Timeframe Selector - Button Style */}
-              <div className="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 shadow-sm">
-                {[
-                  { value: 'today', label: 'Today' },
-                  { value: 'week', label: 'This Week' },
-                  { value: 'month', label: 'This Month' },
-                  { value: 'quarter', label: 'This Quarter' }
-                ].map((option) => (
-                  <Button
-                    key={option.value}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setTimeframe(option.value as any)}
-                    className={`
-                      text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
-                      ${timeframe === option.value
-                        ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
-                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                      }
-                    `}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportData}
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeframe Selector */}
+      <div className="max-w-7xl mx-auto px-6 pb-4">
+        <div className="flex justify-center">
+          <div className="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 shadow-sm">
+            {[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' },
+              { value: 'quarter', label: 'This Quarter' }
+            ].map((option) => (
+              <Button
+                key={option.value}
+                variant="ghost"
+                size="sm"
+                onClick={() => setTimeframe(option.value as any)}
+                className={`
+                  text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${timeframe === option.value
+                    ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }
+                `}
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
         </div>
       </div>
