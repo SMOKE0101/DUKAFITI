@@ -129,7 +129,7 @@ export const useSyncCoordinator = () => {
                     timestamp: new Date().toISOString()
                   }
                 }));
-                window.dispatchEvent(new CustomEvent(`sync-${type}-completed`, {
+                window.dispatchEvent(new CustomEvent(`data-refresh-${type}`, {
                   detail: { 
                     operationCount: typeOperations.length,
                     timestamp: new Date().toISOString()

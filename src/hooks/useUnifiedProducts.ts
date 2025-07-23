@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useNetworkStatus } from './useNetworkStatus';
@@ -23,141 +24,58 @@ export const useUnifiedProducts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const syncingRef = useRef(false);
+  const lastSyncRef = useRef<number>(0);
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache, addPendingOperation, pendingOps, clearPendingOperation } = useCacheManager();
 
-  // Sync pending operations - similar to customers
-  const syncPendingOperations = useCallback(async () => {
-    if (!user || !isOnline) return;
+  // Merge products intelligently - prioritize local changes over server data
+  const mergeProducts = useCallback((serverProducts: Product[], localProducts: Product[]): Product[] => {
+    console.log('[UnifiedProducts] Merging products:', {
+      serverCount: serverProducts.length,
+      localCount: localProducts.length
+    });
 
-    const productOps = pendingOps.filter(op => op.type === 'product');
-    if (productOps.length === 0) return;
-
-    console.log('[UnifiedProducts] Syncing', productOps.length, 'pending product operations');
-    setSyncStatus('syncing');
-
-    const syncedCreates: Array<{tempId: string, realProduct: Product}> = [];
-
-    for (const operation of productOps) {
-      try {
-        let success = false;
-
-        switch (operation.operation) {
-          case 'create':
-            console.log('[UnifiedProducts] Syncing create operation:', operation.data);
-            const createData = {
-              name: operation.data.name,
-              category: operation.data.category,
-              cost_price: operation.data.costPrice,
-              selling_price: operation.data.sellingPrice,
-              current_stock: operation.data.currentStock || 0,
-              low_stock_threshold: operation.data.lowStockThreshold || 10,
-              user_id: user.id,
-            };
-
-            const { data: createdData, error: createError } = await supabase
-              .from('products')
-              .insert([createData])
-              .select()
-              .single();
-
-            success = !createError;
-            if (createError) {
-              console.error('[UnifiedProducts] Create sync failed:', createError);
-            } else {
-              console.log('[UnifiedProducts] Create synced successfully');
-              const tempId = operation.data.id || `temp_${operation.data.name}_${operation.data.category}`;
-              if (createdData) {
-                syncedCreates.push({
-                  tempId,
-                  realProduct: transformDbProduct(createdData)
-                });
-              }
-            }
-            break;
-
-          case 'update':
-            console.log('[UnifiedProducts] Syncing update operation:', operation.data);
-            const updates = operation.data.updates || operation.data;
-            const dbUpdates: any = {};
-            
-            if (updates.name !== undefined) dbUpdates.name = updates.name;
-            if (updates.category !== undefined) dbUpdates.category = updates.category;
-            if (updates.costPrice !== undefined) dbUpdates.cost_price = updates.costPrice;
-            if (updates.sellingPrice !== undefined) dbUpdates.selling_price = updates.sellingPrice;
-            if (updates.currentStock !== undefined) dbUpdates.current_stock = updates.currentStock;
-            if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
-
-            const { error: updateError } = await supabase
-              .from('products')
-              .update(dbUpdates)
-              .eq('id', operation.data.id)
-              .eq('user_id', user.id);
-
-            success = !updateError;
-            if (updateError) {
-              console.error('[UnifiedProducts] Update sync failed:', updateError);
-            } else {
-              console.log('[UnifiedProducts] Update synced successfully');
-            }
-            break;
-
-          case 'delete':
-            console.log('[UnifiedProducts] Syncing delete operation:', operation.data);
-            const { error: deleteError } = await supabase
-              .from('products')
-              .delete()
-              .eq('id', operation.data.id)
-              .eq('user_id', user.id);
-
-            success = !deleteError;
-            if (deleteError) {
-              console.error('[UnifiedProducts] Delete sync failed:', deleteError);
-            } else {
-              console.log('[UnifiedProducts] Delete synced successfully');
-            }
-            break;
-        }
-
-        if (success) {
-          clearPendingOperation(operation.id);
-        }
-      } catch (error) {
-        console.error('[UnifiedProducts] Error syncing operation:', operation.id, error);
-      }
-    }
-
-    // Replace temp products with real ones from sync
-    if (syncedCreates.length > 0) {
-      setProducts(prev => {
-        let updated = [...prev];
-        
-        for (const {tempId, realProduct} of syncedCreates) {
-          // Remove temp product and add real one
-          updated = updated.filter(p => !p.id.startsWith('temp_') || 
-            !(p.name === realProduct.name && p.category === realProduct.category));
-          updated.unshift(realProduct);
-        }
-        
-        // Remove duplicates and sort
-        const uniqueProducts = updated.filter((product, index, self) => 
-          index === self.findIndex(p => p.id === product.id)
-        ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        
-        setCache('products', uniqueProducts);
-        return uniqueProducts;
-      });
-    }
-
-    setSyncStatus('success');
+    const merged = new Map<string, Product>();
     
-    // Refresh data after sync
-    await loadProducts();
-  }, [user, isOnline, pendingOps, clearPendingOperation, setCache]);
+    // First, add all server products
+    serverProducts.forEach(product => {
+      merged.set(product.id, product);
+    });
 
-  // Load products with intelligent caching - similar to customers
+    // Then overlay local products, giving priority to local changes
+    localProducts.forEach(localProduct => {
+      const serverProduct = merged.get(localProduct.id);
+      
+      if (serverProduct) {
+        // If both exist, compare timestamps and prefer newer
+        const localTime = new Date(localProduct.updatedAt || 0).getTime();
+        const serverTime = new Date(serverProduct.updatedAt || 0).getTime();
+        
+        if (localTime >= serverTime) {
+          console.log('[UnifiedProducts] Keeping local changes for:', localProduct.name);
+          merged.set(localProduct.id, localProduct);
+        } else {
+          console.log('[UnifiedProducts] Using server data for:', localProduct.name);
+          merged.set(localProduct.id, serverProduct);
+        }
+      } else {
+        // Local-only product (temp or new)
+        merged.set(localProduct.id, localProduct);
+      }
+    });
+
+    const result = Array.from(merged.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    console.log('[UnifiedProducts] Merge result:', result.length, 'products');
+    return result;
+  }, []);
+
+  // Load products with cache-first strategy
   const loadProducts = useCallback(async () => {
     if (!user) {
       setProducts([]);
@@ -169,14 +87,14 @@ export const useUnifiedProducts = () => {
     setError(null);
 
     try {
-      // Always try cache first for fast UI
+      // Always load from cache first for immediate UI update
       const cached = getCache<Product[]>('products');
       if (cached && Array.isArray(cached)) {
         console.log('[UnifiedProducts] Using cached data:', cached.length, 'products');
         setProducts(cached);
         setLoading(false);
         
-        // If online, fetch fresh data in background and merge intelligently
+        // If online, fetch fresh data in background
         if (isOnline) {
           try {
             const { data, error: fetchError } = await supabase
@@ -186,48 +104,14 @@ export const useUnifiedProducts = () => {
               .order('created_at', { ascending: false });
 
             if (!fetchError && data) {
-              const serverData = data.map(transformDbProduct);
+              const serverProducts = data.map(transformDbProduct);
+              const mergedProducts = mergeProducts(serverProducts, cached);
               
-              // Get local products that might have unsynced changes
-              const unsyncedLocal = cached.filter(product => 
-                product.id.startsWith('temp_') && 
-                !serverData.some(s => s.name === product.name && s.category === product.category)
-              );
-              
-              // For each server product, check if we should preserve local changes
-              const mergedData: Product[] = [...unsyncedLocal];
-              
-              for (const serverProduct of serverData) {
-                const localProduct = cached.find(p => p.id === serverProduct.id);
-                
-                if (localProduct) {
-                  // Always prefer local data if it's been recently updated
-                  const localUpdateTime = new Date(localProduct.updatedAt || 0).getTime();
-                  const serverUpdateTime = new Date(serverProduct.updatedAt || 0).getTime();
-                  
-                  // If local data is newer or equal, keep it; otherwise use server data
-                  if (localUpdateTime >= serverUpdateTime) {
-                    console.log('[UnifiedProducts] Preserving local changes for product:', localProduct.name);
-                    mergedData.push(localProduct);
-                  } else {
-                    mergedData.push(serverProduct);
-                  }
-                } else {
-                  // New product from server
-                  mergedData.push(serverProduct);
-                }
-              }
-              
-              // Remove duplicates and sort
-              const uniqueData = mergedData.filter((product, index, self) => 
-                index === self.findIndex(p => p.id === product.id)
-              ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-              
-              // Update cache and state if data changed
-              if (JSON.stringify(uniqueData) !== JSON.stringify(cached)) {
-                console.log('[UnifiedProducts] Background refresh: updating with merged data');
-                setCache('products', uniqueData);
-                setProducts(uniqueData);
+              // Only update if data actually changed
+              if (JSON.stringify(mergedProducts) !== JSON.stringify(cached)) {
+                console.log('[UnifiedProducts] Background refresh: updating merged data');
+                setCache('products', mergedProducts);
+                setProducts(mergedProducts);
               }
             }
           } catch (bgError) {
@@ -237,7 +121,7 @@ export const useUnifiedProducts = () => {
         return;
       }
 
-      // If no cache and online, fetch from server
+      // No cache - fetch from server if online
       if (isOnline) {
         console.log('[UnifiedProducts] No cache, fetching from server');
         const { data, error: fetchError } = await supabase
@@ -264,22 +148,24 @@ export const useUnifiedProducts = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, isOnline, getCache, setCache]);
+  }, [user?.id, isOnline, getCache, setCache, mergeProducts]);
 
-  // Create product - similar to customers
+  // Create product with optimistic updates
   const createProduct = useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
-    const newProduct: Product = {
+    const tempProduct: Product = {
       ...productData,
-      id: `temp_${Date.now()}`,
+      id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // Optimistically update UI
+    console.log('[UnifiedProducts] Creating product:', tempProduct.name);
+
+    // Optimistically update UI and cache
     setProducts(prev => {
-      const updated = [newProduct, ...prev];
+      const updated = [tempProduct, ...prev];
       setCache('products', updated);
       return updated;
     });
@@ -304,92 +190,70 @@ export const useUnifiedProducts = () => {
 
         if (error) throw error;
 
-        const transformedProduct = transformDbProduct(data);
+        const realProduct = transformDbProduct(data);
         
         // Replace temp product with real one
         setProducts(prev => {
-          const updated = prev.map(p => p.id === newProduct.id ? transformedProduct : p);
+          const updated = prev.map(p => 
+            p.id === tempProduct.id ? realProduct : p
+          );
           setCache('products', updated);
           return updated;
         });
 
-        return transformedProduct;
+        console.log('[UnifiedProducts] Product created successfully');
+        return realProduct;
       } catch (error) {
         console.error('[UnifiedProducts] Create failed, queuing for sync:', error);
         addPendingOperation({
           type: 'product',
           operation: 'create',
-          data: { ...productData, id: newProduct.id },
+          data: { ...productData, id: tempProduct.id },
         });
-        return newProduct;
+        return tempProduct;
       }
     } else {
       // Queue for sync when online
       addPendingOperation({
         type: 'product',
         operation: 'create',
-        data: { ...productData, id: newProduct.id },
+        data: { ...productData, id: tempProduct.id },
       });
-      return newProduct;
+      return tempProduct;
     }
   }, [user, isOnline, addPendingOperation, setCache]);
 
-  // Update product with immediate feedback - similar to customers
+  // Update product with immediate feedback
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
-    if (!user) {
-      console.error('[UnifiedProducts] User not authenticated');
-      throw new Error('User not authenticated');
-    }
+    if (!user) throw new Error('User not authenticated');
 
-    console.log('[UnifiedProducts] updateProduct called:', {
-      productId: id,
-      updates,
-      isOnline,
-      currentProducts: products.length,
-      userAuthenticated: !!user
-    });
+    console.log('[UnifiedProducts] Updating product:', id, updates);
 
-    // Find the current product
     const currentProduct = products.find(p => p.id === id);
     if (!currentProduct) {
-      console.error('[UnifiedProducts] Product not found:', id);
       throw new Error(`Product ${id} not found`);
     }
 
-    console.log('[UnifiedProducts] Current product before update:', {
-      id: currentProduct.id,
-      name: currentProduct.name,
-      currentStock: currentProduct.currentStock,
-      costPrice: currentProduct.costPrice
-    });
+    const updatedProduct = { 
+      ...currentProduct, 
+      ...updates, 
+      updatedAt: new Date().toISOString() 
+    };
 
-    // Calculate new values
-    const updatedProduct = { ...currentProduct, ...updates, updatedAt: new Date().toISOString() };
-    console.log('[UnifiedProducts] New product values:', {
-      id: updatedProduct.id,
-      name: updatedProduct.name,
-      currentStock: updatedProduct.currentStock,
-      costPrice: updatedProduct.costPrice
-    });
-
-    // Immediately update local state for instant UI feedback
+    // Immediately update UI and cache
     setProducts(prev => {
       const updated = prev.map(p => p.id === id ? updatedProduct : p);
-      // Also immediately update cache
       setCache('products', updated);
-      console.log('[UnifiedProducts] Immediately updated product in UI and cache');
       return updated;
     });
 
-    // Dispatch immediate event for UI updates
+    // Dispatch immediate local update event
     window.dispatchEvent(new CustomEvent('product-updated-locally', {
       detail: { productId: id, product: updatedProduct }
     }));
 
-    // Handle server sync
     if (isOnline) {
       try {
-        // Prepare database update object
         const dbUpdates: any = {};
         if (updates.name !== undefined) dbUpdates.name = updates.name;
         if (updates.category !== undefined) dbUpdates.category = updates.category;
@@ -398,18 +262,13 @@ export const useUnifiedProducts = () => {
         if (updates.currentStock !== undefined) dbUpdates.current_stock = updates.currentStock;
         if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
 
-        console.log('[UnifiedProducts] Updating database with:', dbUpdates);
-
         const { error } = await supabase
           .from('products')
           .update(dbUpdates)
           .eq('id', id)
           .eq('user_id', user.id);
 
-        if (error) {
-          console.error('[UnifiedProducts] Database update failed:', error);
-          throw error;
-        }
+        if (error) throw error;
 
         console.log('[UnifiedProducts] Product updated successfully in database');
         
@@ -420,19 +279,13 @@ export const useUnifiedProducts = () => {
         
       } catch (error) {
         console.error('[UnifiedProducts] Server update failed, queuing for sync:', error);
-        
-        // Add to pending operations for later sync
         addPendingOperation({
           type: 'product',
           operation: 'update',
           data: { id, updates },
         });
-        
-        console.log('[UnifiedProducts] Added pending operation for product update');
       }
     } else {
-      console.log('[UnifiedProducts] Offline mode - queuing product update');
-      
       // Queue for sync when online
       addPendingOperation({
         type: 'product',
@@ -441,11 +294,10 @@ export const useUnifiedProducts = () => {
       });
     }
 
-    console.log('[UnifiedProducts] Product update completed');
     return updatedProduct;
   }, [user, isOnline, addPendingOperation, setCache, products]);
 
-  // Delete product - similar to customers
+  // Delete product with optimistic updates
   const deleteProduct = useCallback(async (id: string) => {
     if (!user) throw new Error('User not authenticated');
 
@@ -500,6 +352,126 @@ export const useUnifiedProducts = () => {
     }
   }, [user, isOnline, addPendingOperation, setCache, products]);
 
+  // Sync pending operations
+  const syncPendingOperations = useCallback(async () => {
+    if (!user || !isOnline || syncingRef.current) return false;
+
+    const productOps = pendingOps.filter(op => op.type === 'product');
+    if (productOps.length === 0) return true;
+
+    console.log('[UnifiedProducts] Syncing', productOps.length, 'pending operations');
+    syncingRef.current = true;
+    setSyncStatus('syncing');
+
+    try {
+      const syncedCreates: Array<{tempId: string, realProduct: Product}> = [];
+
+      for (const operation of productOps) {
+        try {
+          let success = false;
+
+          switch (operation.operation) {
+            case 'create':
+              console.log('[UnifiedProducts] Syncing create:', operation.data.name);
+              const { data: createdData, error: createError } = await supabase
+                .from('products')
+                .insert([{
+                  name: operation.data.name,
+                  category: operation.data.category,
+                  cost_price: operation.data.costPrice,
+                  selling_price: operation.data.sellingPrice,
+                  current_stock: operation.data.currentStock || 0,
+                  low_stock_threshold: operation.data.lowStockThreshold || 10,
+                  user_id: user.id,
+                }])
+                .select()
+                .single();
+
+              if (!createError && createdData) {
+                const realProduct = transformDbProduct(createdData);
+                syncedCreates.push({
+                  tempId: operation.data.id,
+                  realProduct
+                });
+                success = true;
+              }
+              break;
+
+            case 'update':
+              console.log('[UnifiedProducts] Syncing update:', operation.data.id);
+              const updates = operation.data.updates;
+              const dbUpdates: any = {};
+              
+              if (updates.name !== undefined) dbUpdates.name = updates.name;
+              if (updates.category !== undefined) dbUpdates.category = updates.category;
+              if (updates.costPrice !== undefined) dbUpdates.cost_price = updates.costPrice;
+              if (updates.sellingPrice !== undefined) dbUpdates.selling_price = updates.sellingPrice;
+              if (updates.currentStock !== undefined) dbUpdates.current_stock = updates.currentStock;
+              if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
+
+              const { error: updateError } = await supabase
+                .from('products')
+                .update(dbUpdates)
+                .eq('id', operation.data.id)
+                .eq('user_id', user.id);
+
+              success = !updateError;
+              break;
+
+            case 'delete':
+              console.log('[UnifiedProducts] Syncing delete:', operation.data.id);
+              const { error: deleteError } = await supabase
+                .from('products')
+                .delete()
+                .eq('id', operation.data.id)
+                .eq('user_id', user.id);
+
+              success = !deleteError;
+              break;
+          }
+
+          if (success) {
+            clearPendingOperation(operation.id);
+          }
+        } catch (error) {
+          console.error('[UnifiedProducts] Error syncing operation:', error);
+        }
+      }
+
+      // Replace temp products with real ones
+      if (syncedCreates.length > 0) {
+        setProducts(prev => {
+          let updated = [...prev];
+          
+          syncedCreates.forEach(({ tempId, realProduct }) => {
+            updated = updated.map(p => p.id === tempId ? realProduct : p);
+          });
+          
+          const uniqueProducts = updated.filter((product, index, self) => 
+            index === self.findIndex(p => p.id === product.id)
+          ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          
+          setCache('products', uniqueProducts);
+          return uniqueProducts;
+        });
+      }
+
+      setSyncStatus('success');
+      lastSyncRef.current = Date.now();
+      
+      // Refresh data after successful sync
+      await loadProducts();
+      
+      return true;
+    } catch (error) {
+      console.error('[UnifiedProducts] Sync failed:', error);
+      setSyncStatus('error');
+      return false;
+    } finally {
+      syncingRef.current = false;
+    }
+  }, [user, isOnline, pendingOps, clearPendingOperation, setCache, loadProducts]);
+
   // Load products on mount and when user changes
   useEffect(() => {
     if (user) {
@@ -507,7 +479,7 @@ export const useUnifiedProducts = () => {
     }
   }, [user?.id]);
 
-  // Listen for various events to refresh product data - similar to customers
+  // Listen for data refresh events
   useEffect(() => {
     const handleDataRefresh = () => {
       console.log('[UnifiedProducts] Data refresh event received');
@@ -515,11 +487,10 @@ export const useUnifiedProducts = () => {
     };
 
     const events = [
-      'sync-completed',
-      'data-synced', 
+      'data-refresh-product',
       'product-synced',
-      'sale-completed',
-      'checkout-completed'
+      'sync-completed',
+      'data-synced'
     ];
 
     events.forEach(event => {
@@ -533,12 +504,12 @@ export const useUnifiedProducts = () => {
     };
   }, [loadProducts]);
 
-  // Sync pending operations when coming online
+  // Auto-sync when coming online
   useEffect(() => {
     if (isOnline && pendingOps.filter(op => op.type === 'product').length > 0) {
       const timer = setTimeout(() => {
         syncPendingOperations();
-      }, 1000); // Delay to ensure stable connection
+      }, 1500);
 
       return () => clearTimeout(timer);
     }

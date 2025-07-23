@@ -35,8 +35,10 @@ const InventoryPage = () => {
     createProduct, 
     updateProduct, 
     deleteProduct,
+    refetch,
     isOnline,
-    pendingOperations 
+    pendingOperations,
+    syncStatus
   } = useUnifiedProducts();
   
   const { globalSyncInProgress } = useUnifiedSyncManager();
@@ -71,6 +73,22 @@ const InventoryPage = () => {
     return filtered;
   }, [products, searchTerm, selectedCategory, sortBy]);
 
+  // Handle sync completion notification
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      if (pendingOperations === 0) {
+        toast({
+          title: "Sync Complete",
+          description: "All offline changes have been synchronized",
+          duration: 3000,
+        });
+      }
+    };
+
+    window.addEventListener('product-synced', handleSyncComplete);
+    return () => window.removeEventListener('product-synced', handleSyncComplete);
+  }, [pendingOperations, toast]);
+
   // Handle stats card clicks for filtering
   const handleStatsCardClick = (filter: string) => {
     switch (filter) {
@@ -79,12 +97,9 @@ const InventoryPage = () => {
         setSearchTerm('');
         break;
       case 'low-stock':
-        // Show products with low stock
         setSelectedCategory('all');
-        // Could add a low stock filter here if needed
         break;
       case 'value':
-        // Could sort by value or show high-value products
         setSortBy('price');
         break;
       default:
@@ -235,6 +250,13 @@ const InventoryPage = () => {
           </div>
           <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">Error loading inventory</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
+          <Button 
+            onClick={() => refetch()} 
+            className="mt-4"
+            variant="outline"
+          >
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -260,6 +282,9 @@ const InventoryPage = () => {
               {globalSyncInProgress && (
                 <span className="text-green-500 ml-2">(Syncing...)</span>
               )}
+              {syncStatus === 'syncing' && (
+                <span className="text-green-500 ml-2">(Sync in progress...)</span>
+              )}
             </p>
           </div>
           
@@ -273,7 +298,7 @@ const InventoryPage = () => {
           </Button>
         </div>
 
-        {/* Stats Cards - Pass products and onCardClick as expected by PremiumStatsCards */}
+        {/* Stats Cards */}
         <PremiumStatsCards products={products} onCardClick={handleStatsCardClick} />
 
         {/* Search and Filter Section */}
