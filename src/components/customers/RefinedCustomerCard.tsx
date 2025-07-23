@@ -35,24 +35,24 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
 
   const getBalanceStatus = () => {
     if (customer.outstandingDebt === 0) {
-      return { color: 'bg-green-100 text-green-800', avatarColor: 'bg-green-100 text-green-600' };
+      return { color: 'bg-success/10 text-success border-success/20', avatarColor: 'bg-success/10 text-success' };
     } else if (customer.outstandingDebt <= 1000) {
-      return { color: 'bg-yellow-100 text-yellow-800', avatarColor: 'bg-yellow-100 text-yellow-600' };
+      return { color: 'bg-warning/10 text-warning border-warning/20', avatarColor: 'bg-warning/10 text-warning' };
     } else {
-      return { color: 'bg-red-100 text-red-800', avatarColor: 'bg-red-100 text-red-600' };
+      return { color: 'bg-destructive/10 text-destructive border-destructive/20', avatarColor: 'bg-destructive/10 text-destructive' };
     }
   };
 
   const balanceStatus = getBalanceStatus();
 
   return (
-    <Card className={`bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-200 relative ${
+    <Card className={`bg-card rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-200 relative ${
       isUpdating ? 'opacity-75' : ''
     }`}>
       <CardContent className="p-0">
         {/* Loading overlay */}
         {isUpdating && (
-          <div className="absolute inset-0 bg-white/50 dark:bg-gray-800/50 rounded-2xl flex items-center justify-center z-10">
+          <div className="absolute inset-0 bg-background/50 rounded-2xl flex items-center justify-center z-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         )}
@@ -67,10 +67,10 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
             </Avatar>
             <div className="flex-1 min-w-0">
               <h3 className="text-lg font-display font-semibold text-foreground truncate">{customer.name}</h3>
-              <p className="text-sm text-gray-500">{customer.phone}</p>
+              <p className="text-sm text-muted-foreground">{customer.phone}</p>
               
               {/* Email Field */}
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {customer.email ? (
                   <span className="truncate block">{customer.email}</span>
                 ) : (
@@ -79,7 +79,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
               </p>
               
               {/* Address Field */}
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {customer.address ? (
                   <span className="line-clamp-2 leading-tight">{customer.address}</span>
                 ) : (
@@ -88,7 +88,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
               </p>
 
               {/* Credit Limit Field */}
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-muted-foreground mt-2">
                 <span className="font-medium">Credit Limit:</span>{' '}
                 {customer.creditLimit ? formatCurrency(customer.creditLimit) : 'Unlimited'}
               </p>
@@ -110,7 +110,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
               <Button
                 onClick={() => onRecordRepayment(customer)}
                 disabled={customer.outstandingDebt === 0}
-                className="w-10 h-10 bg-green-100 dark:bg-green-900/20 text-green-600 rounded-full hover:bg-green-200 dark:hover:bg-green-900/40 transition-all duration-200 hover:scale-110 active:scale-95 p-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="w-10 h-10 bg-success/10 text-success rounded-full hover:bg-success/20 transition-all duration-200 hover:scale-110 active:scale-95 p-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 aria-label="Record payment"
               >
                 <CreditCard className="w-4 h-4" />
@@ -123,7 +123,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
             <TooltipTrigger asChild>
               <Button
                 onClick={() => onEdit(customer)}
-                className="w-10 h-10 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 p-0"
+                className="w-10 h-10 bg-muted/50 text-muted-foreground rounded-full hover:bg-muted transition-all duration-200 hover:scale-110 active:scale-95 p-0"
                 aria-label="Edit customer"
               >
                 <Edit className="w-4 h-4" />
@@ -136,7 +136,7 @@ const RefinedCustomerCard: React.FC<RefinedCustomerCardProps> = ({
             <TooltipTrigger asChild>
               <Button
                 onClick={() => onDelete(customer)}
-                className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 transition-all duration-200 hover:scale-110 active:scale-95 p-0"
+                className="w-10 h-10 bg-destructive/10 text-destructive rounded-full hover:bg-destructive/20 transition-all duration-200 hover:scale-110 active:scale-95 p-0"
                 aria-label="Delete customer"
               >
                 <Trash2 className="w-4 h-4" />

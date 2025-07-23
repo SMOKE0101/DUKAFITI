@@ -33,18 +33,18 @@ const EnhancedCustomerCard: React.FC<EnhancedCustomerCardProps> = ({
 
   const getBalanceStatus = () => {
     if (customer.outstandingDebt === 0) {
-      return { color: 'bg-green-100 text-green-800', avatarColor: 'bg-green-100 text-green-600' };
+      return { color: 'bg-success/10 text-success border-success/20', avatarColor: 'bg-success/10 text-success' };
     } else if (customer.outstandingDebt <= 1000) {
-      return { color: 'bg-yellow-100 text-yellow-800', avatarColor: 'bg-yellow-100 text-yellow-600' };
+      return { color: 'bg-warning/10 text-warning border-warning/20', avatarColor: 'bg-warning/10 text-warning' };
     } else {
-      return { color: 'bg-red-100 text-red-800', avatarColor: 'bg-red-100 text-red-600' };
+      return { color: 'bg-destructive/10 text-destructive border-destructive/20', avatarColor: 'bg-destructive/10 text-destructive' };
     }
   };
 
   const balanceStatus = getBalanceStatus();
 
   return (
-    <Card className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-200">
+    <Card className="bg-card rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-200">
       <CardContent className="p-0">
         {/* Top Row */}
         <div className="flex items-start justify-between mb-6">
@@ -56,7 +56,7 @@ const EnhancedCustomerCard: React.FC<EnhancedCustomerCardProps> = ({
             </Avatar>
             <div>
               <h3 className="text-lg font-semibold text-foreground">{customer.name}</h3>
-              <p className="text-sm text-gray-500">{customer.phone}</p>
+              <p className="text-sm text-muted-foreground">{customer.phone}</p>
             </div>
           </div>
 
@@ -72,7 +72,7 @@ const EnhancedCustomerCard: React.FC<EnhancedCustomerCardProps> = ({
             <TooltipTrigger asChild>
               <Button
                 onClick={() => onViewHistory(customer)}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-500 flex items-center gap-2"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 flex items-center gap-2"
               >
                 <History className="w-4 h-4" />
                 View History
@@ -86,7 +86,7 @@ const EnhancedCustomerCard: React.FC<EnhancedCustomerCardProps> = ({
               <Button
                 onClick={() => onEdit(customer)}
                 variant="outline"
-                className="border border-gray-300 text-gray-700 px-3 py-2 rounded hover:bg-gray-100 flex items-center gap-2"
+                className="border border-border text-foreground px-3 py-2 rounded hover:bg-muted flex items-center gap-2"
               >
                 <Edit className="w-4 h-4" />
               </Button>
@@ -99,7 +99,7 @@ const EnhancedCustomerCard: React.FC<EnhancedCustomerCardProps> = ({
               <Button
                 onClick={() => onDelete(customer)}
                 variant="ghost"
-                className="text-red-600 px-3 py-2 rounded hover:bg-red-50 flex items-center gap-2"
+                className="text-destructive px-3 py-2 rounded hover:bg-destructive/10 flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>

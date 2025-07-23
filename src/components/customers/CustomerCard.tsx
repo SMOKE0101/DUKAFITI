@@ -36,17 +36,17 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
 
   const getRiskBadgeColor = (rating: string) => {
     switch (rating) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'low': return 'bg-success/10 text-success border-success/20';
+      case 'medium': return 'bg-warning/10 text-warning border-warning/20';
+      case 'high': return 'bg-destructive/10 text-destructive border-destructive/20';
+      default: return 'bg-muted/50 text-muted-foreground border-muted';
     }
   };
 
   const getBalanceColor = (debt: number) => {
-    if (debt === 0) return 'bg-green-100 text-green-800';
-    if (debt <= 1000) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
+    if (debt === 0) return 'bg-success/10 text-success border-success/20';
+    if (debt <= 1000) return 'bg-warning/10 text-warning border-warning/20';
+    return 'bg-destructive/10 text-destructive border-destructive/20';
   };
 
   return (
@@ -55,7 +55,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     }`}>
       {/* Loading overlay */}
       {(isDeleting || isRecordingPayment) && (
-        <div className="absolute inset-0 bg-white/50 dark:bg-gray-800/50 rounded-lg flex items-center justify-center z-10">
+        <div className="absolute inset-0 bg-background/50 rounded-lg flex items-center justify-center z-10">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       )}
@@ -108,7 +108,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
         <div className="pt-3 border-t space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Total Purchases:</span>
-            <span className="font-medium text-green-600">
+            <span className="font-medium text-success">
               {formatCurrency(customer.totalPurchases || 0)}
             </span>
           </div>
@@ -149,7 +149,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             variant="outline"
             size="sm"
             onClick={() => onDelete(customer)}
-            className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="w-4 h-4 mr-1" />
             Delete
