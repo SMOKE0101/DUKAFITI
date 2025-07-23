@@ -383,10 +383,6 @@ const ModernLanding = () => {
                 <div className="space-y-6">
                   <div className="text-center">
                     <h3 className="text-2xl font-semibold text-foreground mb-2 font-caesar">Get Started Today</h3>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-success/10 rounded-lg border border-success/20">
-                      <span className="text-2xl">✨</span>
-                      <span className="text-sm font-medium text-success">14-day free trial • No credit card required</span>
-                    </div>
                   </div>
 
                   {/* Google Sign Up */}
