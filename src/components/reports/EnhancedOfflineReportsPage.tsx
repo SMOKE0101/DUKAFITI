@@ -13,6 +13,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { toast } from 'sonner';
 import ModernSummaryCards from './ModernSummaryCards';
 import AlwaysCurrentPanels from './AlwaysCurrentPanels';
+import EnhancedSalesTrendChart from './EnhancedSalesTrendChart';
 
 const EnhancedOfflineReportsPage = () => {
   const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
@@ -199,6 +200,14 @@ const EnhancedOfflineReportsPage = () => {
             customers={customers}
             dateRange={dateRange}
           />
+        </div>
+
+        {/* Sales Trend Chart */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Sales Analytics
+          </h2>
+          <EnhancedSalesTrendChart sales={sales} />
         </div>
 
         {/* Always Current Data Panels */}
