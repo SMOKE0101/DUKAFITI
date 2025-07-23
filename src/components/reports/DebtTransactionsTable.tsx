@@ -9,6 +9,8 @@ import { Search, Download, ChevronLeft, ChevronRight, TrendingDown, TrendingUp }
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
 import { useSupabaseDebtPayments, DebtPayment } from '@/hooks/useSupabaseDebtPayments';
+import { useSupabaseTransactions } from '@/hooks/useSupabaseTransactions';
+import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
 
 interface DebtTransactionsTableProps {
   sales: Sale[];
@@ -22,7 +24,7 @@ interface DebtTransaction {
   customer: string;
   amount: number;
   paymentMethod: string;
-  transactionType: 'debt_created' | 'debt_payment';
+  transactionType: 'cash_lending' | 'debt_sale' | 'payment';
   timestamp: string;
   reference?: string;
 }
@@ -37,12 +39,33 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   const itemsPerPage = 10;
   
   const { debtPayments, loading: paymentsLoading } = useSupabaseDebtPayments();
+  const { transactions, loading: transactionsLoading } = useSupabaseTransactions();
+  const { customers, loading: customersLoading } = useSupabaseCustomers();
 
-  // Combine debt transactions from sales and payments
+  // Combine debt transactions from sales, transactions, and payments
   const allDebtTransactions = useMemo(() => {
-    const transactions: DebtTransaction[] = [];
+    const debtTransactionsList: DebtTransaction[] = [];
 
-    // Add debt from sales (when payment method includes debt)
+    // Add cash lending from transactions table (null itemId indicates cash lending)
+    transactions.forEach(transaction => {
+      // Cash lending transactions have null itemId and are unpaid debt
+      if (!transaction.itemId && !transaction.paid) {
+        const customer = customers.find(c => c.id === transaction.customerId);
+        const customerName = customer ? customer.name : 'Unknown Customer';
+        
+        debtTransactionsList.push({
+          id: `transaction-${transaction.id}`,
+          customer: customerName,
+          amount: transaction.totalAmount,
+          paymentMethod: 'cash', // Cash lending is typically cash
+          transactionType: 'cash_lending',
+          timestamp: transaction.date || new Date().toISOString(),
+          reference: transaction.notes
+        });
+      }
+    });
+
+    // Add debt sales from sales (when payment method includes debt)
     sales.forEach(sale => {
       const hasDebt = sale.paymentMethod === 'debt' || 
                      (sale.paymentMethod === 'partial' && sale.paymentDetails?.debtAmount > 0);
@@ -53,12 +76,12 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
           : (sale.paymentDetails?.debtAmount || 0);
         
         if (debtAmount > 0) {
-          transactions.push({
+          debtTransactionsList.push({
             id: `sale-${sale.id}`,
             customer: sale.customerName || 'Unknown Customer',
             amount: debtAmount,
             paymentMethod: sale.paymentMethod,
-            transactionType: 'debt_created',
+            transactionType: 'debt_sale',
             timestamp: sale.timestamp
           });
         }
@@ -67,19 +90,19 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
 
     // Add debt payments
     debtPayments.forEach(payment => {
-      transactions.push({
+      debtTransactionsList.push({
         id: `payment-${payment.id}`,
         customer: payment.customer_name,
         amount: payment.amount,
         paymentMethod: payment.payment_method,
-        transactionType: 'debt_payment',
+        transactionType: 'payment',
         timestamp: payment.timestamp,
         reference: payment.reference
       });
     });
 
-    return transactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [sales, debtPayments]);
+    return debtTransactionsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [sales, debtPayments, transactions, customers]);
 
   // Filter transactions based on timeframe
   const filteredTransactionsByTime = useMemo(() => {
@@ -132,23 +155,6 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
     setCurrentPage(1);
   }, [timeFrame, searchTerm]);
 
-  // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    const totalDebtCreated = filteredTransactions
-      .filter(t => t.transactionType === 'debt_created')
-      .reduce((sum, t) => sum + t.amount, 0);
-    
-    const totalDebtPayments = filteredTransactions
-      .filter(t => t.transactionType === 'debt_payment')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return {
-      totalDebtCreated,
-      totalDebtPayments,
-      netDebtChange: totalDebtCreated - totalDebtPayments,
-      totalTransactions: filteredTransactions.length
-    };
-  }, [filteredTransactions]);
 
   // Export to CSV
   const exportToCSV = () => {
@@ -158,7 +164,8 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
       transaction.customer,
       transaction.amount,
       transaction.paymentMethod,
-      transaction.transactionType === 'debt_created' ? 'Debt Created' : 'Debt Payment',
+      transaction.transactionType === 'cash_lending' ? 'Cash Lending' : 
+      transaction.transactionType === 'debt_sale' ? 'Debt Sale' : 'Payment',
       transaction.reference || ''
     ]);
 
@@ -178,20 +185,24 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   };
 
   const getTransactionTypeIcon = (type: string) => {
-    return type === 'debt_created' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />;
+    if (type === 'payment') return <TrendingDown className="h-4 w-4" />;
+    return <TrendingUp className="h-4 w-4" />;
   };
 
   const getTransactionTypeBadge = (type: string) => {
-    const isDebtCreated = type === 'debt_created';
+    const variant = type === 'payment' ? "secondary" : "destructive";
+    const label = type === 'cash_lending' ? 'Cash Lending' : 
+                  type === 'debt_sale' ? 'Debt Sale' : 'Payment';
+    
     return (
-      <Badge variant={isDebtCreated ? "destructive" : "secondary"} className="flex items-center gap-1">
+      <Badge variant={variant} className="flex items-center gap-1">
         {getTransactionTypeIcon(type)}
-        {isDebtCreated ? 'Debt Created' : 'Debt Payment'}
+        {label}
       </Badge>
     );
   };
 
-  const isLoading = loading || paymentsLoading;
+  const isLoading = loading || paymentsLoading || transactionsLoading || customersLoading;
 
   return (
     <Card className="w-full">
@@ -225,27 +236,6 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
           ))}
         </div>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Total Transactions</p>
-            <p className="text-lg font-semibold">{summaryStats.totalTransactions}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Debt Created</p>
-            <p className="text-lg font-semibold text-destructive">{formatCurrency(summaryStats.totalDebtCreated)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Debt Payments</p>
-            <p className="text-lg font-semibold text-secondary">{formatCurrency(summaryStats.totalDebtPayments)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Net Change</p>
-            <p className={`text-lg font-semibold ${summaryStats.netDebtChange >= 0 ? 'text-destructive' : 'text-secondary'}`}>
-              {formatCurrency(summaryStats.netDebtChange)}
-            </p>
-          </div>
-        </div>
 
         {/* Search */}
         <div className="relative">
