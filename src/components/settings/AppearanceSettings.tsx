@@ -23,24 +23,23 @@ const AppearanceSettings = () => {
     });
   }, [settings]);
 
-  const handleThemeToggle = async (isDark: boolean) => {
+  const handleThemeToggle = (isDark: boolean) => {
     const newTheme = isDark ? 'dark' : 'light';
-    console.log('Theme toggle changed to:', newTheme, 'Online:', isOnline);
+    console.log('Settings theme toggle - current theme:', formData.theme, 'new theme:', newTheme, 'Online:', isOnline);
     
     // Update local state immediately for instant UI feedback
     setFormData({ ...formData, theme: newTheme });
     
-    // Always update theme immediately (works offline)
+    // Always update theme immediately (works offline) - same as topbar
     setTheme(newTheme);
     
     // Only attempt to save to database when online
     if (isOnline) {
-      try {
-        await saveSettings({ theme: newTheme });
-      } catch (error) {
+      // Fire and forget - don't await to avoid blocking UI
+      saveSettings({ theme: newTheme }).catch(error => {
         console.error('Failed to save theme setting:', error);
         // Theme is already applied locally, so no need to revert
-      }
+      });
     } else {
       console.log('Offline: Theme change applied locally only');
     }
