@@ -89,12 +89,23 @@ export function AppSidebar() {
           "flex items-center gap-3 mb-8 px-2",
           isCollapsed && "justify-center"
         )}>
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">D</span>
+          <div className="relative w-10 h-10 flex-shrink-0">
+            {/* Light mode logo */}
+            <img 
+              src="/lovable-uploads/16db02b7-b050-4236-bbd9-7ded87ba3426.png"
+              alt="DukaFiti Logo"
+              className="w-full h-full object-contain dark:hidden"
+            />
+            {/* Dark mode logo */}
+            <img 
+              src="/lovable-uploads/4ad247ca-3e82-4376-bbb7-19edd9f311fd.png"
+              alt="DukaFiti Logo"
+              className="w-full h-full object-contain hidden dark:block"
+            />
           </div>
           {!isCollapsed && (
-            <div>
-              <h1 className="font-caesar font-bold text-lg text-foreground">DukaFiti</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="font-caesar font-bold text-lg text-foreground truncate">DukaFiti</h1>
             </div>
           )}
         </div>
