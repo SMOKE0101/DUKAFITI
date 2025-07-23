@@ -17,6 +17,7 @@ import EnhancedSalesTrendChart from './EnhancedSalesTrendChart';
 import OrdersBarChart from './OrdersBarChart';
 import SalesReportTable from './SalesReportTable';
 import ProductProfitsTable from './ProductProfitsTable';
+import DebtTransactionsTable from './DebtTransactionsTable';
 
 const EnhancedOfflineReportsPage = () => {
   const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
@@ -235,6 +236,14 @@ const EnhancedOfflineReportsPage = () => {
             Product Profits Report
           </h2>
           <ProductProfitsTable sales={sales} loading={isLoading} />
+        </div>
+
+        {/* Debt Transactions Table */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Debt Transactions Report
+          </h2>
+          <DebtTransactionsTable sales={sales} loading={isLoading} />
         </div>
 
         {/* Always Current Data Panels */}
