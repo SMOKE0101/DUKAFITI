@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ArrowRight, Check, Star, ChevronDown, Eye, EyeOff, Clock, Store, Menu, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Eye, EyeOff, Clock, Store, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -117,26 +117,6 @@ const ModernLanding = () => {
     }
   ];
 
-  const testimonials = [
-    {
-      name: "Grace Mutua",
-      role: "Shop Owner, Machakos",
-      content: "DukaFiti transformed my business completely. Sales tracking is so easy now!",
-      rating: 5
-    },
-    {
-      name: "James Kiprotich", 
-      role: "Electronics Store, Eldoret",
-      content: "The M-Pesa integration is perfect. My customers love the convenience.",
-      rating: 5
-    },
-    {
-      name: "Mary Wanjiru",
-      role: "General Store, Nakuru", 
-      content: "Best investment for my shop. Everything is organized and efficient now.",
-      rating: 5
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,12 +160,6 @@ const ModernLanding = () => {
                 className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
               >
                 Sign Up
-              </a>
-              <a 
-                href="#testimonials" 
-                className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap px-2 py-1"
-              >
-                Testimonies
               </a>
             </nav>
 
@@ -249,13 +223,6 @@ const ModernLanding = () => {
                 className="block text-muted-foreground hover:text-foreground transition-colors py-2"
               >
                 Sign Up
-              </a>
-              <a 
-                href="#testimonials"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-muted-foreground hover:text-foreground transition-colors py-2"
-              >
-                Testimonies
               </a>
               <div className="pt-4 border-t border-border space-y-3">
                 <Button asChild variant="outline" className="w-full">
@@ -576,32 +543,6 @@ const ModernLanding = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section id="testimonials" className="py-20 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-foreground mb-4 font-caesar">What Our Customers Say</h2>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-6 bg-background border border-border">
-                <div className="flex items-center mb-4">
-                  {Array.from({ length: testimonial.rating }).map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-muted-foreground mb-4">"{testimonial.content}"</p>
-                <div>
-                  <div className="font-semibold text-foreground">{testimonial.name}</div>
-                  <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                </div>
-              </Card>
-            ))}
           </div>
         </div>
       </section>
