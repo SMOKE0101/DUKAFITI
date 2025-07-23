@@ -35,7 +35,19 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
   const { addPendingOperation } = useCacheManager();
 
   const handleSavePayment = async () => {
+    console.log('[RepaymentDrawer] Starting payment recording process');
+    console.log('[RepaymentDrawer] Network status:', { isOnline });
+    console.log('[RepaymentDrawer] Customer:', customer?.name, customer?.id);
+    console.log('[RepaymentDrawer] Payment details:', { amount, method, reference });
+    console.log('[RepaymentDrawer] User:', user?.id);
+
     if (!customer || !amount || parseFloat(amount) <= 0 || !user) {
+      console.error('[RepaymentDrawer] Validation failed:', {
+        hasCustomer: !!customer,
+        hasAmount: !!amount,
+        amountValid: amount ? parseFloat(amount) > 0 : false,
+        hasUser: !!user
+      });
       toast({
         title: "Error",
         description: "Please enter a valid payment amount.",
@@ -45,10 +57,18 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
     }
 
     setIsSubmitting(true);
+    
     try {
       const paymentAmount = parseFloat(amount);
       const newBalance = Math.max(0, customer.outstandingDebt - paymentAmount);
       const timestamp = new Date().toISOString();
+      
+      console.log('[RepaymentDrawer] Processed payment data:', {
+        paymentAmount,
+        newBalance,
+        timestamp,
+        networkStatus: isOnline
+      });
       
       if (isOnline) {
         // Online mode - direct database operations
@@ -86,9 +106,17 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
         }
       } else {
         // Offline mode - queue operations and update local state
-        console.log('[RepaymentDrawer] Offline mode - queuing payment operation');
+        console.log('[RepaymentDrawer] Entering offline mode processing');
+        
+        // Validate addPendingOperation function exists
+        if (typeof addPendingOperation !== 'function') {
+          console.error('[RepaymentDrawer] addPendingOperation is not a function:', typeof addPendingOperation);
+          throw new Error('Offline functionality not available');
+        }
         
         try {
+          console.log('[RepaymentDrawer] Queuing debt payment operation...');
+          
           // Queue debt payment creation
           addPendingOperation({
             type: 'debt_payment',
@@ -104,6 +132,9 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
             }
           });
 
+          console.log('[RepaymentDrawer] Debt payment operation queued successfully');
+          console.log('[RepaymentDrawer] Queuing customer update operation...');
+
           // Queue customer balance update
           addPendingOperation({
             type: 'customer',
@@ -117,12 +148,20 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
             }
           });
 
-          console.log('[RepaymentDrawer] Successfully queued offline operations');
+          console.log('[RepaymentDrawer] Customer update operation queued successfully');
+          console.log('[RepaymentDrawer] All offline operations queued successfully');
         } catch (queueError) {
           console.error('[RepaymentDrawer] Error queuing offline operations:', queueError);
-          throw new Error('Failed to save payment offline.');
+          console.error('[RepaymentDrawer] Queue error details:', {
+            error: queueError,
+            stack: queueError instanceof Error ? queueError.stack : 'No stack trace',
+            addPendingOperationType: typeof addPendingOperation
+          });
+          throw new Error(`Failed to save payment offline: ${queueError instanceof Error ? queueError.message : 'Unknown error'}`);
         }
       }
+
+      console.log('[RepaymentDrawer] Payment processing completed successfully');
 
       // Reset form
       setAmount('');
@@ -138,13 +177,22 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
 
       onClose();
     } catch (error) {
-      console.error('Failed to record payment:', error);
+      console.error('[RepaymentDrawer] Payment recording failed:', error);
+      console.error('[RepaymentDrawer] Error details:', {
+        error,
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        networkStatus: isOnline,
+        customerData: customer ? { id: customer.id, name: customer.name } : null,
+        paymentData: { amount, method, reference }
+      });
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to record payment. Please try again.",
         variant: "destructive",
       });
     } finally {
+      console.log('[RepaymentDrawer] Setting isSubmitting to false');
       setIsSubmitting(false);
     }
   };

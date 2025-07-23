@@ -79,17 +79,23 @@ export const useCacheManager = () => {
   }, []);
 
   const addPendingOperation = useCallback((operation: Omit<PendingOperation, 'id' | 'timestamp' | 'attempts' | 'maxAttempts'>): void => {
-    const operationWithId: PendingOperation = {
-      ...operation,
-      id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date().toISOString(),
-      attempts: 0,
-      maxAttempts: 3
-    };
+    console.log('[CacheManager] addPendingOperation called with:', operation);
+    
+    try {
+      const operationWithId: PendingOperation = {
+        ...operation,
+        id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        attempts: 0,
+        maxAttempts: 3
+      };
 
-    console.log('[CacheManager] Adding pending operation:', operationWithId.id, operationWithId.type, operationWithId.operation);
+      console.log('[CacheManager] Created operation with ID:', operationWithId.id);
+      console.log('[CacheManager] Full operation data:', operationWithId);
 
     setPendingOps(prev => {
+      console.log('[CacheManager] Current pending operations before update:', prev.length);
+      
       let filteredOps = [...prev];
       
       // Enhanced deduplication logic
@@ -145,6 +151,12 @@ export const useCacheManager = () => {
       console.log(`[CacheManager] Added pending operation. Total: ${newOps.length}`);
       return newOps;
     });
+    
+    console.log('[CacheManager] addPendingOperation completed successfully');
+    } catch (error) {
+      console.error('[CacheManager] Error in addPendingOperation:', error);
+      throw error;
+    }
   }, []);
 
   const clearPendingOperation = useCallback((operationId: string): void => {
