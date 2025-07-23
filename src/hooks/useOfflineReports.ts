@@ -21,10 +21,12 @@ export const useOfflineReports = () => {
   const { isOnline } = useNetworkStatus();
   const [cachedSnapshot, setCachedSnapshot] = useState<ReportsSnapshot | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [isLoadingCache, setIsLoadingCache] = useState(true);
 
-  // Load cached snapshot from IndexedDB
+  // Load cached snapshot from localStorage
   const loadCachedSnapshot = useCallback(async () => {
     try {
+      setIsLoadingCache(true);
       const cached = localStorage.getItem('reports_snapshot');
       if (cached) {
         const snapshot = JSON.parse(cached);
@@ -34,24 +36,73 @@ export const useOfflineReports = () => {
       }
     } catch (error) {
       console.error('[OfflineReports] Failed to load cached snapshot:', error);
+    } finally {
+      setIsLoadingCache(false);
     }
   }, []);
 
-  // Cache reports snapshot
+  // Cache reports snapshot with comprehensive metrics
   const cacheSnapshot = useCallback(async (
     sales: Sale[], 
     products: Product[], 
-    customers: Customer[],
-    metrics: any,
-    chartData: any[]
+    customers: Customer[]
   ) => {
     try {
+      // Calculate comprehensive metrics
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      const todaySales = sales.filter(sale => {
+        const saleDate = new Date(sale.timestamp);
+        return saleDate >= todayStart;
+      });
+
+      const totalRevenue = todaySales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
+      const totalOrders = todaySales.length;
+      
+      const activeCustomers = new Set(
+        todaySales.map(sale => sale.customerId).filter(id => id && id.trim() !== '')
+      ).size;
+      
+      const lowStockProducts = products.filter(product => {
+        const currentStock = Number(product.currentStock) || 0;
+        const threshold = Number(product.lowStockThreshold) || 10;
+        return currentStock >= 0 && currentStock <= threshold;
+      }).length;
+
+      // Generate chart data for the last 7 days
+      const chartData = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        
+        const daySales = sales.filter(sale => {
+          const saleDate = new Date(sale.timestamp);
+          return saleDate >= dayStart && saleDate < dayEnd;
+        });
+        
+        const dayRevenue = daySales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
+        
+        chartData.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          revenue: dayRevenue,
+          orders: daySales.length
+        });
+      }
+      
       const snapshot: ReportsSnapshot = {
         timestamp: new Date().toISOString(),
         sales,
         products,
         customers,
-        metrics,
+        metrics: {
+          totalRevenue,
+          totalOrders,
+          activeCustomers,
+          lowStockProducts
+        },
         chartData
       };
       
@@ -74,6 +125,7 @@ export const useOfflineReports = () => {
     cachedSnapshot,
     lastSyncedAt,
     cacheSnapshot,
+    isLoadingCache,
     readOnly: !isOnline
   };
 };
