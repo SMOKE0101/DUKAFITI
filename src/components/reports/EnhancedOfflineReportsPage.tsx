@@ -100,7 +100,7 @@ const EnhancedOfflineReportsPage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
               {Array.from({ length: 7 }).map((_, i) => (
                 <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
               ))}
@@ -132,18 +132,31 @@ const EnhancedOfflineReportsPage = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Timeframe Selector */}
-              <Select value={timeframe} onValueChange={(value: any) => setTimeframe(value)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Select timeframe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                  <SelectItem value="quarter">This Quarter</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Timeframe Selector - Button Style */}
+              <div className="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 shadow-sm">
+                {[
+                  { value: 'today', label: 'Today' },
+                  { value: 'week', label: 'This Week' },
+                  { value: 'month', label: 'This Month' },
+                  { value: 'quarter', label: 'This Quarter' }
+                ].map((option) => (
+                  <Button
+                    key={option.value}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTimeframe(option.value as any)}
+                    className={`
+                      text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                      ${timeframe === option.value
+                        ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                      }
+                    `}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
 
               <Button
                 variant="outline"
