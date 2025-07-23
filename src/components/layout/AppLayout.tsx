@@ -5,17 +5,75 @@ import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
 import { BottomNavigation } from './BottomNavigation';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { Moon, Sun, RefreshCw } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
+import UserMenu from '../UserMenu';
+import CubeLogo from '../branding/CubeLogo';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-// Mobile TopBar without sidebar trigger
+// Mobile TopBar with full desktop features
 const MobileTopBar: React.FC = () => {
+  const { theme, setTheme } = useTheme();
+  const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
+
+  const handleSync = () => {
+    if (isOnline) {
+      syncPendingOperations();
+    }
+  };
+
+  const handleThemeToggle = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
-      <div className="flex h-16 items-center justify-center px-6">
-        <h1 className="text-lg font-semibold">DukaFiti</h1>
+      <div className="flex h-16 items-center justify-between px-4">
+        {/* Logo and Brand */}
+        <div className="flex items-center gap-3">
+          <CubeLogo size="sm" />
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent" 
+              style={{ fontFamily: 'Caesar Dressing, cursive' }}>
+            DukaFiti
+          </h1>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {/* Sync Button */}
+          {pendingOperations > 0 && isOnline && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSync}
+              className="gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          )}
+
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleThemeToggle}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4" />
+            ) : (
+              <Moon className="w-4 h-4" />
+            )}
+          </Button>
+
+          {/* User Menu */}
+          <UserMenu />
+        </div>
       </div>
     </header>
   );
