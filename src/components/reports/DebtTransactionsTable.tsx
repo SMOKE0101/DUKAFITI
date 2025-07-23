@@ -195,7 +195,14 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
                   type === 'debt_sale' ? 'Debt Sale' : 'Payment';
     
     return (
-      <Badge variant={variant} className="flex items-center gap-1">
+      <Badge 
+        variant={variant} 
+        className={`flex items-center gap-1 ${
+          type === 'payment' 
+            ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-300' 
+            : ''
+        }`}
+      >
         {getTransactionTypeIcon(type)}
         {label}
       </Badge>

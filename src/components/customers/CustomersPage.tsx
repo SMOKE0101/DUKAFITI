@@ -13,6 +13,8 @@ import CustomerCard from './CustomerCard';
 import CustomerFormModal from './CustomerFormModal';
 import PaymentModal from './PaymentModal';
 import DeleteCustomerModal from './DeleteCustomerModal';
+import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
+import { useAuth } from '../../hooks/useAuth';
 
 const CustomersPage = () => {
   const { 
@@ -24,6 +26,8 @@ const CustomersPage = () => {
     isOnline, 
     pendingOperations 
   } = useUnifiedCustomers();
+  const { createDebtPayment } = useSupabaseDebtPayments();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,6 +135,17 @@ const CustomersPage = () => {
     try {
       // Calculate new outstanding debt
       const newOutstandingDebt = Math.max(0, selectedCustomer.outstandingDebt - paymentData.amount);
+      
+      // Create debt payment record
+      await createDebtPayment({
+        user_id: user?.id || '',
+        customer_id: selectedCustomer.id,
+        customer_name: selectedCustomer.name,
+        amount: paymentData.amount,
+        payment_method: paymentData.method,
+        reference: paymentData.notes || undefined,
+        timestamp: new Date().toISOString(),
+      });
       
       // Update customer with new debt amount
       await updateCustomer(selectedCustomer.id, {
