@@ -21,7 +21,14 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
 }) => {
   const lowStockProducts = React.useMemo(() => {
     return products
-      .filter(product => (product.currentStock || 0) <= (product.lowStockThreshold || 10))
+      .filter(product => {
+        // Only consider products with valid stock quantities
+        const hasValidStock = product.currentStock !== null && product.currentStock !== undefined;
+        if (!hasValidStock) return false;
+        
+        const threshold = product.lowStockThreshold || 10;
+        return product.currentStock <= threshold;
+      })
       .sort((a, b) => (a.currentStock || 0) - (b.currentStock || 0))
       .slice(0, 10);
   }, [products]);
@@ -37,14 +44,14 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {Array.from({ length: 2 }).map((_, index) => (
-          <Card key={index} className="border-0 shadow-lg animate-pulse">
+          <Card key={index} className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl animate-pulse">
             <CardHeader>
-              <div className="h-6 bg-muted rounded w-40"></div>
+              <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-40"></div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-16 bg-muted rounded"></div>
+                  <div key={i} className="h-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
                 ))}
               </div>
             </CardContent>
@@ -57,17 +64,17 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Low Stock Products */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20">
+      <Card className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl">
-              <AlertTriangle className="w-5 h-5 text-white" />
+            <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-xl">
+              <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <CardTitle className="text-lg font-black text-foreground">
+              <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
                 Low Stock Alert
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Products running low (current stock levels)
               </p>
             </div>
@@ -80,25 +87,25 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
                 {lowStockProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-800/50 rounded-xl border border-orange-200 dark:border-orange-800"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
                   >
                     <div className="flex items-center gap-3">
-                      <Package className="w-4 h-4 text-orange-600" />
+                      <Package className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                       <div>
-                        <p className="font-bold text-foreground text-sm">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">
                           {product.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           Threshold: {product.lowStockThreshold || 10}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <Badge
-                        variant={(product.currentStock || 0) <= 0 ? "destructive" : "secondary"}
-                        className="font-bold"
+                        variant={product.currentStock <= 0 ? "destructive" : "secondary"}
+                        className="font-medium"
                       >
-                        {product.currentStock || 0} left
+                        {product.currentStock} left
                       </Badge>
                     </div>
                   </div>
@@ -109,7 +116,7 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
                 <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-xl inline-block mb-3">
                   <Package className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
-                <p className="text-sm font-bold text-muted-foreground">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   All products are well stocked! 🎉
                 </p>
               </div>
@@ -119,17 +126,17 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
       </Card>
 
       {/* Outstanding Debts */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20">
+      <Card className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl">
-              <CreditCard className="w-5 h-5 text-white" />
+            <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-xl">
+              <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <CardTitle className="text-lg font-black text-foreground">
+              <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
                 Outstanding Debts
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Customers with pending payments
               </p>
             </div>
@@ -142,31 +149,31 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
                 {outstandingDebts.map((customer) => (
                   <div
                     key={customer.id}
-                    className="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-800/50 rounded-xl border border-red-200 dark:border-red-800"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
                   >
                     <div className="flex items-center gap-3">
-                      <Users className="w-4 h-4 text-red-600" />
+                      <Users className="w-4 h-4 text-red-600 dark:text-red-400" />
                       <div>
-                        <p className="font-bold text-foreground text-sm">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">
                           {customer.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {customer.phone}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge variant="destructive" className="font-bold">
+                      <Badge variant="destructive" className="font-medium">
                         {formatCurrency(customer.outstandingDebt || 0)}
                       </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Risk: {customer.riskRating}
                       </p>
                     </div>
                   </div>
                 ))}
-                <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/20 rounded-xl">
-                  <p className="text-sm font-bold text-red-700 dark:text-red-400">
+                <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-400">
                     Total Outstanding: {formatCurrency(outstandingDebts.reduce((sum, customer) => sum + (customer.outstandingDebt || 0), 0))}
                   </p>
                 </div>
@@ -176,7 +183,7 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
                 <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-xl inline-block mb-3">
                   <CreditCard className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
-                <p className="text-sm font-bold text-muted-foreground">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   No outstanding debts! 💚
                 </p>
               </div>
