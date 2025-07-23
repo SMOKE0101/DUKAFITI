@@ -4,7 +4,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Bell, 
+   
   Moon, 
   Sun, 
   RefreshCw,
@@ -77,13 +77,6 @@ export function TopBar() {
             </Button>
           )}
 
-          {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="w-4 h-4" />
-            {pendingOperations > 0 && (
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-            )}
-          </Button>
 
           {/* Theme Toggle */}
           <Button

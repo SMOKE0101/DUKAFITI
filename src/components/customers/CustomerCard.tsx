@@ -69,7 +69,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg">{customer.name}</CardTitle>
+              <CardTitle className="text-lg text-foreground">{customer.name}</CardTitle>
               <Badge className={`text-xs ${getRiskBadgeColor(customer.riskRating)}`}>
                 {customer.riskRating} risk
               </Badge>
