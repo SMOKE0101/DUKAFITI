@@ -2,14 +2,10 @@
 import React from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
-   
   Moon, 
   Sun, 
-  RefreshCw,
-  Wifi,
-  WifiOff
+  RefreshCw
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
@@ -37,27 +33,6 @@ export function TopBar() {
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-          
-          {/* Network Status */}
-          <div className="flex items-center gap-2">
-            {isOnline ? (
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                <Wifi className="w-4 h-4" />
-                <span className="text-sm font-medium hidden md:inline">Online</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                <WifiOff className="w-4 h-4" />
-                <span className="text-sm font-medium hidden md:inline">Offline</span>
-              </div>
-            )}
-            
-            {pendingOperations > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {pendingOperations} pending
-              </Badge>
-            )}
-          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -76,7 +51,6 @@ export function TopBar() {
               </span>
             </Button>
           )}
-
 
           {/* Theme Toggle */}
           <Button
