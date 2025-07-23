@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,6 +47,10 @@ const OptimizedModernSalesPage = () => {
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
   const isMobile = useIsMobile();
 
+  // Scroll position preservation
+  const productListRef = useRef<HTMLDivElement>(null);
+  const savedScrollPosition = useRef<number>(0);
+
   const { products, loading: productsLoading } = useUnifiedProducts();
   const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
   const { sales } = useUnifiedSales();
@@ -91,6 +95,11 @@ const OptimizedModernSalesPage = () => {
   }, [products, searchTerm, selectedCategory, productSalesFrequency]);
 
   const addToCart = useCallback((product: any) => {
+    // Save current scroll position before state update
+    if (productListRef.current) {
+      savedScrollPosition.current = productListRef.current.scrollTop;
+    }
+
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       const isUnspecifiedQuantity = product.currentStock === -1;
@@ -130,6 +139,18 @@ const OptimizedModernSalesPage = () => {
     //   setActivePanel('cart');
     // }
   }, [toast]);
+
+  // Restore scroll position after cart updates
+  useEffect(() => {
+    if (productListRef.current && savedScrollPosition.current > 0) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (productListRef.current) {
+          productListRef.current.scrollTop = savedScrollPosition.current;
+        }
+      });
+    }
+  }, [cart]);
 
   const updateQuantity = useCallback((productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -277,7 +298,7 @@ const OptimizedModernSalesPage = () => {
       </Card>
 
       {/* Products Grid */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={productListRef} className="flex-1 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
           {/* Record Debt Card - First Card */}
           <Card 
