@@ -26,6 +26,9 @@ const AlwaysCurrentPanels: React.FC<AlwaysCurrentPanelsProps> = ({
         const hasValidStock = product.currentStock !== null && product.currentStock !== undefined;
         if (!hasValidStock) return false;
         
+        // Exclude products with unspecified quantities (negative values like -1)
+        if (product.currentStock < 0) return false;
+        
         const threshold = product.lowStockThreshold || 10;
         return product.currentStock <= threshold;
       })
