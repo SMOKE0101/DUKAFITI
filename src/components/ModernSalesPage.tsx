@@ -203,10 +203,10 @@ const ModernSalesPage = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-foreground">
             Sales Management
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <p className="text-muted-foreground mt-1">
             Record and track your sales transactions
           </p>
         </div>
@@ -314,34 +314,34 @@ const ModernSalesPage = () => {
                 </div>
 
                 {selectedProduct && (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-2">
-                    <h4 className="font-medium">Sale Summary</h4>
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-2 border border-border">
+                    <h4 className="font-medium text-foreground">Sale Summary</h4>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-slate-600 dark:text-slate-400">Unit Price:</span>
-                        <span className="ml-2 font-medium">KSh {selectedProduct.sellingPrice.toLocaleString()}</span>
+                        <span className="text-muted-foreground">Unit Price:</span>
+                        <span className="ml-2 font-medium text-foreground">KSh {selectedProduct.sellingPrice.toLocaleString()}</span>
                       </div>
                       <div>
-                        <span className="text-slate-600 dark:text-slate-400">Quantity:</span>
-                        <span className="ml-2 font-medium">{formData.quantity}</span>
+                        <span className="text-muted-foreground">Quantity:</span>
+                        <span className="ml-2 font-medium text-foreground">{formData.quantity}</span>
                       </div>
                       <div>
-                        <span className="text-slate-600 dark:text-slate-400">Total Amount:</span>
-                        <span className="ml-2 font-medium">KSh {totalAmount.toLocaleString()}</span>
+                        <span className="text-muted-foreground">Total Amount:</span>
+                        <span className="ml-2 font-medium text-foreground">KSh {totalAmount.toLocaleString()}</span>
                       </div>
                       <div>
-                        <span className="text-slate-600 dark:text-slate-400">Profit:</span>
-                        <span className="ml-2 font-medium text-green-600">KSh {profit.toLocaleString()}</span>
+                        <span className="text-muted-foreground">Profit:</span>
+                        <span className="ml-2 font-medium text-green-600 dark:text-green-400">KSh {profit.toLocaleString()}</span>
                       </div>
                       {formData.paymentMethod === 'debt' && selectedCustomer && (
                         <>
                           <div>
-                            <span className="text-slate-600 dark:text-slate-400">Current Debt:</span>
-                            <span className="ml-2 font-medium">KSh {selectedCustomer.outstandingDebt.toLocaleString()}</span>
+                            <span className="text-muted-foreground">Current Debt:</span>
+                            <span className="ml-2 font-medium text-foreground">KSh {selectedCustomer.outstandingDebt.toLocaleString()}</span>
                           </div>
                           <div>
-                            <span className="text-slate-600 dark:text-slate-400">New Debt:</span>
-                            <span className="ml-2 font-medium text-orange-600">KSh {(selectedCustomer.outstandingDebt + totalAmount).toLocaleString()}</span>
+                            <span className="text-muted-foreground">New Debt:</span>
+                            <span className="ml-2 font-medium text-orange-600 dark:text-orange-400">KSh {(selectedCustomer.outstandingDebt + totalAmount).toLocaleString()}</span>
                           </div>
                         </>
                       )}
@@ -414,16 +414,16 @@ const ModernSalesPage = () => {
         <CardContent>
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-slate-600 dark:text-slate-400">Loading sales...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-muted-foreground">Loading sales...</p>
             </div>
           ) : sales.length === 0 ? (
             <div className="text-center py-8">
-              <ShoppingCart className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+              <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 No sales recorded yet
               </h3>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-muted-foreground">
                 Start by recording your first sale
               </p>
             </div>

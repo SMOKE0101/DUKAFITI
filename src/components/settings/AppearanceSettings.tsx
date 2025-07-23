@@ -34,8 +34,8 @@ const AppearanceSettings = () => {
     return (
       <div className="space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-muted rounded w-1/4"></div>
+          <div className="h-10 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -45,28 +45,30 @@ const AppearanceSettings = () => {
     <div className="space-y-6">
       {/* Theme Toggle Section */}
       <div className="space-y-4">
-        <Label className="block text-sm font-medium text-gray-700">
+        <Label className="block text-sm font-medium text-foreground">
           Theme Preference
         </Label>
         
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
           <div className="flex items-center gap-3">
             <Sun className="w-5 h-5 text-amber-500" />
-            <span className={`text-sm font-medium transition-colors ${formData.theme === 'light' ? 'text-purple-600' : 'text-gray-600'}`}>
+            <span className={`text-sm font-medium transition-colors ${formData.theme === 'light' ? 'text-primary' : 'text-muted-foreground'}`}>
               Light Mode
             </span>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Switch
               checked={formData.theme === 'dark'}
               onCheckedChange={handleThemeToggle}
-              className="data-[state=checked]:bg-purple-600 focus:ring-purple-300"
+              className="data-[state=checked]:bg-primary focus:ring-ring"
             />
-            <span className={`text-sm font-medium transition-colors ${formData.theme === 'dark' ? 'text-purple-600' : 'text-gray-600'}`}>
-              Dark Mode
-            </span>
-            <Moon className="w-5 h-5 text-indigo-500" />
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-medium transition-colors ${formData.theme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`}>
+                Dark Mode
+              </span>
+              <Moon className="w-5 h-5 text-indigo-500" />
+            </div>
           </div>
         </div>
       </div>

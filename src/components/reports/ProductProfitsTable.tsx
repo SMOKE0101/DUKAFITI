@@ -134,10 +134,10 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6">
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
+            <div key={i} className="h-12 bg-muted rounded animate-pulse" />
           ))}
         </div>
       </div>
@@ -145,13 +145,13 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-card rounded-lg shadow-sm border border-border">
       {/* Header with controls */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-border">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
             {/* Time frame selector */}
-            <div className="flex rounded-lg bg-gray-100 p-1">
+            <div className="flex rounded-lg bg-muted p-1">
               <button
                 onClick={() => {
                   setTimeFrame('today');
@@ -159,8 +159,8 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   timeFrame === 'today'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Today
@@ -172,8 +172,8 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   timeFrame === 'week'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 This Week
@@ -185,8 +185,8 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   timeFrame === 'month'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 This Month
@@ -197,7 +197,7 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
           <div className="flex items-center gap-4">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search products..."
                 value={searchTerm}
@@ -212,7 +212,7 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
             {/* Export CSV button */}
             <Button 
               onClick={exportToCSV}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-700 dark:hover:bg-emerald-800"
             >
               <Download className="h-4 w-4" />
               Download CSV
@@ -225,17 +225,17 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-gray-200">
-              <TableHead className="font-semibold text-gray-900 uppercase tracking-wider text-left py-4 px-6">
+            <TableRow className="border-b border-border">
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
                 PRODUCT
               </TableHead>
-              <TableHead className="font-semibold text-gray-900 uppercase tracking-wider text-center py-4 px-6">
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
                 QUANTITY SOLD
               </TableHead>
-              <TableHead className="font-semibold text-gray-900 uppercase tracking-wider text-center py-4 px-6">
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
                 SALES AMOUNT
               </TableHead>
-              <TableHead className="font-semibold text-gray-900 uppercase tracking-wider text-center py-4 px-6">
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
                 PROFIT
               </TableHead>
             </TableRow>
@@ -243,23 +243,23 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
           <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? 'No products found matching your search' : `No products found for ${getTimeFrameLabel().toLowerCase()}`}
                 </TableCell>
               </TableRow>
             ) : (
               paginatedData.map((product, index) => (
-                <TableRow key={`${product.productName}-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
-                  <TableCell className="py-4 px-6 font-medium text-gray-900">
+                <TableRow key={`${product.productName}-${index}`} className="border-b border-border hover:bg-muted/50">
+                  <TableCell className="py-4 px-6 font-medium text-card-foreground">
                     {product.productName}
                   </TableCell>
-                  <TableCell className="py-4 px-6 text-center font-medium text-gray-900">
+                  <TableCell className="py-4 px-6 text-center font-medium text-card-foreground">
                     {product.quantitySold}
                   </TableCell>
-                  <TableCell className="py-4 px-6 text-center font-medium text-blue-600">
+                  <TableCell className="py-4 px-6 text-center font-medium text-blue-600 dark:text-blue-400">
                     {formatCurrency(product.salesAmount)}
                   </TableCell>
-                  <TableCell className="py-4 px-6 text-center font-medium text-emerald-600">
+                  <TableCell className="py-4 px-6 text-center font-medium text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(product.profit)}
                   </TableCell>
                 </TableRow>
@@ -271,8 +271,8 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-500">
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
             Showing {searchedData.length} products for <span className="font-medium">{getTimeFrameLabel()}</span>
           </div>
           <div className="flex gap-2">
@@ -284,7 +284,7 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
             >
               Previous
             </Button>
-            <span className="px-3 py-1 text-sm text-gray-700">
+            <span className="px-3 py-1 text-sm text-foreground">
               Page {currentPage} of {totalPages}
             </span>
             <Button

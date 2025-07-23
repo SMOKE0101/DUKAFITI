@@ -176,39 +176,39 @@ const CustomersPage = () => {
 
   return (
     <TooltipWrapper>
-      <div className="min-h-screen bg-[#F4F6F8] font-['Inter']">
+      <div className="min-h-screen bg-background font-['Inter']">
         <div className="container mx-auto px-6 py-8 space-y-8">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 font-['Inter']">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground font-['Inter']">
                 Customer Management
               </h1>
-              <p className="text-base text-gray-700 mt-2 font-['Inter']">
+              <p className="text-base text-muted-foreground mt-2 font-['Inter']">
                 Manage your customer relationships and credit limits
               </p>
             </div>
 
             <div className="flex items-center gap-4">
               {pendingOperations > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-full">
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-amber-700">
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
                     {pendingOperations} pending sync
                   </span>
                 </div>
               )}
               {!isOnline && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-full">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-full">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-red-700">
+                  <span className="text-sm font-medium text-red-700 dark:text-red-300">
                     Working Offline
                   </span>
                 </div>
               )}
               <Button 
                 onClick={handleAddCustomer}
-                className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 font-['Inter']"
+                className="px-5 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 font-['Inter']"
               >
                 <Plus className="w-5 h-5 mr-2" strokeWidth={2} />
                 Add Customer
@@ -218,40 +218,40 @@ const CustomersPage = () => {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center mr-4">
-                <Users className="w-6 h-6 text-purple-600" strokeWidth={1.5} />
+            <Card className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
+              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mr-4">
+                <Users className="w-6 h-6 text-primary" strokeWidth={1.5} />
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900 font-['Inter']">{totalCustomers}</div>
-                <div className="text-base text-gray-700 font-['Inter']">Total Customers</div>
+                <div className="text-3xl font-bold text-card-foreground font-['Inter']">{totalCustomers}</div>
+                <div className="text-base text-muted-foreground font-['Inter']">Total Customers</div>
               </div>
             </Card>
 
-            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mr-4">
-                <DollarSign className="w-6 h-6 text-red-600" strokeWidth={1.5} />
+            <Card className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
+              <div className="w-12 h-12 bg-destructive/10 rounded-2xl flex items-center justify-center mr-4">
+                <DollarSign className="w-6 h-6 text-destructive" strokeWidth={1.5} />
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900 font-['Inter']">
+                <div className="text-3xl font-bold text-card-foreground font-['Inter']">
                   {formatCurrency(totalOutstandingDebt)}
                 </div>
-                <div className="text-base text-gray-700 font-['Inter']">Outstanding Debt</div>
+                <div className="text-base text-muted-foreground font-['Inter']">Outstanding Debt</div>
               </div>
             </Card>
           </div>
 
           {/* Search Bar */}
-          <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm">
+          <Card className="bg-card rounded-3xl border border-border shadow-sm">
             <CardContent className="p-6">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" strokeWidth={1.5} />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" strokeWidth={1.5} />
                 <Input
                   type="search"
                   placeholder="Search customers by name, phone, or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-100 rounded-xl pl-12 pr-4 py-4 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 border-0 text-base font-['Inter']"
+                  className="w-full bg-muted rounded-xl pl-12 pr-4 py-4 placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring border-0 text-base font-['Inter']"
                 />
               </div>
             </CardContent>
@@ -260,21 +260,21 @@ const CustomersPage = () => {
           {/* Customer List */}
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="mt-4 text-base text-gray-700 font-['Inter']">Loading customers...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-base text-muted-foreground font-['Inter']">Loading customers...</p>
             </div>
           ) : filteredCustomers.length === 0 ? (
-            <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm">
+            <Card className="bg-card rounded-3xl border border-border shadow-sm">
               <CardContent className="text-center py-12">
-                <User className="mx-auto h-12 w-12 text-gray-400 mb-4" strokeWidth={1.5} />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2 font-['Inter']">
+                <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" strokeWidth={1.5} />
+                <h3 className="text-xl font-semibold text-card-foreground mb-2 font-['Inter']">
                   {searchQuery ? 'No customers found' : 'No customers yet'}
                 </h3>
-                <p className="text-base text-gray-700 font-['Inter']">
+                <p className="text-base text-muted-foreground font-['Inter']">
                   {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={handleAddCustomer} className="mt-6 bg-purple-600 hover:bg-purple-700 font-['Inter']">
+                  <Button onClick={handleAddCustomer} className="mt-6 bg-primary hover:bg-primary/90 font-['Inter']">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Customer
                   </Button>

@@ -245,22 +245,22 @@ const OptimizedModernSalesPage = () => {
   const SearchPanel = () => (
     <div className="flex flex-col h-full">
       {/* Search and Filters */}
-      <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm mb-6">
+      <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search products by name or category…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all"
+                className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
               />
             </div>
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-48 bg-gray-100 border-0 rounded-xl py-4 focus:ring-2 focus:ring-purple-300">
+              <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
@@ -281,7 +281,7 @@ const OptimizedModernSalesPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
           {/* Record Debt Card - First Card */}
           <Card 
-            className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
+            className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
             onClick={handleAddDebt}
           >
             <CardContent className="p-6 text-center">
@@ -291,8 +291,8 @@ const OptimizedModernSalesPage = () => {
                 </div>
               </div>
               
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Record Debt</h3>
-              <p className="text-sm text-gray-500 mb-4">Add customer debt transaction</p>
+              <h3 className="text-lg font-semibold text-card-foreground mb-2">Record Debt</h3>
+              <p className="text-sm text-muted-foreground mb-4">Add customer debt transaction</p>
               
               <div className="flex justify-center">
                 <div className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-2 transition-colors">
@@ -305,18 +305,18 @@ const OptimizedModernSalesPage = () => {
           {/* Product Cards */}
           {productsLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
-              <Card key={index} className="bg-white rounded-3xl border border-gray-200 shadow-sm animate-pulse">
+              <Card key={index} className="bg-card rounded-3xl border border-border shadow-sm animate-pulse">
                 <CardContent className="p-6">
-                  <div className="w-full h-24 bg-gray-200 rounded-lg mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3 mb-4"></div>
-                  <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                  <div className="w-full h-24 bg-muted rounded-lg mb-4"></div>
+                  <div className="h-4 bg-muted rounded mb-2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3 mb-4"></div>
+                  <div className="h-6 bg-muted rounded w-1/2"></div>
                 </CardContent>
               </Card>
             ))
           ) : filteredProducts.length === 0 ? (
             <div className="col-span-full text-center py-12">
-              <div className="text-gray-400 mb-2">
+              <div className="text-muted-foreground mb-2">
                 <Search className="w-12 h-12 mx-auto mb-3" />
                 <p className="text-lg font-medium">No products found</p>
                 <p className="text-sm">Try adjusting your search or filters</p>
@@ -326,14 +326,14 @@ const OptimizedModernSalesPage = () => {
             filteredProducts.map(product => (
               <Card 
                 key={product.id} 
-                className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
+                className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
               >
                 <CardContent className="p-6">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
+                    <h3 className="text-lg font-semibold text-card-foreground mb-1 line-clamp-2">
                       {product.name}
                     </h3>
-                    <span className="text-sm text-gray-500 uppercase tracking-wide">
+                    <span className="text-sm text-muted-foreground uppercase tracking-wide">
                       {product.category}
                     </span>
                   </div>
@@ -341,23 +341,23 @@ const OptimizedModernSalesPage = () => {
                   <div className="flex items-center gap-2 mb-4">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
                       product.currentStock === -1 
-                        ? 'bg-blue-100 text-blue-800'
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
                         : product.currentStock <= 5 
-                        ? 'bg-red-100 text-red-800' 
-                        : 'bg-green-100 text-green-800'
+                        ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' 
+                        : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                     }`}>
                       Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-purple-600">
+                    <span className="text-xl font-bold text-primary">
                       {formatCurrency(product.sellingPrice)}
                     </span>
                     <Button 
                       onClick={() => addToCart(product)}
                       disabled={product.currentStock <= 0 && product.currentStock !== -1}
-                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       size="sm"
                       title={product.currentStock === -1 ? 'Add unspecified quantity product' : ''}
                     >
@@ -377,29 +377,29 @@ const OptimizedModernSalesPage = () => {
   const CartPanel = () => (
     <div className="flex flex-col h-full">
       {/* Cart Summary */}
-      <Card className="bg-white rounded-3xl border border-gray-200 shadow-sm mb-6">
+      <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
         <CardContent className="p-6">
           <div className="flex items-center gap-2 mb-6">
-            <ShoppingCart className="w-5 h-5 text-purple-600" />
-            <h2 className="text-lg font-bold text-gray-900">Cart ({cart.length})</h2>
+            <ShoppingCart className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-bold text-card-foreground">Cart ({cart.length})</h2>
           </div>
 
           {/* Cart Items */}
           <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
             {cart.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-muted-foreground">
                 <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p>Your cart is empty</p>
                 <p className="text-xs">Add products to get started</p>
               </div>
             ) : (
               cart.map(item => (
-                <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <div key={item.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 text-sm truncate">
+                    <h4 className="font-medium text-card-foreground text-sm truncate">
                       {item.name}
                     </h4>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {formatCurrency(item.sellingPrice)} each
                     </p>
                   </div>
@@ -414,7 +414,7 @@ const OptimizedModernSalesPage = () => {
                       <Minus className="w-3 h-3" />
                     </Button>
                     
-                    <span className="w-8 text-center text-sm font-medium text-gray-900">
+                    <span className="w-8 text-center text-sm font-medium text-card-foreground">
                       {item.quantity}
                     </span>
                     
@@ -429,7 +429,7 @@ const OptimizedModernSalesPage = () => {
                   </div>
                   
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900 text-sm">
+                    <p className="font-semibold text-card-foreground text-sm">
                       {formatCurrency(item.sellingPrice * item.quantity)}
                     </p>
                   </div>
@@ -451,9 +451,9 @@ const OptimizedModernSalesPage = () => {
             <>
               <Separator className="my-4" />
               
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-lg font-bold text-gray-900">Total:</span>
-                <span className="text-2xl font-black text-purple-600">
+                <div className="flex justify-between items-center mb-6">
+                <span className="text-lg font-bold text-card-foreground">Total:</span>
+                <span className="text-2xl font-black text-primary">
                   {formatCurrency(total)}
                 </span>
               </div>
@@ -467,7 +467,7 @@ const OptimizedModernSalesPage = () => {
         <div className="space-y-6">
           {/* Customer Selection */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
+            <label className="text-sm font-medium text-foreground mb-2 block">
               Customer (Optional)
             </label>
             <div className="flex gap-2">
@@ -477,9 +477,9 @@ const OptimizedModernSalesPage = () => {
                   setSelectedCustomerId(value === 'none' ? null : value);
                 }}
               >
-                <SelectTrigger className="flex-1 bg-gray-100 border-0 rounded-xl py-4 focus:ring-2 focus:ring-purple-300">
+                <SelectTrigger className="flex-1 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
                   <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-400" />
+                    <User className="w-4 h-4 text-muted-foreground" />
                     <SelectValue placeholder="Select customer..." />
                   </div>
                 </SelectTrigger>
@@ -577,9 +577,9 @@ const OptimizedModernSalesPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header with Network Status */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
