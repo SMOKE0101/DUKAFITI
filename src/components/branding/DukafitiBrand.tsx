@@ -50,6 +50,9 @@ const DukafitiBrand: React.FC<DukafitiBrandProps> = ({
           <h1 className={`font-caesar font-bold ${textSizes[size]} ${textColor} tracking-wide`}>
             DUKAFITI
           </h1>
+          <p className={`${taglineSizes[size]} text-gray-600 dark:text-gray-400 italic font-medium mt-1`}>
+            dukubora ni dukafiti
+          </p>
         </div>
       </div>
     );
@@ -62,6 +65,9 @@ const DukafitiBrand: React.FC<DukafitiBrandProps> = ({
         <h1 className={`font-caesar font-bold ${textSizes[size]} ${textColor} tracking-wide leading-tight`}>
           DUKAFITI
         </h1>
+        <p className={`${taglineSizes[size]} text-gray-600 dark:text-gray-400 italic font-medium -mt-1`}>
+          dukubora ni dukafiti
+        </p>
       </div>
     </div>
   );

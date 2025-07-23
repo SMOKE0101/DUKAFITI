@@ -67,34 +67,28 @@ const CubeLogo: React.FC<CubeLogoProps> = ({
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <div className="relative flex-shrink-0" style={{ width: logoSize, height: logoSize }}>
-        {/* Light mode logo */}
-        <img 
-          src="/lovable-uploads/d8334c82-49b3-4d1c-a0f0-0c4325ca25ba.png"
-          alt="DUKAFITI Logo"
-          width={logoSize} 
-          height={logoSize}
-          className="w-full h-full object-contain transition-all duration-300 dark:hidden"
-          onError={handleImageError}
-          onLoad={handleImageLoad}
-          loading="eager"
-        />
-        {/* Dark mode logo */}
-        <img 
-          src="/lovable-uploads/374aea9f-d802-43c1-9ea5-d38770989d8b.png"
-          alt="DUKAFITI Logo"
-          width={logoSize} 
-          height={logoSize}
-          className="w-full h-full object-contain transition-all duration-300 hidden dark:block"
-          onError={handleImageError}
-          onLoad={handleImageLoad}
-          loading="eager"
-        />
-      </div>
+      <img 
+        src={newCubeLogo}
+        alt="DUKAFITI - New Cube Logo"
+        width={logoSize} 
+        height={logoSize}
+        className="flex-shrink-0 transition-all duration-300 drop-shadow-sm"
+        style={{ 
+          width: logoSize, 
+          height: logoSize,
+          objectFit: 'contain'
+        }}
+        onError={handleImageError}
+        onLoad={handleImageLoad}
+        loading="eager"
+      />
       {showText && (
         <div className="flex flex-col">
           <span className="font-caesar font-bold text-lg text-gray-900 dark:text-white tracking-wide">
             DUKAFITI
+          </span>
+          <span className="text-xs text-gray-600 dark:text-gray-400 italic font-medium">
+            dukubora ni dukafiti
           </span>
         </div>
       )}
