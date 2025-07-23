@@ -148,22 +148,22 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 w-full">
         <div className="space-y-3 flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-              <Package className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+              <Package className="w-6 h-6 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-4xl font-bold text-white tracking-tight truncate">Inventory</h1>
-              <p className="text-white/80 text-lg truncate">Manage your products and stock levels</p>
+              <h1 className="text-4xl font-bold text-foreground tracking-tight truncate">Inventory</h1>
+              <p className="text-muted-foreground text-lg truncate">Manage your products and stock levels</p>
             </div>
           </div>
         </div>
         
         <Button 
           onClick={onAddProduct}
-          className="px-8 py-4 bg-white/20 hover:bg-white/30 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-3 font-semibold text-lg backdrop-blur-sm border border-white/20 hover:border-white/30 hover:scale-105 flex-shrink-0"
+          className="px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-3 font-semibold text-lg backdrop-blur-sm border border-primary/20 hover:border-primary/30 hover:scale-105 flex-shrink-0"
           size="lg"
         >
-          <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 bg-primary-foreground/20 rounded-full flex items-center justify-center">
             <Plus className="w-4 h-4" />
           </div>
           Add New Product
