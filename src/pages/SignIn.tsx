@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, ArrowLeft, Mail, Lock, Smartphone, Shield, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,9 +14,29 @@ const SignIn = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmationMessage, setConfirmationMessage] = useState<{email: string} | null>(null);
 
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for signup confirmation message
+    const confirmationData = localStorage.getItem('signupConfirmation');
+    if (confirmationData) {
+      try {
+        const parsed = JSON.parse(confirmationData);
+        // Check if the confirmation is recent (within 5 minutes)
+        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+          setConfirmationMessage({ email: parsed.email });
+        }
+        // Clear the confirmation data after checking
+        localStorage.removeItem('signupConfirmation');
+      } catch (error) {
+        // Invalid data, remove it
+        localStorage.removeItem('signupConfirmation');
+      }
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -95,6 +115,19 @@ const SignIn = () => {
               Sign in to continue managing your dukashop
             </p>
           </div>
+
+          {/* Email Confirmation Message */}
+          {confirmationMessage && (
+            <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-lg flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-success/20 flex items-center justify-center">
+                <span className="text-xs">✓</span>
+              </div>
+              <div>
+                <p className="font-medium">Check your email!</p>
+                <p className="text-sm opacity-90">We've sent a confirmation link to {confirmationMessage.email}. Please confirm your email before signing in.</p>
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

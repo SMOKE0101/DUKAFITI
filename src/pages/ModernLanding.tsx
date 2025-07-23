@@ -68,7 +68,12 @@ const ModernLanding = () => {
       if (error) {
         setSignUpError(error.message);
       } else {
-        navigate('/dashboard');
+        // Store confirmation state and redirect to sign-in
+        localStorage.setItem('signupConfirmation', JSON.stringify({
+          email: signUpData.email,
+          timestamp: Date.now()
+        }));
+        navigate('/signin');
       }
     } catch (err) {
       setSignUpError('An unexpected error occurred');

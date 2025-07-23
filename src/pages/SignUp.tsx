@@ -50,7 +50,12 @@ const SignUp = () => {
       if (error) {
         setError(error.message);
       } else {
-        setIsEmailConfirmationSent(true);
+        // Store confirmation state and redirect to sign-in
+        localStorage.setItem('signupConfirmation', JSON.stringify({
+          email: formData.email,
+          timestamp: Date.now()
+        }));
+        navigate('/signin');
       }
     } catch (err) {
       setError('An unexpected error occurred');
