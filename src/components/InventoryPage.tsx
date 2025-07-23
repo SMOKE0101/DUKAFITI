@@ -10,6 +10,7 @@ import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
 import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
+import InventoryHeader from './inventory/InventoryHeader';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
 import { TooltipWrapper } from './TooltipWrapper';
 import { Product } from '../types';
@@ -47,6 +48,19 @@ const InventoryPage = () => {
   const categories = useMemo(() => {
     const uniqueCategories = ['all', ...new Set(products.map(p => p.category))];
     return uniqueCategories;
+  }, [products]);
+
+  // Calculate inventory stats
+  const { totalProducts, totalValue, lowStockCount } = useMemo(() => {
+    const totalProducts = products.length;
+    const totalValue = products.reduce((sum, product) => 
+      sum + (product.sellingPrice * product.currentStock), 0
+    );
+    const lowStockCount = products.filter(product => 
+      product.currentStock <= 5 // Default low stock threshold
+    ).length;
+    
+    return { totalProducts, totalValue, lowStockCount };
   }, [products]);
 
   // Filter and sort products
@@ -265,41 +279,13 @@ const InventoryPage = () => {
   return (
     <TooltipWrapper>
       <div className="space-y-6">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-              Inventory Management
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">
-              Track and manage your product inventory
-              {!isOnline && <span className="text-orange-500 ml-2">(Offline Mode)</span>}
-              {pendingOperations > 0 && (
-                <span className="text-blue-500 ml-2">
-                  ({pendingOperations} pending sync{pendingOperations !== 1 ? 's' : ''})
-                </span>
-              )}
-              {globalSyncInProgress && (
-                <span className="text-green-500 ml-2">(Syncing...)</span>
-              )}
-              {syncStatus === 'syncing' && (
-                <span className="text-green-500 ml-2">(Sync in progress...)</span>
-              )}
-            </p>
-          </div>
-          
-          <Button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
-            disabled={loading}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Product
-          </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <PremiumStatsCards products={products} onCardClick={handleStatsCardClick} />
+        {/* Header Section with InventoryHeader */}
+        <InventoryHeader
+          totalProducts={totalProducts}
+          totalValue={totalValue}
+          lowStockCount={lowStockCount}
+          onAddProduct={() => setShowAddModal(true)}
+        />
 
         {/* Search and Filter Section */}
         <div className="flex flex-col sm:flex-row gap-4">

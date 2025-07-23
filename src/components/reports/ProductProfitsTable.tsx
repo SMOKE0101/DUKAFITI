@@ -148,75 +148,60 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
     <div className="bg-card rounded-lg shadow-sm border border-border">
       {/* Header with controls */}
       <div className="p-6 border-b border-border">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4">
-            {/* Time frame selector */}
-            <div className="flex rounded-lg bg-muted p-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h3 className="text-xl font-bold text-foreground">
+            Product Profits Report
+          </h3>
+          <Button
+            onClick={exportToCSV}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            size="sm"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download CSV
+          </Button>
+        </div>
+        
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          {/* Timeframe Selector */}
+          <div className="flex bg-muted rounded-lg p-1">
+            {[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' }
+            ].map((option) => (
               <button
+                key={option.value}
                 onClick={() => {
-                  setTimeFrame('today');
+                  setTimeFrame(option.value as 'today' | 'week' | 'month');
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  timeFrame === 'today'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className={`
+                  text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                  ${timeFrame === option.value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background"
+                  }
+                `}
               >
-                Today
+                {option.label}
               </button>
-              <button
-                onClick={() => {
-                  setTimeFrame('week');
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  timeFrame === 'week'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                This Week
-              </button>
-              <button
-                onClick={() => {
-                  setTimeFrame('month');
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  timeFrame === 'month'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                This Month
-              </button>
-            </div>
+            ))}
           </div>
-          
-          <div className="flex items-center gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-10 w-64"
-              />
-            </div>
-            
-            {/* Export CSV button */}
-            <Button 
-              onClick={exportToCSV}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-700 dark:hover:bg-emerald-800"
-            >
-              <Download className="h-4 w-4" />
-              Download CSV
-            </Button>
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10"
+            />
           </div>
         </div>
       </div>

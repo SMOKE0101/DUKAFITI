@@ -9,6 +9,8 @@ import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { useToast } from '../../hooks/use-toast';
 import { TooltipWrapper } from '../TooltipWrapper';
+import { useIsMobile } from '../../hooks/use-mobile';
+import CustomersHeader from './CustomersHeader';
 import CustomerCard from './CustomerCard';
 import CustomerFormModal from './CustomerFormModal';
 import PaymentModal from './PaymentModal';
@@ -29,6 +31,7 @@ const CustomersPage = () => {
   const { createDebtPayment } = useSupabaseDebtPayments();
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [showFormModal, setShowFormModal] = useState(false);
@@ -174,72 +177,127 @@ const CustomersPage = () => {
     }
   };
 
+  if (isMobile) {
+    return (
+      <TooltipWrapper>
+        <div className="min-h-screen bg-background">
+          <div className="px-4 py-6 space-y-6">
+            {/* Mobile Header */}
+            <CustomersHeader
+              totalCustomers={totalCustomers}
+              totalOutstandingDebt={totalOutstandingDebt}
+              pendingOperations={pendingOperations}
+              isOnline={isOnline}
+              onAddCustomer={handleAddCustomer}
+            />
+
+            {/* Search Bar */}
+            <Card className="bg-card rounded-xl border border-border shadow-sm">
+              <CardContent className="p-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    type="search"
+                    placeholder="Search customers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-background rounded-lg border border-border"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Customer List */}
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-3 text-sm text-muted-foreground">Loading customers...</p>
+              </div>
+            ) : filteredCustomers.length === 0 ? (
+              <Card className="bg-card rounded-xl border border-border shadow-sm">
+                <CardContent className="text-center py-8">
+                  <User className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
+                  <h3 className="text-lg font-semibold text-card-foreground mb-2">
+                    {searchQuery ? 'No customers found' : 'No customers yet'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
+                  </p>
+                  {!searchQuery && (
+                    <Button onClick={handleAddCustomer} className="mt-4 bg-primary hover:bg-primary/90">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Customer
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {filteredCustomers.map((customer) => (
+                  <CustomerCard
+                    key={customer.id}
+                    customer={customer}
+                    onEdit={handleEditCustomer}
+                    onDelete={handleDeleteCustomer}
+                    onRecordPayment={handleRecordPayment}
+                    isDeleting={operationsInProgress.deleting === customer.id}
+                    isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Modals */}
+            <CustomerFormModal
+              isOpen={showFormModal}
+              onClose={() => {
+                setShowFormModal(false);
+                setSelectedCustomer(null);
+              }}
+              customer={selectedCustomer}
+              isEditing={isEditing}
+              onSave={handleSaveCustomer}
+            />
+
+            <PaymentModal
+              isOpen={showPaymentModal}
+              onClose={() => {
+                setShowPaymentModal(false);
+                setSelectedCustomer(null);
+              }}
+              customer={selectedCustomer}
+              onPayment={handlePaymentComplete}
+              isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
+            />
+
+            <DeleteCustomerModal
+              isOpen={showDeleteModal}
+              onClose={() => {
+                setShowDeleteModal(false);
+                setSelectedCustomer(null);
+              }}
+              customer={selectedCustomer}
+              onDelete={handleConfirmDelete}
+              isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
+            />
+          </div>
+        </div>
+      </TooltipWrapper>
+    );
+  }
+
   return (
     <TooltipWrapper>
       <div className="min-h-screen bg-background font-['Inter']">
         <div className="container mx-auto px-6 py-8 space-y-8">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground font-['Inter']">
-                Customer Management
-              </h1>
-              <p className="text-base text-muted-foreground mt-2 font-['Inter']">
-                Manage your customer relationships and credit limits
-              </p>
-            </div>
-
-            <div className="flex items-center gap-4">
-              {pendingOperations > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-full">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                    {pendingOperations} pending sync
-                  </span>
-                </div>
-              )}
-              {!isOnline && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-full">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                    Working Offline
-                  </span>
-                </div>
-              )}
-              <Button 
-                onClick={handleAddCustomer}
-                className="px-5 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 font-['Inter']"
-              >
-                <Plus className="w-5 h-5 mr-2" strokeWidth={2} />
-                Add Customer
-              </Button>
-            </div>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mr-4">
-                <Users className="w-6 h-6 text-primary" strokeWidth={1.5} />
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-card-foreground font-['Inter']">{totalCustomers}</div>
-                <div className="text-base text-muted-foreground font-['Inter']">Total Customers</div>
-              </div>
-            </Card>
-
-            <Card className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg p-6 flex items-center transition-all duration-200 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-destructive/10 rounded-2xl flex items-center justify-center mr-4">
-                <DollarSign className="w-6 h-6 text-destructive" strokeWidth={1.5} />
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-card-foreground font-['Inter']">
-                  {formatCurrency(totalOutstandingDebt)}
-                </div>
-                <div className="text-base text-muted-foreground font-['Inter']">Outstanding Debt</div>
-              </div>
-            </Card>
-          </div>
+          {/* Desktop Header using CustomersHeader */}
+          <CustomersHeader
+            totalCustomers={totalCustomers}
+            totalOutstandingDebt={totalOutstandingDebt}
+            pendingOperations={pendingOperations}
+            isOnline={isOnline}
+            onAddCustomer={handleAddCustomer}
+          />
 
           {/* Search Bar */}
           <Card className="bg-card rounded-3xl border border-border shadow-sm">
