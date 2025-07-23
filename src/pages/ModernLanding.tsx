@@ -291,18 +291,24 @@ const ModernLanding = () => {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-3xl p-8 relative overflow-hidden">
-                <div className="grid grid-cols-2 gap-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="w-12 h-12 bg-yellow-400 dark:bg-yellow-500 rounded-lg transform rotate-45" />
-                  ))}
+            <div className="relative group">
+              <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl border border-border/50 overflow-hidden transition-all duration-500 hover:shadow-3xl hover:scale-[1.02]">
+                <div className="relative bg-background rounded-2xl overflow-hidden shadow-xl border border-border">
+                  <img 
+                    src="/lovable-uploads/12cd02b6-65aa-4b9e-a161-60a389e46fa9.png" 
+                    alt="DukaFiti Dashboard Preview" 
+                    className="w-full h-auto object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                    style={{ aspectRatio: '16/10' }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-24 h-24 bg-background rounded-2xl flex items-center justify-center shadow-lg border border-border">
-                    <div className="text-4xl">⌘</div>
-                  </div>
-                </div>
+                
+                {/* Floating elements for premium feel */}
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary/20 rounded-full blur-sm animate-pulse" />
+                <div className="absolute -bottom-3 -left-3 w-8 h-8 bg-accent/20 rounded-full blur-sm animate-pulse delay-1000" />
+                
+                {/* Glow effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               </div>
             </div>
           </div>
