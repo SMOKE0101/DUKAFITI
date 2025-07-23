@@ -396,96 +396,91 @@ const OptimizedModernSalesPage = () => {
 
   // Cart Panel Component
   const CartPanel = () => (
-    <div className="flex flex-col h-full">
-      {/* Cart Summary */}
-      <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <ShoppingCart className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold text-card-foreground">Cart ({cart.length})</h2>
+    <div className="h-full flex flex-col relative">
+      {/* Cart Header - Fixed */}
+      <div className="flex-shrink-0 pb-4 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <ShoppingCart className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-bold text-card-foreground">Cart ({cart.length})</h2>
+        </div>
+        {cart.length > 0 && (
+          <div className="flex justify-between items-center mt-3">
+            <span className="text-sm font-medium text-muted-foreground">Total:</span>
+            <span className="text-xl font-black text-primary">
+              {formatCurrency(total)}
+            </span>
           </div>
+        )}
+      </div>
 
-          {/* Cart Items */}
-          <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
-            {cart.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>Your cart is empty</p>
-                <p className="text-xs">Add products to get started</p>
-              </div>
-            ) : (
-              cart.map(item => (
-                <div key={item.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl border border-border/50">
-                  <div className="flex-1 space-y-1">
-                    <h4 className="font-medium text-card-foreground text-sm leading-tight line-clamp-2">
-                      {item.name}
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(item.sellingPrice)} each
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-7 h-7 p-0 rounded-lg"
-                    >
-                      <Minus className="w-3 h-3" />
-                    </Button>
-                    
-                    <span className="w-6 text-center text-sm font-medium text-card-foreground">
-                      {item.quantity}
-                    </span>
-                    
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-7 h-7 p-0 rounded-lg"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  
-                  <div className="text-right shrink-0 min-w-0">
-                    <p className="font-semibold text-card-foreground text-sm">
-                      {formatCurrency(item.sellingPrice * item.quantity)}
-                    </p>
-                  </div>
-
+      {/* Cart Items - Scrollable */}
+      <div className="flex-1 overflow-y-auto py-4" style={{ maxHeight: 'calc(50vh - 120px)' }}>
+        {cart.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>Your cart is empty</p>
+            <p className="text-xs">Add products to get started</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {cart.map(item => (
+              <div key={item.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl border border-border/50">
+                <div className="flex-1 space-y-1">
+                  <h4 className="font-medium text-card-foreground text-sm leading-tight line-clamp-2">
+                    {item.name}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(item.sellingPrice)} each
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
-                    variant="ghost"
-                    onClick={() => removeFromCart(item.id)}
-                    className="w-7 h-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                    variant="outline"
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    className="w-7 h-7 p-0 rounded-lg"
                   >
-                    <X className="w-4 h-4" />
+                    <Minus className="w-3 h-3" />
+                  </Button>
+                  
+                  <span className="w-6 text-center text-sm font-medium text-card-foreground">
+                    {item.quantity}
+                  </span>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    className="w-7 h-7 p-0 rounded-lg"
+                  >
+                    <Plus className="w-3 h-3" />
                   </Button>
                 </div>
-              ))
-            )}
-          </div>
+                
+                <div className="text-right shrink-0 min-w-0">
+                  <p className="font-semibold text-card-foreground text-sm">
+                    {formatCurrency(item.sellingPrice * item.quantity)}
+                  </p>
+                </div>
 
-          {cart.length > 0 && (
-            <>
-              <Separator className="my-4" />
-              
-                <div className="flex justify-between items-center mb-6">
-                <span className="text-lg font-bold text-card-foreground">Total:</span>
-                <span className="text-2xl font-black text-primary">
-                  {formatCurrency(total)}
-                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => removeFromCart(item.id)}
+                  className="w-7 h-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Customer Selection & Payment */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-6">
+      {/* Fixed Checkout Section - Bottom Half */}
+      <div className="flex-shrink-0 bg-background border-t border-border/50 pt-4">
+        <div className="space-y-4">
           {/* Customer Selection */}
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
@@ -498,7 +493,7 @@ const OptimizedModernSalesPage = () => {
                   setSelectedCustomerId(value === 'none' ? null : value);
                 }}
               >
-                <SelectTrigger className="flex-1 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
+                <SelectTrigger className="flex-1 bg-muted border-0 rounded-xl py-3 focus:ring-2 focus:ring-ring">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
                     <SelectValue placeholder="Select customer..." />
@@ -520,7 +515,7 @@ const OptimizedModernSalesPage = () => {
               </Select>
               <Button
                 onClick={() => setIsAddCustomerModalOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-3 py-2"
               >
                 <UserPlus className="w-4 h-4 mr-1" />
                 Add
@@ -533,8 +528,8 @@ const OptimizedModernSalesPage = () => {
             <div className="bg-primary/10 border border-primary/20 rounded-xl p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-card-foreground">{selectedCustomer.name}</p>
-                  <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
+                  <p className="font-medium text-card-foreground text-sm">{selectedCustomer.name}</p>
+                  <p className="text-xs text-muted-foreground">{selectedCustomer.phone}</p>
                 </div>
                 {selectedCustomer.outstandingDebt > 0 && (
                   <Badge variant="destructive" className="text-xs">
@@ -559,21 +554,22 @@ const OptimizedModernSalesPage = () => {
                 <button
                   key={method.value}
                   onClick={() => setPaymentMethod(method.value as any)}
-                  className={`p-3 rounded-xl border-2 transition-all text-center ${
+                  className={`p-2.5 rounded-xl border-2 transition-all text-center ${
                     paymentMethod === method.value
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border hover:border-border/60 text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  <method.icon className="w-5 h-5 mx-auto mb-1" />
+                  <method.icon className="w-4 h-4 mx-auto mb-1" />
                   <div className="text-xs font-medium">{method.label}</div>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Checkout Actions */}
           {cart.length > 0 && (
-            <div className="space-y-3 pb-20">
+            <div className="space-y-3">
               <SalesCheckout
                 cart={cart}
                 selectedCustomerId={selectedCustomerId}
@@ -586,6 +582,7 @@ const OptimizedModernSalesPage = () => {
               <Button
                 onClick={clearCart}
                 variant="outline"
+                size="sm"
                 className="w-full border-2 border-border hover:border-border/60 rounded-xl"
               >
                 Clear Cart

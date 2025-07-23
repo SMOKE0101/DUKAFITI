@@ -208,21 +208,11 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
   return (
     <div className="space-y-2">
-      {/* Debug information - only show in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <details className="text-xs text-gray-500 bg-gray-50 rounded p-2">
-          <summary className="cursor-pointer">Debug Info</summary>
-          <div className="mt-1 space-y-1">
-            <div>Customer: {customer?.name || 'none'}</div>
-            <div>Current Debt: {customer?.outstandingDebt || 0}</div>
-            <div>Payment Method: {paymentMethod}</div>
-            <div>Cart Items: {cart.length}</div>
-            <div>Total: {total}</div>
-            <div>Online: {isOnline ? 'Yes' : 'No'}</div>
-            <div>Pending Ops: {pendingOperations}</div>
-            <div>Will Add Debt: {paymentMethod === 'debt' ? total : 0}</div>
-          </div>
-        </details>
+      {/* Customer required message for debt payments */}
+      {paymentMethod === 'debt' && !selectedCustomerId && (
+        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
+          Please select a customer for debt transactions
+        </div>
       )}
       
       <Button
