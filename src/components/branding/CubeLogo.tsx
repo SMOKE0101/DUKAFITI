@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
-import { useTheme } from 'next-themes';
+import React from 'react';
 
 interface CubeLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -13,10 +12,6 @@ const CubeLogo: React.FC<CubeLogoProps> = ({
   className = '', 
   showText = false 
 }) => {
-  const { theme, resolvedTheme } = useTheme();
-  const [lightImageError, setLightImageError] = useState(false);
-  const [darkImageError, setDarkImageError] = useState(false);
-  
   const dimensions = {
     sm: 24,
     md: 32,
@@ -25,88 +20,28 @@ const CubeLogo: React.FC<CubeLogoProps> = ({
   };
 
   const logoSize = dimensions[size];
-  
-  const handleLightImageError = () => {
-    console.error('DUKAFITI Logo: Failed to load light mode logo');
-    setLightImageError(true);
-  };
-
-  const handleDarkImageError = () => {
-    console.error('DUKAFITI Logo: Failed to load dark mode logo');
-    setDarkImageError(true);
-  };
-
-  const handleImageLoad = () => {
-    console.log('DUKAFITI Logo: Logo loaded successfully');
-  };
-
-  // Only show fallback if both images fail to load
-  if (lightImageError && darkImageError) {
-    return (
-      <div className={`flex items-center gap-3 ${className}`}>
-        <div 
-          className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0"
-          style={{ width: logoSize, height: logoSize, fontSize: logoSize * 0.4 }}
-        >
-          D
-        </div>
-        {showText && (
-          <div className="flex flex-col">
-            <span className="font-caesar font-bold text-lg text-gray-900 dark:text-white">
-              DUKAFITI
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <div className="relative flex-shrink-0" style={{ width: logoSize, height: logoSize }}>
         {/* Light mode logo */}
-        {!lightImageError && (
-          <img 
-            src="/lovable-uploads/d8334c82-49b3-4d1c-a0f0-0c4325ca25ba.png"
-            alt="DUKAFITI Logo"
-            width={logoSize} 
-            height={logoSize}
-            className="w-full h-full object-contain transition-all duration-300 dark:hidden"
-            onError={handleLightImageError}
-            onLoad={handleImageLoad}
-            loading="eager"
-          />
-        )}
+        <img 
+          src="/lovable-uploads/16db02b7-b050-4236-bbd9-7ded87ba3426.png"
+          alt="DUKAFITI Logo"
+          width={logoSize} 
+          height={logoSize}
+          className="w-full h-full object-contain transition-all duration-300 dark:hidden"
+          loading="eager"
+        />
         {/* Dark mode logo */}
-        {!darkImageError && (
-          <img 
-            src="/lovable-uploads/374aea9f-d802-43c1-9ea5-d38770989d8b.png"
-            alt="DUKAFITI Logo"
-            width={logoSize} 
-            height={logoSize}
-            className="w-full h-full object-contain transition-all duration-300 hidden dark:block"
-            onError={handleDarkImageError}
-            onLoad={handleImageLoad}
-            loading="eager"
-          />
-        )}
-        {/* Individual fallbacks for each mode */}
-        {lightImageError && (
-          <div 
-            className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg dark:hidden"
-            style={{ fontSize: logoSize * 0.4 }}
-          >
-            D
-          </div>
-        )}
-        {darkImageError && (
-          <div 
-            className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg hidden dark:block"
-            style={{ fontSize: logoSize * 0.4 }}
-          >
-            D
-          </div>
-        )}
+        <img 
+          src="/lovable-uploads/4ad247ca-3e82-4376-bbb7-19edd9f311fd.png"
+          alt="DUKAFITI Logo"
+          width={logoSize} 
+          height={logoSize}
+          className="w-full h-full object-contain transition-all duration-300 hidden dark:block"
+          loading="eager"
+        />
       </div>
       {showText && (
         <div className="flex flex-col">
