@@ -23,33 +23,66 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    
+    console.log('[Auth] Starting authentication initialization...');
 
-    // Set up auth state listener
+    // Enhanced session restoration for mobile
+    const initializeAuth = async () => {
+      try {
+        console.log('[Auth] Checking for existing session...');
+        
+        // First try to get the session with explicit refresh attempt
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[Auth] Error getting session:', error);
+        }
+        
+        if (mounted) {
+          console.log('[Auth] Session found:', !!session);
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('[Auth] Error during session initialization:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (!mounted) return;
+        
+        console.log('[Auth] Auth state changed:', event, !!session);
         
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
+        
+        // Only set loading to false after we've processed the auth state
+        if (!loading) {
+          setLoading(false);
+        }
 
-        // Handle logout redirect
-        if (event === 'SIGNED_OUT') {
+        // Handle different auth events
+        if (event === 'SIGNED_IN') {
+          console.log('[Auth] User signed in successfully');
+        } else if (event === 'SIGNED_OUT') {
+          console.log('[Auth] User signed out');
           setTimeout(() => {
             window.location.href = '/';
           }, 100);
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('[Auth] Token refreshed successfully');
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Initialize auth after setting up listener
+    initializeAuth();
 
     return () => {
       mounted = false;

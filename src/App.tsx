@@ -21,6 +21,7 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AppStateWrapper from "./components/AppStateWrapper";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,7 +42,8 @@ function App() {
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <AuthProvider>
-              <ErrorBoundary>
+              <AppStateWrapper>
+                <ErrorBoundary>
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
@@ -82,6 +84,7 @@ function App() {
                   <SafeToasterWrapper />
                 </div>
               </ErrorBoundary>
+              </AppStateWrapper>
             </AuthProvider>
           </ThemeProvider>
         </BrowserRouter>

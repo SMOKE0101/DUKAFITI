@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -8,31 +8,47 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const navigate = useNavigate();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/signin');
-    }
-  }, [user, loading, navigate]);
+    // Give enough time for session restoration on mobile
+    const authCheckTimeout = setTimeout(() => {
+      setHasCheckedAuth(true);
+    }, 1000); // 1 second should be enough for session restoration
 
-  if (loading) {
+    return () => clearTimeout(authCheckTimeout);
+  }, []);
+
+  useEffect(() => {
+    // Only redirect if we've finished loading and checking auth
+    if (!loading && hasCheckedAuth && !user && !session) {
+      console.log('[ProtectedRoute] No authenticated user found, redirecting to signin');
+      navigate('/signin', { replace: true });
+    }
+  }, [user, session, loading, hasCheckedAuth, navigate]);
+
+  // Show loading while auth is being checked or session is being restored
+  if (loading || !hasCheckedAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">
+            {loading ? 'Authenticating...' : 'Loading app...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
+  // Show redirect message if no user after auth check
+  if (!user && !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-gray-600">Redirecting to sign in...</p>
+          <p className="text-muted-foreground">Redirecting to sign in...</p>
         </div>
       </div>
     );
