@@ -15,6 +15,7 @@ import ModernSummaryCards from './ModernSummaryCards';
 import AlwaysCurrentPanels from './AlwaysCurrentPanels';
 import EnhancedSalesTrendChart from './EnhancedSalesTrendChart';
 import OrdersBarChart from './OrdersBarChart';
+import SalesReportTable from './SalesReportTable';
 
 const EnhancedOfflineReportsPage = () => {
   const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
@@ -217,6 +218,14 @@ const EnhancedOfflineReportsPage = () => {
             Orders Analytics
           </h2>
           <OrdersBarChart sales={sales} />
+        </div>
+
+        {/* Sales Report Table */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Detailed Sales Report
+          </h2>
+          <SalesReportTable sales={sales} loading={isLoading} />
         </div>
 
         {/* Always Current Data Panels */}
