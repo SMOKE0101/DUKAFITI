@@ -72,10 +72,14 @@ const SignIn = () => {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
-        setError(error.message);
+        if (error.message.includes('requested path is invalid') || error.message.includes('invalid_request')) {
+          setError('Google authentication is not properly configured. Please contact support or use email login.');
+        } else {
+          setError(error.message);
+        }
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError('Failed to connect with Google. Please try again or use email login.');
     } finally {
       setIsGoogleLoading(false);
     }

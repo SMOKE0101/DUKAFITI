@@ -67,9 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/app/dashboard`
-      : `https://2e731d33-212e-43f1-b204-1c6ae466708b.lovableproject.com/app/dashboard`;
+    const redirectUrl = `${window.location.origin}/app/dashboard`;
     
     const { error } = await supabase.auth.signUp({
       email,
@@ -83,9 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    const redirectUrl = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/app/dashboard`
-      : `https://2e731d33-212e-43f1-b204-1c6ae466708b.lovableproject.com/app/dashboard`;
+    const redirectUrl = `${window.location.origin}/app/dashboard`;
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

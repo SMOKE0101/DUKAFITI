@@ -32,10 +32,14 @@ const ModernLanding = () => {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
-        setSignUpError(error.message);
+        if (error.message.includes('requested path is invalid') || error.message.includes('invalid_request')) {
+          setSignUpError('Google authentication is not properly configured. Please contact support or use email signup.');
+        } else {
+          setSignUpError(error.message);
+        }
       }
     } catch (err) {
-      setSignUpError('An unexpected error occurred');
+      setSignUpError('Failed to connect with Google. Please try again or use email signup.');
     } finally {
       setIsGoogleLoading(false);
     }
