@@ -7,9 +7,7 @@ import {
   Package, 
   Users, 
   BarChart3,
-  Settings,
-  Wifi,
-  WifiOff
+  Settings
 } from 'lucide-react';
 import {
   Sidebar,
@@ -22,7 +20,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Badge } from '@/components/ui/badge';
+
 import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
 import { cn } from '@/lib/utils';
 
@@ -96,35 +94,7 @@ export function AppSidebar() {
           </div>
           {!isCollapsed && (
             <div>
-              <h1 className="font-bold text-lg text-foreground">DukaFiti</h1>
-              <p className="text-xs text-muted-foreground">Business Manager</p>
-            </div>
-          )}
-        </div>
-
-        {/* Network Status */}
-        <div className={cn(
-          "flex items-center gap-2 mb-6 px-2",
-          isCollapsed && "justify-center"
-        )}>
-          {isOnline ? (
-            <Wifi className="w-4 h-4 text-green-500" />
-          ) : (
-            <WifiOff className="w-4 h-4 text-red-500" />
-          )}
-          {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "text-xs font-medium",
-                isOnline ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-              )}>
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
-              {pendingOperations > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {pendingOperations}
-                </Badge>
-              )}
+              <h1 className="font-caesar font-bold text-lg text-foreground">DukaFiti</h1>
             </div>
           )}
         </div>
