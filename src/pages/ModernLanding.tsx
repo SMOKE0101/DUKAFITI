@@ -343,12 +343,30 @@ const ModernLanding = () => {
                       </p>
                     )}
                     {index === 1 && expandedStep === index && (
-                      <div className="mt-6 flex items-center space-x-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
-                        <img src="/lovable-uploads/8d8ce036-eba9-4359-8db6-057c40d653b7.png" alt="Feature highlight" className="w-16 h-12 object-cover rounded" />
-                        <div>
-                          <h4 className="font-semibold text-primary font-caesar">Smart POS Design</h4>
-                          <p className="text-sm text-muted-foreground">
-                            DukaFiti contains components which can easily be integrated into almost any shop workflow.
+                      <div className="mt-8">
+                        <div className="relative group bg-gradient-to-br from-primary/5 to-accent/5 rounded-2xl p-4 sm:p-6 shadow-xl border border-border/50 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:scale-[1.02]">
+                          <div className="relative bg-background rounded-xl overflow-hidden shadow-lg border border-border">
+                            <img 
+                              src="/lovable-uploads/5a4a9f99-fe44-4c73-be88-82a9cf80749d.png" 
+                              alt="DukaFiti Sales Point Interface" 
+                              className="w-full h-auto object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                              style={{ aspectRatio: '16/10' }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                          </div>
+                          
+                          {/* Floating elements */}
+                          <div className="absolute -top-2 -right-2 w-4 h-4 bg-primary/30 rounded-full blur-sm animate-pulse" />
+                          <div className="absolute -bottom-2 -left-2 w-5 h-5 bg-accent/30 rounded-full blur-sm animate-pulse delay-700" />
+                          
+                          {/* Glow effect */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                        </div>
+                        
+                        <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/10">
+                          <h4 className="font-semibold text-primary font-caesar text-lg mb-2">Smart POS Design</h4>
+                          <p className="text-muted-foreground leading-relaxed">
+                            DukaFiti contains powerful components which can easily be integrated into almost any shop workflow. Our intuitive sales interface makes processing transactions, managing inventory, and tracking customers effortless.
                           </p>
                         </div>
                       </div>
