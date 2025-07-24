@@ -215,6 +215,11 @@ const CustomersPage = () => {
           : `Payment of ${formatCurrency(paymentData.amount)} saved offline. Will sync when online.`,
       });
       
+      // Trigger immediate UI refresh
+      window.dispatchEvent(new CustomEvent('customer-debt-updated', {
+        detail: { customerId: selectedCustomer.id, newBalance: newBalance }
+      }));
+      
       setShowPaymentModal(false);
       setSelectedCustomer(null);
     } catch (error) {
