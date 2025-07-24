@@ -409,24 +409,27 @@ export class SyncService {
     try {
       switch (operation.operation) {
         case 'create':
-          const { error: createError } = await supabase
-            .from('debt_payments')
-            .insert([{
-              user_id: userId,
-              customer_id: data.customer_id,
-              customer_name: data.customer_name,
-              amount: data.amount,
-              payment_method: data.payment_method,
-              reference: data.reference,
-              timestamp: data.timestamp,
-              synced: true,
-            }]);
+          // Use the atomic function that updates both debt_payments and customer balance
+          const balanceUpdate = data.customer_balance_update;
+          console.log('[SyncService] Using atomic debt payment with balance update:', balanceUpdate);
+          
+          const { error: createError } = await supabase.rpc('record_debt_payment_with_balance_update', {
+            p_user_id: userId,
+            p_customer_id: data.customer_id,
+            p_customer_name: data.customer_name,
+            p_amount: data.amount,
+            p_payment_method: data.payment_method,
+            p_reference: data.reference,
+            p_timestamp: data.timestamp,
+            p_new_outstanding_debt: balanceUpdate?.new_outstanding_debt || 0,
+            p_last_purchase_date: balanceUpdate?.last_purchase_date || null
+          });
           
           if (createError) {
-            console.error('[SyncService] Debt payment create error:', createError);
+            console.error('[SyncService] Debt payment atomic operation error:', createError);
             return false;
           }
-          console.log('[SyncService] Debt payment created successfully');
+          console.log('[SyncService] Debt payment and customer balance updated successfully');
           return true;
           
         case 'update':

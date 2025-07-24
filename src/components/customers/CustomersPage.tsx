@@ -220,6 +220,21 @@ const CustomersPage = () => {
           : `Payment of ${formatCurrency(paymentData.amount)} saved offline. Will sync when online.`,
       });
       
+      // Trigger immediate sync if online to persist the payment and balance update
+      if (networkOnline && navigator.onLine) {
+        console.log('[CustomersPage] Triggering immediate sync for debt payment');
+        try {
+          // Request sync for debt payments specifically
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('request-sync', {
+              detail: { type: 'debt_payment' }
+            }));
+          }, 100);
+        } catch (syncError) {
+          console.warn('[CustomersPage] Failed to trigger immediate sync:', syncError);
+        }
+      }
+      
       // Trigger immediate UI refresh with specific event
       window.dispatchEvent(new CustomEvent('customer-payment-recorded', {
         detail: { 
