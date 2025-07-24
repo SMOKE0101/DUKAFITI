@@ -15,7 +15,8 @@ import CustomerCard from './CustomerCard';
 import CustomerFormModal from './CustomerFormModal';
 import PaymentModal from './PaymentModal';
 import DeleteCustomerModal from './DeleteCustomerModal';
-import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
+import { useCacheManager } from '../../hooks/useCacheManager';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useAuth } from '../../hooks/useAuth';
 
 const CustomersPage = () => {
@@ -28,7 +29,8 @@ const CustomersPage = () => {
     isOnline, 
     pendingOperations 
   } = useUnifiedCustomers();
-  const { createDebtPayment } = useSupabaseDebtPayments();
+  const { addPendingOperation } = useCacheManager();
+  const { isOnline: networkOnline } = useNetworkStatus();
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -132,41 +134,91 @@ const CustomersPage = () => {
   };
 
   const handlePaymentComplete = async (paymentData: { amount: number; method: string; notes?: string }) => {
-    if (!selectedCustomer) return;
+    if (!selectedCustomer || !user) return;
     
     setOperationsInProgress(prev => ({ ...prev, recordingPayment: selectedCustomer.id }));
     try {
-      // Calculate new outstanding debt
-      const newOutstandingDebt = Math.max(0, selectedCustomer.outstandingDebt - paymentData.amount);
+      const paymentAmount = paymentData.amount;
+      const newBalance = Math.max(0, selectedCustomer.outstandingDebt - paymentAmount);
+      const timestamp = new Date().toISOString();
       
-      // Create debt payment record
-      await createDebtPayment({
-        user_id: user?.id || '',
-        customer_id: selectedCustomer.id,
-        customer_name: selectedCustomer.name,
-        amount: paymentData.amount,
-        payment_method: paymentData.method,
-        reference: paymentData.notes || undefined,
-        timestamp: new Date().toISOString(),
+      console.log('[CustomersPage] Recording payment using offline queuing system');
+      
+      // Always use offline mode to prevent network errors
+      // Queue debt payment creation
+      addPendingOperation({
+        type: 'debt_payment',
+        operation: 'create',
+        data: {
+          user_id: user.id,
+          customer_id: selectedCustomer.id,
+          customer_name: selectedCustomer.name,
+          amount: paymentAmount,
+          payment_method: paymentData.method,
+          reference: paymentData.notes || null,
+          timestamp: timestamp
+        }
+      });
+
+      // Queue customer balance update
+      addPendingOperation({
+        type: 'customer',
+        operation: 'update',
+        data: {
+          id: selectedCustomer.id,
+          updates: {
+            outstandingDebt: newBalance,
+            lastPurchaseDate: timestamp
+          }
+        }
       });
       
-      // Update customer with new debt amount
-      await updateCustomer(selectedCustomer.id, {
-        outstandingDebt: newOutstandingDebt,
-        lastPurchaseDate: new Date().toISOString()
-      });
+      // Update local state immediately for UI responsiveness
+      try {
+        // Update customer in local storage
+        const storedCustomers = localStorage.getItem('customers');
+        if (storedCustomers) {
+          const customers = JSON.parse(storedCustomers);
+          const updatedCustomers = customers.map((c: any) => 
+            c.id === selectedCustomer.id 
+              ? { ...c, outstandingDebt: newBalance, lastPurchaseDate: timestamp }
+              : c
+          );
+          localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+        }
+        
+        // Add to local debt payments for reports
+        const storedPayments = localStorage.getItem('debt_payments_offline') || '[]';
+        const payments = JSON.parse(storedPayments);
+        const newPayment = {
+          id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          user_id: user.id,
+          customer_id: selectedCustomer.id,
+          customer_name: selectedCustomer.name,
+          amount: paymentAmount,
+          payment_method: paymentData.method,
+          reference: paymentData.notes || null,
+          timestamp: timestamp,
+          created_at: timestamp,
+          synced: false
+        };
+        payments.unshift(newPayment);
+        localStorage.setItem('debt_payments_offline', JSON.stringify(payments));
+      } catch (localUpdateError) {
+        console.warn('[CustomersPage] Failed to update local state:', localUpdateError);
+      }
 
       toast({
         title: "Payment Recorded",
-        description: isOnline 
+        description: networkOnline && navigator.onLine
           ? `Payment of ${formatCurrency(paymentData.amount)} recorded successfully`
-          : `Payment of ${formatCurrency(paymentData.amount)} recorded (will sync when online)`,
+          : `Payment of ${formatCurrency(paymentData.amount)} saved offline. Will sync when online.`,
       });
       
       setShowPaymentModal(false);
       setSelectedCustomer(null);
     } catch (error) {
-      console.error('Failed to record payment:', error);
+      console.error('[CustomersPage] Failed to record payment:', error);
       toast({
         title: "Error",
         description: "Failed to record payment. Please try again.",
