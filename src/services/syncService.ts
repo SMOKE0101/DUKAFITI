@@ -411,7 +411,14 @@ export class SyncService {
         case 'create':
           // Use the atomic function that updates both debt_payments and customer balance
           const balanceUpdate = data.customer_balance_update;
-          console.log('[SyncService] Using atomic debt payment with balance update:', balanceUpdate);
+          console.log('[SyncService] Using atomic debt payment with balance update:', {
+            userId,
+            customerId: data.customer_id,
+            customerName: data.customer_name,
+            amount: data.amount,
+            newBalance: balanceUpdate?.new_outstanding_debt,
+            balanceUpdate
+          });
           
           const { error: createError } = await supabase.rpc('record_debt_payment_with_balance_update', {
             p_user_id: userId,
@@ -428,6 +435,30 @@ export class SyncService {
           if (createError) {
             console.error('[SyncService] Debt payment atomic operation error:', createError);
             return false;
+          }
+          
+          console.log('[SyncService] Debt payment and customer balance updated successfully - verifying update');
+          
+          // Verify the customer balance was actually updated
+          try {
+            const { data: updatedCustomer, error: fetchError } = await supabase
+              .from('customers')
+              .select('id, name, outstanding_debt')
+              .eq('id', data.customer_id)
+              .eq('user_id', userId)
+              .single();
+              
+            if (fetchError) {
+              console.error('[SyncService] Error fetching updated customer:', fetchError);
+            } else {
+              console.log('[SyncService] Customer balance after update:', {
+                customerName: updatedCustomer.name,
+                newBalance: updatedCustomer.outstanding_debt,
+                expectedBalance: balanceUpdate?.new_outstanding_debt
+              });
+            }
+          } catch (verifyError) {
+            console.warn('[SyncService] Failed to verify customer update:', verifyError);
           }
           console.log('[SyncService] Debt payment and customer balance updated successfully');
           return true;

@@ -548,10 +548,11 @@ export const useUnifiedCustomers = () => {
 
     const handleDebtPaymentSync = (event: any) => {
       console.log('[UnifiedCustomers] Debt payment synced, refreshing customer data:', event.detail);
-      // Specifically refresh when debt payments are synced to update customer balances
+      // Add a longer delay to ensure database has been fully updated after atomic operation
       setTimeout(() => {
+        console.log('[UnifiedCustomers] Refetching customers after debt payment sync to get updated balances');
         loadCustomers();
-      }, 500); // Small delay to ensure database operations complete
+      }, 2000); // 2 second delay to ensure full consistency
     };
 
     const handleCustomerPaymentRecorded = (event: any) => {

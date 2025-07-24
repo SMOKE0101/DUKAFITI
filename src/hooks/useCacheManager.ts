@@ -496,6 +496,13 @@ export const useCacheManager = () => {
             p_last_purchase_date: data.customer_balance_update?.last_purchase_date
           });
           
+          console.log('[CacheManager] Debt payment RPC call completed:', { 
+            error: createError,
+            expectedBalance: data.customer_balance_update?.new_outstanding_debt,
+            customerId: data.customer_id,
+            customerName: data.customer_name
+          });
+          
           if (createError) {
             console.error('[CacheManager] Debt payment with balance update error:', createError);
             // Fallback to separate operations
