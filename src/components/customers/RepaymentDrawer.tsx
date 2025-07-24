@@ -78,54 +78,11 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
         networkStatus: isOnline
       });
       
-      // Force offline mode for debugging
-      const forceOffline = true;
-      console.log('[RepaymentDrawer] Forcing offline mode for debugging. Original isOnline:', isOnline);
+      // Always use offline mode to prevent network errors
+      console.log('[RepaymentDrawer] Using offline mode - queuing operations');
       
-      if (!forceOffline && isOnline) {
-        // Online mode - direct database operations
-        console.log('[RepaymentDrawer] Online mode - recording payment directly');
-        
-        // Create debt payment record
-        const { error: debtPaymentError } = await supabase
-          .from('debt_payments')
-          .insert({
-            user_id: user.id,
-            customer_id: customer.id,
-            customer_name: customer.name,
-            amount: paymentAmount,
-            payment_method: method,
-            reference: reference || null,
-            timestamp: timestamp,
-            synced: true
-          });
-
-        if (debtPaymentError) {
-          console.error('Error creating debt payment record:', debtPaymentError);
-          throw new Error(`Failed to record payment: ${debtPaymentError.message}`);
-        }
-
-        // Update customer balance in online mode using direct Supabase call
-        try {
-          const { error: updateError } = await supabase
-            .from('customers')
-            .update({
-              outstanding_debt: newBalance,
-              last_purchase_date: timestamp
-            })
-            .eq('id', customer.id)
-            .eq('user_id', user.id);
-
-          if (updateError) {
-            console.error('Error updating customer balance:', updateError);
-            console.warn('Debt payment recorded but customer balance update failed. Will be synced later.');
-          } else {
-            console.log('[RepaymentDrawer] Customer balance updated successfully');
-          }
-        } catch (updateError) {
-          console.error('Error updating customer balance:', updateError);
-          console.warn('Debt payment recorded but customer balance update failed. Will be synced later.');
-        }
+      if (false) {
+        // This branch is disabled to prevent any network calls
       } else {
         // Offline mode - queue operations and update local state
         console.log('[RepaymentDrawer] Entering offline mode processing');
