@@ -505,20 +505,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      record_debt_payment_with_balance_update: {
-        Args: {
-          p_user_id: string
-          p_customer_id: string
-          p_customer_name: string
-          p_amount: number
-          p_payment_method: string
-          p_reference: string
-          p_timestamp: string
-          p_new_outstanding_debt: number
-          p_last_purchase_date: string
-        }
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

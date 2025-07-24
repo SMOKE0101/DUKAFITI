@@ -164,11 +164,8 @@ export const useUnifiedCustomers = () => {
 
     syncInProgressRef.current = false;
     
-    // Force refresh data after sync to ensure latest customer balances are loaded
-    console.log('[UnifiedCustomers] Sync completed, forcing data refresh');
-    setTimeout(() => {
-      loadCustomers();
-    }, 1000); // Delay to ensure all sync operations complete
+    // Refresh data after sync
+    await loadCustomers();
   }, [user, isOnline, pendingOps, clearPendingOperation]);
 
   // Load customers from cache or server
@@ -218,20 +215,15 @@ export const useUnifiedCustomers = () => {
                 const localCustomer = cached.find(c => c.id === serverCustomer.id);
                 
                 if (localCustomer) {
-                  // Check if we have pending operations for this customer
-                  const hasPendingUpdates = pendingOps.some(op => 
-                    op.type === 'customer' && 
-                    op.operation === 'update' && 
-                    op.data.id === serverCustomer.id
-                  );
+                  // Always prefer local data if it's been recently updated
+                  const localUpdateTime = new Date(localCustomer.lastPurchaseDate || 0).getTime();
+                  const serverUpdateTime = new Date(serverCustomer.lastPurchaseDate || 0).getTime();
                   
-                  if (hasPendingUpdates) {
-                    // Keep local data if we have pending updates
-                    console.log('[UnifiedCustomers] Preserving local changes with pending updates for customer:', localCustomer.name);
+                  // If local data is newer or equal, keep it; otherwise use server data
+                  if (localUpdateTime >= serverUpdateTime) {
+                    console.log('[UnifiedCustomers] Preserving local changes for customer:', localCustomer.name);
                     mergedData.push(localCustomer);
                   } else {
-                    // Use server data as it's the latest synced version
-                    console.log('[UnifiedCustomers] Using server data for customer:', serverCustomer.name);
                     mergedData.push(serverCustomer);
                   }
                 } else {
@@ -540,105 +532,27 @@ export const useUnifiedCustomers = () => {
 
   // Listen for various events to refresh customer data
   useEffect(() => {
-    const handleDataRefresh = (event: any) => {
-      console.log('[UnifiedCustomers] Data refresh event received:', event.type, event.detail);
-      // Force refresh from database to get latest customer balances
+    const handleDataRefresh = () => {
+      console.log('[UnifiedCustomers] Data refresh event received');
       loadCustomers();
-    };
-
-    const handleDebtPaymentSync = (event: any) => {
-      console.log('[UnifiedCustomers] Debt payment synced, refreshing customer data:', event.detail);
-      // Add a longer delay to ensure database has been fully updated after atomic operation
-      setTimeout(() => {
-        console.log('[UnifiedCustomers] Refetching customers after debt payment sync to get updated balances');
-        loadCustomers();
-      }, 2000); // 2 second delay to ensure full consistency
-    };
-
-    const handleCustomerPaymentRecorded = (event: any) => {
-      console.log('[UnifiedCustomers] Customer payment recorded, updating local state:', event.detail);
-      const { customerId, newBalance, timestamp } = event.detail;
-      
-      // Update local customers state immediately
-      setCustomers(prevCustomers => 
-        prevCustomers.map(customer => 
-          customer.id === customerId 
-            ? { 
-                ...customer, 
-                outstandingDebt: newBalance, 
-                lastPurchaseDate: timestamp,
-                updated_at: timestamp
-              }
-            : customer
-        )
-      );
-      
-      // Also update localStorage to persist the change
-      try {
-        const storedCustomers = localStorage.getItem('customers');
-        if (storedCustomers) {
-          const customers = JSON.parse(storedCustomers);
-          const updatedCustomers = customers.map((c: any) => 
-            c.id === customerId 
-              ? { ...c, outstandingDebt: newBalance, lastPurchaseDate: timestamp, updated_at: timestamp }
-              : c
-          );
-          localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-        }
-      } catch (error) {
-        console.warn('[UnifiedCustomers] Failed to update localStorage:', error);
-      }
-    };
-
-    const handleCustomerDebtUpdated = (event: any) => {
-      console.log('[UnifiedCustomers] Customer debt updated:', event.detail);
-      const { customerId, newBalance } = event.detail;
-      
-      // Update local state immediately
-      setCustomers(prevCustomers => 
-        prevCustomers.map(customer => 
-          customer.id === customerId 
-            ? { ...customer, outstandingDebt: newBalance }
-            : customer
-        )
-      );
     };
 
     const events = [
       'sync-completed',
       'data-synced', 
-      'customer-synced',
       'customers-synced',
       'sale-completed',
       'checkout-completed'
     ];
 
-    const debtPaymentEvents = [
-      'debt_payment-synced',
-      'debt-payment-synced'
-    ];
-
     events.forEach(event => {
       window.addEventListener(event, handleDataRefresh);
     });
-
-    debtPaymentEvents.forEach(event => {
-      window.addEventListener(event, handleDebtPaymentSync);
-    });
-
-    // Add specific payment event listeners
-    window.addEventListener('customer-payment-recorded', handleCustomerPaymentRecorded);
-    window.addEventListener('customer-debt-updated', handleCustomerDebtUpdated);
     
     return () => {
       events.forEach(event => {
         window.removeEventListener(event, handleDataRefresh);
       });
-      debtPaymentEvents.forEach(event => {
-        window.removeEventListener(event, handleDebtPaymentSync);
-      });
-      window.removeEventListener('customer-payment-recorded', handleCustomerPaymentRecorded);
-      window.removeEventListener('customer-debt-updated', handleCustomerDebtUpdated);
     };
   }, [loadCustomers]);
 

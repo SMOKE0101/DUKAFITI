@@ -88,7 +88,7 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
       }
     });
 
-    // Add debt payments from Supabase
+    // Add debt payments
     debtPayments.forEach(payment => {
       debtTransactionsList.push({
         id: `payment-${payment.id}`,
@@ -100,37 +100,6 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
         reference: payment.reference
       });
     });
-
-    // Add offline debt payments (for offline mode reporting)
-    try {
-      const offlinePayments = localStorage.getItem('debt_payments_offline');
-      if (offlinePayments) {
-        const payments = JSON.parse(offlinePayments);
-        payments.forEach((payment: any) => {
-          // Check if this payment is already in the debtPayments list (to avoid duplicates after sync)
-          const isDuplicate = debtTransactionsList.some(existing => 
-            existing.id === `payment-${payment.id}` || 
-            (existing.customer === payment.customer_name && 
-             existing.amount === payment.amount && 
-             Math.abs(new Date(existing.timestamp).getTime() - new Date(payment.timestamp).getTime()) < 1000)
-          );
-          
-          if (!isDuplicate) {
-            debtTransactionsList.push({
-              id: `offline-payment-${payment.id}`,
-              customer: payment.customer_name,
-              amount: payment.amount,
-              paymentMethod: payment.payment_method,
-              transactionType: 'payment',
-              timestamp: payment.timestamp,
-              reference: payment.reference
-            });
-          }
-        });
-      }
-    } catch (error) {
-      console.warn('Failed to load offline debt payments:', error);
-    }
 
     return debtTransactionsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [sales, debtPayments, transactions, customers]);

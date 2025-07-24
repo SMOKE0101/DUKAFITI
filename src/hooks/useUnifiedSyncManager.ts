@@ -12,14 +12,9 @@ export const useUnifiedSyncManager = () => {
   const { requestSync, globalSyncInProgress, pendingOperationsCount } = useSyncCoordinator();
 
   const syncPendingOperations = useCallback(async () => {
-    // CRITICAL: Double-check offline state to prevent network errors
-    const isActuallyOnline = isOnline && navigator.onLine;
-    
-    if (!isActuallyOnline || pendingOps.length === 0 || !user || globalSyncInProgress) {
+    if (!isOnline || pendingOps.length === 0 || !user || globalSyncInProgress) {
       console.log('[UnifiedSyncManager] Sync conditions not met:', {
         isOnline,
-        navigatorOnline: navigator.onLine,
-        isActuallyOnline,
         pendingOpsLength: pendingOps.length,
         hasUser: !!user,
         globalSyncInProgress
@@ -63,8 +58,7 @@ export const useUnifiedSyncManager = () => {
 
   // Auto-sync when coming online (with coordination)
   useEffect(() => {
-    const isActuallyOnline = isOnline && navigator.onLine;
-    if (isActuallyOnline && pendingOps.length > 0 && user && !globalSyncInProgress) {
+    if (isOnline && pendingOps.length > 0 && user && !globalSyncInProgress) {
       console.log('[UnifiedSyncManager] Coming online with pending operations, initiating coordinated sync...');
       // Use timeout to prevent immediate re-triggering
       const timeout = setTimeout(() => {
@@ -76,8 +70,7 @@ export const useUnifiedSyncManager = () => {
 
   // Periodic sync for any remaining operations
   useEffect(() => {
-    const isActuallyOnline = isOnline && navigator.onLine;
-    if (!isActuallyOnline || pendingOps.length === 0 || globalSyncInProgress) return;
+    if (!isOnline || pendingOps.length === 0 || globalSyncInProgress) return;
 
     const interval = setInterval(() => {
       console.log('[UnifiedSyncManager] Periodic sync check - pending operations:', pendingOps.length);

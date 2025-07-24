@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,10 +15,8 @@ import CustomerCard from './CustomerCard';
 import CustomerFormModal from './CustomerFormModal';
 import PaymentModal from './PaymentModal';
 import DeleteCustomerModal from './DeleteCustomerModal';
-import { useCacheManager } from '../../hooks/useCacheManager';
-import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../integrations/supabase/client';
 
 const CustomersPage = () => {
   const { 
@@ -30,8 +28,7 @@ const CustomersPage = () => {
     isOnline, 
     pendingOperations 
   } = useUnifiedCustomers();
-  const { addPendingOperation, clearPendingOperation } = useCacheManager();
-  const { isOnline: networkOnline } = useNetworkStatus();
+  const { createDebtPayment } = useSupabaseDebtPayments();
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -49,29 +46,6 @@ const CustomersPage = () => {
     deleting: null,
     recordingPayment: null,
   });
-
-  // Handle clearing pending operations when direct sync succeeds
-  useEffect(() => {
-    const handleClearPendingPayment = (event: any) => {
-      const { customerId, timestamp } = event.detail;
-      console.log('[CustomersPage] Clearing pending debt payment operation:', { customerId, timestamp });
-      
-      // Find and clear the specific pending operation
-      // We'll use a timeout to ensure the operation exists before trying to clear it
-      setTimeout(() => {
-        // This will be handled by the cache manager automatically
-        window.dispatchEvent(new CustomEvent('debt_payment-synced', {
-          detail: { customerId, timestamp, directSync: true }
-        }));
-      }, 200);
-    };
-
-    window.addEventListener('clear-pending-debt-payment', handleClearPendingPayment);
-    
-    return () => {
-      window.removeEventListener('clear-pending-debt-payment', handleClearPendingPayment);
-    };
-  }, []);
 
   // Filter customers based on search query
   const filteredCustomers = customers.filter(customer =>
@@ -158,156 +132,41 @@ const CustomersPage = () => {
   };
 
   const handlePaymentComplete = async (paymentData: { amount: number; method: string; notes?: string }) => {
-    if (!selectedCustomer || !user) return;
+    if (!selectedCustomer) return;
     
     setOperationsInProgress(prev => ({ ...prev, recordingPayment: selectedCustomer.id }));
     try {
-      const paymentAmount = paymentData.amount;
-      const newBalance = Math.max(0, selectedCustomer.outstandingDebt - paymentAmount);
-      const timestamp = new Date().toISOString();
+      // Calculate new outstanding debt
+      const newOutstandingDebt = Math.max(0, selectedCustomer.outstandingDebt - paymentData.amount);
       
-      console.log('[CustomersPage] Recording payment using atomic operation');
-      
-      // Use atomic operation to ensure payment and balance update happen together
-      addPendingOperation({
-        type: 'debt_payment',
-        operation: 'create',
-        data: {
-          user_id: user.id,
-          customer_id: selectedCustomer.id,
-          customer_name: selectedCustomer.name,
-          amount: paymentAmount,
-          payment_method: paymentData.method,
-          reference: paymentData.notes || null,
-          timestamp: timestamp,
-          // Include customer balance update data for atomic operation
-          customer_balance_update: {
-            new_outstanding_debt: newBalance,
-            last_purchase_date: timestamp
-          }
-        }
+      // Create debt payment record
+      await createDebtPayment({
+        user_id: user?.id || '',
+        customer_id: selectedCustomer.id,
+        customer_name: selectedCustomer.name,
+        amount: paymentData.amount,
+        payment_method: paymentData.method,
+        reference: paymentData.notes || undefined,
+        timestamp: new Date().toISOString(),
       });
       
-      // Update local state immediately for UI responsiveness
-      try {
-        // Update customer in local storage
-        const storedCustomers = localStorage.getItem('customers');
-        if (storedCustomers) {
-          const customers = JSON.parse(storedCustomers);
-          const updatedCustomers = customers.map((c: any) => 
-            c.id === selectedCustomer.id 
-              ? { ...c, outstandingDebt: newBalance, lastPurchaseDate: timestamp, updated_at: timestamp }
-              : c
-          );
-          localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-          console.log('[CustomersPage] Updated customer in localStorage:', { 
-            customerId: selectedCustomer.id, 
-            oldDebt: selectedCustomer.outstandingDebt, 
-            newBalance: newBalance 
-          });
-        }
-        
-        // Add to local debt payments for reports
-        const storedPayments = localStorage.getItem('debt_payments_offline') || '[]';
-        const payments = JSON.parse(storedPayments);
-        const newPayment = {
-          id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          user_id: user.id,
-          customer_id: selectedCustomer.id,
-          customer_name: selectedCustomer.name,
-          amount: paymentAmount,
-          payment_method: paymentData.method,
-          reference: paymentData.notes || null,
-          timestamp: timestamp,
-          created_at: timestamp,
-          synced: false
-        };
-        payments.unshift(newPayment);
-        localStorage.setItem('debt_payments_offline', JSON.stringify(payments));
-        
-        // Update the selectedCustomer state immediately
-        setSelectedCustomer(prev => prev ? {
-          ...prev,
-          outstandingDebt: newBalance,
-          lastPurchaseDate: timestamp,
-          updated_at: timestamp
-        } : null);
-        
-      } catch (localUpdateError) {
-        console.warn('[CustomersPage] Failed to update local state:', localUpdateError);
-      }
+      // Update customer with new debt amount
+      await updateCustomer(selectedCustomer.id, {
+        outstandingDebt: newOutstandingDebt,
+        lastPurchaseDate: new Date().toISOString()
+      });
 
-      // DIRECT SYNC IMPLEMENTATION for immediate persistence when online
-      if (networkOnline && navigator.onLine) {
-        console.log('[CustomersPage] Online - performing direct sync for debt payment');
-        try {
-          // Perform immediate sync directly using supabase RPC
-          const { error: syncError } = await supabase.rpc('record_debt_payment_with_balance_update', {
-            p_user_id: user.id,
-            p_customer_id: selectedCustomer.id,
-            p_customer_name: selectedCustomer.name,
-            p_amount: paymentAmount,
-            p_payment_method: paymentData.method,
-            p_reference: paymentData.notes || null,
-            p_timestamp: timestamp,
-            p_new_outstanding_debt: newBalance,
-            p_last_purchase_date: timestamp
-          });
-
-          if (syncError) {
-            console.error('[CustomersPage] Direct sync error:', syncError);
-            toast({
-              title: "Payment Recorded",
-              description: `Payment saved offline. Will sync when possible.`,
-            });
-          } else {
-            console.log('[CustomersPage] Direct sync successful - payment and balance updated in database');
-            // Clear the pending operation since we synced directly
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('clear-pending-debt-payment', {
-                detail: { 
-                  customerId: selectedCustomer.id,
-                  timestamp: timestamp
-                }
-              }));
-            }, 100);
-            
-            toast({
-              title: "Payment Recorded",
-              description: `Payment of ${formatCurrency(paymentData.amount)} recorded and synced successfully`,
-            });
-          }
-        } catch (directSyncError) {
-          console.error('[CustomersPage] Direct sync failed:', directSyncError);
-          toast({
-            title: "Payment Recorded",
-            description: `Payment saved offline. Will sync when possible.`,
-          });
-        }
-      } else {
-        toast({
-          title: "Payment Recorded",
-          description: `Payment of ${formatCurrency(paymentData.amount)} saved offline. Will sync when online.`,
-        });
-      }
-      
-      // Trigger UI refresh events
-      window.dispatchEvent(new CustomEvent('customer-payment-recorded', {
-        detail: { 
-          customerId: selectedCustomer.id, 
-          newBalance: newBalance,
-          paymentAmount: paymentAmount,
-          timestamp: timestamp
-        }
-      }));
-      
-      window.dispatchEvent(new CustomEvent('customer-debt-updated', {
-        detail: { customerId: selectedCustomer.id, newBalance: newBalance }
-      }));
+      toast({
+        title: "Payment Recorded",
+        description: isOnline 
+          ? `Payment of ${formatCurrency(paymentData.amount)} recorded successfully`
+          : `Payment of ${formatCurrency(paymentData.amount)} recorded (will sync when online)`,
+      });
       
       setShowPaymentModal(false);
+      setSelectedCustomer(null);
     } catch (error) {
-      console.error('[CustomersPage] Failed to record payment:', error);
+      console.error('Failed to record payment:', error);
       toast({
         title: "Error",
         description: "Failed to record payment. Please try again.",

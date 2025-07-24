@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 
 interface PendingOperation {
   id: string;
-  type: 'sale' | 'product' | 'customer' | 'transaction' | 'debt_payment';
+  type: 'sale' | 'product' | 'customer' | 'transaction';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp: string;
@@ -79,23 +79,17 @@ export const useCacheManager = () => {
   }, []);
 
   const addPendingOperation = useCallback((operation: Omit<PendingOperation, 'id' | 'timestamp' | 'attempts' | 'maxAttempts'>): void => {
-    console.log('[CacheManager] addPendingOperation called with:', operation);
-    
-    try {
-      const operationWithId: PendingOperation = {
-        ...operation,
-        id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: new Date().toISOString(),
-        attempts: 0,
-        maxAttempts: 3
-      };
+    const operationWithId: PendingOperation = {
+      ...operation,
+      id: `${operation.type}_${operation.operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      attempts: 0,
+      maxAttempts: 3
+    };
 
-      console.log('[CacheManager] Created operation with ID:', operationWithId.id);
-      console.log('[CacheManager] Full operation data:', operationWithId);
+    console.log('[CacheManager] Adding pending operation:', operationWithId.id, operationWithId.type, operationWithId.operation);
 
     setPendingOps(prev => {
-      console.log('[CacheManager] Current pending operations before update:', prev.length);
-      
       let filteredOps = [...prev];
       
       // Enhanced deduplication logic
@@ -151,12 +145,6 @@ export const useCacheManager = () => {
       console.log(`[CacheManager] Added pending operation. Total: ${newOps.length}`);
       return newOps;
     });
-    
-    console.log('[CacheManager] addPendingOperation completed successfully');
-    } catch (error) {
-      console.error('[CacheManager] Error in addPendingOperation:', error);
-      throw error;
-    }
   }, []);
 
   const clearPendingOperation = useCallback((operationId: string): void => {
@@ -178,12 +166,6 @@ export const useCacheManager = () => {
 
   // Enhanced sync function with better error handling
   const syncPendingOperations = useCallback(async (): Promise<void> => {
-    // CRITICAL: Don't sync if we're offline to prevent network errors
-    if (!navigator.onLine) {
-      console.log('[CacheManager] Offline detected, skipping sync to prevent network errors');
-      return;
-    }
-    
     if (!user) {
       console.log('[CacheManager] No user, skipping sync');
       return;
@@ -226,8 +208,6 @@ export const useCacheManager = () => {
             success = await syncProductOperation(operation, user.id);
           } else if (operation.type === 'customer') {
             success = await syncCustomerOperation(operation, user.id);
-          } else if (operation.type === 'debt_payment') {
-            success = await syncDebtPaymentOperation(operation, user.id);
           }
 
           if (success) {
@@ -275,12 +255,6 @@ export const useCacheManager = () => {
         if (operationsByType.customer && operationsByType.customer.length > 0) {
           window.dispatchEvent(new CustomEvent('customer-synced', {
             detail: { operationCount: operationsByType.customer.length, timestamp: new Date().toISOString() }
-          }));
-        }
-        
-        if (operationsByType.debt_payment && operationsByType.debt_payment.length > 0) {
-          window.dispatchEvent(new CustomEvent('debt-payment-synced', {
-            detail: { operationCount: operationsByType.debt_payment.length, timestamp: new Date().toISOString() }
           }));
         }
       }, 100);
@@ -475,123 +449,6 @@ export const useCacheManager = () => {
     }
   };
 
-  // Enhanced debt payment sync function with customer balance update
-  const syncDebtPaymentOperation = async (operation: PendingOperation, userId: string): Promise<boolean> => {
-    const { data } = operation;
-    console.log(`[CacheManager] Syncing debt payment ${operation.operation}:`, data?.customer_name || data?.id);
-    
-    try {
-      switch (operation.operation) {
-        case 'create':
-          // Use a transaction to ensure both debt payment and customer update happen atomically
-          const { error: createError } = await supabase.rpc('record_debt_payment_with_balance_update', {
-            p_user_id: userId,
-            p_customer_id: data.customer_id,
-            p_customer_name: data.customer_name,
-            p_amount: data.amount,
-            p_payment_method: data.payment_method,
-            p_reference: data.reference,
-            p_timestamp: data.timestamp,
-            p_new_outstanding_debt: data.customer_balance_update?.new_outstanding_debt,
-            p_last_purchase_date: data.customer_balance_update?.last_purchase_date
-          });
-          
-          console.log('[CacheManager] Debt payment RPC call completed:', { 
-            error: createError,
-            expectedBalance: data.customer_balance_update?.new_outstanding_debt,
-            customerId: data.customer_id,
-            customerName: data.customer_name
-          });
-          
-          if (createError) {
-            console.error('[CacheManager] Debt payment with balance update error:', createError);
-            // Fallback to separate operations
-            console.log('[CacheManager] Falling back to separate operations');
-            
-            // Create debt payment first
-            const { error: fallbackPaymentError } = await supabase
-              .from('debt_payments')
-              .insert([{
-                user_id: userId,
-                customer_id: data.customer_id,
-                customer_name: data.customer_name,
-                amount: data.amount,
-                payment_method: data.payment_method,
-                reference: data.reference,
-                timestamp: data.timestamp,
-                synced: true,
-              }]);
-            
-            if (fallbackPaymentError) {
-              console.error('[CacheManager] Fallback debt payment create error:', fallbackPaymentError);
-              return false;
-            }
-            
-            // Update customer balance if provided
-            if (data.customer_balance_update) {
-              const { error: customerUpdateError } = await supabase
-                .from('customers')
-                .update({
-                  outstanding_debt: data.customer_balance_update.new_outstanding_debt,
-                  last_purchase_date: data.customer_balance_update.last_purchase_date
-                })
-                .eq('id', data.customer_id)
-                .eq('user_id', userId);
-              
-              if (customerUpdateError) {
-                console.error('[CacheManager] Customer balance update error:', customerUpdateError);
-                // Don't fail the whole operation if just balance update fails
-              }
-            }
-          }
-          
-          console.log('[CacheManager] Debt payment and customer balance updated successfully');
-          return true;
-          
-        case 'update':
-          const updates = data.updates || data;
-          const dbUpdates: any = {};
-          
-          if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
-          if (updates.payment_method !== undefined) dbUpdates.payment_method = updates.payment_method;
-          if (updates.reference !== undefined) dbUpdates.reference = updates.reference;
-          if (updates.customer_name !== undefined) dbUpdates.customer_name = updates.customer_name;
-
-          const { error: updateError } = await supabase
-            .from('debt_payments')
-            .update(dbUpdates)
-            .eq('id', data.id)
-            .eq('user_id', userId);
-            
-          if (updateError) {
-            console.error('[CacheManager] Debt payment update error:', updateError);
-            return false;
-          }
-          return true;
-          
-        case 'delete':
-          const { error: deleteError } = await supabase
-            .from('debt_payments')
-            .delete()
-            .eq('id', data.id)
-            .eq('user_id', userId);
-            
-          if (deleteError) {
-            console.error('[CacheManager] Debt payment delete error:', deleteError);
-            return false;
-          }
-          return true;
-          
-        default:
-          console.warn(`[CacheManager] Unsupported operation: ${operation.operation}`);
-          return false;
-      }
-    } catch (error) {
-      console.error('[CacheManager] Debt payment operation error:', error);
-      return false;
-    }
-  };
-
   const debugPendingOperations = useCallback(() => {
     console.log('[CacheManager] Debug - Current pending operations:', {
       total: pendingOps.length,
@@ -600,7 +457,6 @@ export const useCacheManager = () => {
         customer: pendingOps.filter(op => op.type === 'customer').length,
         product: pendingOps.filter(op => op.type === 'product').length,
         transaction: pendingOps.filter(op => op.type === 'transaction').length,
-        debt_payment: pendingOps.filter(op => op.type === 'debt_payment').length,
       },
       operations: pendingOps
     });
