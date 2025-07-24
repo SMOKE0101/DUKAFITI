@@ -33,13 +33,21 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const { addPendingOperation } = useCacheManager();
+  
+  console.log('[RepaymentDrawer] Component rendered with:', {
+    isOnline,
+    hasUser: !!user,
+    hasCustomer: !!customer,
+    hasAddPendingOperation: typeof addPendingOperation
+  });
 
   const handleSavePayment = async () => {
     console.log('[RepaymentDrawer] Starting payment recording process');
-    console.log('[RepaymentDrawer] Network status:', { isOnline });
+    console.log('[RepaymentDrawer] Network status:', { isOnline, navigatorOnline: navigator.onLine });
     console.log('[RepaymentDrawer] Customer:', customer?.name, customer?.id);
     console.log('[RepaymentDrawer] Payment details:', { amount, method, reference });
     console.log('[RepaymentDrawer] User:', user?.id);
+    console.log('[RepaymentDrawer] addPendingOperation function:', typeof addPendingOperation);
 
     if (!customer || !amount || parseFloat(amount) <= 0 || !user) {
       console.error('[RepaymentDrawer] Validation failed:', {
@@ -70,7 +78,11 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
         networkStatus: isOnline
       });
       
-      if (isOnline) {
+      // Force offline mode for debugging
+      const forceOffline = true;
+      console.log('[RepaymentDrawer] Forcing offline mode for debugging. Original isOnline:', isOnline);
+      
+      if (!forceOffline && isOnline) {
         // Online mode - direct database operations
         console.log('[RepaymentDrawer] Online mode - recording payment directly');
         
@@ -93,15 +105,25 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
           throw new Error(`Failed to record payment: ${debtPaymentError.message}`);
         }
 
-        // Update customer balance in online mode
+        // Update customer balance in online mode using direct Supabase call
         try {
-          await updateCustomer(customer.id, {
-            outstandingDebt: newBalance,
-            lastPurchaseDate: timestamp
-          });
+          const { error: updateError } = await supabase
+            .from('customers')
+            .update({
+              outstanding_debt: newBalance,
+              last_purchase_date: timestamp
+            })
+            .eq('id', customer.id)
+            .eq('user_id', user.id);
+
+          if (updateError) {
+            console.error('Error updating customer balance:', updateError);
+            console.warn('Debt payment recorded but customer balance update failed. Will be synced later.');
+          } else {
+            console.log('[RepaymentDrawer] Customer balance updated successfully');
+          }
         } catch (updateError) {
           console.error('Error updating customer balance:', updateError);
-          // Don't throw error for customer update failure, debt payment was recorded
           console.warn('Debt payment recorded but customer balance update failed. Will be synced later.');
         }
       } else {
@@ -149,6 +171,44 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
           });
 
           console.log('[RepaymentDrawer] Customer update operation queued successfully');
+          
+          // Update local state immediately for UI responsiveness
+          try {
+            // Update customer in local storage
+            const storedCustomers = localStorage.getItem('customers');
+            if (storedCustomers) {
+              const customers = JSON.parse(storedCustomers);
+              const updatedCustomers = customers.map((c: any) => 
+                c.id === customer.id 
+                  ? { ...c, outstandingDebt: newBalance, lastPurchaseDate: timestamp }
+                  : c
+              );
+              localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+              console.log('[RepaymentDrawer] Local customer data updated');
+            }
+            
+            // Add to local debt payments for reports
+            const storedPayments = localStorage.getItem('debt_payments_offline') || '[]';
+            const payments = JSON.parse(storedPayments);
+            const newPayment = {
+              id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              user_id: user.id,
+              customer_id: customer.id,
+              customer_name: customer.name,
+              amount: paymentAmount,
+              payment_method: method,
+              reference: reference || null,
+              timestamp: timestamp,
+              created_at: timestamp,
+              synced: false
+            };
+            payments.unshift(newPayment);
+            localStorage.setItem('debt_payments_offline', JSON.stringify(payments));
+            console.log('[RepaymentDrawer] Local debt payment added for reports');
+          } catch (localUpdateError) {
+            console.warn('[RepaymentDrawer] Failed to update local state:', localUpdateError);
+          }
+          
           console.log('[RepaymentDrawer] All offline operations queued successfully');
         } catch (queueError) {
           console.error('[RepaymentDrawer] Error queuing offline operations:', queueError);
