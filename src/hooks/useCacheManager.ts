@@ -178,6 +178,12 @@ export const useCacheManager = () => {
 
   // Enhanced sync function with better error handling
   const syncPendingOperations = useCallback(async (): Promise<void> => {
+    // CRITICAL: Don't sync if we're offline to prevent network errors
+    if (!navigator.onLine) {
+      console.log('[CacheManager] Offline detected, skipping sync to prevent network errors');
+      return;
+    }
+    
     if (!user) {
       console.log('[CacheManager] No user, skipping sync');
       return;
