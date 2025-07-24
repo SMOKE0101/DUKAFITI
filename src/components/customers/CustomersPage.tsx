@@ -142,10 +142,9 @@ const CustomersPage = () => {
       const newBalance = Math.max(0, selectedCustomer.outstandingDebt - paymentAmount);
       const timestamp = new Date().toISOString();
       
-      console.log('[CustomersPage] Recording payment using offline queuing system');
+      console.log('[CustomersPage] Recording payment using atomic operation');
       
-      // Always use offline mode to prevent network errors
-      // Queue debt payment creation
+      // Use atomic operation to ensure payment and balance update happen together
       addPendingOperation({
         type: 'debt_payment',
         operation: 'create',
@@ -156,19 +155,11 @@ const CustomersPage = () => {
           amount: paymentAmount,
           payment_method: paymentData.method,
           reference: paymentData.notes || null,
-          timestamp: timestamp
-        }
-      });
-
-      // Queue customer balance update
-      addPendingOperation({
-        type: 'customer',
-        operation: 'update',
-        data: {
-          id: selectedCustomer.id,
-          updates: {
-            outstandingDebt: newBalance,
-            lastPurchaseDate: timestamp
+          timestamp: timestamp,
+          // Include customer balance update data for atomic operation
+          customer_balance_update: {
+            new_outstanding_debt: newBalance,
+            last_purchase_date: timestamp
           }
         }
       });
@@ -181,10 +172,15 @@ const CustomersPage = () => {
           const customers = JSON.parse(storedCustomers);
           const updatedCustomers = customers.map((c: any) => 
             c.id === selectedCustomer.id 
-              ? { ...c, outstandingDebt: newBalance, lastPurchaseDate: timestamp }
+              ? { ...c, outstandingDebt: newBalance, lastPurchaseDate: timestamp, updated_at: timestamp }
               : c
           );
           localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+          console.log('[CustomersPage] Updated customer in localStorage:', { 
+            customerId: selectedCustomer.id, 
+            oldDebt: selectedCustomer.outstandingDebt, 
+            newBalance: newBalance 
+          });
         }
         
         // Add to local debt payments for reports
@@ -204,6 +200,15 @@ const CustomersPage = () => {
         };
         payments.unshift(newPayment);
         localStorage.setItem('debt_payments_offline', JSON.stringify(payments));
+        
+        // Update the selectedCustomer state immediately
+        setSelectedCustomer(prev => prev ? {
+          ...prev,
+          outstandingDebt: newBalance,
+          lastPurchaseDate: timestamp,
+          updated_at: timestamp
+        } : null);
+        
       } catch (localUpdateError) {
         console.warn('[CustomersPage] Failed to update local state:', localUpdateError);
       }
@@ -215,13 +220,22 @@ const CustomersPage = () => {
           : `Payment of ${formatCurrency(paymentData.amount)} saved offline. Will sync when online.`,
       });
       
-      // Trigger immediate UI refresh
+      // Trigger immediate UI refresh with specific event
+      window.dispatchEvent(new CustomEvent('customer-payment-recorded', {
+        detail: { 
+          customerId: selectedCustomer.id, 
+          newBalance: newBalance,
+          paymentAmount: paymentAmount,
+          timestamp: timestamp
+        }
+      }));
+      
+      // Also trigger general customer update event
       window.dispatchEvent(new CustomEvent('customer-debt-updated', {
         detail: { customerId: selectedCustomer.id, newBalance: newBalance }
       }));
       
       setShowPaymentModal(false);
-      setSelectedCustomer(null);
     } catch (error) {
       console.error('[CustomersPage] Failed to record payment:', error);
       toast({

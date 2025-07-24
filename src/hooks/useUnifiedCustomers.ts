@@ -554,6 +554,55 @@ export const useUnifiedCustomers = () => {
       }, 500); // Small delay to ensure database operations complete
     };
 
+    const handleCustomerPaymentRecorded = (event: any) => {
+      console.log('[UnifiedCustomers] Customer payment recorded, updating local state:', event.detail);
+      const { customerId, newBalance, timestamp } = event.detail;
+      
+      // Update local customers state immediately
+      setCustomers(prevCustomers => 
+        prevCustomers.map(customer => 
+          customer.id === customerId 
+            ? { 
+                ...customer, 
+                outstandingDebt: newBalance, 
+                lastPurchaseDate: timestamp,
+                updated_at: timestamp
+              }
+            : customer
+        )
+      );
+      
+      // Also update localStorage to persist the change
+      try {
+        const storedCustomers = localStorage.getItem('customers');
+        if (storedCustomers) {
+          const customers = JSON.parse(storedCustomers);
+          const updatedCustomers = customers.map((c: any) => 
+            c.id === customerId 
+              ? { ...c, outstandingDebt: newBalance, lastPurchaseDate: timestamp, updated_at: timestamp }
+              : c
+          );
+          localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+        }
+      } catch (error) {
+        console.warn('[UnifiedCustomers] Failed to update localStorage:', error);
+      }
+    };
+
+    const handleCustomerDebtUpdated = (event: any) => {
+      console.log('[UnifiedCustomers] Customer debt updated:', event.detail);
+      const { customerId, newBalance } = event.detail;
+      
+      // Update local state immediately
+      setCustomers(prevCustomers => 
+        prevCustomers.map(customer => 
+          customer.id === customerId 
+            ? { ...customer, outstandingDebt: newBalance }
+            : customer
+        )
+      );
+    };
+
     const events = [
       'sync-completed',
       'data-synced', 
@@ -575,6 +624,10 @@ export const useUnifiedCustomers = () => {
     debtPaymentEvents.forEach(event => {
       window.addEventListener(event, handleDebtPaymentSync);
     });
+
+    // Add specific payment event listeners
+    window.addEventListener('customer-payment-recorded', handleCustomerPaymentRecorded);
+    window.addEventListener('customer-debt-updated', handleCustomerDebtUpdated);
     
     return () => {
       events.forEach(event => {
@@ -583,6 +636,8 @@ export const useUnifiedCustomers = () => {
       debtPaymentEvents.forEach(event => {
         window.removeEventListener(event, handleDebtPaymentSync);
       });
+      window.removeEventListener('customer-payment-recorded', handleCustomerPaymentRecorded);
+      window.removeEventListener('customer-debt-updated', handleCustomerDebtUpdated);
     };
   }, [loadCustomers]);
 
