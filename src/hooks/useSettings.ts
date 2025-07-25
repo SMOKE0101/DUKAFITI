@@ -82,7 +82,7 @@ export const useSettings = () => {
   // Load settings from Supabase only once
   const loadSettings = async () => {
     if (!user || hasLoaded) {
-      console.log('No user or already loaded, skipping settings load');
+      console.log('useSettings - No user or already loaded, skipping settings load. User:', !!user, 'HasLoaded:', hasLoaded);
       if (!user) {
         setSettings(defaultSettings);
         setLoading(false);
@@ -146,7 +146,8 @@ export const useSettings = () => {
 
       console.log('Loaded settings successfully:', loadedSettings);
       setSettings(loadedSettings);
-      setTheme(themeValue);
+      // DO NOT automatically apply theme - let user maintain their current theme choice
+      // setTheme(themeValue); // This line was causing automatic theme switching
       setHasLoaded(true);
     } catch (error) {
       console.error('Error loading settings:', error);

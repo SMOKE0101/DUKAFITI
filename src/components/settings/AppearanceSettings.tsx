@@ -10,18 +10,20 @@ import { Moon, Sun, WifiOff } from 'lucide-react';
 const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
   const { isOnline } = useNetworkStatus();
-  const { setTheme } = useTheme();
+  const { theme: currentTheme, setTheme } = useTheme();
   const [formData, setFormData] = useState({
     theme: 'light' as 'light' | 'dark',
   });
 
-  // Update form data when settings are loaded
+  // Use the current theme from next-themes instead of stored settings
   useEffect(() => {
-    console.log('Settings loaded in AppearanceSettings:', settings);
+    console.log('AppearanceSettings - Current active theme:', currentTheme);
+    console.log('AppearanceSettings - Database stored theme:', settings.theme);
+    console.log('AppearanceSettings - Using current active theme to prevent unwanted switches');
     setFormData({
-      theme: (settings.theme === 'dark' ? 'dark' : 'light') as 'light' | 'dark',
+      theme: (currentTheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark',
     });
-  }, [settings]);
+  }, [currentTheme, settings]);
 
   const handleThemeToggle = (isDark: boolean) => {
     const newTheme = isDark ? 'dark' : 'light';
