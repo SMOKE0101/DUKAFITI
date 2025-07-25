@@ -289,7 +289,7 @@ const CustomersPage = () => {
   return (
     <TooltipWrapper>
       <div className="min-h-screen bg-background font-['Inter']">
-        <div className="container mx-auto px-6 py-8 space-y-8">
+        <div className="container mx-auto px-6 space-y-8">
           {/* Desktop Header using CustomersHeader */}
           <CustomersHeader
             totalCustomers={totalCustomers}
