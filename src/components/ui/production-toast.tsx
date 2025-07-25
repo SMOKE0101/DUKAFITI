@@ -30,7 +30,7 @@ export const productionToast = {
 
   error: (message: string, options?: Omit<ToastOptions, 'variant'>) => {
     sonnerToast.error(message, {
-      duration: options?.duration || 5000,
+      duration: options?.duration || 3000,
       description: options?.description,
       icon: toastIcons.error,
       className: 'border border-red-200 bg-red-50 text-red-900',
@@ -39,7 +39,7 @@ export const productionToast = {
 
   warning: (message: string, options?: Omit<ToastOptions, 'variant'>) => {
     sonnerToast.warning(message, {
-      duration: options?.duration || 4000,
+      duration: options?.duration || 3000,
       description: options?.description,
       icon: toastIcons.warning,
       className: 'border border-orange-200 bg-orange-50 text-orange-900',
