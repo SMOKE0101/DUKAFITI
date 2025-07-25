@@ -22,6 +22,7 @@ import InventoryPage from "./components/InventoryPage";
 import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
+          <ScrollToTop />
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <TooltipProvider>
               <AuthProvider>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Moon, Sun, RefreshCw } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
+import { useLocation } from 'react-router-dom';
 import UserMenu from '../UserMenu';
 import CubeLogo from '../branding/CubeLogo';
 
@@ -81,13 +82,25 @@ const MobileTopBar: React.FC = () => {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
+  const location = useLocation();
+
+  // Reset scroll position when route changes
+  useEffect(() => {
+    // Reset main content scroll for both mobile and desktop
+    const mainElements = document.querySelectorAll('[data-main-content="true"]');
+    mainElements.forEach(element => {
+      if (element.scrollTo) {
+        element.scrollTo(0, 0);
+      }
+    });
+  }, [location.pathname]);
 
   if (isMobile) {
     // Mobile layout with bottom navigation
     return (
       <div className="min-h-screen w-full bg-background flex flex-col">
         <MobileTopBar />
-        <main className="flex-1 overflow-auto pb-20">
+        <main className="flex-1 overflow-auto pb-20" data-main-content="true">
           <div className="h-full">
             {children}
           </div>
@@ -106,7 +119,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar />
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto" data-main-content="true">
             <div className="h-full">
               {children}
             </div>
