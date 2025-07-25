@@ -25,9 +25,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [user, isOnline]);
 
-  // Load last known user when offline
+  // Load last known user when offline or when user is null
   useEffect(() => {
-    if (!user && !isOnline && !loading) {
+    if (!user && !loading) {
       try {
         const stored = localStorage.getItem('lastKnownUser');
         if (stored) {
@@ -35,54 +35,56 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           // Allow access if user was authenticated within last 7 days
           const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
           if (Date.now() - userData.timestamp < sevenDaysMs) {
-            console.log('[ProtectedRoute] Allowing offline access for cached user');
+            console.log('[ProtectedRoute] Using cached user for offline access');
             setLastKnownUser(userData);
             return;
+          } else {
+            console.log('[ProtectedRoute] Cached user expired, clearing cache');
+            localStorage.removeItem('lastKnownUser');
           }
         }
       } catch (error) {
         console.error('[ProtectedRoute] Error loading cached user:', error);
+        localStorage.removeItem('lastKnownUser');
       }
       
       // Only redirect to signin if online and no cached user
-      if (isOnline) {
+      if (isOnline && !lastKnownUser) {
+        console.log('[ProtectedRoute] No user and online, redirecting to signin');
         navigate('/signin');
       }
     }
-  }, [user, loading, navigate, isOnline]);
-
-  // Redirect to signin only when online and no user
-  useEffect(() => {
-    if (!loading && !user && !lastKnownUser && isOnline) {
-      navigate('/signin');
-    }
   }, [user, loading, navigate, isOnline, lastKnownUser]);
 
-  if (loading && isOnline) {
+  // Show loading state when needed
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <span className="text-2xl font-bold text-white">D</span>
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">DukaFiti</h2>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground text-sm font-medium">
+            {isOnline ? 'Loading...' : 'Loading offline data...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  // Show offline loading while trying to authenticate
-  if (loading && !isOnline) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading offline data...</p>
-        </div>
-      </div>
-    );
+  // Allow access if user exists (online) or last known user exists (offline/online)
+  if (user || lastKnownUser) {
+    console.log('[ProtectedRoute] Allowing access - user:', !!user, 'lastKnownUser:', !!lastKnownUser);
+    return <>{children}</>;
   }
 
-  // If online and no user, show redirecting message
-  if (!user && !lastKnownUser && isOnline) {
+  // If we reach here, no authenticated user found
+  // Redirect to signin if online, show offline message if offline
+  if (isOnline) {
+    console.log('[ProtectedRoute] No user found and online, redirecting to signin');
+    navigate('/signin');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -90,11 +92,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         </div>
       </div>
     );
-  }
-
-  // Allow access if user exists (online) or last known user exists (offline)
-  if (user || lastKnownUser) {
-    return <>{children}</>;
   }
 
   // Offline with no cached user - show offline message

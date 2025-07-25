@@ -1,16 +1,49 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { isOnline } = useNetworkStatus();
+  const [hasCheckedCache, setHasCheckedCache] = useState(false);
 
   useEffect(() => {
-    console.log('[Index] Auth state check:', { user: !!user, loading, isOnline: navigator.onLine });
+    console.log('[Index] Auth state check:', { 
+      user: !!user, 
+      loading, 
+      isOnline, 
+      hasCheckedCache 
+    });
     
-    if (!loading) {
+    if (!loading && !hasCheckedCache) {
+      setHasCheckedCache(true);
+      
+      // Check for cached user if no authenticated user
+      if (!user) {
+        try {
+          const stored = localStorage.getItem('lastKnownUser');
+          if (stored) {
+            const userData = JSON.parse(stored);
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            if (Date.now() - userData.timestamp < sevenDaysMs) {
+              console.log('[Index] Cached user found, redirecting to dashboard');
+              navigate('/app/dashboard', { replace: true });
+              return;
+            } else {
+              console.log('[Index] Cached user expired, removing from storage');
+              localStorage.removeItem('lastKnownUser');
+            }
+          }
+        } catch (error) {
+          console.error('[Index] Error checking cached user:', error);
+          localStorage.removeItem('lastKnownUser');
+        }
+      }
+      
+      // Route based on authentication status
       if (user) {
         console.log('[Index] Authenticated user detected, redirecting to dashboard');
         navigate('/app/dashboard', { replace: true });
@@ -19,7 +52,7 @@ const Index = () => {
         navigate('/landing', { replace: true });
       }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isOnline, hasCheckedCache]);
 
   if (loading) {
     return (
