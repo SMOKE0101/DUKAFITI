@@ -56,7 +56,7 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
 
   const cards = [
     {
-      title: 'TOTAL REVENUE TODAY',
+      title: 'TOTAL REVENUE',
       value: formatCurrency(totalRevenue),
       subtitle: `Avg: ${formatCurrency(averageOrderValue)}`,
       icon: DollarSign,
@@ -66,7 +66,7 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
       iconColor: 'text-white'
     },
     {
-      title: 'TOTAL SALES TODAY',
+      title: 'TOTAL SALES',
       value: totalOrders.toString(),
       subtitle: `Profit: ${formatCurrency(totalProfit)}`,
       icon: ShoppingCart,
