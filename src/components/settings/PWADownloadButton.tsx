@@ -1,34 +1,49 @@
-import { Download } from 'lucide-react';
+import { Download, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWA } from '@/hooks/usePWA';
 import { useEffect } from 'react';
 
 const PWADownloadButton = () => {
-  const { isInstallable, isInstalled, installApp } = usePWA();
+  const { isInstalled, installApp, openApp, isRunningInBrowser } = usePWA();
 
   useEffect(() => {
-    console.log('[PWADownloadButton] PWA State:', { isInstallable, isInstalled });
-  }, [isInstallable, isInstalled]);
+    console.log('[PWADownloadButton] PWA State:', { isInstalled, isRunningInBrowser: isRunningInBrowser() });
+  }, [isInstalled, isRunningInBrowser]);
 
-  // Show button only if app is installable and not already installed
-  const shouldShowButton = isInstallable && !isInstalled;
-
-  if (!shouldShowButton) {
+  // Hide button if running in the installed app
+  if (!isRunningInBrowser()) {
     return null;
   }
+
+  const handleButtonClick = () => {
+    if (isInstalled) {
+      // App is installed, try to open it
+      openApp();
+    } else {
+      // App is not installed, show install prompt
+      installApp();
+    }
+  };
+
+  const buttonText = isInstalled ? 'Open App' : 'Download App';
+  const buttonIcon = isInstalled ? ExternalLink : Download;
+  const ButtonIcon = buttonIcon;
 
   return (
     <div className="mt-4 pt-4 border-t border-border">
       <Button 
-        onClick={installApp}
+        onClick={handleButtonClick}
         variant="outline"
         className="w-full bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border-primary/20 text-foreground font-medium py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
       >
-        <Download className="w-4 h-4" />
-        Download App
+        <ButtonIcon className="w-4 h-4" />
+        {buttonText}
       </Button>
       <p className="text-xs text-muted-foreground text-center mt-2">
-        Install the app for a better experience and offline access
+        {isInstalled 
+          ? 'Open the installed app for the best experience'
+          : 'Install the app for a better experience and offline access'
+        }
       </p>
     </div>
   );

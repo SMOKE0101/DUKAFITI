@@ -137,6 +137,20 @@ export const usePWA = () => {
     }
   };
 
+  const openApp = () => {
+    console.log('[PWA] Open app button clicked');
+    // Try to open the installed app using the app URL scheme
+    const appUrl = window.location.origin;
+    window.open(appUrl, '_blank');
+  };
+
+  const isRunningInBrowser = () => {
+    // Check if running in browser (not in installed app)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOSStandalone = (window.navigator as any).standalone;
+    return !isStandalone && !isIOSStandalone;
+  };
+
   const requestPersistentStorage = async () => {
     if ('storage' in navigator && 'persist' in navigator.storage) {
       const persistent = await navigator.storage.persist();
@@ -149,6 +163,8 @@ export const usePWA = () => {
   return {
     ...pwaState,
     installApp,
+    openApp,
+    isRunningInBrowser,
     requestPersistentStorage,
   };
 };
