@@ -597,59 +597,54 @@ const OptimizedModernSalesPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header with Network Status */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-md border-b border-border shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
-                <Receipt className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Sales Point</h1>
-                <p className="text-sm text-muted-foreground">Process sales and manage customers</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {/* Network Status & Sync */}
-              <div className="flex items-center gap-2">
-                {isOnline ? (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <Wifi className="w-5 h-5" />
-                    <span className="text-sm font-medium">Online</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 text-orange-600">
-                    <WifiOff className="w-5 h-5" />
-                    <span className="text-sm font-medium">Offline</span>
-                  </div>
-                )}
-                
-                {pendingOperations > 0 && (
-                  <Button
-                    onClick={handleSync}
-                    disabled={!isOnline}
-                    size="sm"
-                    variant="outline"
-                    className="gap-1"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Sync ({pendingOperations})
-                  </Button>
-                )}
-              </div>
-
-              {/* Cart Summary - Hidden on mobile */}
-              {!isMobile && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
-                  <ShoppingCart className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-primary">
-                    {cart.length} items • {formatCurrency(total)}
-                  </span>
-                </div>
-              )}
-            </div>
+      <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 md:px-6">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+            <Receipt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           </div>
+          <h1 className="font-mono text-lg md:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+            SALES
+          </h1>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Network Status & Sync */}
+          <div className="flex items-center gap-2">
+            {isOnline ? (
+              <div className="flex items-center gap-1 text-green-600">
+                <Wifi className="w-5 h-5" />
+                <span className="text-sm font-medium">Online</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-orange-600">
+                <WifiOff className="w-5 h-5" />
+                <span className="text-sm font-medium">Offline</span>
+              </div>
+            )}
+            
+            {pendingOperations > 0 && (
+              <Button
+                onClick={handleSync}
+                disabled={!isOnline}
+                size="sm"
+                variant="outline"
+                className="gap-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Sync ({pendingOperations})
+              </Button>
+            )}
+          </div>
+
+          {/* Cart Summary - Hidden on mobile */}
+          {!isMobile && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
+              <ShoppingCart className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">
+                {cart.length} items • {formatCurrency(total)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
