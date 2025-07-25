@@ -146,12 +146,13 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
   }
 
   return (
-    <Card className="border-0 shadow-lg">
-      <CardHeader className="pb-4">
+    <div className="bg-card rounded-lg shadow-sm border border-border">
+      {/* Header with controls */}
+      <div className="p-6 border-b border-border">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="text-xl font-bold text-foreground">
+          <h3 className="text-xl font-bold text-foreground">
             Sales Report
-          </CardTitle>
+          </h3>
           <Button
             onClick={handleCSVExport}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
@@ -174,10 +175,8 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
               { value: 'week', label: 'This Week' },
               { value: 'month', label: 'This Month' }
             ].map((option) => (
-              <Button
+              <button
                 key={option.value}
-                variant="ghost"
-                size="sm"
                 onClick={() => setTimeFrame(option.value as TimeFrameType)}
                 disabled={isOffline}
                 className={`
@@ -190,7 +189,7 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
                 `}
               >
                 {option.label}
-              </Button>
+              </button>
             ))}
           </div>
 
@@ -206,135 +205,146 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
             />
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-0">
-        <ScrollArea className="h-96">
-          <Table>
-            <TableHeader className="sticky top-0 bg-muted/50">
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-border">
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                DATE
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                TIME
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                CUSTOMER
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                PRODUCT
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                QUANTITY
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                AMOUNT
+              </TableHead>
+              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                PAYMENT
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.length === 0 ? (
               <TableRow>
-                <TableHead className="font-bold text-foreground">DATE</TableHead>
-                <TableHead className="font-bold text-foreground">TIME</TableHead>
-                <TableHead className="font-bold text-foreground">CUSTOMER</TableHead>
-                <TableHead className="font-bold text-foreground">PRODUCT</TableHead>
-                <TableHead className="font-bold text-foreground text-center">QUANTITY</TableHead>
-                <TableHead className="font-bold text-foreground text-right">AMOUNT</TableHead>
-                <TableHead className="font-bold text-foreground text-center">PAYMENT</TableHead>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? 'No sales found matching your search criteria' : 
+                   `No sales found for ${timeFrame === 'today' ? 'today' : timeFrame === 'week' ? 'this week' : 'this month'}`}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedData.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? 'No sales found matching your search criteria' : 
-                     `No sales found for ${timeFrame === 'today' ? 'today' : timeFrame === 'week' ? 'this week' : 'this month'}`}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedData.map((sale, index) => {
-                  const saleDate = new Date(sale.timestamp);
-                  return (
-                    <TableRow 
-                      key={sale.id} 
-                      className={`hover:bg-muted/50 transition-colors ${
-                        index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                      }`}
-                    >
-                      <TableCell className="font-medium">
-                        {saleDate.toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {saleDate.toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit',
-                          hour12: true 
-                        })}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {sale.customerName || 'Walk-in Customer'}
-                      </TableCell>
-                      <TableCell>{sale.productName}</TableCell>
-                      <TableCell className="text-center font-bold">
-                        {sale.quantity}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-emerald-600">
-                        {formatCurrency(sale.total)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getPaymentMethodBadge(sale.paymentMethod)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </ScrollArea>
+            ) : (
+              paginatedData.map((sale, index) => {
+                const saleDate = new Date(sale.timestamp);
+                return (
+                  <TableRow 
+                    key={sale.id} 
+                    className="border-b border-border hover:bg-muted/50"
+                  >
+                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                      {saleDate.toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-muted-foreground">
+                      {saleDate.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                      })}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                      {sale.customerName || 'Walk-in Customer'}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-card-foreground">{sale.productName}</TableCell>
+                    <TableCell className="py-4 px-6 text-center font-medium text-card-foreground">
+                      {sale.quantity}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center font-medium text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(sale.total)}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-center">
+                      {getPaymentMethodBadge(sale.paymentMethod)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t">
-            <div className="text-sm text-muted-foreground">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSales.length)} of {filteredSales.length} entries
-              {searchTerm && ` (filtered from ${filteredSalesByTime.length} total)`}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSales.length)} of {filteredSales.length} entries
+            {searchTerm && ` (filtered from ${filteredSalesByTime.length} total)`}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const page = i + 1;
+                const isActive = page === currentPage;
+                return (
+                  <Button
+                    key={page}
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+              {totalPages > 5 && (
+                <>
+                  <span className="text-muted-foreground px-2">...</span>
+                  <Button
+                    variant={currentPage === totalPages ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {totalPages}
+                  </Button>
+                </>
+              )}
             </div>
             
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1;
-                  const isActive = page === currentPage;
-                  return (
-                    <Button
-                      key={page}
-                      variant={isActive ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className="h-8 w-8 p-0"
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
-                {totalPages > 5 && (
-                  <>
-                    <span className="text-muted-foreground px-2">...</span>
-                    <Button
-                      variant={currentPage === totalPages ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(totalPages)}
-                      className="h-8 w-8 p-0"
-                    >
-                      {totalPages}
-                    </Button>
-                  </>
-                )}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 };
 
