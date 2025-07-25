@@ -19,6 +19,8 @@ export const usePWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
+    console.log('[PWA] Hook initialized');
+    
     // Register enhanced service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/offline-sw.js')
@@ -45,16 +47,34 @@ export const usePWA = () => {
     }
 
     // Check if app is installed
-    const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
-                        (window.navigator as any).standalone ||
-                        document.referrer.includes('android-app://');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOSStandalone = (window.navigator as any).standalone;
+    const isAndroidInstalled = document.referrer.includes('android-app://');
+    const isInstalled = isStandalone || isIOSStandalone || isAndroidInstalled;
+    
+    console.log('[PWA] Installation check:', { isStandalone, isIOSStandalone, isAndroidInstalled, isInstalled });
     setPwaState(prev => ({ ...prev, isInstalled }));
+
+    // For development/testing, make installable by default if not installed
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com');
+    if (isDev && !isInstalled) {
+      console.log('[PWA] Development mode: making installable by default');
+      setPwaState(prev => ({ ...prev, isInstallable: true }));
+    }
 
     // Listen for install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
+      console.log('[PWA] beforeinstallprompt event fired');
       e.preventDefault();
       setDeferredPrompt(e);
       setPwaState(prev => ({ ...prev, isInstallable: true }));
+    };
+
+    // Listen for app installed event
+    const handleAppInstalled = () => {
+      console.log('[PWA] App was installed');
+      setPwaState(prev => ({ ...prev, isInstalled: true, isInstallable: false }));
+      setDeferredPrompt(null);
     };
 
     // Listen for online/offline status
@@ -71,24 +91,49 @@ export const usePWA = () => {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
   const installApp = async () => {
+    console.log('[PWA] Install button clicked, deferredPrompt:', !!deferredPrompt);
+    
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setPwaState(prev => ({ ...prev, isInstallable: false, isInstalled: true }));
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('[PWA] User choice:', outcome);
+        if (outcome === 'accepted') {
+          setPwaState(prev => ({ ...prev, isInstallable: false, isInstalled: true }));
+        }
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('[PWA] Install prompt error:', error);
       }
-      setDeferredPrompt(null);
+    } else {
+      // Fallback for browsers that don't support the install prompt
+      console.log('[PWA] No deferred prompt available - showing manual instructions');
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+      
+      let message = 'To install this app:\n\n';
+      if (isChrome) {
+        message += '1. Click the menu (⋮) in the top right\n2. Select "Install DukaFiti"\n3. Click "Install" when prompted';
+      } else if (isSafari) {
+        message += '1. Tap the Share button (⬆️)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to confirm';
+      } else {
+        message += '1. Look for an "Install" or "Add to Home Screen" option in your browser menu\n2. Follow the prompts to install the app';
+      }
+      
+      alert(message);
     }
   };
 
