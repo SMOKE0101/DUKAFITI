@@ -1,31 +1,20 @@
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWA } from '@/hooks/usePWA';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 const PWADownloadButton = () => {
   const { isInstallable, isInstalled, installApp } = usePWA();
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
 
   useEffect(() => {
     console.log('[PWADownloadButton] PWA State:', { isInstallable, isInstalled });
-    
-    // Check if running in development mode
-    const isDev = window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com');
-    setShowDebugInfo(isDev);
   }, [isInstallable, isInstalled]);
 
-  // Always show button in development for testing, hide only if actually installed
-  const shouldShowButton = showDebugInfo ? !isInstalled : (isInstallable && !isInstalled);
+  // Show button only if app is installable and not already installed
+  const shouldShowButton = isInstallable && !isInstalled;
 
   if (!shouldShowButton) {
-    return showDebugInfo ? (
-      <div className="mt-4 pt-4 border-t border-border">
-        <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
-          PWA Debug: installed={isInstalled.toString()}, installable={isInstallable.toString()}
-        </div>
-      </div>
-    ) : null;
+    return null;
   }
 
   return (
@@ -41,11 +30,6 @@ const PWADownloadButton = () => {
       <p className="text-xs text-muted-foreground text-center mt-2">
         Install the app for a better experience and offline access
       </p>
-      {showDebugInfo && (
-        <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
-          PWA Debug: installed={isInstalled.toString()}, installable={isInstallable.toString()}
-        </div>
-      )}
     </div>
   );
 };
