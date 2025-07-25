@@ -21,28 +21,16 @@ export const usePWA = () => {
   useEffect(() => {
     console.log('[PWA] Hook initialized');
     
-    // Register enhanced service worker
+    // Check if service worker is already registered by index.html
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/offline-sw.js')
+      // Wait for the service worker registered in index.html
+      navigator.serviceWorker.ready
         .then((registration) => {
-          console.log('[PWA] Enhanced SW registered:', registration.scope);
+          console.log('[PWA] Using existing SW registration:', registration.scope);
           setPwaState(prev => ({ ...prev, serviceWorkerReady: true }));
-          
-          // Handle service worker updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[PWA] New service worker available');
-                  // Optionally show update notification
-                }
-              });
-            }
-          });
         })
         .catch((error) => {
-          console.error('[PWA] Enhanced SW registration failed:', error);
+          console.error('[PWA] SW not ready:', error);
         });
     }
 

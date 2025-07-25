@@ -64,35 +64,13 @@ export const useEnhancedOfflineManager = () => {
     try {
       console.log('[EnhancedOffline] Initializing enhanced offline system...');
       
-      // Register enhanced service worker
+      // Use existing service worker registered in index.html
       if ('serviceWorker' in navigator) {
         try {
-          // Unregister old service workers
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map(reg => reg.unregister()));
+          // Wait for the service worker to be ready
+          const registration = await navigator.serviceWorker.ready;
+          console.log('[EnhancedOffline] Using existing service worker:', registration.scope);
           
-          // Register new enhanced service worker
-          const registration = await navigator.serviceWorker.register('/enhanced-robust-sw.js', {
-            scope: '/'
-          });
-          
-          console.log('[EnhancedOffline] Enhanced service worker registered');
-          
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  toast({
-                    title: "App Updated",
-                    description: "New version available. Refresh to update.",
-                    duration: 5000,
-                  });
-                }
-              });
-            }
-          });
-
           setOfflineState(prev => ({ ...prev, serviceWorkerReady: true }));
           
         } catch (error) {
