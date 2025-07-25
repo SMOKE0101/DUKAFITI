@@ -197,18 +197,13 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 5,
-              }}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
               <XAxis 
                 dataKey="displayLabel" 
                 stroke="#64748b"
-                fontSize={12}
+                fontSize={11}
                 fontWeight={600}
                 tickLine={false}
                 axisLine={false}
@@ -216,13 +211,15 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
                 angle={timeframe === 'hourly' ? 0 : -45}
                 textAnchor={timeframe === 'hourly' ? 'middle' : 'end'}
                 height={timeframe === 'hourly' ? 30 : 60}
+                tick={{ fontSize: 10 }}
               />
               <YAxis 
                 stroke="#64748b"
-                fontSize={12}
+                fontSize={10}
                 fontWeight={600}
                 tickLine={false}
                 axisLine={false}
+                width={25}
                 tickFormatter={(value) => value.toString()}
               />
               <Tooltip 
