@@ -157,14 +157,18 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         await createSale(saleData);
         console.log('[SalesCheckout] Sale created for item:', item.name);
 
-        // Update product stock
-        const currentStock = item.currentStock || 0;
-        const newStock = Math.max(0, currentStock - item.quantity);
-        await updateProduct(item.id, { 
-          currentStock: newStock,
-          updatedAt: new Date().toISOString()
-        });
-        console.log('[SalesCheckout] Product stock updated:', item.name, 'New stock:', newStock);
+        // Update product stock (skip for unspecified quantity products)
+        if (item.currentStock !== -1) {
+          const currentStock = item.currentStock || 0;
+          const newStock = Math.max(0, currentStock - item.quantity);
+          await updateProduct(item.id, { 
+            currentStock: newStock,
+            updatedAt: new Date().toISOString()
+          });
+          console.log('[SalesCheckout] Product stock updated:', item.name, 'New stock:', newStock);
+        } else {
+          console.log('[SalesCheckout] Skipping stock update for unspecified quantity product:', item.name);
+        }
 
         salesProcessed++;
       }

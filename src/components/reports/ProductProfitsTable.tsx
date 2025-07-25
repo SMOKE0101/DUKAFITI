@@ -67,7 +67,14 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
   const productProfitsData = useMemo((): ProductProfitRow[] => {
     const productMap = new Map<string, ProductProfitRow>();
     
-    filteredSales.forEach(sale => {
+    // Filter out sales from unspecified quantity products
+    const validSales = filteredSales.filter(sale => {
+      // Check if this is an unspecified quantity product by examining the cost price
+      // Unspecified quantity products typically have 0 cost price
+      return sale.costPrice > 0;
+    });
+    
+    validSales.forEach(sale => {
       const existing = productMap.get(sale.productName) || {
         productName: sale.productName,
         quantitySold: 0,

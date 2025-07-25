@@ -75,7 +75,9 @@ export const useDashboardMetrics = (
       return sum + total;
     }, 0);
 
-    const todayTotalProfit = todaySalesData.reduce((sum, sale) => {
+    // Filter out sales from unspecified quantity products for profit calculation
+    const validProfitSales = todaySalesData.filter(sale => sale.costPrice > 0);
+    const todayTotalProfit = validProfitSales.reduce((sum, sale) => {
       const profit = Number(sale.profit) || 0;
       return sum + profit;
     }, 0);

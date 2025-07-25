@@ -165,6 +165,12 @@ export class SalesService {
         return;
       }
 
+      // Skip stock update for unspecified quantity products (current_stock = -1)
+      if (product.current_stock === -1) {
+        console.log('[SalesService] Skipping stock update for unspecified quantity product:', productId);
+        return;
+      }
+
       const newStock = Math.max(0, (product.current_stock || 0) - quantitySold);
 
       const { error: updateError } = await supabase
