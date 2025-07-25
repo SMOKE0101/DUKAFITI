@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, DollarSign, AlertTriangle } from 'lucide-react';
+import { Plus, Users, DollarSign } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -82,20 +82,6 @@ const CustomersHeader: React.FC<CustomersHeaderProps> = ({
         </div>
       </div>
 
-      {/* Outstanding Debt Alert */}
-      {totalOutstandingDebt > 0 && (
-        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 shadow-sm w-full">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-destructive truncate">Outstanding Debt Alert</p>
-              <p className="text-sm text-destructive/80 truncate">
-                Total debt: {formatCurrency(totalOutstandingDebt)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
