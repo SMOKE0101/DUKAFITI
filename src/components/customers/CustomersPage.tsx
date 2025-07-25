@@ -181,7 +181,7 @@ const CustomersPage = () => {
     return (
       <TooltipWrapper>
         <div className="min-h-screen bg-background">
-          <div className="px-4 space-y-6">
+          <div className="space-y-6">
             {/* Mobile Header */}
             <CustomersHeader
               totalCustomers={totalCustomers}
@@ -192,47 +192,51 @@ const CustomersPage = () => {
             />
 
             {/* Search Bar */}
-            <Card className="bg-card rounded-xl border border-border shadow-sm">
-              <CardContent className="p-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    type="search"
-                    placeholder="Search customers..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-background rounded-lg border border-border"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <div className="px-4">
+              <Card className="bg-card rounded-xl border border-border shadow-sm">
+                <CardContent className="p-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      type="search"
+                      placeholder="Search customers..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-background rounded-lg border border-border"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Customer List */}
             {loading ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 px-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                 <p className="mt-3 text-sm text-muted-foreground">Loading customers...</p>
               </div>
             ) : filteredCustomers.length === 0 ? (
-              <Card className="bg-card rounded-xl border border-border shadow-sm">
-                <CardContent className="text-center py-8">
-                  <User className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-                  <h3 className="text-lg font-semibold text-card-foreground mb-2">
-                    {searchQuery ? 'No customers found' : 'No customers yet'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
-                  </p>
-                  {!searchQuery && (
-                    <Button onClick={handleAddCustomer} className="mt-4 bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Customer
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="px-4">
+                <Card className="bg-card rounded-xl border border-border shadow-sm">
+                  <CardContent className="text-center py-8">
+                    <User className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
+                    <h3 className="text-lg font-semibold text-card-foreground mb-2">
+                      {searchQuery ? 'No customers found' : 'No customers yet'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
+                    </p>
+                    {!searchQuery && (
+                      <Button onClick={handleAddCustomer} className="mt-4 bg-primary hover:bg-primary/90">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Customer
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 px-4">
                 {filteredCustomers.map((customer) => (
                   <CustomerCard
                     key={customer.id}

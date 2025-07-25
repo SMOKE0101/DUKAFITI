@@ -46,14 +46,6 @@ const CustomersHeader: React.FC<CustomersHeaderProps> = ({
               </span>
             </div>
           )}
-          {!isOnline && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-full">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span className="text-xs font-medium text-red-700 dark:text-red-300">
-                Offline
-              </span>
-            </div>
-          )}
           
           <Button 
             onClick={onAddCustomer}
