@@ -30,7 +30,7 @@ const AccurateDashboardStats: React.FC<AccurateDashboardStatsProps> = ({
 
   const statsCards = [
     {
-      title: 'Total Sales Today',
+      title: 'Total Revenue Today',
       value: formatCurrency(metrics.todaySales.totalRevenue),
       icon: DollarSign,
       color: 'border-green-600',
@@ -38,7 +38,7 @@ const AccurateDashboardStats: React.FC<AccurateDashboardStatsProps> = ({
       bgColor: 'bg-green-50 dark:bg-green-900/10'
     },
     {
-      title: 'Orders Today',
+      title: 'Total Sales Today',
       value: metrics.todaySales.orderCount.toString(),
       icon: ShoppingCart,
       color: 'border-blue-600',
@@ -82,12 +82,12 @@ const AccurateDashboardStats: React.FC<AccurateDashboardStatsProps> = ({
                   <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                     {stat.value}
                   </p>
-                  {stat.title === 'Total Sales Today' && metrics.todaySales.orderCount > 0 && (
+                  {stat.title === 'Total Revenue Today' && metrics.todaySales.orderCount > 0 && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Avg: {formatCurrency(metrics.todaySales.averageOrderValue)}
                     </p>
                   )}
-                  {stat.title === 'Orders Today' && metrics.todaySales.totalProfit > 0 && (
+                  {stat.title === 'Total Sales Today' && metrics.todaySales.totalProfit > 0 && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Profit: {formatCurrency(metrics.todaySales.totalProfit)}
                     </p>
