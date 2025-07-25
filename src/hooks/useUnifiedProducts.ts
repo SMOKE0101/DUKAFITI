@@ -29,7 +29,7 @@ export const useUnifiedProducts = () => {
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
-  const { getCache, setCache, addPendingOperation, pendingOps, clearPendingOperation } = useCacheManager();
+  const { getCache, setCache, clearUserCache, addPendingOperation, pendingOps, clearPendingOperation } = useCacheManager();
 
   // Merge products intelligently - prioritize local changes over server data
   const mergeProducts = useCallback((serverProducts: Product[], localProducts: Product[]): Product[] => {
@@ -474,8 +474,20 @@ export const useUnifiedProducts = () => {
 
   // Load products on mount and when user changes
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
+      console.log('[UnifiedProducts] User changed, loading products for:', user.id);
+      
+      // Clear any stale cache for this user to ensure fresh data on login
+      const currentProducts = getCache<Product[]>('products');
+      console.log('[UnifiedProducts] Current cached products for user:', currentProducts?.length || 0);
+      
       loadProducts();
+    } else {
+      // User logged out, clear products
+      console.log('[UnifiedProducts] User logged out, clearing products');
+      setProducts([]);
+      setLoading(false);
+      setError(null);
     }
   }, [user?.id]);
 

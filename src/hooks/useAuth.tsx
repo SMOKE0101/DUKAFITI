@@ -29,12 +29,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (event, session) => {
         if (!mounted) return;
         
+        const previousUserId = user?.id;
+        const newUserId = session?.user?.id;
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
+        // Dispatch auth state change event for cache management
+        window.dispatchEvent(new CustomEvent('auth-state-change', {
+          detail: { event, session, previousUserId, newUserId }
+        }));
+
         // Handle logout redirect
         if (event === 'SIGNED_OUT') {
+          // Clear all localStorage data on logout
+          const keysToRemove = Object.keys(localStorage).filter(key => 
+            key.startsWith('cache_') || key.startsWith('pendingOperations_')
+          );
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+          
           setTimeout(() => {
             window.location.href = '/';
           }, 100);

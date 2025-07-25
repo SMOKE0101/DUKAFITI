@@ -16,37 +16,63 @@ export const useCacheManager = () => {
   const [pendingOps, setPendingOps] = useState<PendingOperation[]>([]);
   const { user } = useAuth();
 
-  // Load pending operations from localStorage
+  // Load pending operations from localStorage - user specific
   const loadPendingOperations = useCallback(() => {
+    if (!user?.id) return;
+    
     try {
-      const stored = localStorage.getItem('pendingOperations');
+      const userSpecificKey = `pendingOperations_${user.id}`;
+      const stored = localStorage.getItem(userSpecificKey);
       if (stored) {
         const operations = JSON.parse(stored);
-        console.log('[CacheManager] Loaded pending operations:', operations.length);
+        console.log('[CacheManager] Loaded pending operations for user:', user.id, '- count:', operations.length);
         setPendingOps(operations);
+      } else {
+        setPendingOps([]);
       }
     } catch (error) {
       console.error('[CacheManager] Failed to load pending operations:', error);
+      setPendingOps([]);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadPendingOperations();
   }, [loadPendingOperations]);
 
-  // Save pending operations to localStorage
+  // Save pending operations to localStorage - user specific
   useEffect(() => {
+    if (!user?.id) return;
+    
     try {
-      localStorage.setItem('pendingOperations', JSON.stringify(pendingOps));
-      console.log('[CacheManager] Saved pending operations:', pendingOps.length);
+      const userSpecificKey = `pendingOperations_${user.id}`;
+      localStorage.setItem(userSpecificKey, JSON.stringify(pendingOps));
+      console.log('[CacheManager] Saved pending operations for user:', user.id, '- count:', pendingOps.length);
     } catch (error) {
       console.error('[CacheManager] Failed to save pending operations:', error);
     }
-  }, [pendingOps]);
+  }, [pendingOps, user?.id]);
+
+  // Clear user data when user changes or logs out
+  useEffect(() => {
+    const handleAuthChange = () => {
+      if (!user) {
+        // User logged out - clear pending operations
+        setPendingOps([]);
+        console.log('[CacheManager] User logged out, cleared pending operations');
+      }
+    };
+
+    window.addEventListener('auth-state-change', handleAuthChange);
+    return () => window.removeEventListener('auth-state-change', handleAuthChange);
+  }, [user]);
 
   const getCache = useCallback(<T>(key: string): T | null => {
+    if (!user?.id) return null;
+    
     try {
-      const cached = localStorage.getItem(`cache_${key}`);
+      const userSpecificKey = `cache_${user.id}_${key}`;
+      const cached = localStorage.getItem(userSpecificKey);
       if (cached) {
         const parsed = JSON.parse(cached);
         const cacheTime = parsed.timestamp;
@@ -56,27 +82,50 @@ export const useCacheManager = () => {
         if (hoursDiff < 24) {
           return parsed.data;
         } else {
-          localStorage.removeItem(`cache_${key}`);
+          localStorage.removeItem(userSpecificKey);
         }
       }
     } catch (error) {
       console.error('[CacheManager] Failed to get cache:', error);
     }
     return null;
-  }, []);
+  }, [user?.id]);
 
   const setCache = useCallback(<T>(key: string, data: T): void => {
+    if (!user?.id) return;
+    
     try {
+      const userSpecificKey = `cache_${user.id}_${key}`;
       const cacheData = {
         data,
         timestamp: new Date().getTime()
       };
-      localStorage.setItem(`cache_${key}`, JSON.stringify(cacheData));
-      console.log('[CacheManager] Set cache for key:', key, '- items:', Array.isArray(data) ? data.length : 'N/A');
+      localStorage.setItem(userSpecificKey, JSON.stringify(cacheData));
+      console.log('[CacheManager] Set cache for user:', user.id, 'key:', key, '- items:', Array.isArray(data) ? data.length : 'N/A');
     } catch (error) {
       console.error('[CacheManager] Failed to set cache:', error);
     }
-  }, []);
+  }, [user?.id]);
+
+  // Clear cache when user changes
+  const clearUserCache = useCallback(() => {
+    if (!user?.id) return;
+    
+    try {
+      const keys = Object.keys(localStorage);
+      const userCachePrefix = `cache_${user.id}_`;
+      
+      keys.forEach(key => {
+        if (key.startsWith(userCachePrefix)) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      console.log('[CacheManager] Cleared all cache for user:', user.id);
+    } catch (error) {
+      console.error('[CacheManager] Failed to clear user cache:', error);
+    }
+  }, [user?.id]);
 
   const addPendingOperation = useCallback((operation: Omit<PendingOperation, 'id' | 'timestamp' | 'attempts' | 'maxAttempts'>): void => {
     const operationWithId: PendingOperation = {
@@ -465,6 +514,7 @@ export const useCacheManager = () => {
   return {
     getCache,
     setCache,
+    clearUserCache,
     addPendingOperation,
     clearPendingOperation,
     loadPendingOperations,
