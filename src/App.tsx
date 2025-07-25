@@ -49,9 +49,9 @@ function App() {
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
-                    <Route path="/" element={<ModernLanding />} />
+                    <Route path="/" element={<Index />} />
                     <Route path="/modern-landing" element={<ModernLanding />} />
-                    <Route path="/landing" element={<Landing />} />
+                    <Route path="/landing" element={<ModernLanding />} />
                     <Route path="/signin" element={<SignIn />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/auth" element={<Navigate to="/signin" replace />} />
@@ -76,9 +76,6 @@ function App() {
                       <Route path="reports" element={<ReportsPage />} />
                       <Route path="settings" element={<Settings />} />
                     </Route>
-                    
-                    {/* Legacy route redirect */}
-                    <Route path="/index" element={<Index />} />
                     
                     {/* 404 - Always show with layout if user is authenticated */}
                     <Route path="*" element={<NotFound />} />

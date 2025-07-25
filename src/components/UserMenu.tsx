@@ -30,7 +30,7 @@ const UserMenu = () => {
         title: "Signed Out",
         description: "You have been successfully signed out.",
       });
-      // The useAuth hook will handle the redirect to landing page
+      // The useAuth hook will handle the redirect to landing page automatically
     } catch (error) {
       toast({
         title: "Sign Out Failed",

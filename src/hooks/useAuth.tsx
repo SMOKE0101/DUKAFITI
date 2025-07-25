@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           keysToRemove.forEach(key => localStorage.removeItem(key));
           
           setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = '/landing';
           }, 100);
         }
       }
