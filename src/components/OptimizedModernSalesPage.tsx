@@ -51,7 +51,7 @@ const OptimizedModernSalesPage = () => {
   const productListRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
 
-  const { products, loading: productsLoading, refetch: refetchProducts } = useUnifiedProducts();
+  const { products, loading: productsLoading, refetch: refetchProducts, forceRefetch: forceRefetchProducts } = useUnifiedProducts();
   const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
   const { sales } = useUnifiedSales();
   const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
@@ -240,9 +240,9 @@ const OptimizedModernSalesPage = () => {
   const handleCheckoutComplete = useCallback(() => {
     console.log('[OptimizedModernSalesPage] Checkout completed, refreshing all data');
     refetchCustomers();
-    refetchProducts(); // Immediately refresh products to update stock quantities
+    forceRefetchProducts(); // Force refresh from server to update stock quantities immediately
     clearCart();
-  }, [clearCart, refetchCustomers, refetchProducts]);
+  }, [clearCart, refetchCustomers, forceRefetchProducts]);
 
   // Listen for customer debt updates and refresh data immediately
   useEffect(() => {
@@ -262,20 +262,20 @@ const OptimizedModernSalesPage = () => {
   useEffect(() => {
     const handleProductUpdate = (event: CustomEvent) => {
       console.log('[OptimizedModernSalesPage] Product updated locally event received:', event.detail);
-      // Refresh products immediately when stock changes
-      refetchProducts();
+      // Force refresh products immediately when stock changes
+      forceRefetchProducts();
     };
 
     const handleSaleComplete = () => {
       console.log('[OptimizedModernSalesPage] Sale completed event received');
-      // Immediately refresh products to show updated stock
-      refetchProducts();
+      // Force refresh products to show updated stock
+      forceRefetchProducts();
     };
 
     const handleCheckoutComplete = () => {
       console.log('[OptimizedModernSalesPage] Checkout completed event received');
-      // Immediately refresh products to show updated stock
-      refetchProducts();
+      // Force refresh products to show updated stock
+      forceRefetchProducts();
     };
 
     // Listen to product update events
@@ -290,7 +290,7 @@ const OptimizedModernSalesPage = () => {
       window.removeEventListener('sale-completed', handleSaleComplete);
       window.removeEventListener('checkout-completed', handleCheckoutComplete);
     };
-  }, [refetchProducts]);
+  }, [forceRefetchProducts]);
 
   // Toggle between panels on mobile with improved handling
   const togglePanel = useCallback(() => {

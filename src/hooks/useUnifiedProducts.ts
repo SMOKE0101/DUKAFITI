@@ -150,6 +150,30 @@ export const useUnifiedProducts = () => {
     }
   }, [user?.id, isOnline, getCache, setCache, mergeProducts]);
 
+  // Force reload products from server (bypass cache for stock updates)
+  const forceReloadProducts = useCallback(async () => {
+    if (!user || !isOnline) return;
+
+    console.log('[UnifiedProducts] Force reloading products from server');
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!fetchError && data) {
+        const serverProducts = data.map(transformDbProduct);
+        console.log('[UnifiedProducts] Force reload: fetched', serverProducts.length, 'products');
+        setCache('products', serverProducts);
+        setProducts(serverProducts);
+      }
+    } catch (error) {
+      console.error('[UnifiedProducts] Force reload failed:', error);
+    }
+  }, [user?.id, isOnline, setCache]);
+
   // Create product with optimistic updates
   const createProduct = useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
@@ -535,6 +559,7 @@ export const useUnifiedProducts = () => {
     updateProduct,
     deleteProduct,
     refetch: loadProducts,
+    forceRefetch: forceReloadProducts,
     isOnline,
     pendingOperations: pendingOps.filter(op => op.type === 'product').length,
     syncPendingOperations,
