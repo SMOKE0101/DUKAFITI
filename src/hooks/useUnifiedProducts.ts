@@ -472,6 +472,51 @@ export const useUnifiedProducts = () => {
     }
   }, [user, isOnline, pendingOps, clearPendingOperation, setCache, loadProducts]);
 
+  // Set up real-time subscription for products
+  useEffect(() => {
+    if (!user?.id || !isOnline) return;
+
+    console.log('[UnifiedProducts] Setting up real-time subscription for user:', user.id);
+    
+    const channel = supabase
+      .channel('products-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[UnifiedProducts] Real-time change detected:', payload);
+          
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            // Handle real-time product updates
+            const updatedProduct = transformDbProduct(payload.new);
+            console.log('[UnifiedProducts] Real-time product update:', updatedProduct.name, 'Stock:', updatedProduct.currentStock);
+            
+            setProducts(prev => {
+              const updated = prev.map(p => 
+                p.id === updatedProduct.id ? updatedProduct : p
+              );
+              setCache('products', updated);
+              return updated;
+            });
+          } else {
+            // For other events (INSERT, DELETE), refresh all data
+            loadProducts();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[UnifiedProducts] Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, isOnline, loadProducts, setCache]);
+
   // Load products on mount and when user changes
   useEffect(() => {
     if (user?.id) {

@@ -238,24 +238,74 @@ const OptimizedModernSalesPage = () => {
   };
 
   const handleCheckoutComplete = useCallback(() => {
-    console.log('[OptimizedModernSalesPage] Checkout completed, refreshing customer data');
+    console.log('[OptimizedModernSalesPage] Checkout completed, refreshing customer data and products');
     refetchCustomers();
     clearCart();
+    
+    // Force refresh products to ensure stock is updated
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('data-refresh-product'));
+    }, 100);
   }, [clearCart, refetchCustomers]);
 
-  // Listen for customer debt updates and refresh data immediately
+  // Listen for product and customer updates for immediate UI refresh
   useEffect(() => {
     const handleCustomerDebtUpdate = (event: CustomEvent) => {
       console.log('[OptimizedModernSalesPage] Customer debt updated event received:', event.detail);
       refetchCustomers();
     };
 
-    window.addEventListener('customer-debt-updated', handleCustomerDebtUpdate as EventListener);
+    const handleProductUpdate = (event: CustomEvent) => {
+      console.log('[OptimizedModernSalesPage] Product update event received:', event.detail);
+      // The useUnifiedProducts hook will handle the actual update, we just ensure reactivity
+      if (event.detail?.productId) {
+        // Update cart if the product is in the cart
+        setCart(prevCart => {
+          const updatedCart = prevCart.map(item => {
+            if (item.id === event.detail.productId && event.detail.product) {
+              const updatedProduct = event.detail.product;
+              // If the stock went to 0 and this product is in cart, keep the cart but validate
+              if (updatedProduct.currentStock === 0 && updatedProduct.currentStock !== -1) {
+                toast({
+                  title: "Stock Updated",
+                  description: `${updatedProduct.name} is now out of stock`,
+                  variant: "destructive",
+                });
+              }
+              return { ...item, currentStock: updatedProduct.currentStock };
+            }
+            return item;
+          });
+          return updatedCart;
+        });
+      }
+    };
+
+    const events = [
+      'customer-debt-updated',
+      'product-updated-locally',
+      'product-updated-server',
+      'sale-completed'
+    ];
+
+    events.forEach(eventName => {
+      if (eventName === 'customer-debt-updated') {
+        window.addEventListener(eventName, handleCustomerDebtUpdate as EventListener);
+      } else {
+        window.addEventListener(eventName, handleProductUpdate as EventListener);
+      }
+    });
     
     return () => {
-      window.removeEventListener('customer-debt-updated', handleCustomerDebtUpdate as EventListener);
+      events.forEach(eventName => {
+        if (eventName === 'customer-debt-updated') {
+          window.removeEventListener(eventName, handleCustomerDebtUpdate as EventListener);
+        } else {
+          window.removeEventListener(eventName, handleProductUpdate as EventListener);
+        }
+      });
     };
-  }, [refetchCustomers]);
+  }, [refetchCustomers, toast]);
 
   // Toggle between panels on mobile with improved handling
   const togglePanel = useCallback(() => {
