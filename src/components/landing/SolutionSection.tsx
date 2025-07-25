@@ -86,7 +86,7 @@ const SolutionSection = () => {
           <div className="inline-flex items-center space-x-4 bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-full px-8 py-4">
             <span className="text-slate-300">Ready to transform your shop?</span>
             <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-2 rounded-full text-white font-medium transition-all hover:scale-105">
-              Start Free Trial
+              Get Started
             </button>
           </div>
         </div>

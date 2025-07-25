@@ -195,7 +195,7 @@ const Landing = () => {
             <span className="text-xl font-bold text-foreground">DukaFiti</span>
           </div>
           <p className="brand-tagline mb-2">DUKAFITI NI DUKABORA</p>
-          <p className="text-muted-foreground">&copy; 2024 DukaFiti. Umejengwa kwa ajili ya wafanyabiashara wa Kenya.</p>
+          <p className="text-muted-foreground">&copy; 2025 DukaFiti. Umejengwa kwa ajili ya wafanyabiashara wa Kenya.</p>
         </div>
       </footer>
     </div>

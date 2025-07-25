@@ -510,7 +510,7 @@ const ModernLanding = () => {
                           Creating Account...
                         </div>
                       ) : (
-                        'Start Free Trial'
+                        'Get Started'
                       )}
                     </Button>
                   </form>
@@ -567,7 +567,7 @@ const ModernLanding = () => {
               <span className="text-xl font-bold font-caesar">DukaFiti</span>
             </div>
             <p className="text-muted">Smart POS for Kenyan Dukashops</p>
-            <p className="text-sm text-muted mt-4">&copy; 2024 DukaFiti. Built for Kenyan entrepreneurs.</p>
+            <p className="text-sm text-muted mt-4">&copy; 2025 DukaFiti. Built for Kenyan entrepreneurs.</p>
           </div>
         </div>
       </footer>

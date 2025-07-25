@@ -101,7 +101,7 @@ const PricingSection = () => {
                 onClick={navigateToApp}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 border-0"
               >
-                Start Free Trial Now
+                Get Started Now
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </div>
@@ -155,7 +155,7 @@ const PricingSection = () => {
                 onClick={navigateToApp}
                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25 border-0"
               >
-                Start Free Trial
+                Get Started
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               
