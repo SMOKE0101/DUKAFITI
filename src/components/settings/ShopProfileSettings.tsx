@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSettings } from '../../hooks/useSettings';
 import { Save } from 'lucide-react';
+import PWADownloadButton from './PWADownloadButton';
 
 const ShopProfileSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
@@ -148,6 +149,9 @@ const ShopProfileSettings = () => {
           Save Profile
         </Button>
       </div>
+      
+      {/* PWA Download Button */}
+      <PWADownloadButton />
     </form>
   );
 };
