@@ -282,7 +282,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                 <Badge variant="destructive" className="text-xs">Required</Badge>
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm font-medium text-muted-foreground">KSH</span>
                 <Input
                   id="debtAmount"
                   type="number"
@@ -291,7 +291,7 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
                   value={debtAmount}
                   onChange={(e) => setDebtAmount(e.target.value)}
                   placeholder="0.00"
-                  className="pl-10 h-12 text-lg font-semibold"
+                  className="pl-12 h-12 text-lg font-semibold"
                   style={{ fontSize: '16px' }}
                 />
               </div>
@@ -299,58 +299,39 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
 
             {/* Amount Summary */}
             {totalAmount > 0 && (
-              <div className="bg-gradient-to-r from-red-50 via-red-50 to-orange-50 dark:from-red-900/20 dark:via-red-900/25 dark:to-orange-900/20 border-2 border-red-300 dark:border-red-700 rounded-2xl p-5 shadow-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                    <AlertTriangle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="font-bold text-red-700 dark:text-red-300 text-base">
-                    Debt Summary
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                    Amount to lend:
                   </span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 rounded-xl">
-                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                      Amount to lend:
-                    </span>
-                    <span className="text-2xl font-black text-red-700 dark:text-red-300">
-                      {formatCurrency(totalAmount)}
-                    </span>
-                  </div>
+                  <span className="text-lg font-bold text-red-700 dark:text-red-300">
+                    {formatCurrency(totalAmount)}
+                  </span>
                 </div>
               </div>
             )}
 
             {/* Customer Debt Info */}
             {selectedCustomer && (
-              <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 dark:from-amber-900/20 dark:via-yellow-900/20 dark:to-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 shadow-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="font-bold text-amber-700 dark:text-amber-300 text-base">
-                    Customer Debt Analysis
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 rounded-xl">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Current debt:</span>
-                    <span className="font-bold text-lg text-amber-700 dark:text-amber-300">
+                    <span className="font-semibold text-amber-700 dark:text-amber-300">
                       {formatCurrency(selectedCustomer.outstandingDebt || 0)}
                     </span>
                   </div>
-                  <Separator className="bg-gradient-to-r from-amber-300 to-yellow-300 dark:from-amber-600 dark:to-yellow-600 h-0.5" />
-                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-xl border border-amber-200 dark:border-amber-600">
+                  <div className="flex justify-between items-center p-2 bg-amber-100 dark:bg-amber-900/30 rounded border border-amber-200 dark:border-amber-600">
                     <span className="text-sm font-medium text-amber-600 dark:text-amber-400">New total debt:</span>
-                    <span className="text-xl font-black text-amber-700 dark:text-amber-300">
+                    <span className="font-bold text-amber-700 dark:text-amber-300">
                       {formatCurrency((selectedCustomer.outstandingDebt || 0) + totalAmount)}
                     </span>
                   </div>
                   {selectedCustomer.creditLimit && (selectedCustomer.outstandingDebt || 0) + totalAmount > selectedCustomer.creditLimit && (
-                    <div className="bg-gradient-to-r from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-xl p-4 mt-3">
-                      <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2 font-medium">
-                        <AlertTriangle className="w-4 h-4" />
-                        Warning: This will exceed the customer's credit limit of {formatCurrency(selectedCustomer.creditLimit)}
+                    <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded p-2 mt-2">
+                      <p className="text-xs text-red-700 dark:text-red-300 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Exceeds credit limit of {formatCurrency(selectedCustomer.creditLimit)}
                       </p>
                     </div>
                   )}
