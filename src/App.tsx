@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ThemeProvider } from "next-themes";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import ModernLanding from "./pages/ModernLanding";
@@ -40,8 +41,9 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <AuthProvider>
-              <ErrorBoundary>
+            <TooltipProvider>
+              <AuthProvider>
+                <ErrorBoundary>
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
                     {/* Public routes */}
@@ -80,9 +82,10 @@ function App() {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                   <SafeToasterWrapper />
-                </div>
-              </ErrorBoundary>
-            </AuthProvider>
+                  </div>
+                </ErrorBoundary>
+              </AuthProvider>
+            </TooltipProvider>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
