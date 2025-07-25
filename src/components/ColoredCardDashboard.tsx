@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,13 +22,19 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
 import AccurateDashboardStats from './dashboard/AccurateDashboardStats';
+import AddProductModal from './inventory/AddProductModal';
+import AddCustomerModal from './customers/AddCustomerModal';
 
 const ColoredCardDashboard = () => {
   const { sales } = useUnifiedSales();
-  const { products } = useUnifiedProducts();
-  const { customers } = useUnifiedCustomers();
+  const { products, createProduct } = useUnifiedProducts();
+  const { customers, createCustomer } = useUnifiedCustomers();
   const { pendingOperations } = useUnifiedSyncManager();
   const navigate = useNavigate();
+
+  // Modal states
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
 
   console.log('[ColoredCardDashboard] Data loaded:', {
     salesCount: sales.length,
@@ -59,13 +65,31 @@ const ColoredCardDashboard = () => {
         navigate('/app/sales');
         break;
       case 'add-product':
-        navigate('/app/inventory');
+        setShowAddProductModal(true);
         break;
       case 'add-customer':
-        navigate('/app/customers');
+        setShowAddCustomerModal(true);
         break;
       default:
         break;
+    }
+  };
+
+  const handleProductSave = async (productData: any) => {
+    try {
+      await createProduct(productData);
+      setShowAddProductModal(false);
+    } catch (error) {
+      console.error('Error adding product:', error);
+    }
+  };
+
+  const handleCustomerSave = async (customerData: any) => {
+    try {
+      await createCustomer(customerData);
+      setShowAddCustomerModal(false);
+    } catch (error) {
+      console.error('Error adding customer:', error);
     }
   };
 
@@ -219,6 +243,19 @@ const ColoredCardDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <AddProductModal
+        isOpen={showAddProductModal}
+        onClose={() => setShowAddProductModal(false)}
+        onSave={handleProductSave}
+      />
+      
+      <AddCustomerModal
+        isOpen={showAddCustomerModal}
+        onClose={() => setShowAddCustomerModal(false)}
+        onSave={handleCustomerSave}
+      />
     </div>
   );
 };
