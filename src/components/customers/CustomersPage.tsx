@@ -181,7 +181,7 @@ const CustomersPage = () => {
     return (
       <TooltipWrapper>
         <div className="min-h-screen bg-background">
-          <div className="px-4 py-6 space-y-6">
+          <div className="px-4 space-y-6">
             {/* Mobile Header */}
             <CustomersHeader
               totalCustomers={totalCustomers}
