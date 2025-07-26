@@ -12,8 +12,8 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle auth callback from OAuth providers
-        const { data, error } = await supabase.auth.getSession();
+        console.log('AuthCallback: Starting auth callback handling');
+        console.log('Current URL:', window.location.href);
         
         // Check for error in URL params (both hash and search params)
         const urlParams = new URLSearchParams(window.location.search);
@@ -29,6 +29,15 @@ const AuthCallback = () => {
           return;
         }
 
+        // Wait a moment for Supabase to process the OAuth callback
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Handle auth callback from OAuth providers
+        const { data, error } = await supabase.auth.getSession();
+        
+        console.log('AuthCallback: Session data:', data);
+        console.log('AuthCallback: Session error:', error);
+
         if (error) {
           console.error('Session error:', error);
           setStatus('error');
@@ -37,45 +46,28 @@ const AuthCallback = () => {
           return;
         }
 
-        if (data.session) {
+        if (data.session && data.session.user) {
+          console.log('AuthCallback: Valid session found, redirecting to dashboard');
           setStatus('success');
           setMessage('Authentication successful! Redirecting to your dashboard...');
           
-          // Give the auth state time to update
+          // Clean up the URL by removing hash/search params
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Give the auth state time to update and redirect
           setTimeout(() => {
-            navigate('/app/dashboard', { replace: true });
+            window.location.href = '/app/dashboard';
           }, 1500);
         } else {
-          // Try to handle the auth flow
-          const type = hashParams.get('type');
-          const token = hashParams.get('access_token');
-          
-          if (type && token) {
-            // OAuth flow detected, wait for session to be established
-            setStatus('success');
-            setMessage('Completing authentication...');
-            
-            // Wait longer for OAuth session establishment
-            setTimeout(async () => {
-              const { data: newSession } = await supabase.auth.getSession();
-              if (newSession.session) {
-                navigate('/app/dashboard', { replace: true });
-              } else {
-                setStatus('error');
-                setMessage('Session establishment failed');
-                setTimeout(() => navigate('/signin'), 2000);
-              }
-            }, 2500);
-          } else {
-            setStatus('error');
-            setMessage('No valid authentication found');
-            setTimeout(() => navigate('/signin'), 3000);
-          }
+          console.log('AuthCallback: No valid session found');
+          setStatus('error');
+          setMessage('No valid authentication found. Please try signing in again.');
+          setTimeout(() => navigate('/signin'), 3000);
         }
       } catch (err) {
         console.error('Auth callback error:', err);
         setStatus('error');
-        setMessage('An unexpected error occurred');
+        setMessage('An unexpected error occurred during authentication');
         setTimeout(() => navigate('/signin'), 3000);
       }
     };

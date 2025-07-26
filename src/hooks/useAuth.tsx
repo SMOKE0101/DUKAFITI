@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           detail: { event, session, previousUserId, newUserId }
         }));
 
-        // Handle logout redirect
+        // Handle logout - clear data but don't redirect (signOut function handles redirect)
         if (event === 'SIGNED_OUT') {
           // Clear all localStorage data on logout including user cache
           const keysToRemove = Object.keys(localStorage).filter(key => 
@@ -51,9 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           );
           keysToRemove.forEach(key => localStorage.removeItem(key));
           
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 100);
+          // Don't redirect here - let the signOut function handle it to avoid conflicts
         }
       }
     );
@@ -100,7 +98,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    // Use the current domain for redirect
+    const currentUrl = window.location.origin;
+    const redirectUrl = `${currentUrl}/auth/callback`;
+    
+    console.log('Google OAuth redirect URL:', redirectUrl);
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -117,6 +119,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      console.log('SignOut: Starting logout process');
+      
       // Clear localStorage immediately before calling signOut
       const keysToRemove = Object.keys(localStorage).filter(key => 
         key.startsWith('cache_') || 
@@ -124,11 +128,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         key === 'lastKnownUser'
       );
       keysToRemove.forEach(key => localStorage.removeItem(key));
+      console.log('SignOut: Cleared localStorage keys:', keysToRemove);
       
       // Sign out from Supabase
       await supabase.auth.signOut();
+      console.log('SignOut: Supabase signOut completed');
       
       // Force immediate redirect - don't wait for auth state change
+      console.log('SignOut: Redirecting to landing page');
       window.location.href = '/';
     } catch (error) {
       console.error('Sign out error:', error);
@@ -139,6 +146,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         key === 'lastKnownUser'
       );
       keysToRemove.forEach(key => localStorage.removeItem(key));
+      console.log('SignOut: Error recovery - cleared localStorage and redirecting');
       window.location.href = '/';
     }
   };

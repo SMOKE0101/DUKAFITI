@@ -21,34 +21,13 @@ const Index = () => {
     if (!loading && !hasCheckedCache) {
       setHasCheckedCache(true);
       
-      // Check for cached user if no authenticated user
-      if (!user) {
-        try {
-          const stored = localStorage.getItem('lastKnownUser');
-          if (stored) {
-            const userData = JSON.parse(stored);
-            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-            if (Date.now() - userData.timestamp < sevenDaysMs) {
-              console.log('[Index] Cached user found, redirecting to dashboard');
-              navigate('/app/dashboard', { replace: true });
-              return;
-            } else {
-              console.log('[Index] Cached user expired, removing from storage');
-              localStorage.removeItem('lastKnownUser');
-            }
-          }
-        } catch (error) {
-          console.error('[Index] Error checking cached user:', error);
-          localStorage.removeItem('lastKnownUser');
-        }
-      }
-      
       // Route based on authentication status
       if (user) {
         console.log('[Index] Authenticated user detected, redirecting to dashboard');
         navigate('/app/dashboard', { replace: true });
       } else {
-        console.log('[Index] No user found, redirecting to landing');
+        console.log('[Index] No authenticated user, redirecting to landing');
+        // Don't check cached user here - let ProtectedRoute handle offline access
         navigate('/landing', { replace: true });
       }
     }
