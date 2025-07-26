@@ -1,9 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import StaticLanding from './StaticLanding';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -49,14 +48,13 @@ const Index = () => {
         console.log('[Index] Authenticated user detected, redirecting to dashboard');
         navigate('/app/dashboard', { replace: true });
       } else {
-        console.log('[Index] No user found, staying on index to show landing');
-        // Don't redirect - show landing content directly
+        console.log('[Index] No user found, redirecting to landing');
+        navigate('/landing', { replace: true });
       }
     }
   }, [user, loading, navigate, isOnline, hasCheckedCache]);
 
-  // Loading state
-  if (loading || !hasCheckedCache) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <div className="text-center">
@@ -71,18 +69,11 @@ const Index = () => {
     );
   }
 
-  // Show landing page for unauthenticated users
-  if (!user) {
-    console.log('[Index] Showing StaticLanding component for unauthenticated user');
-    return <StaticLanding />;
-  }
-
-  // This should not be reached, but safety fallback
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       <div className="text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-        <p className="text-gray-600 text-sm">Loading...</p>
+        <p className="text-gray-600 text-sm">Redirecting...</p>
       </div>
     </div>
   );

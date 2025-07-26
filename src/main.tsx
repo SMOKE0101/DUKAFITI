@@ -4,21 +4,21 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Production-ready initialization
-console.log('[DukaFiti] Starting application...');
+console.log('[Main] Starting React application initialization...');
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
-  console.error('[DukaFiti] Root element not found');
   throw new Error("Root element not found");
 }
 
+console.log('[Main] Creating React root...');
 const root = createRoot(rootElement);
 
+console.log('[Main] Rendering React app...');
 root.render(
   <StrictMode>
     <App />
   </StrictMode>
 );
 
-console.log('[DukaFiti] Application rendered successfully');
+console.log('[Main] React app rendered successfully');

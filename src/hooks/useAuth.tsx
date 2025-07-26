@@ -49,12 +49,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           );
           keysToRemove.forEach(key => localStorage.removeItem(key));
           
-          // Clear cached user data
-          localStorage.removeItem('lastKnownUser');
-          
-          // Redirect to home page (/) instead of /landing to avoid loops
           setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = '/landing';
           }, 100);
         }
       }
