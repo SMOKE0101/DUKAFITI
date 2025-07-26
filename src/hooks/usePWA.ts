@@ -105,134 +105,145 @@ export const usePWA = () => {
   };
 
   const installApp = async () => {
-    console.log('[PWA] Install button clicked, deferredPrompt:', !!deferredPrompt);
+    console.log('[PWA] Install button clicked');
     
+    // If app is already installed, don't show install prompt
+    if (pwaState.isInstalled) {
+      console.log('[PWA] App is already installed');
+      return;
+    }
+    
+    // Try to trigger install prompt
+    const success = await triggerInstallPrompt();
+    
+    if (!success) {
+      console.log('[PWA] Native install prompt not available, showing manual instructions');
+      // Only show instructions as absolute fallback
+      setTimeout(() => {
+        showManualInstallGuide();
+      }, 100);
+    }
+  };
+
+  const showManualInstallGuide = () => {
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    const isEdge = /Edg/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    let instructions = '';
+    
+    if (isChrome) {
+      instructions = 'Look for the install icon (⬇️) in your address bar, or click the menu (⋮) → "Install DukaFiti"';
+    } else if (isEdge) {
+      instructions = 'Look for the install icon (⬇️) in your address bar, or click the menu (...) → "Apps" → "Install this site as an app"';
+    } else if (isSafari) {
+      instructions = 'Tap the Share button (⬆️) → "Add to Home Screen" → "Add"';
+    } else {
+      instructions = 'Look for an "Install" option in your browser menu or address bar';
+    }
+    
+    // Create a more subtle notification
+    const toast = document.createElement('div');
+    toast.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: hsl(var(--card));
+        color: hsl(var(--card-foreground));
+        border: 1px solid hsl(var(--border));
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px hsl(var(--shadow));
+        z-index: 9999;
+        max-width: 90vw;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        animation: slideUp 0.3s ease-out;
+      ">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>💡</span>
+          <span>${instructions}</span>
+        </div>
+      </div>
+      <style>
+        @keyframes slideUp {
+          from { transform: translateX(-50%) translateY(100%); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+      </style>
+    `;
+    document.body.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.style.animation = 'slideUp 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 5000);
+  };
+
+  const triggerInstallPrompt = async () => {
+    console.log('[PWA] Attempting to trigger install prompt...');
+    
+    // First priority: Use deferred prompt if available
     if (deferredPrompt) {
       try {
-        // Show the install prompt
-        const promptResult = await deferredPrompt.prompt();
-        console.log('[PWA] Prompt result:', promptResult);
+        console.log('[PWA] Using deferred prompt');
+        const result = await deferredPrompt.prompt();
+        console.log('[PWA] Prompt result:', result);
         
-        // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice;
         console.log('[PWA] User choice:', outcome);
         
         if (outcome === 'accepted') {
           console.log('[PWA] User accepted the install prompt');
           setPwaState(prev => ({ ...prev, isInstallable: false, isInstalled: true }));
-        } else {
-          console.log('[PWA] User dismissed the install prompt');
         }
         
-        // Clear the deferred prompt
         setDeferredPrompt(null);
+        return true;
       } catch (error) {
-        console.error('[PWA] Install prompt error:', error);
-        tryAlternativeInstall();
+        console.error('[PWA] Error with deferred prompt:', error);
       }
-    } else {
-      tryAlternativeInstall();
     }
-  };
-
-  const tryAlternativeInstall = () => {
+    
+    // Second priority: Try to manually trigger browser install
     const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     const isEdge = /Edg/.test(navigator.userAgent);
     
-    // For Chrome/Edge, try to trigger the native install banner
     if (isChrome || isEdge) {
-      console.log('[PWA] Trying alternative install method for Chrome/Edge');
+      console.log('[PWA] Chromium browser detected, checking for manual trigger options');
       
-      // Check if the app meets PWA criteria and try to show install prompt
-      if ('serviceWorker' in navigator) {
-        // Create a synthetic beforeinstallprompt event if none exists
-        setTimeout(() => {
-          const event = new CustomEvent('beforeinstallprompt', {
-            bubbles: true,
-            cancelable: true
-          });
-          
-          // Add prompt method to the event
-          (event as any).prompt = () => {
-            showBrowserSpecificInstructions();
-          };
-          
-          window.dispatchEvent(event);
-        }, 100);
-      } else {
-        showBrowserSpecificInstructions();
-      }
-    } else {
-      showBrowserSpecificInstructions();
-    }
-  };
-
-  const showBrowserSpecificInstructions = () => {
-    console.log('[PWA] Showing browser-specific install instructions');
-    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    const isEdge = /Edg/.test(navigator.userAgent);
-    const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
-    const isFirefox = /Firefox/.test(navigator.userAgent);
-    
-    let title = 'Install DukaFiti App';
-    let message = '';
-    
-    if (isChrome) {
-      message = 'To install this app:\n\n1. Click the install icon (⬇️) in the address bar\nOR\n1. Click the menu (⋮) in the top right\n2. Select "Install DukaFiti"\n3. Click "Install" when prompted';
-    } else if (isEdge) {
-      message = 'To install this app:\n\n1. Click the install icon (⬇️) in the address bar\nOR\n1. Click the menu (...) in the top right\n2. Select "Apps" > "Install this site as an app"\n3. Click "Install" when prompted';
-    } else if (isSafari) {
-      message = 'To install this app:\n\n1. Tap the Share button (⬆️) at the bottom\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to confirm\n4. The app will appear on your home screen';
-    } else if (isFirefox) {
-      message = 'To install this app:\n\n1. Click the menu (☰) in the top right\n2. Look for "Install" option\n3. Follow the prompts to install';
-    } else {
-      message = 'To install this app:\n\nLook for an "Install" icon in your browser\'s address bar or an "Install" or "Add to Home Screen" option in your browser menu and follow the prompts.';
-    }
-    
-    // Use a better notification instead of alert
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      // Try to show a styled notification
-      const notification = document.createElement('div');
-      notification.innerHTML = `
-        <div style="
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: #1f2937;
-          color: white;
-          padding: 16px;
-          border-radius: 8px;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-          z-index: 9999;
-          max-width: 300px;
-          font-family: system-ui, -apple-system, sans-serif;
-        ">
-          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">${title}</h4>
-          <p style="margin: 0; font-size: 12px; line-height: 1.4; white-space: pre-line;">${message}</p>
-          <button onclick="this.parentElement.parentElement.remove()" style="
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: none;
-            border: none;
-            color: #9ca3af;
-            cursor: pointer;
-            font-size: 16px;
-          ">×</button>
-        </div>
-      `;
-      document.body.appendChild(notification);
-      
-      // Auto remove after 10 seconds
-      setTimeout(() => {
-        if (notification.parentElement) {
-          notification.remove();
+      // For production apps, try to check if PWA criteria are met
+      if ('serviceWorker' in navigator && 'caches' in window) {
+        try {
+          // Check if all PWA requirements are met
+          const registration = await navigator.serviceWorker.ready;
+          if (registration && registration.active) {
+            console.log('[PWA] Service Worker active, PWA should be installable');
+            
+            // Try to create a synthetic install event
+            const syntheticEvent = new Event('beforeinstallprompt');
+            window.dispatchEvent(syntheticEvent);
+            
+            // Wait a moment and check if prompt was captured
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            if (deferredPrompt) {
+              return triggerInstallPrompt(); // Recursive call with new prompt
+            }
+          }
+        } catch (error) {
+          console.error('[PWA] Error checking PWA requirements:', error);
         }
-      }, 10000);
-    } else {
-      // Fallback to alert
-      alert(title + '\n\n' + message);
+      }
     }
+    
+    // Fallback: Guide user to manual installation
+    return false;
   };
 
 
