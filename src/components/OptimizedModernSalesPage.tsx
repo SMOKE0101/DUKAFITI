@@ -258,29 +258,89 @@ const OptimizedModernSalesPage = () => {
     };
   }, [refetchProducts]);
 
-  // Handle mobile keyboard persistence
+  // Mobile keyboard state management
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle mobile keyboard persistence with improved focus management
   const handleSearchFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    console.log('[Mobile Search] Focus event triggered');
+    setIsSearchFocused(true);
+    
     if (isTouchDevice()) {
       preventZoomOnFocus(e.target);
-      // Prevent blur events from dismissing keyboard on mobile
-      e.target.setAttribute('readonly', 'readonly');
-      setTimeout(() => {
-        e.target.removeAttribute('readonly');
-        e.target.focus();
-      }, 100);
+      
+      // Clear any existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      
+      // Prevent auto-blur on mobile by maintaining focus
+      e.target.setAttribute('data-mobile-focused', 'true');
     }
   }, []);
 
+  const handleSearchBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    console.log('[Mobile Search] Blur event triggered');
+    
+    // Only allow blur if it's intentional (Enter key or tap outside)
+    if (isTouchDevice() && e.target.getAttribute('data-mobile-focused') === 'true') {
+      const relatedTarget = e.relatedTarget as HTMLElement;
+      
+      // If blur is not from pressing Enter or clicking outside, refocus
+      if (!relatedTarget || (!relatedTarget.closest('button') && !relatedTarget.closest('[role="option"]'))) {
+        console.log('[Mobile Search] Preventing unintentional blur, refocusing...');
+        
+        // Use timeout to refocus after blur event completes
+        searchTimeoutRef.current = setTimeout(() => {
+          if (searchInputRef.current && isSearchFocused) {
+            searchInputRef.current.focus();
+          }
+        }, 10);
+        return;
+      }
+    }
+    
+    setIsSearchFocused(false);
+    e.target.removeAttribute('data-mobile-focused');
+  }, [isSearchFocused]);
+
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    // On Enter key, blur the input to close mobile keyboard
+    console.log('[Mobile Search] Key pressed:', e.key);
+    
+    // On Enter key, intentionally blur to close mobile keyboard
     if (e.key === 'Enter') {
       e.preventDefault();
+      console.log('[Mobile Search] Enter pressed, closing keyboard');
+      setIsSearchFocused(false);
+      e.currentTarget.removeAttribute('data-mobile-focused');
       e.currentTarget.blur();
     }
   }, []);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[Mobile Search] Text changed:', e.target.value);
     setSearchTerm(e.target.value);
+    
+    // Maintain focus after value change on mobile
+    if (isTouchDevice() && searchInputRef.current) {
+      // Use requestAnimationFrame to ensure focus is maintained after render
+      requestAnimationFrame(() => {
+        if (searchInputRef.current && isSearchFocused) {
+          searchInputRef.current.focus();
+        }
+      });
+    }
+  }, [isSearchFocused]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Toggle between panels on mobile with improved handling
@@ -309,6 +369,7 @@ const OptimizedModernSalesPage = () => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
                 onKeyDown={handleSearchKeyDown}
                 className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                 style={{
