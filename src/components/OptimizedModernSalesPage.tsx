@@ -35,7 +35,30 @@ import {
 } from 'lucide-react';
 
 const OptimizedModernSalesPage = () => {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // Initialize cart from localStorage with 3-minute expiration
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const savedCart = localStorage.getItem('sales_cart');
+      if (savedCart) {
+        const { items, timestamp } = JSON.parse(savedCart);
+        const now = new Date().getTime();
+        const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
+        
+        // Check if cart is still valid (within 3 minutes)
+        if (now - timestamp < threeMinutes) {
+          return items;
+        } else {
+          // Cart expired, remove from localStorage
+          localStorage.removeItem('sales_cart');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
+      localStorage.removeItem('sales_cart');
+    }
+    return [];
+  });
+  
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,6 +161,50 @@ const OptimizedModernSalesPage = () => {
     // if (isMobile) {
     //   setActivePanel('cart');
     // }
+  }, [toast]);
+
+  // Persist cart to localStorage with timestamp whenever cart changes
+  useEffect(() => {
+    if (cart.length > 0) {
+      const cartData = {
+        items: cart,
+        timestamp: new Date().getTime()
+      };
+      localStorage.setItem('sales_cart', JSON.stringify(cartData));
+    } else {
+      // Remove from localStorage when cart is empty
+      localStorage.removeItem('sales_cart');
+    }
+  }, [cart]);
+
+  // Set up cart expiration cleanup - check every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        const savedCart = localStorage.getItem('sales_cart');
+        if (savedCart) {
+          const { timestamp } = JSON.parse(savedCart);
+          const now = new Date().getTime();
+          const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
+          
+          // If cart has expired, clear it
+          if (now - timestamp >= threeMinutes) {
+            localStorage.removeItem('sales_cart');
+            setCart([]);
+            toast({
+              title: "Cart Expired",
+              description: "Cart items have been cleared after 3 minutes of inactivity.",
+              variant: "default",
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking cart expiration:', error);
+        localStorage.removeItem('sales_cart');
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
   }, [toast]);
 
   // Restore scroll position after cart updates
