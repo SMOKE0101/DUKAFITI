@@ -55,9 +55,6 @@ const OptimizedModernSalesPage = () => {
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
   
-  // Debounced search term to prevent excessive re-renders during typing
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-  
   // Mobile panel state
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
   const isMobile = useIsMobile();
@@ -98,7 +95,7 @@ const OptimizedModernSalesPage = () => {
 
   const filteredProducts = useMemo(() => {
     const filtered = products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
@@ -109,7 +106,7 @@ const OptimizedModernSalesPage = () => {
       const bFreq = productSalesFrequency[b.id] || 0;
       return bFreq - aFreq;
     });
-  }, [products, debouncedSearchTerm, selectedCategory, productSalesFrequency]);
+  }, [products, searchTerm, selectedCategory, productSalesFrequency]);
 
   const addToCart = useCallback((product: any) => {
     // Save current scroll position before state update
@@ -264,18 +261,6 @@ const OptimizedModernSalesPage = () => {
   // Mobile keyboard state management
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isTypingRef = useRef(false);
-  const lastInputTime = useRef<number>(0);
-  
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 150);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm]);
 
   // Handle mobile keyboard persistence with improved focus management
   const handleSearchFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
@@ -285,95 +270,69 @@ const OptimizedModernSalesPage = () => {
     if (isTouchDevice()) {
       preventZoomOnFocus(e.target);
       
-      // Mark the input as focused and prevent blur during typing
+      // Clear any existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      
+      // Prevent auto-blur on mobile by maintaining focus
       e.target.setAttribute('data-mobile-focused', 'true');
-      e.target.setAttribute('data-typing-active', 'false');
     }
   }, []);
 
   const handleSearchBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
     console.log('[Mobile Search] Blur event triggered');
     
-    const now = Date.now();
-    const timeSinceLastInput = now - lastInputTime.current;
-    
-    // If user is actively typing (input happened within last 100ms), prevent blur
-    if (isTouchDevice() && 
-        e.target.getAttribute('data-mobile-focused') === 'true' && 
-        (isTypingRef.current || timeSinceLastInput < 100)) {
+    // Only allow blur if it's intentional (Enter key or tap outside)
+    if (isTouchDevice() && e.target.getAttribute('data-mobile-focused') === 'true') {
+      const relatedTarget = e.relatedTarget as HTMLElement;
       
-      console.log('[Mobile Search] User is typing, preventing blur...');
-      e.preventDefault();
-      
-      // Immediately refocus without timeout to prevent keyboard hide
-      requestAnimationFrame(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
-      });
-      return;
+      // If blur is not from pressing Enter or clicking outside, refocus
+      if (!relatedTarget || (!relatedTarget.closest('button') && !relatedTarget.closest('[role="option"]'))) {
+        console.log('[Mobile Search] Preventing unintentional blur, refocusing...');
+        
+        // Use timeout to refocus after blur event completes
+        searchTimeoutRef.current = setTimeout(() => {
+          if (searchInputRef.current && isSearchFocused) {
+            searchInputRef.current.focus();
+          }
+        }, 10);
+        return;
+      }
     }
     
-    // Allow intentional blur (Enter key or clicking outside)
-    console.log('[Mobile Search] Allowing intentional blur');
     setIsSearchFocused(false);
-    isTypingRef.current = false;
     e.target.removeAttribute('data-mobile-focused');
-    e.target.removeAttribute('data-typing-active');
-  }, []);
+  }, [isSearchFocused]);
 
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     console.log('[Mobile Search] Key pressed:', e.key);
     
+    // On Enter key, intentionally blur to close mobile keyboard
     if (e.key === 'Enter') {
       e.preventDefault();
       console.log('[Mobile Search] Enter pressed, closing keyboard');
       setIsSearchFocused(false);
-      isTypingRef.current = false;
       e.currentTarget.removeAttribute('data-mobile-focused');
-      e.currentTarget.removeAttribute('data-typing-active');
       e.currentTarget.blur();
-    } else {
-      // Mark as typing for any other key
-      isTypingRef.current = true;
-      lastInputTime.current = Date.now();
-      e.currentTarget.setAttribute('data-typing-active', 'true');
-      
-      // Clear typing flag after a delay
-      setTimeout(() => {
-        isTypingRef.current = false;
-        if (searchInputRef.current) {
-          searchInputRef.current.setAttribute('data-typing-active', 'false');
-        }
-      }, 200);
     }
   }, []);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('[Mobile Search] Text changed:', e.target.value);
-    
-    // Update typing state
-    isTypingRef.current = true;
-    lastInputTime.current = Date.now();
-    
-    // Update search term immediately for UI responsiveness
     setSearchTerm(e.target.value);
     
-    // Mark as actively typing to prevent blur
-    e.target.setAttribute('data-typing-active', 'true');
-    
-    // Clear typing flag after user stops typing
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+    // Maintain focus after value change on mobile
+    if (isTouchDevice() && searchInputRef.current) {
+      // Use requestAnimationFrame to ensure focus is maintained after render
+      requestAnimationFrame(() => {
+        if (searchInputRef.current && isSearchFocused) {
+          searchInputRef.current.focus();
+        }
+      });
     }
-    
-    searchTimeoutRef.current = setTimeout(() => {
-      isTypingRef.current = false;
-      if (searchInputRef.current) {
-        searchInputRef.current.setAttribute('data-typing-active', 'false');
-      }
-    }, 200);
-  }, []);
+  }, [isSearchFocused]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
