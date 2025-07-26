@@ -116,7 +116,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      // Clear localStorage immediately before calling signOut
+      const keysToRemove = Object.keys(localStorage).filter(key => 
+        key.startsWith('cache_') || 
+        key.startsWith('pendingOperations_') || 
+        key === 'lastKnownUser'
+      );
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Force immediate redirect - don't wait for auth state change
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Even if signOut fails, clear local data and redirect
+      const keysToRemove = Object.keys(localStorage).filter(key => 
+        key.startsWith('cache_') || 
+        key.startsWith('pendingOperations_') || 
+        key === 'lastKnownUser'
+      );
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      window.location.href = '/';
+    }
   };
 
   const value = {

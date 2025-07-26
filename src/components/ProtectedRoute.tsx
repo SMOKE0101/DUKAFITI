@@ -95,9 +95,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Allow access if user exists (online) or last known user exists (offline/online)
-  if (user || lastKnownUser) {
-    console.log('[ProtectedRoute] Allowing access - user:', !!user, 'lastKnownUser:', !!lastKnownUser);
+  // Allow access if user exists (online) or last known user exists (offline only)
+  if (user || (lastKnownUser && !isOnline)) {
+    console.log('[ProtectedRoute] Allowing access - user:', !!user, 'lastKnownUser (offline only):', !!lastKnownUser && !isOnline);
     return <>{children}</>;
   }
 
