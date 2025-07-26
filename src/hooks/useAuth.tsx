@@ -43,14 +43,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Handle logout redirect
         if (event === 'SIGNED_OUT') {
-          // Clear all localStorage data on logout
+          // Clear all localStorage data on logout including user cache
           const keysToRemove = Object.keys(localStorage).filter(key => 
-            key.startsWith('cache_') || key.startsWith('pendingOperations_')
+            key.startsWith('cache_') || 
+            key.startsWith('pendingOperations_') || 
+            key === 'lastKnownUser'
           );
           keysToRemove.forEach(key => localStorage.removeItem(key));
           
           setTimeout(() => {
-            window.location.href = '/landing';
+            window.location.href = '/';
           }, 100);
         }
       }

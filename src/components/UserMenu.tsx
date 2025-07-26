@@ -67,7 +67,7 @@ const UserMenu = () => {
         </DropdownMenuTrigger>
         <DropdownMenuContent 
           align="end" 
-          className="w-72 sm:w-80 max-w-[90vw] border-2 border-primary rounded-xl bg-card shadow-2xl backdrop-blur-sm z-50"
+          className="w-72 sm:w-80 max-w-[90vw] border-2 border-primary rounded-xl bg-background/95 backdrop-blur-sm shadow-2xl z-[9999]"
           sideOffset={8}
         >
           {/* User Profile Section */}

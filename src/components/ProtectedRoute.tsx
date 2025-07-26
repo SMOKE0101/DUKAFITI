@@ -13,6 +13,21 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const [lastKnownUser, setLastKnownUser] = useState(null);
 
+  // Listen for auth state changes to clear cached user on logout
+  useEffect(() => {
+    const handleAuthStateChange = (event: CustomEvent) => {
+      if (event.detail.event === 'SIGNED_OUT') {
+        setLastKnownUser(null);
+        localStorage.removeItem('lastKnownUser');
+      }
+    };
+
+    window.addEventListener('auth-state-change', handleAuthStateChange as EventListener);
+    return () => {
+      window.removeEventListener('auth-state-change', handleAuthStateChange as EventListener);
+    };
+  }, []);
+
   // Store user info when online for offline access
   useEffect(() => {
     if (user && isOnline) {
@@ -32,15 +47,21 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         const stored = localStorage.getItem('lastKnownUser');
         if (stored) {
           const userData = JSON.parse(stored);
-          // Allow access if user was authenticated within last 7 days
-          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-          if (Date.now() - userData.timestamp < sevenDaysMs) {
+          // Allow access if user was authenticated within last 24 hours and they're offline
+          const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+          if (Date.now() - userData.timestamp < twentyFourHoursMs && !isOnline) {
             console.log('[ProtectedRoute] Using cached user for offline access');
             setLastKnownUser(userData);
             return;
+          } else if (isOnline) {
+            // If online, clear cache and require fresh login
+            console.log('[ProtectedRoute] Online - clearing cache and requiring fresh login');
+            localStorage.removeItem('lastKnownUser');
+            setLastKnownUser(null);
           } else {
             console.log('[ProtectedRoute] Cached user expired, clearing cache');
             localStorage.removeItem('lastKnownUser');
+            setLastKnownUser(null);
           }
         }
       } catch (error) {
@@ -48,13 +69,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         localStorage.removeItem('lastKnownUser');
       }
       
-      // Only redirect to signin if online and no cached user
-      if (isOnline && !lastKnownUser) {
+      // Redirect to signin if online and no valid user
+      if (isOnline && !user) {
         console.log('[ProtectedRoute] No user and online, redirecting to signin');
         navigate('/signin');
       }
     }
-  }, [user, loading, navigate, isOnline, lastKnownUser]);
+  }, [user, loading, navigate, isOnline]);
 
   // Show loading state when needed
   if (loading) {
