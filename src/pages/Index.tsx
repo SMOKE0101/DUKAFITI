@@ -5,6 +5,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import ModernLandingComponent from './ModernLanding';
 
+// Force rebuild marker - version 2.0
+
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -72,9 +74,11 @@ const Index = () => {
 
   // Show landing page for unauthenticated users
   if (!user && hasCheckedCache) {
+    console.log('[Index] Showing ModernLanding component for unauthenticated user');
     return <ModernLandingComponent />;
   }
 
+  // Show loading state
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       <div className="text-center">
