@@ -12,46 +12,63 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Get the hash from URL (Supabase uses hash for auth tokens)
+        // Handle auth callback from OAuth providers
+        const { data, error } = await supabase.auth.getSession();
+        
+        // Check for error in URL params (both hash and search params)
+        const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const token = hashParams.get('access_token');
-        const type = hashParams.get('type');
-        const error = hashParams.get('error');
-        const errorDescription = hashParams.get('error_description');
+        const authError = urlParams.get('error') || hashParams.get('error');
+        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
 
-        if (error) {
+        if (authError) {
+          console.error('Auth callback error:', authError, errorDescription);
           setStatus('error');
           setMessage(errorDescription || 'Authentication failed');
           setTimeout(() => navigate('/signin'), 3000);
           return;
         }
 
-        if (type === 'signup' && token) {
-          setStatus('success');
-          setMessage('Email confirmed successfully! Redirecting to your dashboard...');
-          
-          // Wait a moment for the auth state to update
-          setTimeout(() => {
-            navigate('/app/dashboard');
-          }, 2000);
-        } else {
-          // Handle other auth callbacks or redirect to sign in
-          const { data, error: sessionError } = await supabase.auth.getSession();
-          
-          if (sessionError) {
-            setStatus('error');
-            setMessage('Failed to get session');
-            setTimeout(() => navigate('/signin'), 3000);
-            return;
-          }
+        if (error) {
+          console.error('Session error:', error);
+          setStatus('error');
+          setMessage('Failed to establish session');
+          setTimeout(() => navigate('/signin'), 3000);
+          return;
+        }
 
-          if (data.session) {
+        if (data.session) {
+          setStatus('success');
+          setMessage('Authentication successful! Redirecting to your dashboard...');
+          
+          // Give the auth state time to update
+          setTimeout(() => {
+            navigate('/app/dashboard', { replace: true });
+          }, 1500);
+        } else {
+          // Try to handle the auth flow
+          const type = hashParams.get('type');
+          const token = hashParams.get('access_token');
+          
+          if (type && token) {
+            // OAuth flow detected, wait for session to be established
             setStatus('success');
-            setMessage('Authentication successful! Redirecting...');
-            setTimeout(() => navigate('/app/dashboard'), 1500);
+            setMessage('Completing authentication...');
+            
+            // Wait longer for OAuth session establishment
+            setTimeout(async () => {
+              const { data: newSession } = await supabase.auth.getSession();
+              if (newSession.session) {
+                navigate('/app/dashboard', { replace: true });
+              } else {
+                setStatus('error');
+                setMessage('Session establishment failed');
+                setTimeout(() => navigate('/signin'), 2000);
+              }
+            }, 2500);
           } else {
             setStatus('error');
-            setMessage('No valid session found');
+            setMessage('No valid authentication found');
             setTimeout(() => navigate('/signin'), 3000);
           }
         }
@@ -64,7 +81,7 @@ const AuthCallback = () => {
     };
 
     handleAuthCallback();
-  }, [navigate, searchParams]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-accent/10 flex items-center justify-center px-4">
@@ -74,10 +91,10 @@ const AuthCallback = () => {
             <>
               <Loader2 className="w-16 h-16 mx-auto mb-4 text-primary animate-spin" />
               <h1 className="text-xl font-semibold text-foreground mb-2">
-                Confirming your email...
+                Completing sign in...
               </h1>
               <p className="text-muted-foreground">
-                Please wait while we verify your account.
+                Please wait while we complete your authentication.
               </p>
             </>
           )}
@@ -86,7 +103,7 @@ const AuthCallback = () => {
             <>
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-emerald-500" />
               <h1 className="text-xl font-semibold text-foreground mb-2">
-                Email Confirmed!
+                Sign In Successful!
               </h1>
               <p className="text-muted-foreground">
                 {message}
@@ -98,7 +115,7 @@ const AuthCallback = () => {
             <>
               <XCircle className="w-16 h-16 mx-auto mb-4 text-destructive" />
               <h1 className="text-xl font-semibold text-foreground mb-2">
-                Confirmation Failed
+                Sign In Failed
               </h1>
               <p className="text-muted-foreground">
                 {message}
