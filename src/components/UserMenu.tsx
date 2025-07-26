@@ -19,19 +19,22 @@ const UserMenu = () => {
   };
 
   const handleLogoutClick = () => {
+    console.log('UserMenu: Logout button clicked');
     setShowLogoutConfirm(true);
   };
 
   const handleConfirmLogout = async () => {
+    console.log('UserMenu: Logout confirmed, calling signOut');
     try {
       await signOut();
+      console.log('UserMenu: SignOut completed successfully');
       setShowLogoutConfirm(false);
       toast({
         title: "Signed Out",
         description: "You have been successfully signed out.",
       });
-      // The useAuth hook will handle the redirect to landing page automatically
     } catch (error) {
+      console.error('UserMenu: SignOut failed:', error);
       toast({
         title: "Sign Out Failed",
         description: "There was an error signing out. Please try again.",

@@ -13,7 +13,9 @@ const AuthCallback = () => {
     const handleAuthCallback = async () => {
       try {
         console.log('AuthCallback: Starting auth callback handling');
-        console.log('Current URL:', window.location.href);
+        console.log('AuthCallback: Current URL:', window.location.href);
+        console.log('AuthCallback: Hash:', window.location.hash);
+        console.log('AuthCallback: Search:', window.location.search);
         
         // Check for error in URL params (both hash and search params)
         const urlParams = new URLSearchParams(window.location.search);

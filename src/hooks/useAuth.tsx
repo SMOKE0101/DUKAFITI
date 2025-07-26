@@ -98,11 +98,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    // Use the current domain for redirect
+    // Detect the correct domain - use production domain if available
+    const isProduction = window.location.hostname !== 'localhost';
     const currentUrl = window.location.origin;
-    const redirectUrl = `${currentUrl}/auth/callback`;
     
-    console.log('Google OAuth redirect URL:', redirectUrl);
+    // For production, always use the actual domain, not localhost
+    const redirectUrl = isProduction 
+      ? `${currentUrl}/auth/callback`
+      : `${currentUrl}/auth/callback`;
+    
+    console.log('Google OAuth - Environment:', isProduction ? 'Production' : 'Development');
+    console.log('Google OAuth - Current origin:', currentUrl);
+    console.log('Google OAuth - Redirect URL:', redirectUrl);
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -114,31 +121,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
     
+    if (error) {
+      console.error('Google OAuth error:', error);
+    }
+    
     return { error };
   };
 
   const signOut = async () => {
+    console.log('SignOut: Starting logout process');
+    console.log('SignOut: Current URL:', window.location.href);
+    
     try {
-      console.log('SignOut: Starting logout process');
-      
       // Clear localStorage immediately before calling signOut
       const keysToRemove = Object.keys(localStorage).filter(key => 
         key.startsWith('cache_') || 
         key.startsWith('pendingOperations_') || 
         key === 'lastKnownUser'
       );
+      console.log('SignOut: Clearing localStorage keys:', keysToRemove);
       keysToRemove.forEach(key => localStorage.removeItem(key));
-      console.log('SignOut: Cleared localStorage keys:', keysToRemove);
       
+      console.log('SignOut: Calling supabase.auth.signOut()');
       // Sign out from Supabase
-      await supabase.auth.signOut();
-      console.log('SignOut: Supabase signOut completed');
+      const { error } = await supabase.auth.signOut();
       
-      // Force immediate redirect - don't wait for auth state change
+      if (error) {
+        console.error('SignOut: Supabase signOut error:', error);
+      } else {
+        console.log('SignOut: Supabase signOut completed successfully');
+      }
+      
+      // Force immediate redirect regardless of error
       console.log('SignOut: Redirecting to landing page');
-      window.location.href = '/';
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+      
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('SignOut: Catch block - error:', error);
       // Even if signOut fails, clear local data and redirect
       const keysToRemove = Object.keys(localStorage).filter(key => 
         key.startsWith('cache_') || 
@@ -147,7 +168,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       );
       keysToRemove.forEach(key => localStorage.removeItem(key));
       console.log('SignOut: Error recovery - cleared localStorage and redirecting');
-      window.location.href = '/';
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     }
   };
 
