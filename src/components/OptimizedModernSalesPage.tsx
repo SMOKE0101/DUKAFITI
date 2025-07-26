@@ -16,6 +16,7 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
+import { preventZoomOnFocus, isTouchDevice } from '../utils/mobileUtils';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
@@ -61,6 +62,9 @@ const OptimizedModernSalesPage = () => {
   // Scroll position preservation
   const productListRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
+
+  // Mobile search input ref for keyboard handling
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { products, loading: productsLoading, refetch: refetchProducts } = useUnifiedProducts();
   const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
@@ -254,6 +258,31 @@ const OptimizedModernSalesPage = () => {
     };
   }, [refetchProducts]);
 
+  // Handle mobile keyboard persistence
+  const handleSearchFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    if (isTouchDevice()) {
+      preventZoomOnFocus(e.target);
+      // Prevent blur events from dismissing keyboard on mobile
+      e.target.setAttribute('readonly', 'readonly');
+      setTimeout(() => {
+        e.target.removeAttribute('readonly');
+        e.target.focus();
+      }, 100);
+    }
+  }, []);
+
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    // On Enter key, blur the input to close mobile keyboard
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  }, []);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
+
   // Toggle between panels on mobile with improved handling
   const togglePanel = useCallback(() => {
     setActivePanel(prev => prev === 'search' ? 'cart' : 'search');
@@ -269,11 +298,22 @@ const OptimizedModernSalesPage = () => {
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <input
+                ref={searchInputRef}
                 type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
                 placeholder="Search products by name or category…"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
+                onFocus={handleSearchFocus}
+                onKeyDown={handleSearchKeyDown}
                 className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                style={{
+                  fontSize: isTouchDevice() ? '16px' : undefined // Prevent zoom on iOS
+                }}
               />
             </div>
             
