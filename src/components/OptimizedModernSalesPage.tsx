@@ -15,6 +15,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
+import { usePersistedCart } from '../hooks/usePersistedCart';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
@@ -35,29 +36,16 @@ import {
 } from 'lucide-react';
 
 const OptimizedModernSalesPage = () => {
-  // Initialize cart from localStorage with 3-minute expiration
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const savedCart = localStorage.getItem('sales_cart');
-      if (savedCart) {
-        const { items, timestamp } = JSON.parse(savedCart);
-        const now = new Date().getTime();
-        const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
-        
-        // Check if cart is still valid (within 3 minutes)
-        if (now - timestamp < threeMinutes) {
-          return items;
-        } else {
-          // Cart expired, remove from localStorage
-          localStorage.removeItem('sales_cart');
-        }
-      }
-    } catch (error) {
-      console.error('Error loading cart from localStorage:', error);
-      localStorage.removeItem('sales_cart');
-    }
-    return [];
-  });
+  // Use persistent cart hook instead of local state
+  const {
+    cart,
+    addToCart: addToPersistedCart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    total,
+    refreshCartExpiry
+  } = usePersistedCart();
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
@@ -80,7 +68,6 @@ const OptimizedModernSalesPage = () => {
   const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
 
-  const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   const selectedCustomer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
 
   const categories = useMemo(() => {
@@ -123,27 +110,23 @@ const OptimizedModernSalesPage = () => {
       savedScrollPosition.current = productListRef.current.scrollTop;
     }
 
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
-      const isUnspecifiedQuantity = product.currentStock === -1;
-      
-      if (existingItem) {
-        // For unspecified quantity products, allow unlimited additions
-        if (!isUnspecifiedQuantity && existingItem.quantity >= product.currentStock) {
-          toast({
-            title: "Insufficient Stock",
-            description: `Only ${product.currentStock} units available`,
-            variant: "destructive",
-          });
-          return prevCart;
-        }
-        return prevCart.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
+    // Check stock before adding
+    const existingItem = cart.find(item => item.id === product.id);
+    const isUnspecifiedQuantity = product.currentStock === -1;
+    
+    if (existingItem) {
+      // For unspecified quantity products, allow unlimited additions
+      if (!isUnspecifiedQuantity && existingItem.quantity >= product.currentStock) {
+        toast({
+          title: "Insufficient Stock",
+          description: `Only ${product.currentStock} units available`,
+          variant: "destructive",
+        });
+        return;
       }
-      
+      // Update existing item
+      updateQuantity(product.id, existingItem.quantity + 1);
+    } else {
       // Allow adding unspecified quantity products to cart
       if (!isUnspecifiedQuantity && product.currentStock <= 0) {
         toast({
@@ -151,61 +134,15 @@ const OptimizedModernSalesPage = () => {
           description: `${product.name} is currently out of stock`,
           variant: "destructive",
         });
-        return prevCart;
+        return;
       }
-
-      return [...prevCart, { ...product, quantity: 1 }];
-    });
-
-    // Remove the automatic panel switch - let user stay on search panel
-    // if (isMobile) {
-    //   setActivePanel('cart');
-    // }
-  }, [toast]);
-
-  // Persist cart to localStorage with timestamp whenever cart changes
-  useEffect(() => {
-    if (cart.length > 0) {
-      const cartData = {
-        items: cart,
-        timestamp: new Date().getTime()
-      };
-      localStorage.setItem('sales_cart', JSON.stringify(cartData));
-    } else {
-      // Remove from localStorage when cart is empty
-      localStorage.removeItem('sales_cart');
+      // Add new item
+      addToPersistedCart({ ...product, quantity: 1 });
     }
-  }, [cart]);
 
-  // Set up cart expiration cleanup - check every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      try {
-        const savedCart = localStorage.getItem('sales_cart');
-        if (savedCart) {
-          const { timestamp } = JSON.parse(savedCart);
-          const now = new Date().getTime();
-          const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
-          
-          // If cart has expired, clear it
-          if (now - timestamp >= threeMinutes) {
-            localStorage.removeItem('sales_cart');
-            setCart([]);
-            toast({
-              title: "Cart Expired",
-              description: "Cart items have been cleared after 3 minutes of inactivity.",
-              variant: "default",
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error checking cart expiration:', error);
-        localStorage.removeItem('sales_cart');
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [toast]);
+    // Refresh cart expiry when items are added
+    refreshCartExpiry();
+  }, [cart, updateQuantity, addToPersistedCart, refreshCartExpiry, toast]);
 
   // Restore scroll position after cart updates
   useEffect(() => {
@@ -218,48 +155,6 @@ const OptimizedModernSalesPage = () => {
       });
     }
   }, [cart]);
-
-  const updateQuantity = useCallback((productId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      setCart(prevCart => prevCart.filter(item => item.id !== productId));
-      return;
-    }
-
-    setCart(prevCart =>
-      prevCart.map(item => {
-        if (item.id === productId) {
-          const product = products.find(p => p.id === productId);
-          const isUnspecifiedQuantity = product?.currentStock === -1;
-          
-          // Skip stock validation for unspecified quantity products
-          if (!isUnspecifiedQuantity) {
-            const maxQuantity = product?.currentStock || 0;
-            if (newQuantity > maxQuantity) {
-              toast({
-                title: "Insufficient Stock",
-                description: `Only ${maxQuantity} units available`,
-                variant: "destructive",
-              });
-              return item;
-            }
-          }
-          
-          return { ...item, quantity: newQuantity };
-        }
-        return item;
-      })
-    );
-  }, [products, toast]);
-
-  const removeFromCart = useCallback((productId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
-  }, []);
-
-  const clearCart = useCallback(() => {
-    setCart([]);
-    setSelectedCustomerId(null);
-    setPaymentMethod('cash');
-  }, []);
 
   const handleCustomerAdded = useCallback((newCustomer: Customer) => {
     console.log('[OptimizedModernSalesPage] Customer added:', newCustomer);
