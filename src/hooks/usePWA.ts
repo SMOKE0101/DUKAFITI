@@ -96,41 +96,53 @@ export const usePWA = () => {
     
     if (deferredPrompt) {
       try {
-        deferredPrompt.prompt();
+        // Show the install prompt
+        const promptResult = await deferredPrompt.prompt();
+        console.log('[PWA] Prompt result:', promptResult);
+        
+        // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice;
         console.log('[PWA] User choice:', outcome);
+        
         if (outcome === 'accepted') {
+          console.log('[PWA] User accepted the install prompt');
           setPwaState(prev => ({ ...prev, isInstallable: false, isInstalled: true }));
+        } else {
+          console.log('[PWA] User dismissed the install prompt');
         }
+        
+        // Clear the deferred prompt
         setDeferredPrompt(null);
       } catch (error) {
         console.error('[PWA] Install prompt error:', error);
+        showManualInstructions();
       }
     } else {
-      // Fallback for browsers that don't support the install prompt
-      console.log('[PWA] No deferred prompt available - showing manual instructions');
-      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-      const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
-      
-      let message = 'To install this app:\n\n';
-      if (isChrome) {
-        message += '1. Click the menu (⋮) in the top right\n2. Select "Install DukaFiti"\n3. Click "Install" when prompted';
-      } else if (isSafari) {
-        message += '1. Tap the Share button (⬆️)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to confirm';
-      } else {
-        message += '1. Look for an "Install" or "Add to Home Screen" option in your browser menu\n2. Follow the prompts to install the app';
-      }
-      
-      alert(message);
+      showManualInstructions();
     }
   };
 
-  const openApp = () => {
-    console.log('[PWA] Open app button clicked');
-    // Try to open the installed app using the app URL scheme
-    const appUrl = window.location.origin;
-    window.open(appUrl, '_blank');
+  const showManualInstructions = () => {
+    console.log('[PWA] No deferred prompt available - showing manual instructions');
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    const isEdge = /Edg/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+    const isFirefox = /Firefox/.test(navigator.userAgent);
+    
+    let message = 'To install this app:\n\n';
+    if (isChrome || isEdge) {
+      message += '1. Click the menu (⋮) in the top right\n2. Select "Install DukaFiti" or "Install app"\n3. Click "Install" when prompted';
+    } else if (isSafari) {
+      message += '1. Tap the Share button (⬆️)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to confirm';
+    } else if (isFirefox) {
+      message += '1. Click the menu (☰) in the top right\n2. Look for "Install" option\n3. Follow the prompts';
+    } else {
+      message += '1. Look for an "Install" or "Add to Home Screen" option in your browser menu\n2. Follow the prompts to install the app';
+    }
+    
+    alert(message);
   };
+
 
   const isRunningInBrowser = () => {
     // Check if running in browser (not in installed app)
@@ -151,7 +163,6 @@ export const usePWA = () => {
   return {
     ...pwaState,
     installApp,
-    openApp,
     isRunningInBrowser,
     requestPersistentStorage,
   };
