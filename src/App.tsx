@@ -11,6 +11,7 @@ import Landing from "./pages/Landing";
 import ModernLanding from "./pages/ModernLanding";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Offline from "./pages/Offline";
@@ -54,6 +55,7 @@ function App() {
                     <Route path="/landing" element={<ModernLanding />} />
                     <Route path="/signin" element={<SignIn />} />
                     <Route path="/signup" element={<SignUp />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/auth" element={<Navigate to="/signin" replace />} />
                     <Route path="/offline" element={<Offline />} />
                     
