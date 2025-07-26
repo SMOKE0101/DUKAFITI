@@ -1,11 +1,9 @@
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import ModernLandingComponent from './ModernLanding';
-
-// Force rebuild marker - version 2.0
+import StaticLanding from './StaticLanding';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -57,7 +55,8 @@ const Index = () => {
     }
   }, [user, loading, navigate, isOnline, hasCheckedCache]);
 
-  if (loading) {
+  // Loading state
+  if (loading || !hasCheckedCache) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <div className="text-center">
@@ -73,12 +72,12 @@ const Index = () => {
   }
 
   // Show landing page for unauthenticated users
-  if (!user && hasCheckedCache) {
-    console.log('[Index] Showing ModernLanding component for unauthenticated user');
-    return <ModernLandingComponent />;
+  if (!user) {
+    console.log('[Index] Showing StaticLanding component for unauthenticated user');
+    return <StaticLanding />;
   }
 
-  // Show loading state
+  // This should not be reached, but safety fallback
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       <div className="text-center">
