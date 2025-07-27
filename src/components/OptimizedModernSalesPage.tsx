@@ -16,8 +16,6 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
-import { isTouchDevice } from '../utils/mobileUtils';
-import { PersistentMobileSearch } from '@/components/ui/persistent-mobile-search';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
@@ -63,7 +61,6 @@ const OptimizedModernSalesPage = () => {
   // Scroll position preservation
   const productListRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
-
 
   const { products, loading: productsLoading, refetch: refetchProducts } = useUnifiedProducts();
   const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
@@ -257,7 +254,6 @@ const OptimizedModernSalesPage = () => {
     };
   }, [refetchProducts]);
 
-
   // Toggle between panels on mobile with improved handling
   const togglePanel = useCallback(() => {
     setActivePanel(prev => prev === 'search' ? 'cart' : 'search');
@@ -269,13 +265,17 @@ const OptimizedModernSalesPage = () => {
       {/* Search and Filters */}
       <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
         <CardContent className="p-6">
-           <div className="flex flex-col sm:flex-row gap-4">
-            <PersistentMobileSearch
-              value={searchTerm}
-              onChange={setSearchTerm}
-              placeholder="Search products by name or category…"
-              className="flex-1"
-            />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search products by name or category…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">

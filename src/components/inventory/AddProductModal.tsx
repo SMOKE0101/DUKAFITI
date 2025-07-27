@@ -32,7 +32,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     costPrice: 0,
     sellingPrice: 0,
     currentStock: 0,
-    lowStockThreshold: 0,
+    lowStockThreshold: 10,
   });
   const [unspecifiedQuantity, setUnspecifiedQuantity] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
@@ -61,7 +61,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         costPrice: 0,
         sellingPrice: 0,
         currentStock: 0,
-        lowStockThreshold: 0,
+        lowStockThreshold: 10,
       });
       setUnspecifiedQuantity(false);
       setCustomCategory('');
@@ -354,8 +354,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                          type="number"
                          min="0"
                          value={unspecifiedQuantity ? '' : formData.lowStockThreshold}
-                          onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 0)}
-                          placeholder={unspecifiedQuantity ? "Unspecified" : "0"}
+                         onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 10)}
+                         placeholder={unspecifiedQuantity ? "Unspecified" : "10"}
                          className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 ${
                            unspecifiedQuantity ? 'opacity-50 cursor-not-allowed' : ''
                          }`}
