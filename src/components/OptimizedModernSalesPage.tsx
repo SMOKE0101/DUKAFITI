@@ -16,7 +16,8 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
-import { preventZoomOnFocus, isTouchDevice } from '../utils/mobileUtils';
+import { isTouchDevice } from '../utils/mobileUtils';
+import { PersistentMobileSearch } from '@/components/ui/persistent-mobile-search';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
@@ -63,8 +64,6 @@ const OptimizedModernSalesPage = () => {
   const productListRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
 
-  // Mobile search input ref for keyboard handling
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { products, loading: productsLoading, refetch: refetchProducts } = useUnifiedProducts();
   const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
@@ -258,90 +257,6 @@ const OptimizedModernSalesPage = () => {
     };
   }, [refetchProducts]);
 
-  // Mobile keyboard state management
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Handle mobile keyboard persistence with improved focus management
-  const handleSearchFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    console.log('[Mobile Search] Focus event triggered');
-    setIsSearchFocused(true);
-    
-    if (isTouchDevice()) {
-      preventZoomOnFocus(e.target);
-      
-      // Clear any existing timeout
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-        searchTimeoutRef.current = null;
-      }
-      
-      // Prevent auto-blur on mobile by maintaining focus
-      e.target.setAttribute('data-mobile-focused', 'true');
-    }
-  }, []);
-
-  const handleSearchBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    console.log('[Mobile Search] Blur event triggered');
-    
-    // Only allow blur if it's intentional (Enter key or tap outside)
-    if (isTouchDevice() && e.target.getAttribute('data-mobile-focused') === 'true') {
-      const relatedTarget = e.relatedTarget as HTMLElement;
-      
-      // If blur is not from pressing Enter or clicking outside, refocus
-      if (!relatedTarget || (!relatedTarget.closest('button') && !relatedTarget.closest('[role="option"]'))) {
-        console.log('[Mobile Search] Preventing unintentional blur, refocusing...');
-        
-        // Use timeout to refocus after blur event completes
-        searchTimeoutRef.current = setTimeout(() => {
-          if (searchInputRef.current && isSearchFocused) {
-            searchInputRef.current.focus();
-          }
-        }, 10);
-        return;
-      }
-    }
-    
-    setIsSearchFocused(false);
-    e.target.removeAttribute('data-mobile-focused');
-  }, [isSearchFocused]);
-
-  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    console.log('[Mobile Search] Key pressed:', e.key);
-    
-    // On Enter key, intentionally blur to close mobile keyboard
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      console.log('[Mobile Search] Enter pressed, closing keyboard');
-      setIsSearchFocused(false);
-      e.currentTarget.removeAttribute('data-mobile-focused');
-      e.currentTarget.blur();
-    }
-  }, []);
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[Mobile Search] Text changed:', e.target.value);
-    setSearchTerm(e.target.value);
-    
-    // Maintain focus after value change on mobile
-    if (isTouchDevice() && searchInputRef.current) {
-      // Use requestAnimationFrame to ensure focus is maintained after render
-      requestAnimationFrame(() => {
-        if (searchInputRef.current && isSearchFocused) {
-          searchInputRef.current.focus();
-        }
-      });
-    }
-  }, [isSearchFocused]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Toggle between panels on mobile with improved handling
   const togglePanel = useCallback(() => {
@@ -354,29 +269,13 @@ const OptimizedModernSalesPage = () => {
       {/* Search and Filters */}
       <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                inputMode="text"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-                placeholder="Search products by name or category…"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                onFocus={handleSearchFocus}
-                onBlur={handleSearchBlur}
-                onKeyDown={handleSearchKeyDown}
-                className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                style={{
-                  fontSize: isTouchDevice() ? '16px' : undefined // Prevent zoom on iOS
-                }}
-              />
-            </div>
+           <div className="flex flex-col sm:flex-row gap-4">
+            <PersistentMobileSearch
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Search products by name or category…"
+              className="flex-1"
+            />
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
