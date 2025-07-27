@@ -34,6 +34,7 @@ import {
   Banknote,
   X
 } from 'lucide-react';
+import { PersistentMobileSearch } from '@/components/ui/persistent-mobile-search';
 
 const OptimizedModernSalesPage = () => {
   // Use persistent cart hook instead of local state
@@ -266,16 +267,11 @@ const OptimizedModernSalesPage = () => {
       <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search products by name or category…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              />
-            </div>
+            <PersistentMobileSearch
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+              placeholder="Search products by name or category…"
+            />
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
