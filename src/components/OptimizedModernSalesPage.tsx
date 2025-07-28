@@ -263,36 +263,64 @@ const OptimizedModernSalesPage = () => {
   // Search Panel Component
   const SearchPanel = () => (
     <div className="flex flex-col h-full">
-      {/* Search and Filters */}
-      <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <PersistentMobileSearch
-              value={searchTerm}
-              onValueChange={setSearchTerm}
-              placeholder="Search products by name or category…"
-            />
-            
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Desktop/Tablet: Search and Filters at Top */}
+      {!isMobile && (
+        <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <PersistentMobileSearch
+                value={searchTerm}
+                onValueChange={setSearchTerm}
+                placeholder="Search products by name or category…"
+              />
+              
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mobile: Category Filter at Top */}
+      {isMobile && (
+        <div className="mb-4">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Products Grid */}
-      <div ref={productListRef} className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+      <div 
+        ref={productListRef} 
+        className={`flex-1 overflow-y-auto ${isMobile ? 'pb-24' : 'pb-6'}`}
+        style={{ 
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
+        <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
           {/* Record Debt Card - First Card */}
           <Card 
             className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
@@ -340,11 +368,11 @@ const OptimizedModernSalesPage = () => {
             filteredProducts.map(product => (
               <Card 
                 key={product.id} 
-                className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
+                className={`bg-white rounded-3xl shadow-sm border border-border hover:shadow-lg transition-all duration-300 ${!isMobile ? 'hover:-translate-y-1' : ''} group`}
               >
-                <CardContent className="p-6">
+                <CardContent className={`${isMobile ? 'p-4' : 'p-6'} relative`}>
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-card-foreground mb-1 line-clamp-2">
+                    <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-card-foreground mb-1 line-clamp-2`}>
                       {product.name}
                     </h3>
                     <span className="text-sm text-muted-foreground uppercase tracking-wide">
@@ -365,13 +393,13 @@ const OptimizedModernSalesPage = () => {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary">
+                    <span className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-primary`}>
                       {formatCurrency(product.sellingPrice)}
                     </span>
                     <Button 
                       onClick={() => addToCart(product)}
                       disabled={product.currentStock <= 0 && product.currentStock !== -1}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       size="sm"
                       title={product.currentStock === -1 ? 'Add unspecified quantity product' : ''}
                     >
@@ -384,6 +412,18 @@ const OptimizedModernSalesPage = () => {
           )}
         </div>
       </div>
+
+      {/* Mobile: Fixed Search Bar at Bottom */}
+      {isMobile && (
+        <div className="fixed bottom-0 inset-x-0 bg-white dark:bg-gray-900 p-4 border-t border-gray-200 dark:border-gray-700 z-10">
+          <PersistentMobileSearch
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            placeholder="Search products…"
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
   );
 
