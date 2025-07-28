@@ -16,6 +16,7 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
+import { preventZoomOnFocus, isTouchDevice } from '../utils/mobileUtils';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
@@ -34,8 +35,6 @@ import {
   Banknote,
   X
 } from 'lucide-react';
-import { PersistentMobileSearch } from '@/components/ui/persistent-mobile-search';
-import { MobileBottomSearch } from '@/components/ui/mobile-bottom-search';
 
 const OptimizedModernSalesPage = () => {
   // Use persistent cart hook instead of local state
@@ -63,6 +62,9 @@ const OptimizedModernSalesPage = () => {
   // Scroll position preservation
   const productListRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
+
+  // Mobile search input ref for keyboard handling
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { products, loading: productsLoading, refetch: refetchProducts } = useUnifiedProducts();
   const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
@@ -256,6 +258,91 @@ const OptimizedModernSalesPage = () => {
     };
   }, [refetchProducts]);
 
+  // Mobile keyboard state management
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle mobile keyboard persistence with improved focus management
+  const handleSearchFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    console.log('[Mobile Search] Focus event triggered');
+    setIsSearchFocused(true);
+    
+    if (isTouchDevice()) {
+      preventZoomOnFocus(e.target);
+      
+      // Clear any existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      
+      // Prevent auto-blur on mobile by maintaining focus
+      e.target.setAttribute('data-mobile-focused', 'true');
+    }
+  }, []);
+
+  const handleSearchBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    console.log('[Mobile Search] Blur event triggered');
+    
+    // Only allow blur if it's intentional (Enter key or tap outside)
+    if (isTouchDevice() && e.target.getAttribute('data-mobile-focused') === 'true') {
+      const relatedTarget = e.relatedTarget as HTMLElement;
+      
+      // If blur is not from pressing Enter or clicking outside, refocus
+      if (!relatedTarget || (!relatedTarget.closest('button') && !relatedTarget.closest('[role="option"]'))) {
+        console.log('[Mobile Search] Preventing unintentional blur, refocusing...');
+        
+        // Use timeout to refocus after blur event completes
+        searchTimeoutRef.current = setTimeout(() => {
+          if (searchInputRef.current && isSearchFocused) {
+            searchInputRef.current.focus();
+          }
+        }, 10);
+        return;
+      }
+    }
+    
+    setIsSearchFocused(false);
+    e.target.removeAttribute('data-mobile-focused');
+  }, [isSearchFocused]);
+
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    console.log('[Mobile Search] Key pressed:', e.key);
+    
+    // On Enter key, intentionally blur to close mobile keyboard
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      console.log('[Mobile Search] Enter pressed, closing keyboard');
+      setIsSearchFocused(false);
+      e.currentTarget.removeAttribute('data-mobile-focused');
+      e.currentTarget.blur();
+    }
+  }, []);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[Mobile Search] Text changed:', e.target.value);
+    setSearchTerm(e.target.value);
+    
+    // Maintain focus after value change on mobile
+    if (isTouchDevice() && searchInputRef.current) {
+      // Use requestAnimationFrame to ensure focus is maintained after render
+      requestAnimationFrame(() => {
+        if (searchInputRef.current && isSearchFocused) {
+          searchInputRef.current.focus();
+        }
+      });
+    }
+  }, [isSearchFocused]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Toggle between panels on mobile with improved handling
   const togglePanel = useCallback(() => {
     setActivePanel(prev => prev === 'search' ? 'cart' : 'search');
@@ -264,64 +351,53 @@ const OptimizedModernSalesPage = () => {
   // Search Panel Component
   const SearchPanel = () => (
     <div className="flex flex-col h-full">
-      {/* Desktop/Tablet: Search and Filters at Top */}
-      {!isMobile && (
-        <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <PersistentMobileSearch
-                value={searchTerm}
-                onValueChange={setSearchTerm}
+      {/* Search and Filters */}
+      <Card className="bg-card rounded-3xl border border-border shadow-sm mb-6">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
                 placeholder="Search products by name or category…"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
+                onKeyDown={handleSearchKeyDown}
+                className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                style={{
+                  fontSize: isTouchDevice() ? '16px' : undefined // Prevent zoom on iOS
+                }}
               />
-              
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mobile: Category Filter at Top */}
-      {isMobile && (
-        <div className="mb-4">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map(category => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+            
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-48 bg-muted border-0 rounded-xl py-4 focus:ring-2 focus:ring-ring">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Products Grid */}
-      <div 
-        ref={productListRef} 
-        className={`flex-1 overflow-y-auto ${isMobile ? 'pb-24' : 'pb-6'}`}
-        style={{ 
-          touchAction: 'pan-y',
-          WebkitOverflowScrolling: 'touch'
-        }}
-      >
-        <div className={`grid gap-6 ${isMobile ? 'grid-cols-1 min-[400px]:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+      <div ref={productListRef} className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
           {/* Record Debt Card - First Card */}
           <Card 
             className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
@@ -369,11 +445,11 @@ const OptimizedModernSalesPage = () => {
             filteredProducts.map(product => (
               <Card 
                 key={product.id} 
-                className={`bg-white rounded-3xl shadow-sm border border-border hover:shadow-lg transition-all duration-300 ${!isMobile ? 'hover:-translate-y-1' : ''} group`}
+                className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
               >
-                <CardContent className={`${isMobile ? 'p-4' : 'p-6'} relative`}>
+                <CardContent className="p-6">
                   <div className="mb-4">
-                    <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-card-foreground mb-1 line-clamp-2`}>
+                    <h3 className="text-lg font-semibold text-card-foreground mb-1 line-clamp-2">
                       {product.name}
                     </h3>
                     <span className="text-sm text-muted-foreground uppercase tracking-wide">
@@ -394,13 +470,13 @@ const OptimizedModernSalesPage = () => {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-primary`}>
+                    <span className="text-xl font-bold text-primary">
                       {formatCurrency(product.sellingPrice)}
                     </span>
                     <Button 
                       onClick={() => addToCart(product)}
                       disabled={product.currentStock <= 0 && product.currentStock !== -1}
-                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       size="sm"
                       title={product.currentStock === -1 ? 'Add unspecified quantity product' : ''}
                     >
@@ -413,18 +489,6 @@ const OptimizedModernSalesPage = () => {
           )}
         </div>
       </div>
-
-      {/* Mobile: Fixed Search Bar at Bottom */}
-      {isMobile && (
-        <div className="fixed bottom-0 inset-x-0 bg-white dark:bg-gray-900 p-3 border-t border-gray-200 dark:border-gray-700 z-10 shadow-lg">
-          <MobileBottomSearch
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-            placeholder="Search products…"
-            className="w-full"
-          />
-        </div>
-      )}
     </div>
   );
 
