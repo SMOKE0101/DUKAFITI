@@ -1,6 +1,6 @@
 
 import React from 'react';
-import OptimizedModernSalesPage from './OptimizedModernSalesPage';
+import RebuiltModernSalesPage from './RebuiltModernSalesPage';
 import SalesErrorBoundary from './sales/SalesErrorBoundary';
 
 const SalesManagement = () => {
@@ -8,7 +8,7 @@ const SalesManagement = () => {
   
   return (
     <SalesErrorBoundary>
-      <OptimizedModernSalesPage />
+      <RebuiltModernSalesPage />
     </SalesErrorBoundary>
   );
 };
