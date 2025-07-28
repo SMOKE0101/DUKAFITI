@@ -100,16 +100,16 @@ const FixedMobileSearch = ({
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-t border-border shadow-lg"
+      className="fixed bottom-16 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border shadow-lg"
       style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
         transform: 'translateZ(0)',
         willChange: 'transform'
       }}
     >
-      <div className="p-4">
+      <div className="p-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
           <input
             ref={inputRef}
             type="search"
@@ -123,7 +123,7 @@ const FixedMobileSearch = ({
             onChange={handleInputChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            className="w-full h-14 pl-12 pr-12 bg-muted/90 rounded-xl text-foreground placeholder-muted-foreground border-2 border-transparent focus:outline-none focus:border-primary/50 focus:bg-background transition-all duration-200 ease-in-out text-[16px] leading-tight"
+            className="w-full h-10 pl-10 pr-10 bg-muted/90 rounded-lg text-foreground placeholder-muted-foreground border-2 border-transparent focus:outline-none focus:border-primary/50 focus:bg-background transition-all duration-200 ease-in-out text-[16px] leading-tight"
             style={{
               fontSize: '16px', // Prevents zoom on iOS
               WebkitAppearance: 'none',
@@ -135,10 +135,10 @@ const FixedMobileSearch = ({
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 flex items-center justify-center transition-colors duration-150"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 flex items-center justify-center transition-colors duration-150"
               aria-label="Clear search"
             >
-              <X className="w-4 h-4 text-muted-foreground" />
+              <X className="w-3 h-3 text-muted-foreground" />
             </button>
           )}
         </div>
@@ -385,7 +385,7 @@ const RebuiltModernSalesPage = () => {
                 {/* Side Toggle Button to Cart */}
                 <Button
                   onClick={() => handlePanelSwitch('cart')}
-                  className="fixed right-4 top-1/2 transform -translate-y-1/2 z-40 h-16 w-12 rounded-full shadow-lg"
+                  className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30 h-16 w-12 rounded-full shadow-lg"
                   size="sm"
                 >
                   <div className="flex flex-col items-center gap-1">
@@ -402,7 +402,7 @@ const RebuiltModernSalesPage = () => {
                 <div 
                   ref={productListRef}
                   className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '160px' }} // Extra space for fixed search + bottom nav
+                  style={{ paddingBottom: '180px' }} // Extra space for fixed search + bottom nav
                 >
                   <div className="p-4 grid grid-cols-2 gap-3">
                     {filteredProducts.map(product => {
@@ -486,7 +486,7 @@ const RebuiltModernSalesPage = () => {
               {/* Side Toggle Button to Products */}
               <Button
                 onClick={() => handlePanelSwitch('search')}
-                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-40 h-16 w-12 rounded-full shadow-lg"
+                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 h-16 w-12 rounded-full shadow-lg"
                 size="sm"
               >
                 <div className="flex flex-col items-center gap-1">
@@ -558,7 +558,7 @@ const RebuiltModernSalesPage = () => {
               </div>
 
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto pb-20">
                 {cart.length > 0 ? (
                   <div className="p-4 space-y-3">
                     {cart.map(item => (
