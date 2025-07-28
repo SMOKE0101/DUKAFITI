@@ -434,8 +434,11 @@ const RebuiltModernSalesPage = () => {
                 
                 <div 
                   ref={productListRef}
-                  className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '400px' }} // Extra space for fixed search + bottom nav
+                  className="h-full overflow-y-auto pb-44"
+                  style={{ 
+                    paddingBottom: 'max(176px, calc(20vh))', // Dynamic padding: bottom nav (64px) + search bar (40px) + extra space (72px)
+                    minHeight: '100%'
+                  }}
                 >
                   <div className="p-4 grid grid-cols-2 gap-3">
                     {filteredProducts.map(product => {
@@ -551,7 +554,7 @@ const RebuiltModernSalesPage = () => {
               {/* Side Toggle Button to Products */}
               <Button
                 onClick={() => handlePanelSwitch('search')}
-                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 h-20 w-16 rounded-2xl shadow-2xl bg-gradient-to-br from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 border-2 border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95"
+                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 h-20 w-16 rounded-2xl shadow-2xl bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 border-2 border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95"
                 size="sm"
               >
                 <div className="flex flex-col items-center gap-1.5">
