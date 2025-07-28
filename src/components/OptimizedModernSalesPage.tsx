@@ -16,7 +16,7 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
-import { FixedBottomSearch } from '@/components/ui/fixed-bottom-search';
+import { MobileSearchBar } from '@/components/ui/mobile-search-bar';
 import SalesCheckout from './sales/SalesCheckout';
 import AddCustomerModal from './sales/AddCustomerModal';
 import AddDebtModal from './sales/AddDebtModal';
@@ -433,7 +433,7 @@ const OptimizedModernSalesPage = () => {
 
       {/* Mobile Fixed Bottom Search */}
       {isMobile && (
-        <FixedBottomSearch
+        <MobileSearchBar
           value={searchTerm}
           onChange={handleSearchTermChange}
           placeholder="Search products…"
