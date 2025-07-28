@@ -432,15 +432,13 @@ const RebuiltModernSalesPage = () => {
                   </div>
                 </Button>
                 
-                <div 
+                 <div 
                   ref={productListRef}
-                  className="h-full overflow-y-auto pb-44"
-                  style={{ 
-                    paddingBottom: 'max(176px, calc(20vh))', // Dynamic padding: bottom nav (64px) + search bar (40px) + extra space (72px)
-                    minHeight: '100%'
-                  }}
+                  className="h-full overflow-y-auto"
                 >
-                  <div className="p-4 grid grid-cols-2 gap-3">
+                   <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" 
+                        style={{ paddingBottom: '120px' }} // Space for search bar + bottom nav + extra padding
+                   >
                     {filteredProducts.map(product => {
                       // Special handling for debt card
                       if ('isDebtCard' in product && product.isDebtCard) {
@@ -478,18 +476,22 @@ const RebuiltModernSalesPage = () => {
                       const quantity = cartItem?.quantity || 0;
                       
                       return (
-                        <Card key={product.id} className="overflow-hidden">
-                          <CardContent className="p-3">
+                        <Card key={product.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
+                          <CardContent className="p-2.5 md:p-3">
                             <div className="flex flex-col h-full">
-                              <h3 className="font-medium text-sm mb-1 line-clamp-2">{product.name}</h3>
-                              <p className="text-xs text-muted-foreground mb-2">{product.category}</p>
+                              <h3 className="font-medium text-xs md:text-sm mb-1 truncate leading-tight">{product.name}</h3>
+                              <p className="text-[10px] md:text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
                               
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-bold text-sm text-primary">
+                              <div className="flex justify-between items-center mb-2 gap-1">
+                                <span className="font-bold text-xs md:text-sm text-primary truncate">
                                   {formatCurrency(product.sellingPrice)}
                                 </span>
-                                <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'} className="text-xs">
-                                  {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
+                                <Badge 
+                                  variant={product.currentStock > 0 ? 'default' : product.currentStock === -1 ? 'secondary' : 'destructive'} 
+                                  className="text-[9px] md:text-xs px-1 py-0.5 min-w-0 max-w-[60px] md:max-w-[80px] truncate whitespace-nowrap"
+                                  title={product.currentStock === -1 ? "Unspecified" : `Stock: ${product.currentStock}`}
+                                >
+                                  {product.currentStock === -1 ? 'Unspec.' : product.currentStock}
                                 </Badge>
                               </div>
                               
@@ -518,9 +520,9 @@ const RebuiltModernSalesPage = () => {
                                   <Button
                                     onClick={() => addToCart(product.id)}
                                     size="sm"
-                                    className="w-full"
+                                    className="w-full text-xs md:text-sm h-7 md:h-8"
                                   >
-                                    <Plus size={14} className="mr-1" />
+                                    <Plus size={12} className="mr-1" />
                                     Add
                                   </Button>
                                 )
