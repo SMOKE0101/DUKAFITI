@@ -32,7 +32,9 @@ import {
   DollarSign,
   User,
   Banknote,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 // Fixed Mobile Search Component
@@ -355,36 +357,10 @@ const RebuiltModernSalesPage = () => {
             )}
           </div>
 
-          {/* Panel Toggle */}
-          <div className="flex bg-muted rounded-lg p-1">
-            <Button
-              variant={activePanel === 'search' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handlePanelSwitch('search')}
-              className="flex-1 relative"
-            >
-              <Search size={16} className="mr-2" />
-              Products
-            </Button>
-            <Button
-              variant={activePanel === 'cart' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handlePanelSwitch('cart')}
-              className="flex-1 relative"
-            >
-              <ShoppingCart size={16} className="mr-2" />
-              Cart
-              {cartItemCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 min-w-[20px] h-5 rounded-full text-xs px-1">
-                  {cartItemCount}
-                </Badge>
-              )}
-            </Button>
-          </div>
         </div>
 
         {/* Mobile Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
           {activePanel === 'search' ? (
             <>
               {/* Filters */}
@@ -404,90 +380,121 @@ const RebuiltModernSalesPage = () => {
                 </Select>
               </div>
 
-              {/* Products Grid */}
-              <div 
-                ref={productListRef}
-                className="flex-1 overflow-y-auto pb-24"
-                style={{ paddingBottom: '120px' }} // Extra space for fixed search
-              >
-                <div className="p-4 grid grid-cols-2 gap-3">
-                  {filteredProducts.map(product => {
-                    const cartItem = cart.find(item => item.id === product.id);
-                    const quantity = cartItem?.quantity || 0;
-                    
-                    return (
-                      <Card key={product.id} className="overflow-hidden">
-                        <CardContent className="p-3">
-                          <div className="flex flex-col h-full">
-                            <h3 className="font-medium text-sm mb-1 line-clamp-2">{product.name}</h3>
-                            <p className="text-xs text-muted-foreground mb-2">{product.category}</p>
-                            
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-bold text-sm text-primary">
-                                {formatCurrency(product.sellingPrice)}
-                              </span>
-                              <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'} className="text-xs">
-                                {product.currentStock}
-                              </Badge>
-                            </div>
-                            
-                            {product.currentStock > 0 ? (
-                              quantity > 0 ? (
-                                <div className="flex items-center justify-between bg-muted rounded-lg p-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => handleQuantityChange(product.id, quantity - 1)}
-                                  >
-                                    <Minus size={14} />
-                                  </Button>
-                                  <span className="font-medium text-sm">{quantity}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                                  >
-                                    <Plus size={14} />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  onClick={() => addToCart(product.id)}
-                                  size="sm"
-                                  className="w-full"
-                                >
-                                  <Plus size={14} className="mr-1" />
-                                  Add
-                                </Button>
-                              )
-                            ) : (
-                              <Button disabled size="sm" className="w-full">
-                                Out of Stock
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-                
-                {filteredProducts.length === 0 && (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <Search size={48} className="text-muted-foreground mb-4" />
-                    <h3 className="font-medium mb-2">No products found</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Try adjusting your search or category filter
-                    </p>
+              {/* Products Grid with Side Toggle */}
+              <div className="relative flex-1 overflow-hidden">
+                {/* Side Toggle Button to Cart */}
+                <Button
+                  onClick={() => handlePanelSwitch('cart')}
+                  className="fixed right-4 top-1/2 transform -translate-y-1/2 z-40 h-16 w-12 rounded-full shadow-lg"
+                  size="sm"
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <ChevronRight size={16} />
+                    <span className="text-xs">Cart</span>
+                    {cartItemCount > 0 && (
+                      <Badge className="absolute -top-1 -left-1 min-w-[20px] h-5 rounded-full text-xs px-1">
+                        {cartItemCount}
+                      </Badge>
+                    )}
                   </div>
-                )}
+                </Button>
+                
+                <div 
+                  ref={productListRef}
+                  className="h-full overflow-y-auto"
+                  style={{ paddingBottom: '160px' }} // Extra space for fixed search + bottom nav
+                >
+                  <div className="p-4 grid grid-cols-2 gap-3">
+                    {filteredProducts.map(product => {
+                      const cartItem = cart.find(item => item.id === product.id);
+                      const quantity = cartItem?.quantity || 0;
+                      
+                      return (
+                        <Card key={product.id} className="overflow-hidden">
+                          <CardContent className="p-3">
+                            <div className="flex flex-col h-full">
+                              <h3 className="font-medium text-sm mb-1 line-clamp-2">{product.name}</h3>
+                              <p className="text-xs text-muted-foreground mb-2">{product.category}</p>
+                              
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="font-bold text-sm text-primary">
+                                  {formatCurrency(product.sellingPrice)}
+                                </span>
+                                <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'} className="text-xs">
+                                  {product.currentStock}
+                                </Badge>
+                              </div>
+                              
+                              {product.currentStock > 0 ? (
+                                quantity > 0 ? (
+                                  <div className="flex items-center justify-between bg-muted rounded-lg p-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => handleQuantityChange(product.id, quantity - 1)}
+                                    >
+                                      <Minus size={14} />
+                                    </Button>
+                                    <span className="font-medium text-sm">{quantity}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => handleQuantityChange(product.id, quantity + 1)}
+                                    >
+                                      <Plus size={14} />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    onClick={() => addToCart(product.id)}
+                                    size="sm"
+                                    className="w-full"
+                                  >
+                                    <Plus size={14} className="mr-1" />
+                                    Add
+                                  </Button>
+                                )
+                              ) : (
+                                <Button disabled size="sm" className="w-full">
+                                  Out of Stock
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                  
+                  {filteredProducts.length === 0 && (
+                    <div className="flex flex-col items-center justify-center p-8 text-center">
+                      <Search size={48} className="text-muted-foreground mb-4" />
+                      <h3 className="font-medium mb-2">No products found</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Try adjusting your search or category filter
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           ) : (
             // Cart Panel
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col relative">
+              {/* Side Toggle Button to Products */}
+              <Button
+                onClick={() => handlePanelSwitch('search')}
+                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-40 h-16 w-12 rounded-full shadow-lg"
+                size="sm"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <ChevronLeft size={16} />
+                  <span className="text-xs">Products</span>
+                </div>
+              </Button>
+              
               {/* Customer Selection */}
               <div className="flex-shrink-0 p-4 bg-background border-b border-border">
                 <div className="space-y-4">
