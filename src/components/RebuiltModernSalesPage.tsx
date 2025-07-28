@@ -249,7 +249,7 @@ const RebuiltModernSalesPage = () => {
       return;
     }
 
-    addToPersistedCart(product, quantity);
+    addToPersistedCart({ ...product, quantity });
     
     // Refresh cart expiry on each addition
     refreshCartExpiry();
@@ -412,7 +412,7 @@ const RebuiltModernSalesPage = () => {
               >
                 <div className="p-4 grid grid-cols-2 gap-3">
                   {filteredProducts.map(product => {
-                    const cartItem = cart.find(item => item.product.id === product.id);
+                    const cartItem = cart.find(item => item.id === product.id);
                     const quantity = cartItem?.quantity || 0;
                     
                     return (
@@ -555,13 +555,13 @@ const RebuiltModernSalesPage = () => {
                 {cart.length > 0 ? (
                   <div className="p-4 space-y-3">
                     {cart.map(item => (
-                      <Card key={item.product.id}>
+                      <Card key={item.id}>
                         <CardContent className="p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <h4 className="font-medium text-sm">{item.product.name}</h4>
+                              <h4 className="font-medium text-sm">{item.name}</h4>
                               <p className="text-xs text-muted-foreground">
-                                {formatCurrency(item.customPrice || item.product.sellingPrice)} each
+                                {formatCurrency(item.customPrice || item.sellingPrice)} each
                               </p>
                             </div>
                             
@@ -570,7 +570,7 @@ const RebuiltModernSalesPage = () => {
                                 variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
                               >
                                 <Minus size={14} />
                               </Button>
@@ -579,7 +579,7 @@ const RebuiltModernSalesPage = () => {
                                 variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                               >
                                 <Plus size={14} />
                               </Button>
@@ -587,7 +587,7 @@ const RebuiltModernSalesPage = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0 text-destructive"
-                                onClick={() => removeFromCart(item.product.id)}
+                                onClick={() => removeFromCart(item.id)}
                               >
                                 <X size={14} />
                               </Button>
@@ -597,7 +597,7 @@ const RebuiltModernSalesPage = () => {
                           <div className="flex justify-between items-center mt-2 pt-2 border-t border-border">
                             <span className="text-xs text-muted-foreground">Subtotal:</span>
                             <span className="font-medium text-sm">
-                              {formatCurrency((item.customPrice || item.product.sellingPrice) * item.quantity)}
+                              {formatCurrency((item.customPrice || item.sellingPrice) * item.quantity)}
                             </span>
                           </div>
                         </CardContent>
@@ -626,11 +626,11 @@ const RebuiltModernSalesPage = () => {
                     
                     <SalesCheckout
                       cart={cart}
-                      total={total}
-                      selectedCustomer={selectedCustomer}
+                      selectedCustomerId={selectedCustomerId}
                       paymentMethod={paymentMethod}
-                      onSuccess={handleCheckoutSuccess}
-                      onOpenAddDebt={() => setIsAddDebtModalOpen(true)}
+                      customers={customers}
+                      onCheckoutComplete={handleCheckoutSuccess}
+                      isOnline={isOnline}
                     />
                   </div>
                 </div>
@@ -650,18 +650,14 @@ const RebuiltModernSalesPage = () => {
 
         {/* Modals */}
         <AddCustomerModal
-          isOpen={isAddCustomerModalOpen}
-          onClose={() => setIsAddCustomerModalOpen(false)}
-          onSuccess={handleAddCustomerSuccess}
+          open={isAddCustomerModalOpen}
+          onOpenChange={setIsAddCustomerModalOpen}
+          onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
         />
         
         <AddDebtModal
           isOpen={isAddDebtModalOpen}
           onClose={() => setIsAddDebtModalOpen(false)}
-          cart={cart}
-          total={total}
-          customer={selectedCustomer}
-          onSuccess={handleCheckoutSuccess}
         />
       </div>
     );
@@ -728,7 +724,7 @@ const RebuiltModernSalesPage = () => {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map(product => {
-              const cartItem = cart.find(item => item.product.id === product.id);
+              const cartItem = cart.find(item => item.id === product.id);
               const quantity = cartItem?.quantity || 0;
               
               return (
@@ -876,20 +872,20 @@ const RebuiltModernSalesPage = () => {
           {cart.length > 0 ? (
             <div className="p-6 space-y-4">
               {cart.map(item => (
-                <Card key={item.product.id}>
+                <Card key={item.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="font-medium">{item.product.name}</h4>
+                        <h4 className="font-medium">{item.name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {formatCurrency(item.customPrice || item.product.sellingPrice)} each
+                          {formatCurrency(item.customPrice || item.sellingPrice)} each
                         </p>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(item.id)}
                       >
                         <X size={16} />
                       </Button>
@@ -900,7 +896,7 @@ const RebuiltModernSalesPage = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                          onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
                         >
                           <Minus size={16} />
                         </Button>
@@ -908,14 +904,14 @@ const RebuiltModernSalesPage = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                         >
                           <Plus size={16} />
                         </Button>
                       </div>
                       
                       <span className="font-medium">
-                        {formatCurrency((item.customPrice || item.product.sellingPrice) * item.quantity)}
+                        {formatCurrency((item.customPrice || item.sellingPrice) * item.quantity)}
                       </span>
                     </div>
                   </CardContent>
@@ -945,11 +941,11 @@ const RebuiltModernSalesPage = () => {
               
               <SalesCheckout
                 cart={cart}
-                total={total}
-                selectedCustomer={selectedCustomer}
+                selectedCustomerId={selectedCustomerId}
                 paymentMethod={paymentMethod}
-                onSuccess={handleCheckoutSuccess}
-                onOpenAddDebt={() => setIsAddDebtModalOpen(true)}
+                customers={customers}
+                onCheckoutComplete={handleCheckoutSuccess}
+                isOnline={isOnline}
               />
             </div>
           </div>
@@ -958,18 +954,14 @@ const RebuiltModernSalesPage = () => {
 
       {/* Modals */}
       <AddCustomerModal
-        isOpen={isAddCustomerModalOpen}
-        onClose={() => setIsAddCustomerModalOpen(false)}
-        onSuccess={handleAddCustomerSuccess}
+        open={isAddCustomerModalOpen}
+        onOpenChange={setIsAddCustomerModalOpen}
+        onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
       />
       
       <AddDebtModal
         isOpen={isAddDebtModalOpen}
         onClose={() => setIsAddDebtModalOpen(false)}
-        cart={cart}
-        total={total}
-        customer={selectedCustomer}
-        onSuccess={handleCheckoutSuccess}
       />
     </div>
   );
