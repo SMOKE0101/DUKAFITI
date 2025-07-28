@@ -35,6 +35,7 @@ import {
   X
 } from 'lucide-react';
 import { PersistentMobileSearch } from '@/components/ui/persistent-mobile-search';
+import { MobileBottomSearch } from '@/components/ui/mobile-bottom-search';
 
 const OptimizedModernSalesPage = () => {
   // Use persistent cart hook instead of local state
@@ -320,7 +321,7 @@ const OptimizedModernSalesPage = () => {
           WebkitOverflowScrolling: 'touch'
         }}
       >
-        <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+        <div className={`grid gap-6 ${isMobile ? 'grid-cols-1 min-[400px]:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
           {/* Record Debt Card - First Card */}
           <Card 
             className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
@@ -415,8 +416,8 @@ const OptimizedModernSalesPage = () => {
 
       {/* Mobile: Fixed Search Bar at Bottom */}
       {isMobile && (
-        <div className="fixed bottom-0 inset-x-0 bg-white dark:bg-gray-900 p-4 border-t border-gray-200 dark:border-gray-700 z-10">
-          <PersistentMobileSearch
+        <div className="fixed bottom-0 inset-x-0 bg-white dark:bg-gray-900 p-3 border-t border-gray-200 dark:border-gray-700 z-10 shadow-lg">
+          <MobileBottomSearch
             value={searchTerm}
             onValueChange={setSearchTerm}
             placeholder="Search products…"

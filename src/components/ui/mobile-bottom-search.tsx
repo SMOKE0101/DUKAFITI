@@ -2,19 +2,19 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-interface PersistentMobileSearchProps {
+interface MobileBottomSearchProps {
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   className?: string;
 }
 
-export const PersistentMobileSearch = React.memo(({
+export const MobileBottomSearch = React.memo(({
   value,
   onValueChange,
-  placeholder = "Search products...",
+  placeholder = "Search products…",
   className = ""
-}: PersistentMobileSearchProps) => {
+}: MobileBottomSearchProps) => {
   const [internalValue, setInternalValue] = useState(value);
   const [isKeyboardActive, setIsKeyboardActive] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -30,7 +30,7 @@ export const PersistentMobileSearch = React.memo(({
     }
   }, [value]);
 
-  // Debounced update to parent
+  // Debounced update to parent - fast for instant filtering
   useEffect(() => {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -42,7 +42,7 @@ export const PersistentMobileSearch = React.memo(({
       }
       setIsTyping(false);
       isTypingRef.current = false;
-    }, 100); // Reduced debounce to 100ms for instant filtering
+    }, 100); // Fast debounce for instant filtering
 
     return () => {
       if (typingTimeoutRef.current) {
@@ -57,15 +57,19 @@ export const PersistentMobileSearch = React.memo(({
     isTypingRef.current = true;
   }, []);
 
-  const handleBlur = useCallback(() => {
-    // Only blur if not actively typing
-    if (!isTyping) {
-      setIsKeyboardActive(false);
-      isTypingRef.current = false;
-      // Immediately sync on blur
-      if (internalValue !== value) {
-        onValueChange(internalValue);
-      }
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    // Prevent blur when actively typing to keep keyboard open
+    if (isTyping && isTypingRef.current) {
+      e.preventDefault();
+      e.target.focus();
+      return;
+    }
+    
+    setIsKeyboardActive(false);
+    isTypingRef.current = false;
+    // Immediately sync on blur
+    if (internalValue !== value) {
+      onValueChange(internalValue);
     }
   }, [isTyping, internalValue, value, onValueChange]);
 
@@ -112,11 +116,11 @@ export const PersistentMobileSearch = React.memo(({
 
   return (
     <div 
-      className={`relative flex-1 ${className}`}
+      className={`relative ${className}`}
       onTouchStart={handleTouchStart}
     >
       <Search 
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none"
+        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4 pointer-events-none z-10"
         data-search-icon
       />
       <input
@@ -128,7 +132,7 @@ export const PersistentMobileSearch = React.memo(({
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className="w-full pl-12 pr-4 py-4 bg-muted rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+        className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner transition-all"
         style={{
           fontSize: isMobile ? '16px' : '14px', // Prevent zoom on iOS
           WebkitUserSelect: 'text',
@@ -142,13 +146,8 @@ export const PersistentMobileSearch = React.memo(({
         spellCheck="false"
         enterKeyHint="search"
       />
-      {isMobile && isKeyboardActive && (
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-          Enter to search
-        </div>
-      )}
     </div>
   );
 });
 
-PersistentMobileSearch.displayName = 'PersistentMobileSearch';
+MobileBottomSearch.displayName = 'MobileBottomSearch';
