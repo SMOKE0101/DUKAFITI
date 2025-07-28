@@ -228,14 +228,10 @@ const RebuiltModernSalesPage = () => {
     }
     setActivePanel(panel);
     
-    // Restore scroll position when switching back to search
-    if (panel === 'search' && productListRef.current) {
-      setTimeout(() => {
-        if (productListRef.current) {
-          productListRef.current.scrollTop = savedScrollPosition.current;
-        }
-      }, 50);
-    }
+    // Always scroll to top when switching panels
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   }, [activePanel]);
 
   const addToCart = useCallback((productId: string, quantity: number = 1) => {
@@ -407,7 +403,7 @@ const RebuiltModernSalesPage = () => {
                 <div 
                   ref={productListRef}
                   className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '220px' }} // Extra space for fixed search + bottom nav
+                  style={{ paddingBottom: '250px' }} // Extra space for fixed search + bottom nav
                 >
                   <div className="p-4 grid grid-cols-2 gap-3">
                     {filteredProducts.map(product => {
@@ -509,13 +505,33 @@ const RebuiltModernSalesPage = () => {
                     <div className="flex gap-2">
                       <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
                         <SelectTrigger className="flex-1">
-                          <SelectValue />
+                          <SelectValue>
+                            {selectedCustomer ? (
+                              <div className="flex justify-between items-center w-full">
+                                <span>{selectedCustomer.name}</span>
+                                {selectedCustomer.outstandingDebt > 0 && (
+                                  <span className="text-xs text-red-600 font-medium">
+                                    Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              "No Customer"
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="no-customer">No Customer</SelectItem>
                           {customers.map(customer => (
                             <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name} - {customer.phone}
+                              <div className="flex justify-between items-center w-full">
+                                <span>{customer.name} - {customer.phone}</span>
+                                {customer.outstandingDebt > 0 && (
+                                  <span className="text-xs text-red-600 font-medium ml-2">
+                                    Debt: {formatCurrency(customer.outstandingDebt)}
+                                  </span>
+                                )}
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -533,37 +549,41 @@ const RebuiltModernSalesPage = () => {
                   {/* Payment Method */}
                   <div>
                     <label className="text-sm font-medium mb-2 block">Payment Method</label>
-                    <Select value={paymentMethod} onValueChange={(value: 'cash' | 'mpesa' | 'debt') => setPaymentMethod(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">
-                          <div className="flex items-center gap-2">
-                            <Banknote size={16} />
-                            Cash
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="mpesa">
-                          <div className="flex items-center gap-2">
-                            <DollarSign size={16} />
-                            M-Pesa
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="debt">
-                          <div className="flex items-center gap-2">
-                            <Receipt size={16} />
-                            On Credit
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPaymentMethod('cash')}
+                        className="flex-1"
+                      >
+                        <Banknote size={14} className="mr-1" />
+                        Cash
+                      </Button>
+                      <Button
+                        variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPaymentMethod('mpesa')}
+                        className="flex-1"
+                      >
+                        <DollarSign size={14} className="mr-1" />
+                        M-Pesa
+                      </Button>
+                      <Button
+                        variant={paymentMethod === 'debt' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPaymentMethod('debt')}
+                        className="flex-1"
+                      >
+                        <Receipt size={14} className="mr-1" />
+                        Debt
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto pb-20">
+              <div className="flex-1 overflow-y-auto">
                 {cart.length > 0 ? (
                   <div className="p-4 space-y-3">
                     {cart.map(item => (
@@ -827,13 +847,33 @@ const RebuiltModernSalesPage = () => {
               <div className="flex gap-2">
                 <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue />
+                    <SelectValue>
+                      {selectedCustomer ? (
+                        <div className="flex justify-between items-center w-full">
+                          <span>{selectedCustomer.name}</span>
+                          {selectedCustomer.outstandingDebt > 0 && (
+                            <span className="text-xs text-red-600 font-medium">
+                              Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        "No Customer"
+                      )}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="no-customer">No Customer</SelectItem>
                     {customers.map(customer => (
                       <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name} - {customer.phone}
+                        <div className="flex justify-between items-center w-full">
+                          <span>{customer.name} - {customer.phone}</span>
+                          {customer.outstandingDebt > 0 && (
+                            <span className="text-xs text-red-600 font-medium ml-2">
+                              Debt: {formatCurrency(customer.outstandingDebt)}
+                            </span>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -850,31 +890,35 @@ const RebuiltModernSalesPage = () => {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Payment Method</label>
-              <Select value={paymentMethod} onValueChange={(value: 'cash' | 'mpesa' | 'debt') => setPaymentMethod(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">
-                    <div className="flex items-center gap-2">
-                      <Banknote size={16} />
-                      Cash
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="mpesa">
-                    <div className="flex items-center gap-2">
-                      <DollarSign size={16} />
-                      M-Pesa
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="debt">
-                    <div className="flex items-center gap-2">
-                      <Receipt size={16} />
-                      On Credit
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Button
+                  variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPaymentMethod('cash')}
+                  className="flex-1"
+                >
+                  <Banknote size={14} className="mr-1" />
+                  Cash
+                </Button>
+                <Button
+                  variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPaymentMethod('mpesa')}
+                  className="flex-1"
+                >
+                  <DollarSign size={14} className="mr-1" />
+                  M-Pesa
+                </Button>
+                <Button
+                  variant={paymentMethod === 'debt' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPaymentMethod('debt')}
+                  className="flex-1"
+                >
+                  <Receipt size={14} className="mr-1" />
+                  Debt
+                </Button>
+              </div>
             </div>
           </div>
         </div>
