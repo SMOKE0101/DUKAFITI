@@ -100,16 +100,16 @@ const FixedMobileSearch = ({
 
   return (
     <div 
-      className="fixed bottom-16 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border shadow-lg"
+      className="fixed bottom-16 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-t border-border shadow-lg"
       style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 6px)',
         transform: 'translateZ(0)',
         willChange: 'transform'
       }}
     >
-      <div className="p-3">
+      <div className="p-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
           <input
             ref={inputRef}
             type="search"
@@ -123,7 +123,7 @@ const FixedMobileSearch = ({
             onChange={handleInputChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            className="w-full h-10 pl-10 pr-10 bg-muted/90 rounded-lg text-foreground placeholder-muted-foreground border-2 border-transparent focus:outline-none focus:border-primary/50 focus:bg-background transition-all duration-200 ease-in-out text-[16px] leading-tight"
+            className="w-full h-8 pl-9 pr-9 bg-muted/90 rounded-lg text-foreground placeholder-muted-foreground border-2 border-transparent focus:outline-none focus:border-primary/50 focus:bg-background transition-all duration-200 ease-in-out text-[16px] leading-tight"
             style={{
               fontSize: '16px', // Prevents zoom on iOS
               WebkitAppearance: 'none',
@@ -135,7 +135,7 @@ const FixedMobileSearch = ({
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 flex items-center justify-center transition-colors duration-150"
+              className="absolute right-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 flex items-center justify-center transition-colors duration-150"
               aria-label="Clear search"
             >
               <X className="w-3 h-3 text-muted-foreground" />
@@ -321,29 +321,35 @@ const RebuiltModernSalesPage = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen bg-background">
-        {/* Mobile Header */}
-        <div className="flex-shrink-0 p-4 bg-background border-b border-border">
-          {/* Network Status */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              {isOnline ? (
-                <div className="flex items-center gap-2 text-green-600">
-                  <Wifi size={16} />
-                  <span className="text-xs font-medium">Online</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-orange-600">
-                  <WifiOff size={16} />
-                  <span className="text-xs font-medium">Offline</span>
-                </div>
-              )}
-              {pendingOperations > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {pendingOperations} pending
-                </Badge>
-              )}
+        {/* Sales Header - Similar to Dashboard */}
+        <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <Receipt className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
-            
+            <h1 className="font-mono text-lg font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              SALES
+            </h1>
+          </div>
+          
+          {/* Network Status */}
+          <div className="flex items-center gap-2">
+            {isOnline ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <Wifi size={14} />
+                <span className="text-xs font-medium">Online</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-orange-600">
+                <WifiOff size={14} />
+                <span className="text-xs font-medium">Offline</span>
+              </div>
+            )}
+            {pendingOperations > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {pendingOperations}
+              </Badge>
+            )}
             {!isOnline && (
               <Button
                 variant="outline"
@@ -351,12 +357,11 @@ const RebuiltModernSalesPage = () => {
                 onClick={syncPendingOperations}
                 className="text-xs"
               >
-                <RefreshCw size={14} className="mr-1" />
+                <RefreshCw size={12} className="mr-1" />
                 Sync
               </Button>
             )}
           </div>
-
         </div>
 
         {/* Mobile Content */}
@@ -402,7 +407,7 @@ const RebuiltModernSalesPage = () => {
                 <div 
                   ref={productListRef}
                   className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '180px' }} // Extra space for fixed search + bottom nav
+                  style={{ paddingBottom: '220px' }} // Extra space for fixed search + bottom nav
                 >
                   <div className="p-4 grid grid-cols-2 gap-3">
                     {filteredProducts.map(product => {
