@@ -416,14 +416,16 @@ const RebuiltModernSalesPage = () => {
                 {/* Side Toggle Button to Cart */}
                 <Button
                   onClick={() => handlePanelSwitch('cart')}
-                  className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30 h-16 w-12 rounded-full shadow-lg"
+                  className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30 h-20 w-16 rounded-2xl shadow-2xl bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 border-2 border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95"
                   size="sm"
                 >
-                  <div className="flex flex-col items-center gap-1">
-                    <ChevronRight size={16} />
-                    <span className="text-xs">Cart</span>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="bg-white/20 rounded-full p-1.5">
+                      <ChevronRight size={18} className="text-white" />
+                    </div>
+                    <span className="text-xs font-semibold text-white">Cart</span>
                     {cartItemCount > 0 && (
-                      <Badge className="absolute -top-1 -left-1 min-w-[20px] h-5 rounded-full text-xs px-1">
+                      <Badge className="absolute -top-2 -left-2 min-w-[24px] h-6 rounded-full text-xs px-1.5 bg-red-500 hover:bg-red-500 text-white border-2 border-white shadow-lg animate-pulse">
                         {cartItemCount}
                       </Badge>
                     )}
@@ -433,7 +435,7 @@ const RebuiltModernSalesPage = () => {
                 <div 
                   ref={productListRef}
                   className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '350px' }} // Extra space for fixed search + bottom nav
+                  style={{ paddingBottom: '400px' }} // Extra space for fixed search + bottom nav
                 >
                   <div className="p-4 grid grid-cols-2 gap-3">
                     {filteredProducts.map(product => {
@@ -549,12 +551,14 @@ const RebuiltModernSalesPage = () => {
               {/* Side Toggle Button to Products */}
               <Button
                 onClick={() => handlePanelSwitch('search')}
-                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 h-16 w-12 rounded-full shadow-lg"
+                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 h-20 w-16 rounded-2xl shadow-2xl bg-gradient-to-br from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 border-2 border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95"
                 size="sm"
               >
-                <div className="flex flex-col items-center gap-1">
-                  <ChevronLeft size={16} />
-                  <span className="text-xs">Products</span>
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="bg-white/20 rounded-full p-1.5">
+                    <ChevronLeft size={18} className="text-white" />
+                  </div>
+                  <span className="text-xs font-semibold text-white">Products</span>
                 </div>
               </Button>
               
