@@ -403,7 +403,7 @@ const RebuiltModernSalesPage = () => {
                 <div 
                   ref={productListRef}
                   className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '250px' }} // Extra space for fixed search + bottom nav
+                  style={{ paddingBottom: '300px' }} // Extra space for fixed search + bottom nav
                 >
                   <div className="p-4 grid grid-cols-2 gap-3">
                     {filteredProducts.map(product => {
@@ -501,48 +501,79 @@ const RebuiltModernSalesPage = () => {
                 <div className="space-y-4">
                   {/* Customer Selection */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Customer</label>
-                    <div className="flex gap-2">
-                      <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue>
-                            {selectedCustomer ? (
-                              <div className="flex justify-between items-center w-full">
-                                <span>{selectedCustomer.name}</span>
-                                {selectedCustomer.outstandingDebt > 0 && (
-                                  <span className="text-xs text-red-600 font-medium">
-                                    Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              "No Customer"
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no-customer">No Customer</SelectItem>
-                          {customers.map(customer => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              <div className="flex justify-between items-center w-full">
-                                <span>{customer.name} - {customer.phone}</span>
-                                {customer.outstandingDebt > 0 && (
-                                  <span className="text-xs text-red-600 font-medium ml-2">
-                                    Debt: {formatCurrency(customer.outstandingDebt)}
-                                  </span>
-                                )}
+                    <label className="text-sm font-medium mb-3 block text-foreground">Customer Selection</label>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
+                          <SelectTrigger className="flex-1 h-12 bg-background border border-border hover:border-primary/50 transition-colors">
+                            <SelectValue>
+                              {selectedCustomer ? (
+                                <div className="flex flex-col items-start w-full">
+                                  <div className="flex items-center gap-2">
+                                    <User size={14} className="text-primary" />
+                                    <span className="font-medium">{selectedCustomer.name}</span>
+                                  </div>
+                                  {selectedCustomer.outstandingDebt > 0 && (
+                                    <span className="text-xs text-red-600 font-medium mt-1">
+                                      Outstanding Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <User size={14} />
+                                  <span>No Customer Selected</span>
+                                </div>
+                              )}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="no-customer">
+                              <div className="flex items-center gap-2">
+                                <User size={14} className="text-muted-foreground" />
+                                <span>No Customer</span>
                               </div>
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setIsAddCustomerModalOpen(true)}
-                      >
-                        <UserPlus size={16} />
-                      </Button>
+                            {customers.map(customer => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                <div className="flex flex-col items-start w-full">
+                                  <div className="flex items-center gap-2">
+                                    <User size={14} className="text-primary" />
+                                    <span className="font-medium">{customer.name}</span>
+                                    <span className="text-xs text-muted-foreground">({customer.phone})</span>
+                                  </div>
+                                  {customer.outstandingDebt > 0 && (
+                                    <span className="text-xs text-red-600 font-medium mt-1">
+                                      Debt: {formatCurrency(customer.outstandingDebt)}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-12 w-12 border-border hover:border-primary/50 transition-colors"
+                          onClick={() => setIsAddCustomerModalOpen(true)}
+                        >
+                          <UserPlus size={16} />
+                        </Button>
+                      </div>
+                      
+                      {/* Customer Debt Display */}
+                      {selectedCustomer && selectedCustomer.outstandingDebt > 0 && (
+                        <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                          <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                            <Receipt size={14} />
+                            <span className="text-sm font-medium">Customer has outstanding debt</span>
+                          </div>
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                            Current debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -843,48 +874,79 @@ const RebuiltModernSalesPage = () => {
           {/* Customer Selection */}
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Customer</label>
-              <div className="flex gap-2">
-                <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue>
-                      {selectedCustomer ? (
-                        <div className="flex justify-between items-center w-full">
-                          <span>{selectedCustomer.name}</span>
-                          {selectedCustomer.outstandingDebt > 0 && (
-                            <span className="text-xs text-red-600 font-medium">
-                              Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        "No Customer"
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no-customer">No Customer</SelectItem>
-                    {customers.map(customer => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        <div className="flex justify-between items-center w-full">
-                          <span>{customer.name} - {customer.phone}</span>
-                          {customer.outstandingDebt > 0 && (
-                            <span className="text-xs text-red-600 font-medium ml-2">
-                              Debt: {formatCurrency(customer.outstandingDebt)}
-                            </span>
-                          )}
+              <label className="text-sm font-medium mb-3 block text-foreground">Customer Selection</label>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
+                    <SelectTrigger className="flex-1 h-12 bg-background border border-border hover:border-primary/50 transition-colors">
+                      <SelectValue>
+                        {selectedCustomer ? (
+                          <div className="flex flex-col items-start w-full">
+                            <div className="flex items-center gap-2">
+                              <User size={14} className="text-primary" />
+                              <span className="font-medium">{selectedCustomer.name}</span>
+                            </div>
+                            {selectedCustomer.outstandingDebt > 0 && (
+                              <span className="text-xs text-red-600 font-medium mt-1">
+                                Outstanding Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <User size={14} />
+                            <span>No Customer Selected</span>
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no-customer">
+                        <div className="flex items-center gap-2">
+                          <User size={14} className="text-muted-foreground" />
+                          <span>No Customer</span>
                         </div>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsAddCustomerModalOpen(true)}
-                >
-                  <UserPlus size={16} />
-                </Button>
+                      {customers.map(customer => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          <div className="flex flex-col items-start w-full">
+                            <div className="flex items-center gap-2">
+                              <User size={14} className="text-primary" />
+                              <span className="font-medium">{customer.name}</span>
+                              <span className="text-xs text-muted-foreground">({customer.phone})</span>
+                            </div>
+                            {customer.outstandingDebt > 0 && (
+                              <span className="text-xs text-red-600 font-medium mt-1">
+                                Debt: {formatCurrency(customer.outstandingDebt)}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-12 w-12 border-border hover:border-primary/50 transition-colors"
+                    onClick={() => setIsAddCustomerModalOpen(true)}
+                  >
+                    <UserPlus size={16} />
+                  </Button>
+                </div>
+                
+                {/* Customer Debt Display */}
+                {selectedCustomer && selectedCustomer.outstandingDebt > 0 && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                      <Receipt size={14} />
+                      <span className="text-sm font-medium">Customer has outstanding debt</span>
+                    </div>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      Current debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
