@@ -37,6 +37,22 @@ import {
   ChevronRight
 } from 'lucide-react';
 
+// Define types for the mixed product array
+type DebtCardType = {
+  id: string;
+  name: string;
+  category: string;
+  sellingPrice: number;
+  currentStock: number;
+  isDebtCard: true;
+};
+
+type ProductWithCheck = {
+  isDebtCard?: boolean;
+} & any;
+
+type FilteredProductType = DebtCardType | ProductWithCheck;
+
 // Fixed Mobile Search Component
 const FixedMobileSearch = ({ 
   searchTerm, 
@@ -201,7 +217,7 @@ const RebuiltModernSalesPage = () => {
     return frequency;
   }, [sales]);
 
-  const filteredProducts = useMemo(() => {
+  const filteredProducts = useMemo((): FilteredProductType[] => {
     const filtered = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
@@ -209,7 +225,7 @@ const RebuiltModernSalesPage = () => {
     });
 
     // Sort by sales frequency (popular first), then by name
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       const freqA = productSalesFrequency[a.id] || 0;
       const freqB = productSalesFrequency[b.id] || 0;
       
@@ -219,6 +235,18 @@ const RebuiltModernSalesPage = () => {
       
       return a.name.localeCompare(b.name); // Alphabetical as secondary sort
     });
+
+    // Add debt card as first item
+    const debtCard: DebtCardType = {
+      id: 'add-debt-card',
+      name: 'Record Cash Lending',
+      category: 'Special',
+      sellingPrice: 0,
+      currentStock: 1,
+      isDebtCard: true
+    };
+
+    return [debtCard, ...sorted];
   }, [products, searchTerm, selectedCategory, productSalesFrequency]);
 
   // Preserve scroll position when switching panels
@@ -238,7 +266,8 @@ const RebuiltModernSalesPage = () => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
-    if (product.currentStock < quantity) {
+    // Allow adding products with unspecified stock (-1)
+    if (product.currentStock !== -1 && product.currentStock < quantity) {
       toast({
         title: "Insufficient Stock",
         description: `Only ${product.currentStock} units available for ${product.name}`,
@@ -267,7 +296,8 @@ const RebuiltModernSalesPage = () => {
       return;
     }
 
-    if (newQuantity > product.currentStock) {
+    // Allow quantity changes for products with unspecified stock (-1)
+    if (product.currentStock !== -1 && newQuantity > product.currentStock) {
       toast({
         title: "Insufficient Stock",
         description: `Only ${product.currentStock} units available`,
@@ -403,10 +433,42 @@ const RebuiltModernSalesPage = () => {
                 <div 
                   ref={productListRef}
                   className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '300px' }} // Extra space for fixed search + bottom nav
+                  style={{ paddingBottom: '350px' }} // Extra space for fixed search + bottom nav
                 >
                   <div className="p-4 grid grid-cols-2 gap-3">
                     {filteredProducts.map(product => {
+                      // Special handling for debt card
+                      if ('isDebtCard' in product && product.isDebtCard) {
+                        return (
+                          <Card key={product.id} className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                            <CardContent className="p-3">
+                              <div className="flex flex-col h-full">
+                                <h3 className="font-medium text-sm mb-1 text-red-700 dark:text-red-400">Record Cash Lending</h3>
+                                <p className="text-xs text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
+                                
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-bold text-sm text-red-700 dark:text-red-400">
+                                    Debt Recording
+                                  </span>
+                                  <Badge variant="destructive" className="text-xs">
+                                    Active
+                                  </Badge>
+                                </div>
+                                
+                                <Button
+                                  onClick={() => setIsAddDebtModalOpen(true)}
+                                  size="sm"
+                                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  <Receipt size={14} className="mr-1" />
+                                  Record Debt
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      }
+
                       const cartItem = cart.find(item => item.id === product.id);
                       const quantity = cartItem?.quantity || 0;
                       
@@ -422,11 +484,11 @@ const RebuiltModernSalesPage = () => {
                                   {formatCurrency(product.sellingPrice)}
                                 </span>
                                 <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'} className="text-xs">
-                                  {product.currentStock}
+                                  {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
                                 </Badge>
                               </div>
                               
-                              {product.currentStock > 0 ? (
+                              {product.currentStock > 0 || product.currentStock === -1 ? (
                                 quantity > 0 ? (
                                   <div className="flex items-center justify-between bg-muted rounded-lg p-1">
                                     <Button
@@ -787,6 +849,37 @@ const RebuiltModernSalesPage = () => {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map(product => {
+              // Special handling for debt card
+              if ('isDebtCard' in product && product.isDebtCard) {
+                return (
+                  <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col h-full">
+                        <h3 className="font-medium mb-2 text-red-700 dark:text-red-400">Record Cash Lending</h3>
+                        <p className="text-sm text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
+                        
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="font-bold text-lg text-red-700 dark:text-red-400">
+                            Debt Recording
+                          </span>
+                          <Badge variant="destructive">
+                            Active
+                          </Badge>
+                        </div>
+                        
+                        <Button
+                          onClick={() => setIsAddDebtModalOpen(true)}
+                          className="w-full bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          <Receipt size={16} className="mr-2" />
+                          Record Debt
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
               const cartItem = cart.find(item => item.id === product.id);
               const quantity = cartItem?.quantity || 0;
               
@@ -802,11 +895,11 @@ const RebuiltModernSalesPage = () => {
                           {formatCurrency(product.sellingPrice)}
                         </span>
                         <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'}>
-                          Stock: {product.currentStock}
+                          Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
                         </Badge>
                       </div>
                       
-                      {product.currentStock > 0 ? (
+                      {product.currentStock > 0 || product.currentStock === -1 ? (
                         quantity > 0 ? (
                           <div className="flex items-center justify-between bg-muted rounded-lg p-2">
                             <Button
