@@ -14,7 +14,7 @@ import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
-import { useIsMobile } from '../hooks/use-mobile';
+import { useIsMobile, useIsTablet } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
 import { useSidebar } from '@/components/ui/sidebar';
 import NewSalesCheckout from './sales/NewSalesCheckout';
@@ -185,9 +185,9 @@ const RebuiltModernSalesPage = () => {
   // Mobile panel state
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
   
   // Get sidebar state for responsive grid
-  const sidebarContext = React.useContext(React.createContext<any>(null));
   let sidebarOpen = true;
   try {
     const sidebar = useSidebar();
@@ -446,8 +446,14 @@ const RebuiltModernSalesPage = () => {
                   ref={productListRef}
                   className="h-full overflow-y-auto"
                 >
-                   <div 
-                        className="px-4 pt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" 
+                    <div 
+                        className={`px-4 pt-4 gap-3 ${
+                          isMobile 
+                            ? 'grid grid-cols-2' 
+                            : isTablet 
+                              ? (sidebarOpen ? 'grid grid-cols-1' : 'grid grid-cols-2')
+                              : (sidebarOpen ? 'grid grid-cols-4' : 'grid grid-cols-5')
+                        }`}
                         style={{ paddingBottom: '250px' }}
                    >
                     {filteredProducts.map(product => {
