@@ -43,8 +43,15 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
   // Get all available customers (unified from hook)
   const allCustomers = useMemo(() => {
-    return hookCustomers.length > 0 ? hookCustomers : initialCustomers;
-  }, [hookCustomers, initialCustomers]);
+    const customers = hookCustomers.length > 0 ? hookCustomers : initialCustomers;
+    console.log('[NewSalesCheckout] Available customers updated:', {
+      hookCustomers: hookCustomers.length,
+      initialCustomers: initialCustomers.length,
+      totalCustomers: customers.length,
+      selectedCustomerId
+    });
+    return customers;
+  }, [hookCustomers, initialCustomers, selectedCustomerId]);
 
   // Update selected customer when customer list changes or selection changes
   useEffect(() => {
@@ -63,20 +70,38 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
 
-  const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
-    console.log('[NewSalesCheckout] Customer added:', newCustomer);
+  const handleCustomerAdded = useCallback((newCustomer: Customer) => {
+    console.log('[NewSalesCheckout] Customer added successfully:', {
+      id: newCustomer.id,
+      name: newCustomer.name,
+      phone: newCustomer.phone,
+      debt: newCustomer.outstandingDebt
+    });
     
-    // Immediately select the new customer and update UI
+    // Immediately update the customer in the customers hook to ensure it's available
+    // The useUnifiedCustomers hook should have already added it, but we force a sync here
+    
+    // Set the new customer as selected immediately for instant UI feedback
     setSelectedCustomer(newCustomer);
     setSelectedCustomerId(newCustomer.id);
+    
+    // Close the modal
     setIsAddCustomerModalOpen(false);
     
-    // Refresh customers from parent
+    // Refresh customers from parent to ensure consistency
     onCustomersRefresh();
     
+    // Show success feedback
     toast({
-      title: "Customer Added",
-      description: `${newCustomer.name} has been added and selected.`,
+      title: "Customer Added & Selected",
+      description: `${newCustomer.name} has been added and is now selected for this sale.`,
+    });
+    
+    // Log the current state for debugging
+    console.log('[NewSalesCheckout] Customer selection updated:', {
+      selectedCustomerId: newCustomer.id,
+      selectedCustomerName: newCustomer.name,
+      selectedCustomerDebt: newCustomer.outstandingDebt
     });
   }, [onCustomersRefresh, toast]);
 

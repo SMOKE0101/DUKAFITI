@@ -140,12 +140,13 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
       });
       setErrors({});
 
-      // Close modal
-      onOpenChange(false);
-      
-      // Notify parent component with the new customer
+      // Notify parent component with the new customer FIRST
+      // This ensures the parent gets the customer data before the modal closes
       console.log('[AddCustomerModal] Notifying parent with new customer:', newCustomer);
       onCustomerAdded?.(newCustomer);
+      
+      // Close modal after notifying parent
+      onOpenChange(false);
 
     } catch (error) {
       console.error('[AddCustomerModal] Error creating customer:', error);
