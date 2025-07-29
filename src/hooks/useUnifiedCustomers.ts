@@ -326,13 +326,19 @@ export const useUnifiedCustomers = () => {
 
         const transformedCustomer = transformDbCustomer(data);
         
-        // Replace temp customer with real one
+        // Replace temp customer with real one and trigger immediate state update
         setCustomers(prev => {
           const updated = prev.map(c => c.id === newCustomer.id ? transformedCustomer : c);
           setCache('customers', updated);
           return updated;
         });
 
+        // Trigger immediate event to notify components of the new customer
+        window.dispatchEvent(new CustomEvent('customer-created', {
+          detail: { customer: transformedCustomer, tempId: newCustomer.id }
+        }));
+
+        console.log('[UnifiedCustomers] Customer created successfully, returning real customer:', transformedCustomer);
         return transformedCustomer;
       } catch (error) {
         console.error('[UnifiedCustomers] Create failed, queuing for sync:', error);
