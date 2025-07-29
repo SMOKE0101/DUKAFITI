@@ -435,8 +435,7 @@ const RebuiltModernSalesPage = () => {
                 >
                    <div 
                         className="px-4 pt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" 
-                        style={{ paddingBottom: '120px' }}
-                        onLoad={() => console.log('Product grid container loaded with paddingBottom: 120px')}
+                        style={{ paddingBottom: '200px' }}
                    >
                     {filteredProducts.map(product => {
                       // Special handling for debt card
