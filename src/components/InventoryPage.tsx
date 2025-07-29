@@ -5,9 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import AddProductModal from './inventory/AddProductModal';
+import BulkProductModal from './inventory/BulkProductModal';
+import UncountableProductModal from './inventory/UncountableProductModal';
+import VariationProductModal from './inventory/VariationProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
+import { ProductMode } from './inventory/AddProductDropdown';
 import InventoryFilters from './inventory/InventoryFilters';
 import InventoryProductGrid from './inventory/InventoryProductGrid';
 import InventoryHeader from './inventory/InventoryHeader';
@@ -21,6 +25,9 @@ const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showUncountableModal, setShowUncountableModal] = useState(false);
+  const [showVariationModal, setShowVariationModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
@@ -124,6 +131,23 @@ const InventoryPage = () => {
     }
   };
 
+  const handleAddProductMode = (mode: ProductMode) => {
+    switch (mode) {
+      case 'normal':
+        setShowAddModal(true);
+        break;
+      case 'bulk':
+        setShowBulkModal(true);
+        break;
+      case 'uncountable':
+        setShowUncountableModal(true);
+        break;
+      case 'variation':
+        setShowVariationModal(true);
+        break;
+    }
+  };
+
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await createProduct(productData);
@@ -147,6 +171,41 @@ const InventoryPage = () => {
       toast({
         title: "Error",
         description: "Failed to add product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkAddProducts = async (productsData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+    try {
+      const results = await Promise.allSettled(
+        productsData.map(productData => createProduct(productData))
+      );
+      
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      const failed = results.filter(result => result.status === 'rejected').length;
+      
+      setShowBulkModal(false);
+      
+      if (failed === 0) {
+        toast({
+          title: "Bulk Products Added",
+          description: `${successful} products have been added to your inventory.`,
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `${successful} products added, ${failed} failed. Please check and retry failed items.`,
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Error in bulk add:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add products. Please try again.",
         variant: "destructive",
       });
     }
@@ -287,7 +346,7 @@ const InventoryPage = () => {
           totalProducts={totalProducts}
           totalValue={totalValue}
           lowStockCount={lowStockCount}
-          onAddProduct={() => setShowAddModal(true)}
+          onAddProduct={handleAddProductMode}
         />
 
         {/* Search and Filter Section */}
@@ -340,6 +399,25 @@ const InventoryPage = () => {
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onSave={handleAddProduct}
+        />
+
+        <BulkProductModal
+          isOpen={showBulkModal}
+          onClose={() => setShowBulkModal(false)}
+          onSave={handleBulkAddProducts}
+        />
+
+        <UncountableProductModal
+          isOpen={showUncountableModal}
+          onClose={() => setShowUncountableModal(false)}
+          onSave={handleAddProduct}
+        />
+
+        <VariationProductModal
+          isOpen={showVariationModal}
+          onClose={() => setShowVariationModal(false)}
+          onSave={handleBulkAddProducts}
+          existingProducts={products}
         />
 
         <EditProductModal

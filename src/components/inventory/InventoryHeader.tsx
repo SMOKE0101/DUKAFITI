@@ -1,16 +1,16 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Plus, Package, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Package, TrendingUp, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import AddProductDropdown, { ProductMode } from './AddProductDropdown';
 
 interface InventoryHeaderProps {
   totalProducts: number;
   totalValue: number;
   lowStockCount: number;
-  onAddProduct: () => void;
+  onAddProduct: (mode: ProductMode) => void;
 }
 
 const InventoryHeader: React.FC<InventoryHeaderProps> = ({ 
@@ -35,14 +35,10 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           </h1>
         </div>
         
-        <Button 
-          onClick={onAddProduct}
-          className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0"
-          size="sm"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          {isMobile ? 'Add' : 'Add Product'}
-        </Button>
+        <AddProductDropdown
+          onModeSelect={onAddProduct}
+          className="flex-shrink-0"
+        />
       </div>
 
       {/* Stats Cards */}
