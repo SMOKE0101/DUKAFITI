@@ -147,16 +147,6 @@ const FixedMobileSearch = ({
               transform: 'translateZ(0)'
             }}
           />
-          {localValue && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 flex items-center justify-center transition-colors duration-150"
-              aria-label="Clear search"
-            >
-              <X className="w-3 h-3 text-muted-foreground" />
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -339,7 +329,11 @@ const RebuiltModernSalesPage = () => {
 
   const handleSearchTermChange = useCallback((value: string) => {
     setSearchTerm(value);
-  }, []);
+    // Scroll to top when filtering products on mobile
+    if (isMobile && productListRef.current) {
+      productListRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [isMobile]);
 
   // Get cart count
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -454,7 +448,7 @@ const RebuiltModernSalesPage = () => {
                               ? (sidebarOpen ? 'grid grid-cols-1' : 'grid grid-cols-2')
                               : (sidebarOpen ? 'grid grid-cols-4' : 'grid grid-cols-5')
                         }`}
-                        style={{ paddingBottom: '250px' }}
+                        style={{ paddingBottom: '100px' }}
                    >
                     {filteredProducts.map(product => {
                       // Special handling for debt card - same size as other product cards
