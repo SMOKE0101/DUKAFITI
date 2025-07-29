@@ -323,60 +323,11 @@ const RebuiltModernSalesPage = () => {
     }
   }, [clearCart, refetchProducts, isMobile]);
 
-  const handleAddCustomerSuccess = useCallback(async (customer: Customer) => {
-    console.log('[RebuiltModernSalesPage] Customer added successfully:', customer);
-    console.log('[RebuiltModernSalesPage] Current customers before update:', customers.map(c => ({ id: c.id, name: c.name })));
-    
-    // Close modal first
+  const handleAddCustomerSuccess = useCallback((customerId: string) => {
+    setSelectedCustomerId(customerId);
     setIsAddCustomerModalOpen(false);
-    
-    // If customer has temp ID, we need to wait and find the real customer
-    if (customer.id.startsWith('temp_')) {
-      console.log('[RebuiltModernSalesPage] Customer has temp ID, waiting for sync to get real ID...');
-      
-      // Set temp ID initially
-      setSelectedCustomerId(customer.id);
-      
-      // Refresh customers to get the latest data
-      await refetchCustomers();
-      
-      // Try to find the real customer by name and phone after a short delay
-      // This allows time for sync to complete
-      setTimeout(async () => {
-        await refetchCustomers();
-        
-        // Look for a customer with the same name and phone but without temp ID
-        const realCustomer = customers.find(c => 
-          c.name === customer.name && 
-          c.phone === customer.phone && 
-          !c.id.startsWith('temp_')
-        );
-        
-        if (realCustomer) {
-          console.log('[RebuiltModernSalesPage] Found real customer after sync:', realCustomer);
-          setSelectedCustomerId(realCustomer.id);
-        } else {
-          console.log('[RebuiltModernSalesPage] Real customer not found yet, keeping temp ID');
-        }
-      }, 2000); // Wait 2 seconds for sync
-      
-    } else {
-      // Customer already has real ID
-      console.log('[RebuiltModernSalesPage] Customer has real ID, setting immediately');
-      setSelectedCustomerId(customer.id);
-      await refetchCustomers();
-    }
-    
-    // Also dispatch an event to ensure all components are notified
-    window.dispatchEvent(new CustomEvent('customer-list-updated'));
-    
-    toast({
-      title: "Customer Added",
-      description: `${customer.name} has been added successfully.`,
-    });
-    
-    console.log('[RebuiltModernSalesPage] Current payment method:', paymentMethod);
-  }, [refetchCustomers, customers, paymentMethod, toast]);
+    refetchCustomers();
+  }, [refetchCustomers]);
 
   const handleSearchTermChange = useCallback((value: string) => {
     setSearchTerm(value);
@@ -384,39 +335,6 @@ const RebuiltModernSalesPage = () => {
 
   // Get cart count
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  // Listen for customer creation events to update selected customer properly
-  useEffect(() => {
-    const handleCustomerCreated = (event: any) => {
-      const { customer, tempId } = event.detail;
-      console.log('[RebuiltModernSalesPage] Customer created event received:', { customer, tempId, currentSelectedId: selectedCustomerId });
-      
-      // If we were using the temporary ID, switch to the real customer ID
-      if (selectedCustomerId === tempId) {
-        console.log('[RebuiltModernSalesPage] Switching from temp ID to real customer ID:', customer.id);
-        setSelectedCustomerId(customer.id);
-      }
-    };
-
-    const handleCustomerIdUpdated = (event: any) => {
-      const { oldId, newId, customer } = event.detail;
-      console.log('[RebuiltModernSalesPage] Customer ID updated event received:', { oldId, newId, currentSelectedId: selectedCustomerId });
-      
-      // If we were using the old ID, switch to the new ID
-      if (selectedCustomerId === oldId) {
-        console.log('[RebuiltModernSalesPage] Updating selected customer ID from old to new:', oldId, '->', newId);
-        setSelectedCustomerId(newId);
-      }
-    };
-
-    window.addEventListener('customer-created', handleCustomerCreated);
-    window.addEventListener('customer-id-updated', handleCustomerIdUpdated);
-    
-    return () => {
-      window.removeEventListener('customer-created', handleCustomerCreated);
-      window.removeEventListener('customer-id-updated', handleCustomerIdUpdated);
-    };
-  }, [selectedCustomerId]);
 
   if (productsLoading || customersLoading) {
     return (
@@ -518,7 +436,7 @@ const RebuiltModernSalesPage = () => {
                   ref={productListRef}
                   className="h-full overflow-y-auto"
                 >
-                   <div className="p-3 sm:p-4 md:p-6 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6" 
+                   <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" 
                         style={{ paddingBottom: '120px' }} // Space for search bar + bottom nav + extra padding
                    >
                     {filteredProducts.map(product => {
@@ -558,63 +476,61 @@ const RebuiltModernSalesPage = () => {
                       const quantity = cartItem?.quantity || 0;
                       
                       return (
-                        <Card key={product.id} className="overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border/50 hover:border-primary/30">
-                          <CardContent className="p-2 sm:p-2.5 md:p-3 lg:p-4">
-                            <div className="flex flex-col h-full min-h-[140px] sm:min-h-[160px] md:min-h-[180px]">
-                              <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm lg:text-base mb-1 line-clamp-2 leading-tight">{product.name}</h3>
-                              <p className="text-[8px] sm:text-[10px] md:text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
+                        <Card key={product.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
+                          <CardContent className="p-2.5 md:p-3">
+                            <div className="flex flex-col h-full">
+                              <h3 className="font-medium text-xs md:text-sm mb-1 truncate leading-tight">{product.name}</h3>
+                              <p className="text-[10px] md:text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
                               
-                              <div className="flex justify-between items-center mb-3 gap-1">
-                                <span className="font-bold text-[10px] sm:text-xs md:text-sm lg:text-base text-primary truncate">
+                              <div className="flex justify-between items-center mb-2 gap-1">
+                                <span className="font-bold text-xs md:text-sm text-primary truncate">
                                   {formatCurrency(product.sellingPrice)}
                                 </span>
                                 <Badge 
                                   variant={product.currentStock > 0 ? 'default' : product.currentStock === -1 ? 'secondary' : 'destructive'} 
-                                  className="text-[8px] sm:text-[9px] md:text-xs px-1 py-0.5 min-w-0 max-w-[50px] sm:max-w-[60px] md:max-w-[80px] truncate whitespace-nowrap"
+                                  className="text-[9px] md:text-xs px-1 py-0.5 min-w-0 max-w-[60px] md:max-w-[80px] truncate whitespace-nowrap"
                                   title={product.currentStock === -1 ? "Unspecified" : `Stock: ${product.currentStock}`}
                                 >
                                   {product.currentStock === -1 ? 'Unspec.' : product.currentStock}
                                 </Badge>
                               </div>
                               
-                              <div className="mt-auto">
-                                {product.currentStock > 0 || product.currentStock === -1 ? (
-                                  quantity > 0 ? (
-                                    <div className="flex items-center justify-between bg-muted rounded-lg p-1.5">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 p-0 hover:bg-destructive hover:text-white"
-                                        onClick={() => handleQuantityChange(product.id, quantity - 1)}
-                                      >
-                                        <Minus size={10} className="sm:size-3 md:size-4" />
-                                      </Button>
-                                      <span className="font-medium text-xs sm:text-sm md:text-base px-2">{quantity}</span>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 p-0 hover:bg-primary hover:text-white"
-                                        onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                                      >
-                                        <Plus size={10} className="sm:size-3 md:size-4" />
-                                      </Button>
-                                    </div>
-                                  ) : (
+                              {product.currentStock > 0 || product.currentStock === -1 ? (
+                                quantity > 0 ? (
+                                  <div className="flex items-center justify-between bg-muted rounded-lg p-1">
                                     <Button
-                                      onClick={() => addToCart(product.id)}
+                                      variant="ghost"
                                       size="sm"
-                                      className="w-full text-[10px] sm:text-xs md:text-sm h-6 sm:h-7 md:h-8 lg:h-9 hover:scale-105 transition-transform"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => handleQuantityChange(product.id, quantity - 1)}
                                     >
-                                      <Plus size={10} className="sm:size-3 md:size-4 mr-1" />
-                                      Add
+                                      <Minus size={14} />
                                     </Button>
-                                  )
+                                    <span className="font-medium text-sm">{quantity}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => handleQuantityChange(product.id, quantity + 1)}
+                                    >
+                                      <Plus size={14} />
+                                    </Button>
+                                  </div>
                                 ) : (
-                                  <Button disabled size="sm" className="w-full text-[10px] sm:text-xs md:text-sm h-6 sm:h-7 md:h-8">
-                                    Out of Stock
+                                  <Button
+                                    onClick={() => addToCart(product.id)}
+                                    size="sm"
+                                    className="w-full text-xs md:text-sm h-7 md:h-8"
+                                  >
+                                    <Plus size={12} className="mr-1" />
+                                    Add
                                   </Button>
-                                )}
-                              </div>
+                                )
+                              ) : (
+                                <Button disabled size="sm" className="w-full">
+                                  Out of Stock
+                                </Button>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -870,7 +786,7 @@ const RebuiltModernSalesPage = () => {
         <AddCustomerModal
           open={isAddCustomerModalOpen}
           onOpenChange={setIsAddCustomerModalOpen}
-          onCustomerAdded={(customer) => handleAddCustomerSuccess(customer)}
+          onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
         />
         
         <AddDebtModal
@@ -940,33 +856,32 @@ const RebuiltModernSalesPage = () => {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 lg:gap-7">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map(product => {
               // Special handling for debt card
               if ('isDebtCard' in product && product.isDebtCard) {
                 return (
                   <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
-                    <CardContent className="p-3 sm:p-4">
+                    <CardContent className="p-4">
                       <div className="flex flex-col h-full">
-                        <h3 className="font-medium mb-1 sm:mb-2 text-sm sm:text-base text-red-700 dark:text-red-400">Record Cash Lending</h3>
-                        <p className="text-xs sm:text-sm text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
+                        <h3 className="font-medium mb-2 text-red-700 dark:text-red-400">Record Cash Lending</h3>
+                        <p className="text-sm text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
                         
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 sm:mb-3 gap-1">
-                          <span className="font-bold text-sm sm:text-base text-red-700 dark:text-red-400">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="font-bold text-lg text-red-700 dark:text-red-400">
                             Debt Recording
                           </span>
-                          <Badge variant="destructive" className="text-xs w-fit">
+                          <Badge variant="destructive">
                             Active
                           </Badge>
                         </div>
                         
                         <Button
                           onClick={() => setIsAddDebtModalOpen(true)}
-                          className="w-full bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm h-8 sm:h-10"
+                          className="w-full bg-red-600 hover:bg-red-700 text-white"
                         >
-                          <Receipt size={14} className="mr-1 sm:mr-2" />
-                          <span className="hidden sm:inline">Record Debt</span>
-                          <span className="sm:hidden">Record</span>
+                          <Receipt size={16} className="mr-2" />
+                          Record Debt
                         </Button>
                       </div>
                     </CardContent>
@@ -978,56 +893,51 @@ const RebuiltModernSalesPage = () => {
               const quantity = cartItem?.quantity || 0;
               
               return (
-                <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow h-full">
-                  <CardContent className="p-2 sm:p-3 h-full">
-                    <div className="flex flex-col h-full justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium mb-1 sm:mb-2 line-clamp-2 text-xs sm:text-sm">{product.name}</h3>
-                        <p className="text-xs text-muted-foreground mb-1 sm:mb-2 truncate">{product.category}</p>
-                        
-                        <div className="flex flex-col gap-1 mb-2 sm:mb-3">
-                          <span className="font-bold text-sm sm:text-base text-primary">
-                            {formatCurrency(product.sellingPrice)}
-                          </span>
-                          <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'} className="text-xs w-fit">
-                            {product.currentStock === -1 ? 'Unspec.' : `Stock: ${product.currentStock}`}
-                          </Badge>
-                        </div>
+                <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col h-full">
+                      <h3 className="font-medium mb-2 line-clamp-2">{product.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
+                      
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-bold text-lg text-primary">
+                          {formatCurrency(product.sellingPrice)}
+                        </span>
+                        <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'}>
+                          Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
+                        </Badge>
                       </div>
                       
                       {product.currentStock > 0 || product.currentStock === -1 ? (
                         quantity > 0 ? (
-                          <div className="flex items-center justify-between bg-muted rounded-lg p-1.5 sm:p-2">
+                          <div className="flex items-center justify-between bg-muted rounded-lg p-2">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(product.id, quantity - 1)}
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                             >
-                              <Minus size={14} />
+                              <Minus size={16} />
                             </Button>
-                            <span className="font-medium text-sm sm:text-base">{quantity}</span>
+                            <span className="font-medium">{quantity}</span>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                             >
-                              <Plus size={14} />
+                              <Plus size={16} />
                             </Button>
                           </div>
                         ) : (
                           <Button
                             onClick={() => addToCart(product.id)}
-                            className="w-full h-8 sm:h-10 text-xs sm:text-sm"
+                            className="w-full"
                           >
-                            <Plus size={14} className="mr-1 sm:mr-2" />
-                            <span className="hidden sm:inline">Add to Cart</span>
-                            <span className="sm:hidden">Add</span>
+                            <Plus size={16} className="mr-2" />
+                            Add to Cart
                           </Button>
                         )
                       ) : (
-                        <Button disabled className="w-full h-8 sm:h-10 text-xs sm:text-sm">
+                        <Button disabled className="w-full">
                           Out of Stock
                         </Button>
                       )}
@@ -1266,7 +1176,7 @@ const RebuiltModernSalesPage = () => {
       <AddCustomerModal
         open={isAddCustomerModalOpen}
         onOpenChange={setIsAddCustomerModalOpen}
-        onCustomerAdded={(customer) => handleAddCustomerSuccess(customer)}
+        onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
       />
       
       <AddDebtModal
