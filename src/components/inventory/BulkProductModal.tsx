@@ -254,7 +254,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[98vw] h-[98vh] max-w-none max-h-none border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
         {/* Header */}
-        <div className="border-b-4 border-blue-600 bg-white dark:bg-gray-900 p-6 text-center flex-shrink-0">
+        <div className="border-b-4 border-blue-600 bg-white dark:bg-gray-900 p-3 lg:p-6 text-center flex-shrink-0">
           <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
             BULK ADD PRODUCTS
           </DialogTitle>
@@ -265,7 +265,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
         
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Controls */}
-          <div className="flex flex-wrap gap-4 p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex flex-wrap gap-2 lg:gap-4 p-2 lg:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <Button
               onClick={downloadCSVTemplate}
               variant="outline"
@@ -439,7 +439,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 flex justify-between items-center">
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 lg:p-4 flex justify-between items-center">
             <div className="text-xs text-gray-500 dark:text-gray-400">
               <AlertCircle className="w-4 h-4 inline mr-1" />
               Empty quantity/threshold will use automatic values
