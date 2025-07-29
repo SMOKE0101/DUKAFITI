@@ -325,17 +325,23 @@ const RebuiltModernSalesPage = () => {
 
   const handleAddCustomerSuccess = useCallback((customerId: string) => {
     console.log('[RebuiltModernSalesPage] Customer added successfully, ID:', customerId);
+    console.log('[RebuiltModernSalesPage] Current customers before update:', customers.map(c => ({ id: c.id, name: c.name })));
     
     // Immediately set the customer ID
     setSelectedCustomerId(customerId);
     setIsAddCustomerModalOpen(false);
     
     // Refresh the customer list immediately to ensure the new customer is available
-    refetchCustomers();
+    refetchCustomers().then(() => {
+      console.log('[RebuiltModernSalesPage] Customers refreshed after adding new customer');
+    });
     
     // Also dispatch an event to ensure all components are notified
     window.dispatchEvent(new CustomEvent('customer-list-updated'));
-  }, [refetchCustomers]);
+    
+    // Add debugging for payment method
+    console.log('[RebuiltModernSalesPage] Current payment method:', paymentMethod);
+  }, [refetchCustomers, customers, paymentMethod]);
 
   const handleSearchTermChange = useCallback((value: string) => {
     setSearchTerm(value);
@@ -461,7 +467,7 @@ const RebuiltModernSalesPage = () => {
                   ref={productListRef}
                   className="h-full overflow-y-auto"
                 >
-                   <div className="p-3 md:p-4 lg:p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 md:gap-3 lg:gap-4" 
+                   <div className="p-2 sm:p-3 md:p-4 lg:p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4" 
                         style={{ paddingBottom: '120px' }} // Space for search bar + bottom nav + extra padding
                    >
                     {filteredProducts.map(product => {
@@ -883,32 +889,33 @@ const RebuiltModernSalesPage = () => {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-4 lg:gap-5">
             {filteredProducts.map(product => {
               // Special handling for debt card
               if ('isDebtCard' in product && product.isDebtCard) {
                 return (
                   <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                       <div className="flex flex-col h-full">
-                        <h3 className="font-medium mb-2 text-red-700 dark:text-red-400">Record Cash Lending</h3>
-                        <p className="text-sm text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
+                        <h3 className="font-medium mb-1 sm:mb-2 text-sm sm:text-base text-red-700 dark:text-red-400">Record Cash Lending</h3>
+                        <p className="text-xs sm:text-sm text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
                         
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="font-bold text-lg text-red-700 dark:text-red-400">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 sm:mb-3 gap-1">
+                          <span className="font-bold text-sm sm:text-base text-red-700 dark:text-red-400">
                             Debt Recording
                           </span>
-                          <Badge variant="destructive">
+                          <Badge variant="destructive" className="text-xs w-fit">
                             Active
                           </Badge>
                         </div>
                         
                         <Button
                           onClick={() => setIsAddDebtModalOpen(true)}
-                          className="w-full bg-red-600 hover:bg-red-700 text-white"
+                          className="w-full bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm h-8 sm:h-10"
                         >
-                          <Receipt size={16} className="mr-2" />
-                          Record Debt
+                          <Receipt size={14} className="mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Record Debt</span>
+                          <span className="sm:hidden">Record</span>
                         </Button>
                       </div>
                     </CardContent>
@@ -921,14 +928,14 @@ const RebuiltModernSalesPage = () => {
               
               return (
                 <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow h-full">
-                  <CardContent className="p-3 sm:p-4 h-full">
+                  <CardContent className="p-2 sm:p-3 h-full">
                     <div className="flex flex-col h-full justify-between">
                       <div className="flex-1">
-                        <h3 className="font-medium mb-2 line-clamp-2 text-sm sm:text-base">{product.name}</h3>
-                        <p className="text-xs sm:text-sm text-muted-foreground mb-2 truncate">{product.category}</p>
+                        <h3 className="font-medium mb-1 sm:mb-2 line-clamp-2 text-xs sm:text-sm">{product.name}</h3>
+                        <p className="text-xs text-muted-foreground mb-1 sm:mb-2 truncate">{product.category}</p>
                         
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-1 sm:gap-2">
-                          <span className="font-bold text-sm sm:text-lg text-primary">
+                        <div className="flex flex-col gap-1 mb-2 sm:mb-3">
+                          <span className="font-bold text-sm sm:text-base text-primary">
                             {formatCurrency(product.sellingPrice)}
                           </span>
                           <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'} className="text-xs w-fit">

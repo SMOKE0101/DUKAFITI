@@ -44,7 +44,9 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
     selectedCustomerId,
     customersCount: customers.length,
     customerFound: !!customer,
-    customerIds: customers.map(c => c.id)
+    customerData: customer ? { id: customer.id, name: customer.name, debt: customer.outstandingDebt } : null,
+    allCustomerIds: customers.map(c => ({ id: c.id, name: c.name })),
+    paymentMethod
   });
 
   const handleCheckout = async () => {
@@ -94,7 +96,9 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
     if (paymentMethod === 'debt' && selectedCustomerId && !customer) {
       console.error('[SalesCheckout] Customer not found for debt sale:', {
         selectedCustomerId,
-        availableCustomers: customers.map(c => ({ id: c.id, name: c.name }))
+        availableCustomers: customers.map(c => ({ id: c.id, name: c.name })),
+        paymentMethod,
+        customersLoaded: customers.length > 0
       });
       
       toast({
@@ -103,6 +107,20 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         variant: "destructive",
       });
       return;
+    }
+
+    // Add extra validation and logging for debt sales
+    if (paymentMethod === 'debt') {
+      console.log('[SalesCheckout] Processing debt sale with validation:', {
+        hasSelectedCustomerId: !!selectedCustomerId,
+        customerExists: !!customer,
+        customerDetails: customer ? {
+          id: customer.id,
+          name: customer.name,
+          currentDebt: customer.outstandingDebt,
+          totalPurchases: customer.totalPurchases
+        } : null
+      });
     }
 
     setIsProcessing(true);
