@@ -330,10 +330,11 @@ const RebuiltModernSalesPage = () => {
     setSelectedCustomerId(customerId);
     setIsAddCustomerModalOpen(false);
     
-    // Refresh the customer list to ensure the new customer is available
-    setTimeout(() => {
-      refetchCustomers();
-    }, 100);
+    // Refresh the customer list immediately to ensure the new customer is available
+    refetchCustomers();
+    
+    // Also dispatch an event to ensure all components are notified
+    window.dispatchEvent(new CustomEvent('customer-list-updated'));
   }, [refetchCustomers]);
 
   const handleSearchTermChange = useCallback((value: string) => {
@@ -882,7 +883,7 @@ const RebuiltModernSalesPage = () => {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
             {filteredProducts.map(product => {
               // Special handling for debt card
               if ('isDebtCard' in product && product.isDebtCard) {
@@ -919,51 +920,56 @@ const RebuiltModernSalesPage = () => {
               const quantity = cartItem?.quantity || 0;
               
               return (
-                <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col h-full">
-                      <h3 className="font-medium mb-2 line-clamp-2">{product.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
-                      
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="font-bold text-lg text-primary">
-                          {formatCurrency(product.sellingPrice)}
-                        </span>
-                        <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'}>
-                          Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
-                        </Badge>
+                <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow h-full">
+                  <CardContent className="p-3 sm:p-4 h-full">
+                    <div className="flex flex-col h-full justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium mb-2 line-clamp-2 text-sm sm:text-base">{product.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-2 truncate">{product.category}</p>
+                        
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-1 sm:gap-2">
+                          <span className="font-bold text-sm sm:text-lg text-primary">
+                            {formatCurrency(product.sellingPrice)}
+                          </span>
+                          <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'} className="text-xs w-fit">
+                            {product.currentStock === -1 ? 'Unspec.' : `Stock: ${product.currentStock}`}
+                          </Badge>
+                        </div>
                       </div>
                       
                       {product.currentStock > 0 || product.currentStock === -1 ? (
                         quantity > 0 ? (
-                          <div className="flex items-center justify-between bg-muted rounded-lg p-2">
+                          <div className="flex items-center justify-between bg-muted rounded-lg p-1.5 sm:p-2">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(product.id, quantity - 1)}
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                             >
-                              <Minus size={16} />
+                              <Minus size={14} />
                             </Button>
-                            <span className="font-medium">{quantity}</span>
+                            <span className="font-medium text-sm sm:text-base">{quantity}</span>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(product.id, quantity + 1)}
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                             >
-                              <Plus size={16} />
+                              <Plus size={14} />
                             </Button>
                           </div>
                         ) : (
                           <Button
                             onClick={() => addToCart(product.id)}
-                            className="w-full"
+                            className="w-full h-8 sm:h-10 text-xs sm:text-sm"
                           >
-                            <Plus size={16} className="mr-2" />
-                            Add to Cart
+                            <Plus size={14} className="mr-1 sm:mr-2" />
+                            <span className="hidden sm:inline">Add to Cart</span>
+                            <span className="sm:hidden">Add</span>
                           </Button>
                         )
                       ) : (
-                        <Button disabled className="w-full">
+                        <Button disabled className="w-full h-8 sm:h-10 text-xs sm:text-sm">
                           Out of Stock
                         </Button>
                       )}

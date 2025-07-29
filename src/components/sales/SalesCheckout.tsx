@@ -39,6 +39,14 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
 
+  // Debug customer lookup
+  console.log('[SalesCheckout] Customer lookup:', {
+    selectedCustomerId,
+    customersCount: customers.length,
+    customerFound: !!customer,
+    customerIds: customers.map(c => c.id)
+  });
+
   const handleCheckout = async () => {
     console.log('[SalesCheckout] handleCheckout called with:', {
       cart: cart.length,
@@ -77,6 +85,21 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       toast({
         title: "Customer Required",
         description: "Please select a customer for debt transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // For debt sales, ensure customer exists before proceeding
+    if (paymentMethod === 'debt' && selectedCustomerId && !customer) {
+      console.error('[SalesCheckout] Customer not found for debt sale:', {
+        selectedCustomerId,
+        availableCustomers: customers.map(c => ({ id: c.id, name: c.name }))
+      });
+      
+      toast({
+        title: "Customer Not Found",
+        description: "The selected customer could not be found. Please refresh and try again.",
         variant: "destructive",
       });
       return;
