@@ -254,11 +254,11 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[98vw] h-[98vh] max-w-none max-h-none border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
         {/* Header */}
-        <div className="border-b-4 border-blue-600 bg-white dark:bg-gray-900 p-3 lg:p-6 text-center flex-shrink-0">
-          <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+        <div className="border-b-4 border-blue-600 bg-white dark:bg-gray-900 p-2 lg:p-6 text-center flex-shrink-0">
+          <DialogTitle className="font-mono text-lg lg:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
             BULK ADD PRODUCTS
           </DialogTitle>
-          <DialogDescription className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2 uppercase tracking-wider">
+          <DialogDescription className="font-mono text-xs lg:text-sm text-gray-600 dark:text-gray-400 mt-1 lg:mt-2 uppercase tracking-wider">
             Add multiple products using spreadsheet-style table
           </DialogDescription>
         </div>
@@ -406,17 +406,17 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
             </div>
 
             {/* Templates - Bottom on mobile (1/5), Right sidebar on desktop */}
-            <div className="flex-[1] lg:w-64 h-48 lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-gray-900 dark:text-white">
-                  Quick Templates
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Click to fill {activeRowIndex !== null ? `row ${activeRowIndex + 1}` : 'selected row'}
-                </p>
-              </div>
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-2">
+            <div className="flex-[1] lg:w-64 h-40 lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col">
+              <ScrollArea className="flex-1">
+                <div className="p-2 lg:p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="font-mono font-bold text-xs lg:text-sm uppercase tracking-wider text-gray-900 dark:text-white">
+                    Quick Templates
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Click to fill {activeRowIndex !== null ? `row ${activeRowIndex + 1}` : 'selected row'}
+                  </p>
+                </div>
+                <div className="p-2 lg:p-4 space-y-2">
                   {commonTemplates.map((template, index) => (
                     <button
                       key={index}
