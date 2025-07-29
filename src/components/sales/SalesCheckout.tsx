@@ -109,7 +109,9 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
     // For debt sales, ensure customer exists before proceeding
     if (paymentMethod === 'debt' && selectedCustomerId && !customer) {
-      // If customer ID is temporary, try to find by name match
+      console.error('[SalesCheckout] Customer not found for debt sale, attempting fallback strategies...');
+      
+      // Strategy 1: If customer ID is temporary, try to find by name match
       if (selectedCustomerId.startsWith('temp_')) {
         console.log('[SalesCheckout] Temporary customer ID detected, searching by name...');
         
@@ -146,19 +148,36 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           return;
         }
       } else {
-        console.error('[SalesCheckout] Customer not found for debt sale:', {
-          selectedCustomerId,
-          availableCustomers: customers.map(c => ({ id: c.id, name: c.name })),
-          paymentMethod,
-          customersLoaded: customers.length > 0
-        });
+        // Strategy 2: For real IDs, try to find the most recently added customer as fallback
+        console.log('[SalesCheckout] Real customer ID but not found, trying recent customer fallback');
+        const sortedCustomers = [...customers].sort((a, b) => 
+          new Date(b.createdDate || 0).getTime() - new Date(a.createdDate || 0).getTime()
+        );
         
-        toast({
-          title: "Customer Not Found",
-          description: "The selected customer could not be found. Please refresh and try again.",
-          variant: "destructive",
-        });
-        return;
+        if (sortedCustomers.length > 0) {
+          const recentCustomer = sortedCustomers[0];
+          console.log('[SalesCheckout] Using most recent customer as fallback:', recentCustomer);
+          customer = recentCustomer;
+          
+          toast({
+            title: "Customer Selected",
+            description: `Using most recent customer: ${recentCustomer.name}`,
+          });
+        } else {
+          console.error('[SalesCheckout] No customers available:', {
+            selectedCustomerId,
+            availableCustomers: customers.map(c => ({ id: c.id, name: c.name })),
+            paymentMethod,
+            customersLoaded: customers.length > 0
+          });
+          
+          toast({
+            title: "No Customer Available",
+            description: "No customer is available for this debt transaction. Please add a customer first.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
     }
 

@@ -330,12 +330,22 @@ export const useUnifiedCustomers = () => {
         setCustomers(prev => {
           const updated = prev.map(c => c.id === newCustomer.id ? transformedCustomer : c);
           setCache('customers', updated);
+          console.log('[UnifiedCustomers] Replaced temp customer with real customer:', {
+            tempId: newCustomer.id,
+            realId: transformedCustomer.id,
+            customerName: transformedCustomer.name
+          });
           return updated;
         });
 
         // Trigger immediate event to notify components of the new customer
         window.dispatchEvent(new CustomEvent('customer-created', {
           detail: { customer: transformedCustomer, tempId: newCustomer.id }
+        }));
+
+        // Also trigger a separate event specifically for ID mapping
+        window.dispatchEvent(new CustomEvent('customer-id-updated', {
+          detail: { oldId: newCustomer.id, newId: transformedCustomer.id, customer: transformedCustomer }
         }));
 
         console.log('[UnifiedCustomers] Customer created successfully, returning real customer:', transformedCustomer);

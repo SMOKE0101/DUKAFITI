@@ -398,8 +398,24 @@ const RebuiltModernSalesPage = () => {
       }
     };
 
+    const handleCustomerIdUpdated = (event: any) => {
+      const { oldId, newId, customer } = event.detail;
+      console.log('[RebuiltModernSalesPage] Customer ID updated event received:', { oldId, newId, currentSelectedId: selectedCustomerId });
+      
+      // If we were using the old ID, switch to the new ID
+      if (selectedCustomerId === oldId) {
+        console.log('[RebuiltModernSalesPage] Updating selected customer ID from old to new:', oldId, '->', newId);
+        setSelectedCustomerId(newId);
+      }
+    };
+
     window.addEventListener('customer-created', handleCustomerCreated);
-    return () => window.removeEventListener('customer-created', handleCustomerCreated);
+    window.addEventListener('customer-id-updated', handleCustomerIdUpdated);
+    
+    return () => {
+      window.removeEventListener('customer-created', handleCustomerCreated);
+      window.removeEventListener('customer-id-updated', handleCustomerIdUpdated);
+    };
   }, [selectedCustomerId]);
 
   if (productsLoading || customersLoading) {
