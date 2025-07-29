@@ -23,7 +23,7 @@ interface AddDebtModalProps {
 }
 
 const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
-  const { customers, updateCustomer } = useUnifiedCustomers();
+  const { customers, updateCustomer, refetch } = useUnifiedCustomers();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
@@ -152,14 +152,44 @@ const AddDebtModal = ({ isOpen, onClose }: AddDebtModalProps) => {
     }
   };
 
-  const handleCustomerAdded = (customer: any) => {
+  const handleCustomerAdded = async (customer: any) => {
     console.log('🎯 Customer added successfully, setting selection:', customer);
-    setSelectedCustomerId(customer.id);
-    setShowAddCustomer(false);
-    toast({
-      title: "Customer Added",
-      description: `${customer.name} has been selected for debt recording.`,
-    });
+    
+    try {
+      // Force refresh customers from the unified hook to ensure latest data
+      await refetch();
+      
+      // Set the new customer as selected immediately for instant UI feedback
+      setSelectedCustomerId(customer.id);
+      
+      // Close the modal
+      setShowAddCustomer(false);
+      
+      // Show success feedback
+      toast({
+        title: "Customer Added & Selected",
+        description: `${customer.name} has been added and is now selected for debt recording.`,
+      });
+      
+      // Log the current state for debugging
+      console.log('🎯 Customer selection updated in AddDebtModal:', {
+        selectedCustomerId: customer.id,
+        selectedCustomerName: customer.name,
+        selectedCustomerDebt: customer.outstandingDebt
+      });
+      
+    } catch (error) {
+      console.error('🎯 Error in handleCustomerAdded:', error);
+      
+      // Fallback: still set selection even if refresh fails
+      setSelectedCustomerId(customer.id);
+      setShowAddCustomer(false);
+      
+      toast({
+        title: "Customer Added",
+        description: `${customer.name} has been selected for debt recording.`,
+      });
+    }
   };
 
   return (
