@@ -39,18 +39,27 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   const { toast } = useToast();
   const { createSale } = useUnifiedSales();
   const { updateProduct } = useUnifiedProducts();
-  const { updateCustomer, customers: hookCustomers, createCustomer } = useUnifiedCustomers();
+  const { updateCustomer, customers: hookCustomers, createCustomer, refetch: refetchCustomers } = useUnifiedCustomers();
 
-  // Get all available customers (unified from hook)
+  // Get all available customers (unified from hook) - ensure we always have the most up-to-date list
   const allCustomers = useMemo(() => {
-    const customers = hookCustomers.length > 0 ? hookCustomers : initialCustomers;
+    // Combine both sources and deduplicate by id, preferring hookCustomers when available
+    const combinedCustomers = [...hookCustomers];
+    
+    // Add any customers from initialCustomers that aren't in hookCustomers
+    initialCustomers.forEach(customer => {
+      if (!hookCustomers.find(hc => hc.id === customer.id)) {
+        combinedCustomers.push(customer);
+      }
+    });
+    
     console.log('[NewSalesCheckout] Available customers updated:', {
       hookCustomers: hookCustomers.length,
       initialCustomers: initialCustomers.length,
-      totalCustomers: customers.length,
+      combinedCustomers: combinedCustomers.length,
       selectedCustomerId
     });
-    return customers;
+    return combinedCustomers;
   }, [hookCustomers, initialCustomers, selectedCustomerId]);
 
   // Update selected customer when customer list changes or selection changes
@@ -68,9 +77,24 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
     }
   }, [selectedCustomerId, allCustomers]);
 
+  // Listen for customer refresh events
+  useEffect(() => {
+    const handleCustomersRefreshed = () => {
+      console.log('[NewSalesCheckout] Customers refreshed event received');
+      // Force re-evaluation of customer selection
+      if (selectedCustomerId) {
+        const customer = allCustomers.find(c => c.id === selectedCustomerId);
+        setSelectedCustomer(customer || null);
+      }
+    };
+
+    window.addEventListener('customers-refreshed', handleCustomersRefreshed);
+    return () => window.removeEventListener('customers-refreshed', handleCustomersRefreshed);
+  }, [selectedCustomerId, allCustomers]);
+
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
 
-  const handleCustomerAdded = useCallback((newCustomer: Customer) => {
+  const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
     console.log('[NewSalesCheckout] Customer added successfully:', {
       id: newCustomer.id,
       name: newCustomer.name,
@@ -78,32 +102,48 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       debt: newCustomer.outstandingDebt
     });
     
-    // Immediately update the customer in the customers hook to ensure it's available
-    // The useUnifiedCustomers hook should have already added it, but we force a sync here
-    
-    // Set the new customer as selected immediately for instant UI feedback
-    setSelectedCustomer(newCustomer);
-    setSelectedCustomerId(newCustomer.id);
-    
-    // Close the modal
-    setIsAddCustomerModalOpen(false);
-    
-    // Refresh customers from parent to ensure consistency
-    onCustomersRefresh();
-    
-    // Show success feedback
-    toast({
-      title: "Customer Added & Selected",
-      description: `${newCustomer.name} has been added and is now selected for this sale.`,
-    });
-    
-    // Log the current state for debugging
-    console.log('[NewSalesCheckout] Customer selection updated:', {
-      selectedCustomerId: newCustomer.id,
-      selectedCustomerName: newCustomer.name,
-      selectedCustomerDebt: newCustomer.outstandingDebt
-    });
-  }, [onCustomersRefresh, toast]);
+    try {
+      // Force refresh customers from the unified hook to ensure latest data
+      await refetchCustomers();
+      
+      // Set the new customer as selected immediately for instant UI feedback
+      setSelectedCustomer(newCustomer);
+      setSelectedCustomerId(newCustomer.id);
+      
+      // Close the modal
+      setIsAddCustomerModalOpen(false);
+      
+      // Refresh customers from parent to ensure consistency across components
+      onCustomersRefresh();
+      
+      // Show success feedback
+      toast({
+        title: "Customer Added & Selected",
+        description: `${newCustomer.name} has been added and is now selected for this sale.`,
+      });
+      
+      // Log the current state for debugging
+      console.log('[NewSalesCheckout] Customer selection updated:', {
+        selectedCustomerId: newCustomer.id,
+        selectedCustomerName: newCustomer.name,
+        selectedCustomerDebt: newCustomer.outstandingDebt
+      });
+      
+    } catch (error) {
+      console.error('[NewSalesCheckout] Error handling customer addition:', error);
+      
+      // Still try to select the customer even if refresh failed
+      setSelectedCustomer(newCustomer);
+      setSelectedCustomerId(newCustomer.id);
+      setIsAddCustomerModalOpen(false);
+      
+      toast({
+        title: "Customer Added",
+        description: `${newCustomer.name} has been added. If you don't see them in the dropdown, try refreshing the page.`,
+        variant: "destructive",
+      });
+    }
+  }, [refetchCustomers, onCustomersRefresh, toast]);
 
   const handleCheckout = async () => {
     console.log('[NewSalesCheckout] Starting checkout:', {

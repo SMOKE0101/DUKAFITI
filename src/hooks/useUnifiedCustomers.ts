@@ -574,7 +574,12 @@ export const useUnifiedCustomers = () => {
     createCustomer,
     updateCustomer,
     deleteCustomer,
-    refetch: loadCustomers,
+    refetch: useCallback(async () => {
+      console.log('[UnifiedCustomers] Force refreshing customer data...');
+      await loadCustomers();
+      // Dispatch a custom event to notify components
+      window.dispatchEvent(new CustomEvent('customers-refreshed'));
+    }, [loadCustomers]),
     isOnline,
     pendingOperations: pendingOps.filter(op => op.type === 'customer').length,
     syncPendingOperations,
