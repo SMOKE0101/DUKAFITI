@@ -16,6 +16,7 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
+import { useSidebar } from '@/components/ui/sidebar';
 import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
 import { 
@@ -184,6 +185,16 @@ const RebuiltModernSalesPage = () => {
   // Mobile panel state
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
   const isMobile = useIsMobile();
+  
+  // Get sidebar state for responsive grid
+  const sidebarContext = React.useContext(React.createContext<any>(null));
+  let sidebarOpen = true;
+  try {
+    const sidebar = useSidebar();
+    sidebarOpen = sidebar.open;
+  } catch {
+    // useSidebar not available in this context, default to open
+  }
 
   // Scroll position preservation
   const productListRef = useRef<HTMLDivElement>(null);
@@ -726,31 +737,39 @@ const RebuiltModernSalesPage = () => {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {/* Responsive grid based on sidebar state:
+              Desktop: 4x4 when sidebar open, 5x5 when sidebar closed  
+              Tablet: 1x1 when sidebar open, 2x2 when sidebar closed */}
+          <div className={`grid gap-3 ${
+            sidebarOpen 
+              ? 'grid-cols-4 lg:grid-cols-4 xl:grid-cols-4' // 4x4 when open
+              : 'grid-cols-5 lg:grid-cols-5 xl:grid-cols-5' // 5x5 when closed
+          }`}>
             {filteredProducts.map(product => {
-              // Special handling for debt card
+              // Special handling for debt card - use mobile design
               if ('isDebtCard' in product && product.isDebtCard) {
                 return (
-                  <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
-                    <CardContent className="p-4">
+                  <Card key={product.id} className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                    <CardContent className="p-2.5">
                       <div className="flex flex-col h-full">
-                        <h3 className="font-medium mb-2 text-red-700 dark:text-red-400">Record Cash Lending</h3>
-                        <p className="text-sm text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
+                        <h3 className="font-medium text-sm mb-1 text-red-700 dark:text-red-400">Record Cash Lending</h3>
+                        <p className="text-xs text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
                         
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="font-bold text-lg text-red-700 dark:text-red-400">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-bold text-sm text-red-700 dark:text-red-400">
                             Debt Recording
                           </span>
-                          <Badge variant="destructive">
+                          <Badge variant="destructive" className="text-xs">
                             Active
                           </Badge>
                         </div>
                         
                         <Button
                           onClick={() => setIsAddDebtModalOpen(true)}
-                          className="w-full bg-red-600 hover:bg-red-700 text-white"
+                          size="sm"
+                          className="w-full bg-red-600 hover:bg-red-700 text-white h-7"
                         >
-                          <Receipt size={16} className="mr-2" />
+                          <Receipt size={14} className="mr-1" />
                           Record Debt
                         </Button>
                       </div>
@@ -763,51 +782,58 @@ const RebuiltModernSalesPage = () => {
               const quantity = cartItem?.quantity || 0;
               
               return (
-                <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
+                <Card key={product.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <CardContent className="p-2.5">
                     <div className="flex flex-col h-full">
-                      <h3 className="font-medium mb-2 line-clamp-2">{product.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
+                      <h3 className="font-medium text-sm mb-1 truncate leading-tight">{product.name}</h3>
+                      <p className="text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
                       
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="font-bold text-lg text-primary">
+                      <div className="flex justify-between items-center mb-2 gap-1">
+                        <span className="font-bold text-sm text-primary truncate">
                           {formatCurrency(product.sellingPrice)}
                         </span>
-                        <Badge variant={product.currentStock > 0 ? 'default' : 'destructive'}>
-                          Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
+                        <Badge 
+                          variant={product.currentStock > 0 ? 'default' : product.currentStock === -1 ? 'secondary' : 'destructive'} 
+                          className="text-xs px-1 py-0.5 min-w-0 max-w-[80px] truncate whitespace-nowrap"
+                          title={product.currentStock === -1 ? "Unspecified" : `Stock: ${product.currentStock}`}
+                        >
+                          {product.currentStock === -1 ? 'Unspec.' : product.currentStock}
                         </Badge>
                       </div>
                       
                       {product.currentStock > 0 || product.currentStock === -1 ? (
                         quantity > 0 ? (
-                          <div className="flex items-center justify-between bg-muted rounded-lg p-2">
+                          <div className="flex items-center justify-between bg-muted rounded-lg p-1">
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="h-8 w-8 p-0"
                               onClick={() => handleQuantityChange(product.id, quantity - 1)}
                             >
-                              <Minus size={16} />
+                              <Minus size={14} />
                             </Button>
-                            <span className="font-medium">{quantity}</span>
+                            <span className="font-medium text-sm">{quantity}</span>
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="h-8 w-8 p-0"
                               onClick={() => handleQuantityChange(product.id, quantity + 1)}
                             >
-                              <Plus size={16} />
+                              <Plus size={14} />
                             </Button>
                           </div>
                         ) : (
                           <Button
                             onClick={() => addToCart(product.id)}
-                            className="w-full"
+                            size="sm"
+                            className="w-full text-sm h-8"
                           >
-                            <Plus size={16} className="mr-2" />
-                            Add to Cart
+                            <Plus size={12} className="mr-1" />
+                            Add
                           </Button>
                         )
                       ) : (
-                        <Button disabled className="w-full">
+                        <Button disabled size="sm" className="w-full h-8">
                           Out of Stock
                         </Button>
                       )}
