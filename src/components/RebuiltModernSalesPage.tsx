@@ -457,31 +457,22 @@ const RebuiltModernSalesPage = () => {
                         style={{ paddingBottom: '250px' }}
                    >
                     {filteredProducts.map(product => {
-                      // Special handling for debt card
+                      // Special handling for debt card - same size as other product cards
                       if ('isDebtCard' in product && product.isDebtCard) {
                         return (
-                          <Card key={product.id} className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
-                            <CardContent className="p-3">
+                          <Card key={product.id} className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
+                            <CardContent className="p-2.5 md:p-3">
                               <div className="flex flex-col h-full">
-                                <h3 className="font-medium text-sm mb-1 text-red-700 dark:text-red-400">Record Cash Lending</h3>
-                                <p className="text-xs text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
-                                
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="font-bold text-sm text-red-700 dark:text-red-400">
-                                    Debt Recording
-                                  </span>
-                                  <Badge variant="destructive" className="text-xs">
-                                    Active
-                                  </Badge>
-                                </div>
+                                <h3 className="font-medium text-xs md:text-sm mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
+                                <p className="text-[10px] md:text-xs text-red-600 dark:text-red-500 mb-2 truncate">Add customer debt</p>
                                 
                                 <Button
                                   onClick={() => setIsAddDebtModalOpen(true)}
                                   size="sm"
-                                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                                  className="w-full bg-red-600 hover:bg-red-700 text-white h-6 md:h-7 text-xs mt-auto"
                                 >
                                   <Receipt size={14} className="mr-1" />
-                                  Record Debt
+                                  Add
                                 </Button>
                               </div>
                             </CardContent>
@@ -752,31 +743,22 @@ const RebuiltModernSalesPage = () => {
               : 'grid-cols-5 lg:grid-cols-5 xl:grid-cols-5' // 5x5 when closed
           }`}>
             {filteredProducts.map(product => {
-              // Special handling for debt card - use mobile design
+              // Special handling for debt card - same size as other product cards
               if ('isDebtCard' in product && product.isDebtCard) {
                 return (
-                  <Card key={product.id} className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                  <Card key={product.id} className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
                     <CardContent className="p-2.5">
                       <div className="flex flex-col h-full">
-                        <h3 className="font-medium text-sm mb-1 text-red-700 dark:text-red-400">Record Cash Lending</h3>
-                        <p className="text-xs text-red-600 dark:text-red-500 mb-2">Add customer debt</p>
-                        
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-bold text-sm text-red-700 dark:text-red-400">
-                            Debt Recording
-                          </span>
-                          <Badge variant="destructive" className="text-xs">
-                            Active
-                          </Badge>
-                        </div>
+                        <h3 className="font-medium text-xs mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
+                        <p className="text-[10px] text-red-600 dark:text-red-500 mb-2 truncate">Add customer debt</p>
                         
                         <Button
                           onClick={() => setIsAddDebtModalOpen(true)}
                           size="sm"
-                          className="w-full bg-red-600 hover:bg-red-700 text-white h-7"
+                          className="w-full bg-red-600 hover:bg-red-700 text-white h-6 text-xs mt-auto"
                         >
                           <Receipt size={14} className="mr-1" />
-                          Record Debt
+                          Add
                         </Button>
                       </div>
                     </CardContent>
