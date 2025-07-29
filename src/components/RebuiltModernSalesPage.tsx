@@ -434,7 +434,7 @@ const RebuiltModernSalesPage = () => {
                   className="h-full overflow-y-auto"
                 >
                    <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" 
-                        style={{ paddingBottom: '140px' }} // 64px (bottom nav) + 56px (search bar height) + 20px (comfortable space)
+                        style={{ paddingBottom: '120px' }}
                    >
                     {filteredProducts.map(product => {
                       // Special handling for debt card
