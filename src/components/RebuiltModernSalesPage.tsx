@@ -341,9 +341,11 @@ const RebuiltModernSalesPage = () => {
     );
   }
 
+  console.log('isMobile status:', isMobile, 'window.innerWidth:', window.innerWidth);
+  
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen bg-background">
+      <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px' }}>
         {/* Sales Header - Similar to Dashboard */}
         <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
           <div className="flex items-center gap-4">
@@ -435,7 +437,7 @@ const RebuiltModernSalesPage = () => {
                 >
                    <div 
                         className="px-4 pt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" 
-                        style={{ paddingBottom: '200px' }}
+                        style={{ paddingBottom: '250px' }}
                    >
                     {filteredProducts.map(product => {
                       // Special handling for debt card
