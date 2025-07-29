@@ -16,8 +16,7 @@ import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
-import SalesCheckout from './sales/SalesCheckout';
-import AddCustomerModal from './sales/AddCustomerModal';
+import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
 import { 
   Search, 
@@ -323,9 +322,7 @@ const RebuiltModernSalesPage = () => {
     }
   }, [clearCart, refetchProducts, isMobile]);
 
-  const handleAddCustomerSuccess = useCallback((customerId: string) => {
-    setSelectedCustomerId(customerId);
-    setIsAddCustomerModalOpen(false);
+  const handleCustomersRefresh = useCallback(() => {
     refetchCustomers();
   }, [refetchCustomers]);
 
@@ -567,122 +564,6 @@ const RebuiltModernSalesPage = () => {
                 </div>
               </Button>
               
-              {/* Customer Selection */}
-              <div className="flex-shrink-0 p-4 bg-background border-b border-border">
-                <div className="space-y-4">
-                  {/* Customer Selection */}
-                  <div>
-                    <label className="text-sm font-medium mb-3 block text-foreground">Customer Selection</label>
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
-                          <SelectTrigger className="flex-1 h-12 bg-background border border-border hover:border-primary/50 transition-colors">
-                            <SelectValue>
-                              {selectedCustomer ? (
-                                <div className="flex flex-col items-start w-full">
-                                  <div className="flex items-center gap-2">
-                                    <User size={14} className="text-primary" />
-                                    <span className="font-medium">{selectedCustomer.name}</span>
-                                  </div>
-                                  {selectedCustomer.outstandingDebt > 0 && (
-                                    <span className="text-xs text-red-600 font-medium mt-1">
-                                      Outstanding Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <User size={14} />
-                                  <span>No Customer Selected</span>
-                                </div>
-                              )}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="no-customer">
-                              <div className="flex items-center gap-2">
-                                <User size={14} className="text-muted-foreground" />
-                                <span>No Customer</span>
-                              </div>
-                            </SelectItem>
-                            {customers.map(customer => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                <div className="flex flex-col items-start w-full">
-                                  <div className="flex items-center gap-2">
-                                    <User size={14} className="text-primary" />
-                                    <span className="font-medium">{customer.name}</span>
-                                    <span className="text-xs text-muted-foreground">({customer.phone})</span>
-                                  </div>
-                                  {customer.outstandingDebt > 0 && (
-                                    <span className="text-xs text-red-600 font-medium mt-1">
-                                      Debt: {formatCurrency(customer.outstandingDebt)}
-                                    </span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-12 w-12 border-border hover:border-primary/50 transition-colors"
-                          onClick={() => setIsAddCustomerModalOpen(true)}
-                        >
-                          <UserPlus size={16} />
-                        </Button>
-                      </div>
-                      
-                      {/* Customer Debt Display */}
-                      {selectedCustomer && selectedCustomer.outstandingDebt > 0 && (
-                        <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                          <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                            <Receipt size={14} />
-                            <span className="text-sm font-medium">Customer has outstanding debt</span>
-                          </div>
-                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            Current debt: {formatCurrency(selectedCustomer.outstandingDebt)}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Payment Method */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Payment Method</label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPaymentMethod('cash')}
-                        className="flex-1"
-                      >
-                        <Banknote size={14} className="mr-1" />
-                        Cash
-                      </Button>
-                      <Button
-                        variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPaymentMethod('mpesa')}
-                        className="flex-1"
-                      >
-                        <DollarSign size={14} className="mr-1" />
-                        M-Pesa
-                      </Button>
-                      <Button
-                        variant={paymentMethod === 'debt' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPaymentMethod('debt')}
-                        className="flex-1"
-                      >
-                        <Receipt size={14} className="mr-1" />
-                        Debt
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Cart Items */}
               <div className="flex-1 overflow-y-auto">
@@ -749,24 +630,16 @@ const RebuiltModernSalesPage = () => {
                 )}
               </div>
 
-              {/* Cart Summary & Checkout */}
+              {/* Mobile Checkout */}
               {cart.length > 0 && (
-                <div className="flex-shrink-0 p-4 bg-background border-t border-border">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Total:</span>
-                      <span className="font-bold text-lg text-primary">{formatCurrency(total)}</span>
-                    </div>
-                    
-                    <SalesCheckout
-                      cart={cart}
-                      selectedCustomerId={selectedCustomerId}
-                      paymentMethod={paymentMethod}
-                      customers={customers}
-                      onCheckoutComplete={handleCheckoutSuccess}
-                      isOnline={isOnline}
-                    />
-                  </div>
+                <div className="flex-shrink-0 border-t border-border">
+                  <NewSalesCheckout
+                    cart={cart}
+                    onCheckoutComplete={handleCheckoutSuccess}
+                    isOnline={isOnline}
+                    customers={customers}
+                    onCustomersRefresh={handleCustomersRefresh}
+                  />
                 </div>
               )}
             </div>
@@ -783,12 +656,6 @@ const RebuiltModernSalesPage = () => {
         )}
 
         {/* Modals */}
-        <AddCustomerModal
-          open={isAddCustomerModalOpen}
-          onOpenChange={setIsAddCustomerModalOpen}
-          onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
-        />
-        
         <AddDebtModal
           isOpen={isAddDebtModalOpen}
           onClose={() => setIsAddDebtModalOpen(false)}
@@ -973,118 +840,6 @@ const RebuiltModernSalesPage = () => {
             )}
           </div>
 
-          {/* Customer Selection */}
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-3 block text-foreground">Customer Selection</label>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Select value={selectedCustomerId || 'no-customer'} onValueChange={(value) => setSelectedCustomerId(value === 'no-customer' ? null : value)}>
-                    <SelectTrigger className="flex-1 h-12 bg-background border border-border hover:border-primary/50 transition-colors">
-                      <SelectValue>
-                        {selectedCustomer ? (
-                          <div className="flex flex-col items-start w-full">
-                            <div className="flex items-center gap-2">
-                              <User size={14} className="text-primary" />
-                              <span className="font-medium">{selectedCustomer.name}</span>
-                            </div>
-                            {selectedCustomer.outstandingDebt > 0 && (
-                              <span className="text-xs text-red-600 font-medium mt-1">
-                                Outstanding Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <User size={14} />
-                            <span>No Customer Selected</span>
-                          </div>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no-customer">
-                        <div className="flex items-center gap-2">
-                          <User size={14} className="text-muted-foreground" />
-                          <span>No Customer</span>
-                        </div>
-                      </SelectItem>
-                      {customers.map(customer => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          <div className="flex flex-col items-start w-full">
-                            <div className="flex items-center gap-2">
-                              <User size={14} className="text-primary" />
-                              <span className="font-medium">{customer.name}</span>
-                              <span className="text-xs text-muted-foreground">({customer.phone})</span>
-                            </div>
-                            {customer.outstandingDebt > 0 && (
-                              <span className="text-xs text-red-600 font-medium mt-1">
-                                Debt: {formatCurrency(customer.outstandingDebt)}
-                              </span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-12 w-12 border-border hover:border-primary/50 transition-colors"
-                    onClick={() => setIsAddCustomerModalOpen(true)}
-                  >
-                    <UserPlus size={16} />
-                  </Button>
-                </div>
-                
-                {/* Customer Debt Display */}
-                {selectedCustomer && selectedCustomer.outstandingDebt > 0 && (
-                  <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                      <Receipt size={14} />
-                      <span className="text-sm font-medium">Customer has outstanding debt</span>
-                    </div>
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                      Current debt: {formatCurrency(selectedCustomer.outstandingDebt)}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Payment Method</label>
-              <div className="flex gap-2">
-                <Button
-                  variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setPaymentMethod('cash')}
-                  className="flex-1"
-                >
-                  <Banknote size={14} className="mr-1" />
-                  Cash
-                </Button>
-                <Button
-                  variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setPaymentMethod('mpesa')}
-                  className="flex-1"
-                >
-                  <DollarSign size={14} className="mr-1" />
-                  M-Pesa
-                </Button>
-                <Button
-                  variant={paymentMethod === 'debt' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setPaymentMethod('debt')}
-                  className="flex-1"
-                >
-                  <Receipt size={14} className="mr-1" />
-                  Debt
-                </Button>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Cart Items */}
@@ -1149,36 +904,21 @@ const RebuiltModernSalesPage = () => {
           )}
         </div>
 
-        {/* Cart Summary & Checkout */}
+        {/* New Checkout Section */}
         {cart.length > 0 && (
-          <div className="flex-shrink-0 p-6 bg-muted/50 border-t border-border">
-            <div className="space-y-4">
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Total:</span>
-                <span className="font-bold text-xl text-primary">{formatCurrency(total)}</span>
-              </div>
-              
-              <SalesCheckout
-                cart={cart}
-                selectedCustomerId={selectedCustomerId}
-                paymentMethod={paymentMethod}
-                customers={customers}
-                onCheckoutComplete={handleCheckoutSuccess}
-                isOnline={isOnline}
-              />
-            </div>
+          <div className="flex-shrink-0 border-t border-border">
+            <NewSalesCheckout
+              cart={cart}
+              onCheckoutComplete={handleCheckoutSuccess}
+              isOnline={isOnline}
+              customers={customers}
+              onCustomersRefresh={handleCustomersRefresh}
+            />
           </div>
         )}
       </div>
 
       {/* Modals */}
-      <AddCustomerModal
-        open={isAddCustomerModalOpen}
-        onOpenChange={setIsAddCustomerModalOpen}
-        onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
-      />
-      
       <AddDebtModal
         isOpen={isAddDebtModalOpen}
         onClose={() => setIsAddDebtModalOpen(false)}
