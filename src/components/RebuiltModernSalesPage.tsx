@@ -115,9 +115,9 @@ const FixedMobileSearch = ({
 
   return (
     <div 
-      className="fixed bottom-16 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-t border-border shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-t border-border shadow-lg"
       style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 80px)', // 64px for bottom nav + 16px padding
         transform: 'translateZ(0)',
         willChange: 'transform'
       }}
@@ -434,7 +434,7 @@ const RebuiltModernSalesPage = () => {
                   className="h-full overflow-y-auto"
                 >
                    <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" 
-                        style={{ paddingBottom: '180px' }} // 64px (bottom nav) + 72px (search bar with padding) + 44px (comfortable space)
+                        style={{ paddingBottom: '220px' }} // Account for search bar at bottom (148px) + comfortable space (72px)
                    >
                     {filteredProducts.map(product => {
                       // Special handling for debt card
