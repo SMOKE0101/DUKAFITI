@@ -37,7 +37,22 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const { pendingOperations } = useUnifiedSyncManager();
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
-  const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
+  let customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
+  
+  // If customer not found but selectedCustomerId is a temp ID, try to find by name
+  if (!customer && selectedCustomerId?.startsWith('temp_')) {
+    // Try to find the newest customer (most recently added) as fallback
+    const sortedCustomers = [...customers].sort((a, b) => 
+      new Date(b.createdDate || 0).getTime() - new Date(a.createdDate || 0).getTime()
+    );
+    
+    // Use the most recently added real customer if temp customer not found
+    const recentRealCustomer = sortedCustomers.find(c => !c.id.startsWith('temp_'));
+    if (recentRealCustomer) {
+      console.log('[SalesCheckout] Using most recent real customer as fallback:', recentRealCustomer);
+      customer = recentRealCustomer;
+    }
+  }
 
   // Debug customer lookup
   console.log('[SalesCheckout] Customer lookup:', {
@@ -94,19 +109,57 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
     // For debt sales, ensure customer exists before proceeding
     if (paymentMethod === 'debt' && selectedCustomerId && !customer) {
-      console.error('[SalesCheckout] Customer not found for debt sale:', {
-        selectedCustomerId,
-        availableCustomers: customers.map(c => ({ id: c.id, name: c.name })),
-        paymentMethod,
-        customersLoaded: customers.length > 0
-      });
-      
-      toast({
-        title: "Customer Not Found",
-        description: "The selected customer could not be found. Please refresh and try again.",
-        variant: "destructive",
-      });
-      return;
+      // If customer ID is temporary, try to find by name match
+      if (selectedCustomerId.startsWith('temp_')) {
+        console.log('[SalesCheckout] Temporary customer ID detected, searching by name...');
+        
+        // Try to find a real customer with similar details in the current list
+        const tempCustomerParts = selectedCustomerId.split('_');
+        const possibleMatches = customers.filter(c => 
+          !c.id.startsWith('temp_') && 
+          (c.name.toLowerCase().includes(tempCustomerParts[1]?.toLowerCase() || '') ||
+           c.phone.includes(tempCustomerParts[2] || ''))
+        );
+        
+        if (possibleMatches.length > 0) {
+          // Use the first match and update the selected customer
+          const matchedCustomer = possibleMatches[0];
+          console.log('[SalesCheckout] Found matching real customer:', matchedCustomer);
+          
+          // Update the customer reference to use the matched customer
+          customer = matchedCustomer;
+          
+          toast({
+            title: "Customer Updated",
+            description: `Using customer: ${matchedCustomer.name}`,
+          });
+          
+          console.log('[SalesCheckout] Proceeding with matched customer for debt sale');
+          
+        } else {
+          console.error('[SalesCheckout] No matching real customer found for temp ID:', selectedCustomerId);
+          toast({
+            title: "Customer Not Synced",
+            description: "The new customer is still syncing. Please wait a moment and try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        console.error('[SalesCheckout] Customer not found for debt sale:', {
+          selectedCustomerId,
+          availableCustomers: customers.map(c => ({ id: c.id, name: c.name })),
+          paymentMethod,
+          customersLoaded: customers.length > 0
+        });
+        
+        toast({
+          title: "Customer Not Found",
+          description: "The selected customer could not be found. Please refresh and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Add extra validation and logging for debt sales
@@ -130,8 +183,12 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
       // For debt sales, update customer debt FIRST to ensure it's processed
       if (paymentMethod === 'debt' && selectedCustomerId && customer) {
+        // Use the actual customer ID (might be different from selectedCustomerId if we matched a temp customer)
+        const actualCustomerId = customer.id;
+        
         console.log('[SalesCheckout] Processing debt sale - updating customer first:', {
-          customerId: selectedCustomerId,
+          selectedCustomerId,
+          actualCustomerId,
           customerName: customer.name,
           currentDebt: customer.outstandingDebt,
           currentTotalPurchases: customer.totalPurchases,
@@ -147,8 +204,8 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         };
         
         try {
-          // Update customer debt first and wait for it to complete
-          await updateCustomer(selectedCustomerId, customerUpdates);
+          // Update customer debt first and wait for it to complete - use actual customer ID
+          await updateCustomer(actualCustomerId, customerUpdates);
           console.log('[SalesCheckout] Customer debt updated successfully before sale creation');
           
           // Dispatch immediate event to update UI
@@ -181,7 +238,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
           costPrice: item.costPrice,
           profit: profit,
           total: itemTotal,
-          customerId: selectedCustomerId || undefined,
+          customerId: customer?.id || selectedCustomerId || undefined,
           customerName: customer?.name || undefined,
           paymentMethod: paymentMethod,
           paymentDetails: {

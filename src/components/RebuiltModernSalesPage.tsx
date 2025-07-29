@@ -323,25 +323,60 @@ const RebuiltModernSalesPage = () => {
     }
   }, [clearCart, refetchProducts, isMobile]);
 
-  const handleAddCustomerSuccess = useCallback((customerId: string) => {
-    console.log('[RebuiltModernSalesPage] Customer added successfully, ID:', customerId);
+  const handleAddCustomerSuccess = useCallback(async (customer: Customer) => {
+    console.log('[RebuiltModernSalesPage] Customer added successfully:', customer);
     console.log('[RebuiltModernSalesPage] Current customers before update:', customers.map(c => ({ id: c.id, name: c.name })));
     
-    // Immediately set the customer ID
-    setSelectedCustomerId(customerId);
+    // Close modal first
     setIsAddCustomerModalOpen(false);
     
-    // Refresh the customer list immediately to ensure the new customer is available
-    refetchCustomers().then(() => {
-      console.log('[RebuiltModernSalesPage] Customers refreshed after adding new customer');
-    });
+    // If customer has temp ID, we need to wait and find the real customer
+    if (customer.id.startsWith('temp_')) {
+      console.log('[RebuiltModernSalesPage] Customer has temp ID, waiting for sync to get real ID...');
+      
+      // Set temp ID initially
+      setSelectedCustomerId(customer.id);
+      
+      // Refresh customers to get the latest data
+      await refetchCustomers();
+      
+      // Try to find the real customer by name and phone after a short delay
+      // This allows time for sync to complete
+      setTimeout(async () => {
+        await refetchCustomers();
+        
+        // Look for a customer with the same name and phone but without temp ID
+        const realCustomer = customers.find(c => 
+          c.name === customer.name && 
+          c.phone === customer.phone && 
+          !c.id.startsWith('temp_')
+        );
+        
+        if (realCustomer) {
+          console.log('[RebuiltModernSalesPage] Found real customer after sync:', realCustomer);
+          setSelectedCustomerId(realCustomer.id);
+        } else {
+          console.log('[RebuiltModernSalesPage] Real customer not found yet, keeping temp ID');
+        }
+      }, 2000); // Wait 2 seconds for sync
+      
+    } else {
+      // Customer already has real ID
+      console.log('[RebuiltModernSalesPage] Customer has real ID, setting immediately');
+      setSelectedCustomerId(customer.id);
+      await refetchCustomers();
+    }
     
     // Also dispatch an event to ensure all components are notified
     window.dispatchEvent(new CustomEvent('customer-list-updated'));
     
-    // Add debugging for payment method
+    toast({
+      title: "Customer Added",
+      description: `${customer.name} has been added successfully.`,
+    });
+    
     console.log('[RebuiltModernSalesPage] Current payment method:', paymentMethod);
-  }, [refetchCustomers, customers, paymentMethod]);
+  }, [refetchCustomers, customers, paymentMethod, toast]);
 
   const handleSearchTermChange = useCallback((value: string) => {
     setSearchTerm(value);
@@ -467,7 +502,7 @@ const RebuiltModernSalesPage = () => {
                   ref={productListRef}
                   className="h-full overflow-y-auto"
                 >
-                   <div className="p-2 sm:p-3 md:p-4 lg:p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4" 
+                   <div className="p-3 sm:p-4 md:p-6 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6" 
                         style={{ paddingBottom: '120px' }} // Space for search bar + bottom nav + extra padding
                    >
                     {filteredProducts.map(product => {
@@ -819,7 +854,7 @@ const RebuiltModernSalesPage = () => {
         <AddCustomerModal
           open={isAddCustomerModalOpen}
           onOpenChange={setIsAddCustomerModalOpen}
-          onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
+          onCustomerAdded={(customer) => handleAddCustomerSuccess(customer)}
         />
         
         <AddDebtModal
@@ -889,7 +924,7 @@ const RebuiltModernSalesPage = () => {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-4 lg:gap-5">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 lg:gap-7">
             {filteredProducts.map(product => {
               // Special handling for debt card
               if ('isDebtCard' in product && product.isDebtCard) {
@@ -1215,7 +1250,7 @@ const RebuiltModernSalesPage = () => {
       <AddCustomerModal
         open={isAddCustomerModalOpen}
         onOpenChange={setIsAddCustomerModalOpen}
-        onCustomerAdded={(customer) => handleAddCustomerSuccess(customer.id)}
+        onCustomerAdded={(customer) => handleAddCustomerSuccess(customer)}
       />
       
       <AddDebtModal
