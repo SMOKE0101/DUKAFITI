@@ -452,7 +452,10 @@ const CleanReportsPage = () => {
       profit: number;
     }> = {};
 
-    filteredSales.forEach(sale => {
+    // Only process sales with both cost price and selling price > 0 for profit calculation
+    const validProfitSales = filteredSales.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
+    
+    validProfitSales.forEach(sale => {
       const productKey = sale.productId;
       const productName = sale.productName;
       

@@ -233,7 +233,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
     const products = validRows.map(row => ({
       name: row.name.trim(),
       category: row.category,
-      costPrice: Number(row.costPrice) || 0,
+      costPrice: row.costPrice === '' ? 0 : Number(row.costPrice),
       sellingPrice: Number(row.sellingPrice),
       currentStock: row.currentStock === '' ? -1 : Number(row.currentStock), // -1 for unspecified
       lowStockThreshold: row.lowStockThreshold === '' ? 0 : Number(row.lowStockThreshold),
@@ -301,10 +301,10 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 flex overflow-hidden">
-            {/* Table */}
-            <div className="flex-1 overflow-auto">
+          {/* Main Content - Responsive Layout */}
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            {/* Table - takes 4/5 on mobile, main area on desktop */}
+            <div className="flex-[4] lg:flex-1 overflow-auto">
               <table className="w-full border-collapse">
                 <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
                   <tr>
@@ -405,9 +405,9 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
               </table>
             </div>
 
-            {/* Templates Sidebar */}
-            <div className="w-64 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            {/* Templates - Bottom on mobile (1/5), Right sidebar on desktop */}
+            <div className="flex-[1] lg:w-64 h-48 lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-gray-900 dark:text-white">
                   Quick Templates
                 </h3>
@@ -430,7 +430,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
                       )}
                     >
                       <div className="font-medium">{template.name}</div>
-                      <div className="text-gray-500 dark:text-gray-400">{template.category}</div>
+                      <div className="text-gray-500 dark:text-gray-400 text-xs">{template.category}</div>
                     </button>
                   ))}
                 </div>
@@ -439,38 +439,39 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between items-center gap-4 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <AlertCircle className="w-4 h-4" />
-              <span>Empty quantity/threshold fields will be marked as "Unspecified"</span>
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 flex justify-between items-center">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              <AlertCircle className="w-4 h-4 inline mr-1" />
+              Empty quantity/threshold will use automatic values
             </div>
-            <div className="flex gap-3">
-              <Button 
-                onClick={onClose}
+            <div className="flex gap-2">
+              <Button
                 variant="outline"
+                onClick={onClose}
+                className="border-2"
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSave}
+                className="bg-blue-600 hover:bg-blue-700 border-2 border-blue-600"
                 disabled={validRowCount === 0}
-                className="bg-blue-600 hover:bg-blue-700"
               >
-                Save {validRowCount} Products
+                Save {validRowCount} Product{validRowCount !== 1 ? 's' : ''}
               </Button>
             </div>
           </div>
         </div>
-
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleCSVUpload}
-          className="hidden"
-        />
       </DialogContent>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleCSVUpload}
+        className="hidden"
+      />
     </Dialog>
   );
 };
