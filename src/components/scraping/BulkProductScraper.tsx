@@ -153,19 +153,22 @@ export const BulkProductScraper: React.FC = () => {
 
   const scrapeTarget = async (target: ScrapeTarget): Promise<ScrapedProductData[]> => {
     const options = {
-      formats: ['markdown', 'html'],
-      limit: 100,
-      maxDepth: 3,
+      limit: 25, // Reduced to respect rate limits
+      maxDepth: 2,
       excludePaths: [
         '/admin/*', '/user/*', '/login*', '/register*', '/cart*', '/checkout*',
         '/account*', '/profile*', '/wish*', '/compare*'
       ],
       includePaths: target.paths ? target.paths : [
-        '/products/*', '/product/*', '/shop/*', '/category/*', '/categories/*'
+        '/products/*', '/product/*', '/shop/*', '/category/*', '/categories/*',
+        '/supermarket/*', '/groceries/*', '/household/*'
       ]
     };
 
     try {
+      // Add delay to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       const result = await FirecrawlService.crawlWebsite(target.url, options);
       
       if (!result.success) {
@@ -178,12 +181,13 @@ export const BulkProductScraper: React.FC = () => {
       const filteredProducts: ScrapedProductData[] = extractedProducts
         .filter(product => filterProduct(product.name, product.category))
         .map(product => ({
-          name: product.name,
+          name: product.name.trim(),
           category: target.category,
           image_url: product.image_url || null,
           source_url: target.url
         }));
 
+      console.log(`[BulkProductScraper] Found ${filteredProducts.length} relevant products from ${target.name}`);
       return filteredProducts;
     } catch (error) {
       console.error(`Error scraping ${target.name}:`, error);

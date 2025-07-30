@@ -96,37 +96,76 @@ export class FirecrawlService {
     const products: ScrapedProduct[] = [];
     
     try {
-      if (crawlData?.data) {
-        // Handle different response formats
-        const pages = Array.isArray(crawlData.data) ? crawlData.data : [crawlData.data];
-        
-        for (const page of pages) {
-          if (page?.extracted?.products) {
-            // LLM extracted products
-            for (const product of page.extracted.products) {
-              products.push({
-                name: product.name || 'Unknown Product',
-                category: product.category || 'General',
-                price: product.price,
-                image_url: product.image_url,
-                description: product.description,
-                source_url: page.url || page.source_url || ''
-              });
-            }
-          } else if (page?.markdown || page?.html) {
-            // Parse manually from content
-            const parsedProducts = this.parseProductsFromContent(
-              page.markdown || page.html, 
-              page.url || ''
-            );
-            products.push(...parsedProducts);
+      // Handle the v1 API response format
+      const data = crawlData?.data;
+      
+      if (data?.data && Array.isArray(data.data)) {
+        // Array of crawled pages from v1 API
+        data.data.forEach((page: any) => {
+          if (page.extract && page.extract.products) {
+            page.extract.products.forEach((product: any) => {
+              if (product.name && product.category) {
+                products.push({
+                  name: product.name,
+                  category: product.category,
+                  price: product.price || '',
+                  image_url: product.image_url || '',
+                  description: product.description || '',
+                  source_url: page.metadata?.sourceURL || page.url || ''
+                });
+              }
+            });
+          } else if (page.markdown) {
+            // Try to extract from markdown content
+            const extracted = this.parseProductsFromContent(page.markdown, page.metadata?.sourceURL || page.url || '');
+            products.push(...extracted);
+          } else if (page.html) {
+            // Try to extract from HTML content
+            const extracted = this.parseProductsFromContent(page.html, page.metadata?.sourceURL || page.url || '');
+            products.push(...extracted);
           }
-        }
+        });
+      } else if (Array.isArray(data)) {
+        // Direct array format (fallback)
+        data.forEach((page: any) => {
+          if (page.extract && page.extract.products) {
+            page.extract.products.forEach((product: any) => {
+              if (product.name && product.category) {
+                products.push({
+                  name: product.name,
+                  category: product.category,
+                  price: product.price || '',
+                  image_url: product.image_url || '',
+                  description: product.description || '',
+                  source_url: page.metadata?.sourceURL || page.url || ''
+                });
+              }
+            });
+          } else if (page.markdown) {
+            const extracted = this.parseProductsFromContent(page.markdown, page.metadata?.sourceURL || page.url || '');
+            products.push(...extracted);
+          }
+        });
+      } else if (data?.extract && data.extract.products) {
+        // Single page with extracted products
+        data.extract.products.forEach((product: any) => {
+          if (product.name && product.category) {
+            products.push({
+              name: product.name,
+              category: product.category,
+              price: product.price || '',
+              image_url: product.image_url || '',
+              description: product.description || '',
+              source_url: data.metadata?.sourceURL || data.url || ''
+            });
+          }
+        });
       }
     } catch (error) {
       console.error('[FirecrawlService] Error extracting products:', error);
     }
     
+    console.log(`[FirecrawlService] Extracted ${products.length} products from crawl data`);
     return products;
   }
 

@@ -36,9 +36,8 @@ serve(async (req) => {
 
     console.log(`[Firecrawl] Starting crawl for: ${url}`);
 
-    // Default options optimized for Kenyan e-commerce sites
+    // Default options optimized for Kenyan e-commerce sites using correct v1 API format
     const crawlOptions = {
-      formats: options.formats || ['markdown', 'html'],
       limit: options.limit || 50,
       excludePaths: options.excludePaths || [
         '/admin/*', 
@@ -56,22 +55,27 @@ serve(async (req) => {
       maxDepth: options.maxDepth || 3,
       scrapeOptions: {
         formats: ['markdown', 'html'],
-        extractorOptions: {
-          mode: 'llm-extraction',
-          extractionSchema: {
-            type: 'object',
-            properties: {
-              products: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string' },
-                    category: { type: 'string' },
-                    price: { type: 'string' },
-                    image_url: { type: 'string' },
-                    description: { type: 'string' }
-                  }
+        onlyMainContent: true,
+        waitFor: 2000
+      },
+      webhook: null,
+      // Use LLM extraction for structured product data
+      extractorOptions: {
+        mode: 'llm-extraction',
+        extractionPrompt: 'Extract product information including name, category, price, and image URL from this e-commerce page. Focus on products suitable for Kenyan dukas (small shops).',
+        extractionSchema: {
+          type: 'object',
+          properties: {
+            products: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  category: { type: 'string' },
+                  price: { type: 'string' },
+                  image_url: { type: 'string' },
+                  description: { type: 'string' }
                 }
               }
             }
@@ -80,6 +84,7 @@ serve(async (req) => {
       }
     };
 
+    // Start the crawl
     const response = await fetch('https://api.firecrawl.dev/v1/crawl', {
       method: 'POST',
       headers: {
@@ -99,15 +104,51 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log(`[Firecrawl] Crawl completed successfully`);
-
-    return new Response(JSON.stringify({
-      success: true,
-      data: data,
-      timestamp: new Date().toISOString()
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    
+    // Check if crawl was initiated successfully
+    if (data.success && data.id) {
+      console.log(`[Firecrawl] Crawl initiated with ID: ${data.id}`);
+      
+      // For async crawls, we need to poll for status
+      let crawlStatus = data;
+      let attempts = 0;
+      const maxAttempts = 60; // 5 minutes max
+      
+      while (crawlStatus.status === 'scraping' && attempts < maxAttempts) {
+        console.log(`[Firecrawl] Checking crawl status, attempt ${attempts + 1}`);
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+        
+        const statusResponse = await fetch(`https://api.firecrawl.dev/v1/crawl/${data.id}`, {
+          headers: {
+            'Authorization': `Bearer ${firecrawlApiKey}`,
+          },
+        });
+        
+        if (statusResponse.ok) {
+          crawlStatus = await statusResponse.json();
+        }
+        attempts++;
+      }
+      
+      console.log(`[Firecrawl] Crawl completed with status: ${crawlStatus.status}`);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        data: crawlStatus,
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } else {
+      console.log(`[Firecrawl] Crawl completed immediately`);
+      return new Response(JSON.stringify({
+        success: true,
+        data: data,
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
   } catch (error) {
     console.error('[Firecrawl] Error:', error);
