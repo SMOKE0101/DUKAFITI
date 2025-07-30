@@ -25,27 +25,13 @@ interface ScrapedProductData {
   isDuplicate?: boolean;
 }
 
+// Reduced to only Jumia to respect rate limits
 const SCRAPE_TARGETS: ScrapeTarget[] = [
   {
     name: 'Jumia Supermarket',
     url: 'https://www.jumia.co.ke/supermarket/',
     category: 'Food & Beverages',
     paths: ['/food-cupboard/', '/beverages/', '/household-cleaning/', '/personal-care/']
-  },
-  {
-    name: 'Kilimall Groceries',
-    url: 'https://www.kilimall.co.ke/groceries/',
-    category: 'Groceries'
-  },
-  {
-    name: 'Kilimall Household',
-    url: 'https://www.kilimall.co.ke/household/',
-    category: 'Household'
-  },
-  {
-    name: 'Bidco Africa Products',
-    url: 'https://www.bidcoafrica.com/products/',
-    category: 'Personal Care'
   }
 ];
 
@@ -153,29 +139,30 @@ export const BulkProductScraper: React.FC = () => {
 
   const scrapeTarget = async (target: ScrapeTarget): Promise<ScrapedProductData[]> => {
     const options = {
-      limit: 25, // Reduced to respect rate limits
-      maxDepth: 2,
+      limit: 10, // Very small limit to respect rate limits
+      maxDepth: 1, // Minimal depth
       excludePaths: [
         '/admin/*', '/user/*', '/login*', '/register*', '/cart*', '/checkout*',
         '/account*', '/profile*', '/wish*', '/compare*'
       ],
-      includePaths: target.paths ? target.paths : [
-        '/products/*', '/product/*', '/shop/*', '/category/*', '/categories/*',
-        '/supermarket/*', '/groceries/*', '/household/*'
-      ]
+      includePaths: ['/supermarket/*', '/food-cupboard/*', '/beverages/*']
     };
 
     try {
-      // Add delay to respect rate limits
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`[BulkProductScraper] Starting to scrape ${target.name}...`);
+      
+      // Add longer delay to respect rate limits (5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 5000));
       
       const result = await FirecrawlService.crawlWebsite(target.url, options);
       
       if (!result.success) {
+        console.error(`[BulkProductScraper] Failed to scrape ${target.name}:`, result.error);
         throw new Error(result.error || 'Failed to scrape website');
       }
 
       const extractedProducts = FirecrawlService.extractProductsFromCrawlData(result.data);
+      console.log(`[BulkProductScraper] Extracted ${extractedProducts.length} raw products from ${target.name}`);
       
       // Filter and format products
       const filteredProducts: ScrapedProductData[] = extractedProducts
@@ -185,13 +172,22 @@ export const BulkProductScraper: React.FC = () => {
           category: target.category,
           image_url: product.image_url || null,
           source_url: target.url
-        }));
+        }))
+        .slice(0, 10); // Limit to max 10 products
 
       console.log(`[BulkProductScraper] Found ${filteredProducts.length} relevant products from ${target.name}`);
       return filteredProducts;
     } catch (error) {
-      console.error(`Error scraping ${target.name}:`, error);
-      throw error;
+      console.error(`[BulkProductScraper] Error scraping ${target.name}:`, error);
+      
+      // Don't throw error, just return empty array to continue with other targets
+      toast({
+        title: "Scraping Error",
+        description: `Failed to scrape ${target.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+        duration: 3000
+      });
+      return [];
     }
   };
 
@@ -221,19 +217,28 @@ export const BulkProductScraper: React.FC = () => {
         setProgress((i / SCRAPE_TARGETS.length) * 80);
 
         try {
+          console.log(`[BulkProductScraper] Processing target ${i + 1}/${SCRAPE_TARGETS.length}: ${target.name}`);
           const products = await scrapeTarget(target);
           allProducts.push(...products);
           
-          toast({
-            title: "Progress",
-            description: `Scraped ${products.length} products from ${target.name}`,
-            duration: 2000
-          });
+          if (products.length > 0) {
+            toast({
+              title: "Progress",
+              description: `Found ${products.length} products from ${target.name}`,
+              duration: 2000
+            });
+          } else {
+            toast({
+              title: "Info",
+              description: `No products found from ${target.name}`,
+              duration: 2000
+            });
+          }
         } catch (error) {
-          console.error(`Failed to scrape ${target.name}:`, error);
+          console.error(`[BulkProductScraper] Failed to scrape ${target.name}:`, error);
           toast({
             title: "Warning",
-            description: `Failed to scrape ${target.name}`,
+            description: `Skipped ${target.name} due to errors`,
             variant: "destructive",
             duration: 3000
           });
@@ -275,16 +280,20 @@ export const BulkProductScraper: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Store className="w-5 h-5" />
-            Bulk Product Scraper for Kenyan E-commerce
+            Bulk Product Scraper - Jumia Only (Rate Limited)
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Reduced to Jumia only with minimal limits to respect Firecrawl API rate limits
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {SCRAPE_TARGETS.map((target, index) => (
-              <div key={index} className="p-3 border rounded-lg">
-                <h4 className="font-medium">{target.name}</h4>
-                <p className="text-sm text-muted-foreground">{target.category}</p>
-                <p className="text-xs text-muted-foreground">{target.url}</p>
+              <div key={index} className="p-3 border rounded-lg bg-green-50 dark:bg-green-950">
+                <h4 className="font-medium text-green-800 dark:text-green-200">{target.name}</h4>
+                <p className="text-sm text-green-600 dark:text-green-300">{target.category}</p>
+                <p className="text-xs text-green-500 dark:text-green-400">{target.url}</p>
+                <p className="text-xs text-green-600 dark:text-green-300 mt-1">✓ Optimized for rate limits</p>
               </div>
             ))}
           </div>

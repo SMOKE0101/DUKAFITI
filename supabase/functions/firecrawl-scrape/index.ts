@@ -36,9 +36,9 @@ serve(async (req) => {
 
     console.log(`[Firecrawl] Starting crawl for: ${url}`);
 
-    // Default options optimized for Kenyan e-commerce sites using correct v1 API format
+    // Simplified options for v1 API format
     const crawlOptions = {
-      limit: options.limit || 50,
+      limit: options.limit || 10, // Reduced for rate limits
       excludePaths: options.excludePaths || [
         '/admin/*', 
         '/user/*', 
@@ -52,35 +52,11 @@ serve(async (req) => {
         '/categories/*',
         '/catalog/*'
       ],
-      maxDepth: options.maxDepth || 3,
+      maxDepth: options.maxDepth || 2, // Reduced depth
       scrapeOptions: {
-        formats: ['markdown', 'html'],
+        formats: ['markdown'],
         onlyMainContent: true,
-        waitFor: 2000
-      },
-      webhook: null,
-      // Use LLM extraction for structured product data
-      extractorOptions: {
-        mode: 'llm-extraction',
-        extractionPrompt: 'Extract product information including name, category, price, and image URL from this e-commerce page. Focus on products suitable for Kenyan dukas (small shops).',
-        extractionSchema: {
-          type: 'object',
-          properties: {
-            products: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  name: { type: 'string' },
-                  category: { type: 'string' },
-                  price: { type: 'string' },
-                  image_url: { type: 'string' },
-                  description: { type: 'string' }
-                }
-              }
-            }
-          }
-        }
+        waitFor: 1000
       }
     };
 
