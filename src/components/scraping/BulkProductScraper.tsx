@@ -28,7 +28,7 @@ interface ScrapedProductData {
 const SCRAPE_TARGETS: ScrapeTarget[] = [
   {
     name: 'Jumia Supermarket',
-    url: 'https://www.jumia.co.ke/mlp-supermarket/',
+    url: 'https://www.jumia.co.ke/supermarket/',
     category: 'Food & Beverages',
     paths: ['/food-cupboard/', '/beverages/', '/household-cleaning/', '/personal-care/']
   },
@@ -45,19 +45,22 @@ const SCRAPE_TARGETS: ScrapeTarget[] = [
   {
     name: 'Bidco Africa Products',
     url: 'https://www.bidcoafrica.com/products/',
-    category: 'Consumer Goods'
+    category: 'Personal Care'
   }
 ];
 
 const INCLUDE_KEYWORDS = [
-  'flour', 'sugar', 'rice', 'oil', 'soap', 'detergent', 'milk', 'bread', 'tea', 'coffee',
-  'cooking', 'edible', 'food', 'beverage', 'drink', 'household', 'cleaning', 'personal care',
-  'shampoo', 'toothpaste', 'salt', 'spices', 'cereal', 'juice', 'water', 'snack'
+  'flour', 'rice', 'sugar', 'oil', 'soap', 'detergent', 'toothpaste', 'shampoo', 
+  'biscuits', 'soda', 'water', 'toilet paper', 'matches', 'milk', 'bread', 'tea', 
+  'coffee', 'cooking', 'edible', 'food', 'beverage', 'drink', 'household', 'cleaning', 
+  'personal care', 'salt', 'spices', 'cereal', 'juice', 'snack', 'grains', 'cereals',
+  'soft drinks', 'maize', 'wheat', 'beans', 'cooking oil', 'body lotion', 'washing powder'
 ];
 
 const EXCLUDE_KEYWORDS = [
-  'phone', 'tv', 'television', 'laptop', 'computer', 'tablet', 'electronics', 'fashion',
-  'clothing', 'shoes', 'furniture', 'car', 'vehicle', 'jewelry', 'watch', 'camera'
+  'phone', 'laptop', 'tv', 'television', 'computer', 'tablet', 'electronics', 
+  'fashion', 'dress', 'shoes', 'clothing', 'furniture', 'car', 'vehicle', 
+  'jewelry', 'watch', 'camera', 'home appliances', 'refrigerator', 'microwave'
 ];
 
 export const BulkProductScraper: React.FC = () => {
