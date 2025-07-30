@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import ShopProfileSettings from '@/components/settings/ShopProfileSettings';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import { WebScrapingPanel } from '@/components/scraping/WebScrapingPanel';
+import { BulkProductScraper } from '@/components/scraping/BulkProductScraper';
 import { Store, Monitor, Globe } from 'lucide-react';
 
 const Settings = () => {
@@ -73,6 +74,7 @@ const Settings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 pt-0">
+                <BulkProductScraper />
                 <WebScrapingPanel />
               </CardContent>
             </Card>
