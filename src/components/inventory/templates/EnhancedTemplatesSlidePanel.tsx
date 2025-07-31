@@ -217,14 +217,14 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Spreadsheet Section - Default View */}
         <div className={cn(
-          "flex-1 bg-white dark:bg-gray-900 flex flex-col transition-all duration-300",
-          isExpanded ? "h-0 overflow-hidden" : "h-full"
+          "bg-white dark:bg-gray-900 flex flex-col transition-all duration-300 ease-in-out",
+          isExpanded ? "h-0 overflow-hidden opacity-0" : "flex-1"
         )}>
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Product Bulk Entry</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <h3 className="font-semibold text-base text-gray-900 dark:text-white">Product Bulk Entry</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Fill in pricing and stock information
                 </p>
               </div>
@@ -232,9 +232,9 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
                 onClick={handleClose}
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className="h-7 w-7 p-0"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3 w-3" />
               </Button>
             </div>
           </div>
@@ -248,84 +248,86 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
           </div>
         </div>
 
-        {/* Templates Section - Expanded View */}
-        {isExpanded && (
-          <div className="flex-1 bg-white dark:bg-gray-900 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Browse Product Templates</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Select products to add to your spreadsheet
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={downloadTemplate}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    CSV Template
-                  </Button>
-                  <Button
-                    onClick={handleClose}
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+        {/* Templates Section - Full Page Expanded View */}
+        <div className={cn(
+          "bg-white dark:bg-gray-900 flex flex-col transition-all duration-300 ease-in-out",
+          isExpanded ? "flex-1" : "h-0 overflow-hidden opacity-0"
+        )}>
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-base text-gray-900 dark:text-white">Browse Product Templates</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Select products to add to your spreadsheet
+                </p>
               </div>
-              
-              <TemplatesSearch
-                searchTerm={searchTerm}
-                onSearchChange={searchTemplates}
-                selectedCategory={selectedCategory}
-                categories={categories}
-                onCategoryChange={filterByCategory}
-                onClearFilters={clearFilters}
-                templatesCount={templates.length}
-              />
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={downloadTemplate}
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  <span className="text-xs">CSV</span>
+                </Button>
+                <Button
+                  onClick={handleClose}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
             
-            <div className="flex-1 overflow-hidden">
-              <TemplatesGrid
-                templates={templates}
-                selectedTemplates={selectedTemplates}
-                onTemplateSelect={handleTemplateSelect}
-                loading={loading}
-                error={error}
-              />
-            </div>
+            <TemplatesSearch
+              searchTerm={searchTerm}
+              onSearchChange={searchTemplates}
+              selectedCategory={selectedCategory}
+              categories={categories}
+              onCategoryChange={filterByCategory}
+              onClearFilters={clearFilters}
+              templatesCount={templates.length}
+            />
           </div>
-        )}
+          
+          <div className="flex-1 overflow-hidden">
+            <TemplatesGrid
+              templates={templates}
+              selectedTemplates={selectedTemplates}
+              onTemplateSelect={handleTemplateSelect}
+              loading={loading}
+              error={error}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-              <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+      {/* Compressed Bottom Action Bar */}
+      <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+              <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <h2 className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+              <h2 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
                 BULK ADD
               </h2>
-              <div className="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap gap-2">
+              <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-1">
                 {selectedCount > 0 && (
-                  <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-medium">
+                  <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1.5 py-0.5 rounded-full text-xs font-medium">
                     {selectedCount} selected
                   </span>
                 )}
                 {validCount > 0 && (
-                  <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+                  <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full text-xs font-medium">
                     {validCount} ready
                   </span>
                 )}
-                <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full text-xs font-medium">
+                <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded-full text-xs font-medium">
                   {totalTemplates} total{!isOnline && ' (offline)'}
                 </span>
               </div>
@@ -339,10 +341,10 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
               onClick={handleClearAll}
               variant="outline"
               size="sm"
-              className="text-red-600 hover:text-red-700 flex-1"
+              className="text-red-600 hover:text-red-700 flex-1 h-8"
             >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Clear All
+              <RotateCcw className="w-3 h-3 mr-1" />
+              <span className="text-xs">Clear All</span>
             </Button>
           )}
           
@@ -350,17 +352,17 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
             onClick={() => setIsExpanded(!isExpanded)}
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="flex-1 h-8"
           >
             {isExpanded ? (
               <>
-                <ChevronDown className="w-4 h-4 mr-1" />
-                Show Spreadsheet
+                <ChevronDown className="w-3 h-3 mr-1" />
+                <span className="text-xs">Show Spreadsheet</span>
               </>
             ) : (
               <>
-                <ChevronUp className="w-4 h-4 mr-1" />
-                Browse Templates
+                <ChevronUp className="w-3 h-3 mr-1" />
+                <span className="text-xs">Browse Templates</span>
               </>
             )}
           </Button>
@@ -368,9 +370,9 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
           {validCount > 0 && (
             <Button
               onClick={handleSave}
-              className="bg-green-600 hover:bg-green-700 text-white flex-1"
+              className="bg-green-600 hover:bg-green-700 text-white flex-1 h-8"
             >
-              Add {validCount} Product{validCount !== 1 ? 's' : ''}
+              <span className="text-xs">Add {validCount} Product{validCount !== 1 ? 's' : ''}</span>
             </Button>
           )}
         </div>
