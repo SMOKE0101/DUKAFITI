@@ -36,9 +36,10 @@ serve(async (req) => {
 
     console.log(`[Firecrawl] Starting crawl for: ${url}`);
 
-    // Simplified options for v1 API format
+    // Default options optimized for Kenyan e-commerce sites
     const crawlOptions = {
-      limit: options.limit || 10, // Reduced for rate limits
+      formats: options.formats || ['markdown', 'html'],
+      limit: options.limit || 50,
       excludePaths: options.excludePaths || [
         '/admin/*', 
         '/user/*', 
@@ -52,15 +53,33 @@ serve(async (req) => {
         '/categories/*',
         '/catalog/*'
       ],
-      maxDepth: options.maxDepth || 2, // Reduced depth
+      maxDepth: options.maxDepth || 3,
       scrapeOptions: {
-        formats: ['markdown'],
-        onlyMainContent: true,
-        waitFor: 1000
+        formats: ['markdown', 'html'],
+        extractorOptions: {
+          mode: 'llm-extraction',
+          extractionSchema: {
+            type: 'object',
+            properties: {
+              products: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    category: { type: 'string' },
+                    price: { type: 'string' },
+                    image_url: { type: 'string' },
+                    description: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     };
 
-    // Start the crawl
     const response = await fetch('https://api.firecrawl.dev/v1/crawl', {
       method: 'POST',
       headers: {
@@ -80,51 +99,15 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    
-    // Check if crawl was initiated successfully
-    if (data.success && data.id) {
-      console.log(`[Firecrawl] Crawl initiated with ID: ${data.id}`);
-      
-      // For async crawls, we need to poll for status
-      let crawlStatus = data;
-      let attempts = 0;
-      const maxAttempts = 60; // 5 minutes max
-      
-      while (crawlStatus.status === 'scraping' && attempts < maxAttempts) {
-        console.log(`[Firecrawl] Checking crawl status, attempt ${attempts + 1}`);
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-        
-        const statusResponse = await fetch(`https://api.firecrawl.dev/v1/crawl/${data.id}`, {
-          headers: {
-            'Authorization': `Bearer ${firecrawlApiKey}`,
-          },
-        });
-        
-        if (statusResponse.ok) {
-          crawlStatus = await statusResponse.json();
-        }
-        attempts++;
-      }
-      
-      console.log(`[Firecrawl] Crawl completed with status: ${crawlStatus.status}`);
-      
-      return new Response(JSON.stringify({
-        success: true,
-        data: crawlStatus,
-        timestamp: new Date().toISOString()
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } else {
-      console.log(`[Firecrawl] Crawl completed immediately`);
-      return new Response(JSON.stringify({
-        success: true,
-        data: data,
-        timestamp: new Date().toISOString()
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    console.log(`[Firecrawl] Crawl completed successfully`);
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: data,
+      timestamp: new Date().toISOString()
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
     console.error('[Firecrawl] Error:', error);
