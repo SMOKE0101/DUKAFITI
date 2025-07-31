@@ -105,7 +105,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {children}
           </div>
         </main>
-        <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="fixed bottom-0 left-0 right-0 z-50" data-bottom-nav>
           <BottomNavigation />
         </div>
       </div>

@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, Plus, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PRODUCT_CATEGORIES } from '../../../constants/categories';
+import { addTouchFriendlyClasses } from '../../../utils/mobileUtils';
 
 interface BulkProductRow {
   id: string;
@@ -129,7 +130,7 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* Controls */}
-      <div className="flex gap-2 p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="flex flex-wrap gap-2 p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <input
           type="file"
           accept=".csv"
@@ -142,55 +143,57 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
           onClick={() => fileInputRef.current?.click()}
           variant="outline"
           size="sm"
-          className="flex items-center gap-2"
+          className={cn("flex items-center gap-2", addTouchFriendlyClasses(""))}
         >
           <Upload className="w-4 h-4" />
-          Upload CSV
+          <span className="hidden sm:inline">Upload CSV</span>
+          <span className="sm:hidden">CSV</span>
         </Button>
         
         <Button
           onClick={addMoreRows}
           variant="outline"
           size="sm"
-          className="flex items-center gap-2"
+          className={cn("flex items-center gap-2", addTouchFriendlyClasses(""))}
         >
           <Plus className="w-4 h-4" />
-          Add 10 Rows
+          <span className="hidden sm:inline">Add 10 Rows</span>
+          <span className="sm:hidden">+10</span>
         </Button>
 
-        <div className="ml-auto flex items-center gap-4 text-sm">
-          <span className="text-green-600 font-medium">
-            Valid: {data.filter(row => row.isValid).length}
+        <div className="ml-auto flex items-center gap-2 text-sm">
+          <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+            {data.filter(row => row.isValid).length} valid
           </span>
-          <span className="text-gray-500">
-            Total: {data.filter(row => row.name.trim()).length}
+          <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full text-xs font-medium">
+            {data.filter(row => row.name.trim()).length} total
           </span>
         </div>
       </div>
 
       {/* Spreadsheet */}
-      <ScrollArea className="flex-1">
-        <div className="min-w-full">
+      <ScrollArea className="flex-1" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="min-w-[800px] lg:min-w-full">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
               <tr>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[200px]">
+                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[180px] lg:min-w-[200px]">
                   Name*
                 </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[150px]">
+                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[120px] lg:min-w-[150px]">
                   Category*
                 </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[120px]">
-                  Cost Price
+                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[100px] lg:min-w-[120px]">
+                  Cost
                 </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[120px]">
-                  Sell Price*
+                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[100px] lg:min-w-[120px]">
+                  Price*
                 </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[100px]">
+                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[80px] lg:min-w-[100px]">
                   Stock
                 </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[100px]">
-                  Threshold
+                <th className="border border-gray-300 dark:border-gray-600 p-2 text-left font-mono text-xs uppercase tracking-wider min-w-[80px] lg:min-w-[100px]">
+                  Alert
                 </th>
               </tr>
             </thead>
@@ -216,9 +219,10 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
                         onChange={(e) => updateRow(index, 'name', e.target.value)}
                         placeholder="Product name"
                         className={cn(
-                          "border-0 h-8 text-sm focus-visible:ring-1",
+                          "border-0 h-10 text-sm focus-visible:ring-1 touch-manipulation",
                           highlighted && "pl-6"
                         )}
+                        style={{ fontSize: '16px' }}
                       />
                     </td>
                     <td className="border border-gray-300 dark:border-gray-600 p-1">
@@ -226,7 +230,7 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
                         value={row.category}
                         onValueChange={(value) => updateRow(index, 'category', value)}
                       >
-                        <SelectTrigger className="border-0 h-8 text-sm focus-visible:ring-1">
+                        <SelectTrigger className="border-0 h-10 text-sm focus-visible:ring-1 touch-manipulation" style={{ fontSize: '16px' }}>
                           <SelectValue placeholder="Category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -246,7 +250,8 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
                         value={row.costPrice}
                         onChange={(e) => updateRow(index, 'costPrice', e.target.value ? parseFloat(e.target.value) : '')}
                         placeholder="0.00"
-                        className="border-0 h-8 text-sm focus-visible:ring-1"
+                        className="border-0 h-10 text-sm focus-visible:ring-1 touch-manipulation"
+                        style={{ fontSize: '16px' }}
                       />
                     </td>
                     <td className="border border-gray-300 dark:border-gray-600 p-1">
@@ -257,7 +262,8 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
                         value={row.sellingPrice}
                         onChange={(e) => updateRow(index, 'sellingPrice', e.target.value ? parseFloat(e.target.value) : '')}
                         placeholder="0.00"
-                        className="border-0 h-8 text-sm focus-visible:ring-1"
+                        className="border-0 h-10 text-sm focus-visible:ring-1 touch-manipulation"
+                        style={{ fontSize: '16px' }}
                       />
                     </td>
                     <td className="border border-gray-300 dark:border-gray-600 p-1">
@@ -267,7 +273,8 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
                         value={row.currentStock}
                         onChange={(e) => updateRow(index, 'currentStock', e.target.value ? parseInt(e.target.value) : '')}
                         placeholder="Auto"
-                        className="border-0 h-8 text-sm focus-visible:ring-1"
+                        className="border-0 h-10 text-sm focus-visible:ring-1 touch-manipulation"
+                        style={{ fontSize: '16px' }}
                       />
                     </td>
                     <td className="border border-gray-300 dark:border-gray-600 p-1">
@@ -277,7 +284,8 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
                         value={row.lowStockThreshold}
                         onChange={(e) => updateRow(index, 'lowStockThreshold', e.target.value ? parseInt(e.target.value) : '')}
                         placeholder="10"
-                        className="border-0 h-8 text-sm focus-visible:ring-1"
+                        className="border-0 h-10 text-sm focus-visible:ring-1 touch-manipulation"
+                        style={{ fontSize: '16px' }}
                       />
                     </td>
                   </tr>

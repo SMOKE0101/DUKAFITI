@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import AddProductModal from './inventory/AddProductModal';
-import TemplatesSlidePanel from './inventory/templates/TemplatesSlidePanel';
+import EnhancedTemplatesSlidePanel from './inventory/templates/EnhancedTemplatesSlidePanel';
 import UncountableProductModal from './inventory/UncountableProductModal';
 import VariationProductModal from './inventory/VariationProductModal';
 import EditProductModal from './inventory/EditProductModal';
@@ -401,7 +401,7 @@ const InventoryPage = () => {
           onSave={handleAddProduct}
         />
 
-        <TemplatesSlidePanel
+        <EnhancedTemplatesSlidePanel
           isOpen={showTemplatesPanel}
           onClose={() => setShowTemplatesPanel(false)}
           onSave={handleBulkAddProducts}
