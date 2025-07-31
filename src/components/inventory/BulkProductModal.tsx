@@ -233,7 +233,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
     const products = validRows.map(row => ({
       name: row.name.trim(),
       category: row.category,
-      costPrice: row.costPrice === '' ? 0 : Number(row.costPrice),
+      costPrice: Number(row.costPrice) || 0,
       sellingPrice: Number(row.sellingPrice),
       currentStock: row.currentStock === '' ? -1 : Number(row.currentStock), // -1 for unspecified
       lowStockThreshold: row.lowStockThreshold === '' ? 0 : Number(row.lowStockThreshold),
@@ -254,18 +254,18 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[98vw] h-[98vh] max-w-none max-h-none border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
         {/* Header */}
-        <div className="border-b-4 border-blue-600 bg-white dark:bg-gray-900 p-2 lg:p-6 text-center flex-shrink-0">
-          <DialogTitle className="font-mono text-lg lg:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+        <div className="border-b-4 border-blue-600 bg-white dark:bg-gray-900 p-6 text-center flex-shrink-0">
+          <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
             BULK ADD PRODUCTS
           </DialogTitle>
-          <DialogDescription className="font-mono text-xs lg:text-sm text-gray-600 dark:text-gray-400 mt-1 lg:mt-2 uppercase tracking-wider">
+          <DialogDescription className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2 uppercase tracking-wider">
             Add multiple products using spreadsheet-style table
           </DialogDescription>
         </div>
         
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Controls */}
-          <div className="flex flex-wrap gap-2 lg:gap-4 p-2 lg:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex flex-wrap gap-4 p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <Button
               onClick={downloadCSVTemplate}
               variant="outline"
@@ -301,10 +301,10 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
             </div>
           </div>
 
-          {/* Main Content - Responsive Layout */}
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-            {/* Table - takes 4/5 on mobile, main area on desktop */}
-            <div className="flex-[4] lg:flex-1 overflow-auto">
+          {/* Main Content */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Table */}
+            <div className="flex-1 overflow-auto">
               <table className="w-full border-collapse">
                 <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
                   <tr>
@@ -405,18 +405,18 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
               </table>
             </div>
 
-            {/* Templates - Bottom on mobile (1/5), Right sidebar on desktop */}
-            <div className="flex-[1] lg:w-64 h-40 lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col">
-              <ScrollArea className="flex-1">
-                <div className="p-2 lg:p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="font-mono font-bold text-xs lg:text-sm uppercase tracking-wider text-gray-900 dark:text-white">
-                    Quick Templates
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Click to fill {activeRowIndex !== null ? `row ${activeRowIndex + 1}` : 'selected row'}
-                  </p>
-                </div>
-                <div className="p-2 lg:p-4 space-y-2">
+            {/* Templates Sidebar */}
+            <div className="w-64 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-gray-900 dark:text-white">
+                  Quick Templates
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Click to fill {activeRowIndex !== null ? `row ${activeRowIndex + 1}` : 'selected row'}
+                </p>
+              </div>
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-2">
                   {commonTemplates.map((template, index) => (
                     <button
                       key={index}
@@ -430,7 +430,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
                       )}
                     >
                       <div className="font-medium">{template.name}</div>
-                      <div className="text-gray-500 dark:text-gray-400 text-xs">{template.category}</div>
+                      <div className="text-gray-500 dark:text-gray-400">{template.category}</div>
                     </button>
                   ))}
                 </div>
@@ -439,39 +439,38 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 lg:p-4 flex justify-between items-center">
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              <AlertCircle className="w-4 h-4 inline mr-1" />
-              Empty quantity/threshold will use automatic values
+          <div className="flex justify-between items-center gap-4 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <AlertCircle className="w-4 h-4" />
+              <span>Empty quantity/threshold fields will be marked as "Unspecified"</span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
+            <div className="flex gap-3">
+              <Button 
                 onClick={onClose}
-                className="border-2"
+                variant="outline"
               >
                 Cancel
               </Button>
-              <Button
+              <Button 
                 onClick={handleSave}
-                className="bg-blue-600 hover:bg-blue-700 border-2 border-blue-600"
                 disabled={validRowCount === 0}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                Save {validRowCount} Product{validRowCount !== 1 ? 's' : ''}
+                Save {validRowCount} Products
               </Button>
             </div>
           </div>
         </div>
-      </DialogContent>
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv"
-        onChange={handleCSVUpload}
-        className="hidden"
-      />
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleCSVUpload}
+          className="hidden"
+        />
+      </DialogContent>
     </Dialog>
   );
 };

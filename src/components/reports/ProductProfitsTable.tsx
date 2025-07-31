@@ -67,10 +67,11 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
   const productProfitsData = useMemo((): ProductProfitRow[] => {
     const productMap = new Map<string, ProductProfitRow>();
     
-    // Filter out sales from products without both cost price and selling price
+    // Filter out sales from unspecified quantity products
     const validSales = filteredSales.filter(sale => {
-      // Only include sales where both cost price and selling price exist and are greater than 0
-      return sale.costPrice > 0 && sale.sellingPrice > 0;
+      // Check if this is an unspecified quantity product by examining the cost price
+      // Unspecified quantity products typically have 0 cost price
+      return sale.costPrice > 0;
     });
     
     validSales.forEach(sale => {

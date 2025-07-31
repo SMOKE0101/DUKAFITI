@@ -4,8 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopProfileSettings from '@/components/settings/ShopProfileSettings';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
-import { WebScrapingPanel } from '@/components/scraping/WebScrapingPanel';
-import { Store, Monitor, Globe } from 'lucide-react';
+import { Store, Monitor } from 'lucide-react';
 
 const Settings = () => {
   return (
@@ -29,13 +28,6 @@ const Settings = () => {
               Shop Info
             </TabsTrigger>
             <TabsTrigger 
-              value="scraping" 
-              className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            >
-              <Globe className="w-4 h-4" />
-              Web Scraping
-            </TabsTrigger>
-            <TabsTrigger 
               value="display" 
               className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             >
@@ -57,23 +49,6 @@ const Settings = () => {
               </CardHeader>
               <CardContent className="p-6 pt-0">
                 <ShopProfileSettings />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Web Scraping Tab Content */}
-          <TabsContent value="scraping" className="mt-6">
-            <Card className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="p-6 pb-4">
-                <CardTitle className="text-2xl font-semibold text-card-foreground mb-2">
-                  Web Scraping
-                </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground">
-                  Scrape product data from Kenyan e-commerce websites for inventory templates
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <WebScrapingPanel />
               </CardContent>
             </Card>
           </TabsContent>

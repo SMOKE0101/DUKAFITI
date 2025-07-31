@@ -43,8 +43,8 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
   // Calculate additional metrics
   const totalOutstandingDebts = customers.reduce((sum, customer) => sum + (customer.outstandingDebt || 0), 0);
   
-  // Filter out sales from products without both cost price and selling price for profit calculation
-  const validProfitSales = filteredSales.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
+  // Filter out sales from unspecified quantity products for profit calculation
+  const validProfitSales = filteredSales.filter(sale => sale.costPrice > 0);
   const totalProfit = validProfitSales.reduce((sum, sale) => sum + (sale.profit || 0), 0);
   
   const totalInventoryValue = products.reduce((sum, product) => {

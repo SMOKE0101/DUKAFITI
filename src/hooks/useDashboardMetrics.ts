@@ -75,8 +75,8 @@ export const useDashboardMetrics = (
       return sum + total;
     }, 0);
 
-    // Filter out sales from products without both cost price and selling price for profit calculation
-    const validProfitSales = todaySalesData.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
+    // Filter out sales from unspecified quantity products for profit calculation
+    const validProfitSales = todaySalesData.filter(sale => sale.costPrice > 0);
     const todayTotalProfit = validProfitSales.reduce((sum, sale) => {
       const profit = Number(sale.profit) || 0;
       return sum + profit;

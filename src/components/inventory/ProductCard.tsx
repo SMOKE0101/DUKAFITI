@@ -68,7 +68,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
             <div className="flex justify-between items-center">
               <span className="text-xs text-gray-600 dark:text-gray-400">Cost Price:</span>
               <span className="font-semibold text-gray-900 dark:text-white text-sm">
-                {product.costPrice === 0 ? 'Unspecified' : formatCurrency(product.costPrice)}
+                {isUnspecifiedQuantity ? 'Unspecified' : formatCurrency(product.costPrice)}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -163,9 +163,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
             </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-600 dark:text-gray-400">Cost Price:</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {product.costPrice === 0 ? 'Unspecified' : formatCurrency(product.costPrice)}
-              </span>
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {isUnspecifiedQuantity ? 'Unspecified' : formatCurrency(product.costPrice)}
+            </span>
           </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Selling Price:</span>
@@ -249,9 +249,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
           </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Cost Price:</span>
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {product.costPrice === 0 ? 'Unspecified' : formatCurrency(product.costPrice)}
-            </span>
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {isUnspecifiedQuantity ? 'Unspecified' : formatCurrency(product.costPrice)}
+              </span>
             </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-600 dark:text-gray-400">Selling Price:</span>

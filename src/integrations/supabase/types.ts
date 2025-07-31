@@ -140,27 +140,6 @@ export type Database = {
         }
         Relationships: []
       }
-      duka_products: {
-        Row: {
-          category: string
-          id: number
-          image_url: string | null
-          name: string
-        }
-        Insert: {
-          category: string
-          id?: number
-          image_url?: string | null
-          name: string
-        }
-        Update: {
-          category?: string
-          id?: number
-          image_url?: string | null
-          name?: string
-        }
-        Relationships: []
-      }
       products: {
         Row: {
           category: string
