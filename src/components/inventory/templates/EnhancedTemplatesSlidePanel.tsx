@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Package, RotateCcw, Download, X } from 'lucide-
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '../../../types';
-import TemplatesGrid from './TemplatesGrid';
+import VirtualTemplatesGrid from './VirtualTemplatesGrid';
 import TemplatesSearch from './TemplatesSearch';
 import BulkProductsSpreadsheet from './BulkProductsSpreadsheet';
 import { useProductTemplates, ProductTemplate } from '../../../hooks/useProductTemplates';
@@ -37,7 +37,11 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
     searchTemplates,
     filterByCategory,
     clearFilters,
-    isOnline
+    isOnline,
+    searchSuggestions,
+    searchHistory,
+    isSearching,
+    totalItems
   } = useProductTemplates();
 
   // Hide bottom navigation on mobile when panel is open
@@ -290,16 +294,22 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
               onCategoryChange={filterByCategory}
               onClearFilters={clearFilters}
               templatesCount={templates.length}
+              searchSuggestions={searchSuggestions}
+              searchHistory={searchHistory}
+              onSearchSuggestionSelect={searchTemplates}
+              isSearching={isSearching}
+              totalItems={totalItems}
             />
           </div>
           
           <div className="flex-1 overflow-hidden">
-            <TemplatesGrid
+            <VirtualTemplatesGrid
               templates={templates}
               selectedTemplates={selectedTemplates}
               onTemplateSelect={handleTemplateSelect}
               loading={loading}
               error={error}
+              searchTerm={searchTerm}
             />
           </div>
         </div>

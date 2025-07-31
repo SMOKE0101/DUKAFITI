@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
+import { useIntelligentSearch } from './useIntelligentSearch';
 
 export interface ProductTemplate {
   id: number;
@@ -19,11 +20,32 @@ export const useProductTemplates = () => {
   const [templates, setTemplates] = useState<ProductTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache } = useCacheManager();
+
+  // Enhanced search with intelligent features
+  const {
+    searchTerm,
+    searchResults,
+    searchSuggestions,
+    filters,
+    filterOptions,
+    isSearching,
+    handleSearch: handleSearchChange,
+    handleFilterChange,
+    clearSearch,
+    searchHistory,
+    hasActiveSearch,
+    hasActiveFilters,
+    totalResults
+  } = useIntelligentSearch(templates, {
+    searchFields: ['name', 'category'],
+    minSearchLength: 1,
+    debounceMs: 300,
+    maxResults: 1000,
+    enableAnalytics: true
+  });
 
   // Get unique categories from templates
   const categories = useMemo(() => {
@@ -31,26 +53,13 @@ export const useProductTemplates = () => {
     return uniqueCategories;
   }, [templates]);
 
-  // Filter templates based on search and category
+  // Use intelligent search results or all templates
   const filteredTemplates = useMemo(() => {
-    let filtered = templates;
-
-    // Apply search filter
-    if (searchTerm.trim()) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(template => 
-        template.name.toLowerCase().includes(search) ||
-        (template.category?.toLowerCase().includes(search))
-      );
+    if (hasActiveSearch || hasActiveFilters) {
+      return searchResults;
     }
-
-    // Apply category filter
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(template => template.category === selectedCategory);
-    }
-
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [templates, searchTerm, selectedCategory]);
+    return templates.sort((a, b) => a.name.localeCompare(b.name));
+  }, [templates, searchResults, hasActiveSearch, hasActiveFilters]);
 
   // Load templates with cache-first strategy
   const loadTemplates = useCallback(async () => {
@@ -116,21 +125,27 @@ export const useProductTemplates = () => {
     }
   }, [isOnline, getCache, setCache]);
 
-  // Search templates with debouncing
+  // Search templates with intelligent features
   const searchTemplates = useCallback((term: string) => {
-    setSearchTerm(term);
-  }, []);
+    handleSearchChange(term);
+  }, [handleSearchChange]);
 
   // Filter by category
   const filterByCategory = useCallback((category: string) => {
-    setSelectedCategory(category);
-  }, []);
+    handleFilterChange({ 
+      categories: category === 'all' ? [] : [category] 
+    });
+  }, [handleFilterChange]);
 
   // Clear filters
   const clearFilters = useCallback(() => {
-    setSearchTerm('');
-    setSelectedCategory('all');
-  }, []);
+    clearSearch();
+  }, [clearSearch]);
+
+  // Get selected category for backward compatibility
+  const selectedCategory = useMemo(() => {
+    return filters.categories.length > 0 ? filters.categories[0] : 'all';
+  }, [filters.categories]);
 
   // Load templates on mount
   useEffect(() => {
@@ -150,5 +165,13 @@ export const useProductTemplates = () => {
     clearFilters,
     refetch: loadTemplates,
     isOnline,
+    // Enhanced search features
+    searchSuggestions,
+    searchHistory,
+    isSearching,
+    totalResults,
+    hasActiveSearch,
+    hasActiveFilters,
+    totalItems: templates.length,
   };
 };
