@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import AddProductModal from './inventory/AddProductModal';
-import BulkProductModal from './inventory/BulkProductModal';
+import TemplatesSlidePanel from './inventory/templates/TemplatesSlidePanel';
 import UncountableProductModal from './inventory/UncountableProductModal';
 import VariationProductModal from './inventory/VariationProductModal';
 import EditProductModal from './inventory/EditProductModal';
@@ -25,7 +25,7 @@ const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showTemplatesPanel, setShowTemplatesPanel] = useState(false);
   const [showUncountableModal, setShowUncountableModal] = useState(false);
   const [showVariationModal, setShowVariationModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -137,7 +137,7 @@ const InventoryPage = () => {
         setShowAddModal(true);
         break;
       case 'bulk':
-        setShowBulkModal(true);
+        setShowTemplatesPanel(true);
         break;
       case 'uncountable':
         setShowUncountableModal(true);
@@ -185,7 +185,7 @@ const InventoryPage = () => {
       const successful = results.filter(result => result.status === 'fulfilled').length;
       const failed = results.filter(result => result.status === 'rejected').length;
       
-      setShowBulkModal(false);
+      setShowTemplatesPanel(false);
       
       if (failed === 0) {
         toast({
@@ -401,9 +401,9 @@ const InventoryPage = () => {
           onSave={handleAddProduct}
         />
 
-        <BulkProductModal
-          isOpen={showBulkModal}
-          onClose={() => setShowBulkModal(false)}
+        <TemplatesSlidePanel
+          isOpen={showTemplatesPanel}
+          onClose={() => setShowTemplatesPanel(false)}
           onSave={handleBulkAddProducts}
         />
 
