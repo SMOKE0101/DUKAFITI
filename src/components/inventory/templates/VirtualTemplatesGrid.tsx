@@ -29,8 +29,12 @@ const VirtualTemplatesGrid: React.FC<VirtualTemplatesGridProps> = ({
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
+  // Safety checks
+  const safeTemplates = Array.isArray(templates) ? templates : [];
+  const safeSelectedTemplates = Array.isArray(selectedTemplates) ? selectedTemplates : [];
+  
   const isSelected = (template: ProductTemplate) => 
-    selectedTemplates.some(t => t.id === template.id);
+    safeSelectedTemplates.some(t => t && template && t.id === template.id);
 
   // Calculate grid columns based on container width
   const [gridCols, setGridCols] = useState(5);
@@ -49,24 +53,16 @@ const VirtualTemplatesGrid: React.FC<VirtualTemplatesGridProps> = ({
     return () => window.removeEventListener('resize', updateGridCols);
   }, []);
 
-  // Convert flat array to grid rows for virtualization
-  const gridRows = React.useMemo(() => {
-    const rows = [];
-    for (let i = 0; i < templates.length; i += gridCols) {
-      rows.push(templates.slice(i, i + gridCols));
-    }
-    return rows;
-  }, [templates, gridCols]);
-
+  // Use direct virtual scrolling with templates
   const {
-    visibleItems: visibleRows,
+    visibleItems: visibleTemplates,
     totalHeight,
     scrollToTop,
     onScroll
-  } = useVirtualScrolling(gridRows, {
+  } = useVirtualScrolling(safeTemplates, {
     itemHeight: ITEM_HEIGHT,
     containerHeight: CONTAINER_HEIGHT,
-    overscan: 3
+    overscan: 5
   });
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -118,7 +114,7 @@ const VirtualTemplatesGrid: React.FC<VirtualTemplatesGridProps> = ({
   }
 
   // Render empty state
-  if (templates.length === 0) {
+  if (safeTemplates.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center p-8">
@@ -163,99 +159,103 @@ const VirtualTemplatesGrid: React.FC<VirtualTemplatesGridProps> = ({
         onScrollCapture={handleScroll}
       >
         <div style={{ height: totalHeight, position: 'relative' }}>
-          {visibleRows.map((row, rowIndex) => (
-            <div
-              key={`row-${row[0]?.id || rowIndex}`}
-              style={row.style}
-              className="absolute left-0 right-0"
-            >
-              <div className="p-4">
-                <div className={cn(
-                  "grid gap-4",
-                  gridCols === 2 && "grid-cols-2",
-                  gridCols === 3 && "grid-cols-3", 
-                  gridCols === 4 && "grid-cols-4",
-                  gridCols === 5 && "grid-cols-5"
-                )}>
-                  {row.map((template) => {
-                    if (!template) return null;
-                    
-                    const selected = isSelected(template);
-                    
-                    return (
-                      <div
-                        key={template.id}
-                        className={cn(
-                          "group relative bg-card rounded-lg border-2 transition-all duration-200 hover:shadow-lg cursor-pointer",
-                          selected 
-                            ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-md scale-105" 
-                            : "border-border hover:border-purple-300 hover:scale-102"
-                        )}
-                        onClick={() => onTemplateSelect(template)}
-                      >
-                        {/* Selection Indicator */}
-                        {selected && (
-                          <div className="absolute top-2 right-2 z-10 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                            <Check className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-
-                        {/* Product Image */}
-                        <div className="aspect-square rounded-t-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                          <img
-                            src={template.image_url || fallbackImage}
-                            alt={template.name}
-                            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                            loading="lazy"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = fallbackImage;
-                            }}
-                          />
+          <div className="p-4">
+            <div className={cn(
+              "grid gap-4",
+              gridCols === 2 && "grid-cols-2",
+              gridCols === 3 && "grid-cols-3", 
+              gridCols === 4 && "grid-cols-4",
+              gridCols === 5 && "grid-cols-5"
+            )}>
+              {visibleTemplates.map((item) => {
+                const template = item as any; // Cast to template type
+                if (!template || !template.id) return null;
+                
+                const selected = isSelected(template);
+                
+                return (
+                  <div
+                    key={template.id}
+                    style={{
+                      position: 'absolute',
+                      top: Math.floor(item.virtualIndex / gridCols) * ITEM_HEIGHT,
+                      left: `${(item.virtualIndex % gridCols) * (100 / gridCols)}%`,
+                      width: `${100 / gridCols}%`,
+                      height: ITEM_HEIGHT,
+                      padding: '0.5rem'
+                    }}
+                  >
+                    <div
+                      className={cn(
+                        "group relative bg-card rounded-lg border-2 transition-all duration-200 hover:shadow-lg cursor-pointer h-full",
+                        selected 
+                          ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-md scale-105" 
+                          : "border-border hover:border-purple-300 hover:scale-102"
+                      )}
+                      onClick={() => onTemplateSelect(template)}
+                    >
+                      {/* Selection Indicator */}
+                      {selected && (
+                        <div className="absolute top-2 right-2 z-10 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                          <Check className="w-4 h-4 text-white" />
                         </div>
+                      )}
 
-                        {/* Product Info */}
-                        <div className="p-3">
-                          <h4 className="font-medium text-sm text-foreground line-clamp-2 mb-1">
-                            {highlightText(template.name, searchTerm)}
-                          </h4>
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {highlightText(template.category || 'General', searchTerm)}
-                          </p>
-                        </div>
-
-                        {/* Action Button Overlay */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex items-center justify-center">
-                          <Button
-                            size="sm"
-                            variant={selected ? "secondary" : "default"}
-                            className={cn(
-                              "shadow-lg transition-all duration-200",
-                              selected 
-                                ? "bg-white text-purple-600 hover:bg-gray-100 scale-110" 
-                                : "bg-purple-600 hover:bg-purple-700 text-white"
-                            )}
-                          >
-                            {selected ? (
-                              <>
-                                <Check className="w-4 h-4 mr-1" />
-                                Selected
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingCart className="w-4 h-4 mr-1" />
-                                Add to Cart
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                      {/* Product Image */}
+                      <div className="aspect-square rounded-t-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        <img
+                          src={template.image_url || fallbackImage}
+                          alt={template.name}
+                          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = fallbackImage;
+                          }}
+                        />
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+
+                      {/* Product Info */}
+                      <div className="p-3">
+                        <h4 className="font-medium text-sm text-foreground line-clamp-2 mb-1">
+                          {highlightText(template.name, searchTerm)}
+                        </h4>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {highlightText(template.category || 'General', searchTerm)}
+                        </p>
+                      </div>
+
+                      {/* Action Button Overlay */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex items-center justify-center">
+                        <Button
+                          size="sm"
+                          variant={selected ? "secondary" : "default"}
+                          className={cn(
+                            "shadow-lg transition-all duration-200",
+                            selected 
+                              ? "bg-white text-purple-600 hover:bg-gray-100 scale-110" 
+                              : "bg-purple-600 hover:bg-purple-700 text-white"
+                          )}
+                        >
+                          {selected ? (
+                            <>
+                              <Check className="w-4 h-4 mr-1" />
+                              Selected
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart className="w-4 h-4 mr-1" />
+                              Add to Cart
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
         </div>
       </ScrollArea>
 

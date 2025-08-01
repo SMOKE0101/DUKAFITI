@@ -38,6 +38,12 @@ export function useVirtualScrolling<T>(
   }, [debouncedScrollTop, itemHeight, containerHeight, items.length, overscan]);
 
   const visibleItems = useMemo(() => {
+    // Safety check to ensure items is an array
+    if (!Array.isArray(items)) {
+      console.warn('useVirtualScrolling: items is not an array', items);
+      return [];
+    }
+    
     return items.slice(visibleRange.startIndex, visibleRange.endIndex).map((item, index) => ({
       ...item,
       virtualIndex: visibleRange.startIndex + index,
@@ -51,7 +57,7 @@ export function useVirtualScrolling<T>(
     }));
   }, [items, visibleRange, itemHeight]);
 
-  const totalHeight = items.length * itemHeight;
+  const totalHeight = Array.isArray(items) ? items.length * itemHeight : 0;
 
   const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;

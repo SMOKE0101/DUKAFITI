@@ -86,7 +86,8 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
   }, []);
 
   const handleTemplateSelect = useCallback((template: ProductTemplate) => {
-    const isSelected = selectedTemplates.some(t => t.id === template.id);
+    if (!template || !template.id) return;
+    const isSelected = selectedTemplates.some(t => t && t.id === template.id);
     
     if (isSelected) {
       // Remove from selection
@@ -304,12 +305,12 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
           
           <div className="flex-1 overflow-hidden">
             <VirtualTemplatesGrid
-              templates={templates}
-              selectedTemplates={selectedTemplates}
+              templates={Array.isArray(templates) ? templates : []}
+              selectedTemplates={Array.isArray(selectedTemplates) ? selectedTemplates : []}
               onTemplateSelect={handleTemplateSelect}
               loading={loading}
               error={error}
-              searchTerm={searchTerm}
+              searchTerm={searchTerm || ''}
             />
           </div>
         </div>
