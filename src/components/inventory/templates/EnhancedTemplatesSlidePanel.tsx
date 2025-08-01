@@ -244,7 +244,10 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
             </div>
           </div>
           
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden" style={{ 
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-x pan-y'
+          }}>
             <BulkProductsSpreadsheet
               data={spreadsheetData}
               onDataChange={handleSpreadsheetUpdate}
@@ -303,7 +306,10 @@ const EnhancedTemplatesSlidePanel: React.FC<EnhancedTemplatesSlidePanelProps> = 
             />
           </div>
           
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden" style={{ 
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-x pan-y'
+          }}>
             <VirtualTemplatesGrid
               templates={Array.isArray(templates) ? templates : []}
               selectedTemplates={Array.isArray(selectedTemplates) ? selectedTemplates : []}

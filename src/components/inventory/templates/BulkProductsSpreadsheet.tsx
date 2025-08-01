@@ -172,7 +172,11 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
       </div>
 
       {/* Spreadsheet */}
-      <ScrollArea className="flex-1" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex-1 overflow-auto overscroll-contain" style={{ 
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-x pan-y'
+      }}>
         <div className="min-w-[800px] lg:min-w-full">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
@@ -294,7 +298,7 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
             </tbody>
           </table>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 };

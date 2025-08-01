@@ -153,10 +153,14 @@ const VirtualTemplatesGrid: React.FC<VirtualTemplatesGridProps> = ({
 
   return (
     <div className="relative h-full">
-      <ScrollArea 
-        className="h-full"
+      <div 
+        className="h-full overflow-auto overscroll-contain"
         ref={scrollContainerRef}
-        onScrollCapture={handleScroll}
+        onScroll={handleScroll}
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-x pan-y'
+        }}
       >
         <div style={{ height: totalHeight, position: 'relative' }}>
           <div className="p-4">
@@ -257,7 +261,7 @@ const VirtualTemplatesGrid: React.FC<VirtualTemplatesGridProps> = ({
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Scroll to Top Button */}
       {showScrollToTop && (
