@@ -82,7 +82,7 @@ const TemplatesSearch: React.FC<TemplatesSearchProps> = ({
               )}
               <Input
                 ref={searchInputRef}
-                placeholder="Search thousands of products... (try 'soap', 'electronics', etc.)"
+                placeholder="Type 'kabras' for Kabras Sugar, 'omo' for detergent, etc..."
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
@@ -204,11 +204,18 @@ const TemplatesSearch: React.FC<TemplatesSearchProps> = ({
           )}
         </div>
         
-        {searchTerm && templatesCount > 0 && (
-          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800">
-            ✓ {templatesCount.toLocaleString()} found
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {searchTerm && templatesCount > 0 && (
+            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800">
+              ✓ {templatesCount.toLocaleString()} found
+            </Badge>
+          )}
+          {searchTerm && templatesCount === 0 && (
+            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">
+              No matches for "{searchTerm}"
+            </Badge>
+          )}
+        </div>
       </div>
     </div>
   );

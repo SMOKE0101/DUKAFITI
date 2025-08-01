@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
-import { useIntelligentSearch } from './useIntelligentSearch';
+import { useEnhancedSearch } from './useEnhancedSearch';
 
 export interface ProductTemplate {
   id: number;
@@ -24,7 +24,7 @@ export const useProductTemplates = () => {
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache } = useCacheManager();
 
-  // Enhanced search with intelligent features
+  // Enhanced search with Excel-like behavior and intelligent features
   const {
     searchTerm,
     searchResults,
@@ -39,10 +39,10 @@ export const useProductTemplates = () => {
     hasActiveSearch,
     hasActiveFilters,
     totalResults
-  } = useIntelligentSearch(templates, {
+  } = useEnhancedSearch(templates, {
     searchFields: ['name', 'category'],
     minSearchLength: 1,
-    debounceMs: 300,
+    debounceMs: 150, // Faster response
     maxResults: 1000,
     enableAnalytics: true
   });
