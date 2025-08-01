@@ -251,13 +251,49 @@ function extractKeywords(name: string, category: string | null): string[] {
     keywords.add(category.toLowerCase());
   }
   
-  // Add common synonyms and related terms
+  // Enhanced synonyms for Kenyan/African products and global brands
   const synonymMap: Record<string, string[]> = {
-    'soap': ['detergent', 'cleaner', 'washing'],
-    'shampoo': ['hair', 'care', 'cosmetic'],
-    'milk': ['dairy', 'beverage', 'drink'],
-    'rice': ['grain', 'food', 'staple'],
-    'sugar': ['sweet', 'sweetener', 'additive']
+    // Food & Beverages
+    'soap': ['detergent', 'cleaner', 'washing', 'omo', 'persil', 'ariel'],
+    'shampoo': ['hair', 'care', 'cosmetic', 'loreal', 'pantene', 'dove'],
+    'milk': ['dairy', 'beverage', 'drink', 'brookside', 'tuzo', 'fresh'],
+    'rice': ['grain', 'food', 'staple', 'pishori', 'basmati', 'jasmine'],
+    'sugar': ['sweet', 'sweetener', 'additive', 'mumias', 'kabras'],
+    'tea': ['chai', 'beverage', 'drink', 'ketepa', 'brookbond', 'lipton'],
+    'flour': ['unga', 'baking', 'cooking', 'exe', 'hostess', 'pembe'],
+    'oil': ['cooking', 'frying', 'fresh fri', 'elianto', 'postman'],
+    'bread': ['loaf', 'bakery', 'mini', 'festive', 'mothers choice'],
+    
+    // Personal Care
+    'toothpaste': ['dental', 'oral', 'colgate', 'aquafresh', 'close up'],
+    'deodorant': ['antiperspirant', 'body spray', 'rexona', 'sure', 'nivea'],
+    'lotion': ['moisturizer', 'cream', 'vaseline', 'nivea', 'dove'],
+    'perfume': ['fragrance', 'cologne', 'scent', 'spray'],
+    
+    // Household
+    'detergent': ['washing powder', 'soap', 'omo', 'ariel', 'persil'],
+    'toilet paper': ['tissue', 'softcare', 'rose', 'gentle care'],
+    'dishwasher': ['washing liquid', 'fairy', 'sunlight', 'mama lemon'],
+    
+    // Electronics
+    'phone': ['mobile', 'smartphone', 'samsung', 'tecno', 'infinix', 'oppo'],
+    'charger': ['cable', 'power', 'adapter', 'usb'],
+    'battery': ['power', 'alkaline', 'duracell', 'eveready'],
+    
+    // Drinks
+    'soda': ['soft drink', 'coca cola', 'fanta', 'sprite', 'pepsi'],
+    'water': ['mineral', 'drinking', 'dasani', 'keringet', 'aquafina'],
+    'juice': ['fresh', 'minute maid', 'del monte', 'tropical'],
+    
+    // Kenyan brands
+    'safaricom': ['telecom', 'mobile', 'network'],
+    'equity': ['bank', 'financial'],
+    'unga': ['flour', 'baking', 'cooking'],
+    'brookside': ['dairy', 'milk', 'yogurt'],
+    'bidco': ['oil', 'cooking', 'soap'],
+    'pwani': ['oil', 'cooking'],
+    'ketepa': ['tea', 'chai'],
+    'mumias': ['sugar', 'sweet']
   };
   
   nameWords.forEach(word => {

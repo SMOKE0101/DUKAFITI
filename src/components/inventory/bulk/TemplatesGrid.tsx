@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, Package, AlertCircle } from 'lucide-react';
+import { Check, Package, AlertCircle, CheckSquare, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductTemplate } from '../../../hooks/useProductTemplates';
 import { Skeleton } from '@/components/ui/skeleton';
+import BulkSelectionTools from './BulkSelectionTools';
 
 interface TemplatesGridProps {
   templates: ProductTemplate[];
@@ -60,6 +61,30 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
     return selectedTemplates.some(t => t.id === template.id);
   }, [selectedTemplates]);
 
+  // Bulk selection handlers
+  const handleSelectAll = useCallback(() => {
+    templates.forEach(template => {
+      if (!isSelected(template)) {
+        onTemplateSelect(template);
+      }
+    });
+  }, [templates, isSelected, onTemplateSelect]);
+
+  const handleClearAll = useCallback(() => {
+    selectedTemplates.forEach(template => {
+      onTemplateSelect(template);
+    });
+  }, [selectedTemplates, onTemplateSelect]);
+
+  const handleSelectVisible = useCallback(() => {
+    const visible = templates.slice(0, visibleItems);
+    visible.forEach(template => {
+      if (!isSelected(template)) {
+        onTemplateSelect(template);
+      }
+    });
+  }, [templates, visibleItems, isSelected, onTemplateSelect]);
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-4">
@@ -99,15 +124,32 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
   const visibleTemplates = templates.slice(0, visibleItems);
 
   return (
-    <div 
-      ref={scrollContainerRef}
-      className="h-full overflow-auto"
-      style={{ 
-        overscrollBehavior: 'contain',
-        WebkitOverflowScrolling: 'touch',
-      }}
-    >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-4">
+    <div className="h-full flex flex-col">
+      {/* Bulk Selection Tools */}
+      {templates.length > 0 && (
+        <div className="flex-shrink-0 p-4 pb-2">
+          <BulkSelectionTools
+            selectedCount={selectedTemplates.length}
+            totalCount={templates.length}
+            visibleCount={visibleItems}
+            onSelectAll={handleSelectAll}
+            onClearAll={handleClearAll}
+            onSelectVisible={handleSelectVisible}
+            disabled={loading}
+          />
+        </div>
+      )}
+
+      {/* Templates Grid */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto"
+        style={{ 
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-4 pt-2">
         {visibleTemplates.map((template) => {
           const selected = isSelected(template);
           
@@ -158,14 +200,15 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
             </div>
           );
         })}
-      </div>
-      
-      {/* Load More Trigger */}
-      {visibleItems < templates.length && (
-        <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">Loading more templates...</div>
         </div>
-      )}
+        
+        {/* Load More Trigger */}
+        {visibleItems < templates.length && (
+          <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+            <div className="text-sm text-muted-foreground">Loading more templates...</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

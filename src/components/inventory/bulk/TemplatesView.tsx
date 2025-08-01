@@ -12,11 +12,18 @@ const TemplatesView: React.FC = () => {
     error,
     searchTerm,
     selectedCategory,
+    selectedCategories,
     categories,
     searchTemplates,
     filterByCategory,
+    toggleCategory,
     clearFilters,
-    isOnline
+    isOnline,
+    templateCounts,
+    searchSuggestions,
+    searchHistory,
+    isSearching,
+    totalItems
   } = useProductTemplates();
 
   return (
@@ -41,10 +48,18 @@ const TemplatesView: React.FC = () => {
           searchTerm={searchTerm}
           onSearchChange={searchTemplates}
           selectedCategory={selectedCategory}
+          selectedCategories={selectedCategories}
           categories={categories}
           onCategoryChange={filterByCategory}
+          onCategoryToggle={toggleCategory}
           onClearFilters={clearFilters}
           templatesCount={templates.length}
+          templateCounts={templateCounts}
+          searchSuggestions={searchSuggestions}
+          searchHistory={searchHistory}
+          onSearchSuggestionSelect={searchTemplates}
+          isSearching={isSearching}
+          totalItems={totalItems}
         />
       </div>
       

@@ -137,6 +137,22 @@ export const useProductTemplates = () => {
     });
   }, [handleFilterChange]);
 
+  // Toggle category for multi-select
+  const toggleCategory = useCallback((category: string) => {
+    const currentCategories = filters.categories;
+    if (currentCategories.includes(category)) {
+      // Remove category
+      handleFilterChange({ 
+        categories: currentCategories.filter(c => c !== category) 
+      });
+    } else {
+      // Add category
+      handleFilterChange({ 
+        categories: [...currentCategories, category] 
+      });
+    }
+  }, [filters.categories, handleFilterChange]);
+
   // Clear filters
   const clearFilters = useCallback(() => {
     clearSearch();
@@ -146,6 +162,20 @@ export const useProductTemplates = () => {
   const selectedCategory = useMemo(() => {
     return filters.categories.length > 0 ? filters.categories[0] : 'all';
   }, [filters.categories]);
+
+  // Get template counts per category
+  const templateCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // Count templates per category
+    templates.forEach(template => {
+      if (template.category) {
+        counts[template.category] = (counts[template.category] || 0) + 1;
+      }
+    });
+    
+    return counts;
+  }, [templates]);
 
   // Load templates on mount
   useEffect(() => {
@@ -159,12 +189,15 @@ export const useProductTemplates = () => {
     error,
     searchTerm,
     selectedCategory,
+    selectedCategories: filters.categories,
     categories,
     searchTemplates,
     filterByCategory,
+    toggleCategory,
     clearFilters,
     refetch: loadTemplates,
     isOnline,
+    templateCounts,
     // Enhanced search features
     searchSuggestions,
     searchHistory,
