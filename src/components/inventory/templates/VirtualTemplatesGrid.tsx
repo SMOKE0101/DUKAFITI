@@ -159,7 +159,8 @@ const VirtualTemplatesGrid: React.FC<VirtualTemplatesGridProps> = ({
         onScroll={handleScroll}
         style={{ 
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-x pan-y'
+          touchAction: 'pan-x pan-y',
+          overflowAnchor: 'none'
         }}
       >
         <div style={{ height: totalHeight, position: 'relative' }}>

@@ -74,7 +74,6 @@ export function useIntelligentSearch<T extends SearchableItem>(
       return applyFilters(items, filters);
     }
 
-    setIsSearching(true);
     const query = debouncedSearchTerm.toLowerCase().trim();
     const results: SearchResult<T>[] = [];
 
@@ -96,15 +95,26 @@ export function useIntelligentSearch<T extends SearchableItem>(
       .slice(0, maxResults);
 
     const filteredResults = applyFilters(sortedResults.map(r => r.originalItem), filters);
-    
-    // Log search analytics
-    if (enableAnalytics && debouncedSearchTerm !== searchTerm) {
-      logSearchAnalytics(debouncedSearchTerm, filteredResults.length);
-    }
-
-    setIsSearching(false);
     return filteredResults;
   }, [debouncedSearchTerm, searchIndex, filters, items, searchFields, minSearchLength, maxResults]);
+
+  // Handle search loading state separately
+  useEffect(() => {
+    if (debouncedSearchTerm && debouncedSearchTerm.length >= minSearchLength) {
+      setIsSearching(true);
+      const timer = setTimeout(() => setIsSearching(false), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setIsSearching(false);
+    }
+  }, [debouncedSearchTerm, minSearchLength]);
+
+  // Handle search analytics separately
+  useEffect(() => {
+    if (enableAnalytics && debouncedSearchTerm && debouncedSearchTerm !== searchTerm && searchResults.length >= 0) {
+      logSearchAnalytics(debouncedSearchTerm, searchResults.length);
+    }
+  }, [debouncedSearchTerm, searchTerm, searchResults.length, enableAnalytics]);
 
   // Search suggestions based on current input
   const searchSuggestions = useMemo(() => {

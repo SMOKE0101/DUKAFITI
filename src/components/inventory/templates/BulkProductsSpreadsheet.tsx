@@ -175,7 +175,9 @@ const BulkProductsSpreadsheet: React.FC<BulkProductsSpreadsheetProps> = ({
       <div className="flex-1 overflow-auto overscroll-contain" style={{ 
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         WebkitOverflowScrolling: 'touch',
-        touchAction: 'pan-x pan-y'
+        touchAction: 'pan-x pan-y',
+        overflowAnchor: 'none',
+        scrollBehavior: 'auto'
       }}>
         <div className="min-w-[800px] lg:min-w-full">
           <table className="w-full border-collapse">
