@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkStatus } from './useNetworkStatus';
-import { useCacheManager } from './useCacheManager';
+import { usePublicTemplateCache } from './usePublicTemplateCache';
 import { useSimpleTemplateSearch } from './useSimpleTemplateSearch';
 
 export interface ProductTemplate {

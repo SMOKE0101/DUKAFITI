@@ -109,14 +109,19 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
     );
   }
 
-  if (templates.length === 0) {
+  if (templates.length === 0 && !loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
         <Package className="w-12 h-12 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Templates Found</h3>
-        <p className="text-muted-foreground">
-          Try adjusting your search criteria or check your connection.
+        <p className="text-muted-foreground mb-4">
+          {error ? error : "Try adjusting your search criteria or check your connection."}
         </p>
+        {error && (
+          <p className="text-xs text-muted-foreground">
+            Expected 7,000+ templates. Please check your internet connection and try again.
+          </p>
+        )}
       </div>
     );
   }
@@ -205,7 +210,18 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
         {/* Load More Trigger */}
         {visibleItems < templates.length && (
           <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
-            <div className="text-sm text-muted-foreground">Loading more templates...</div>
+            <div className="text-sm text-muted-foreground">
+              Loading more templates... ({visibleItems.toLocaleString()} of {templates.length.toLocaleString()} shown)
+            </div>
+          </div>
+        )}
+        
+        {/* Status indicator when all templates are loaded */}
+        {visibleItems >= templates.length && templates.length > 50 && (
+          <div className="h-16 flex items-center justify-center border-t border-border">
+            <div className="text-xs text-muted-foreground">
+              ✓ All {templates.length.toLocaleString()} templates loaded
+            </div>
           </div>
         )}
       </div>

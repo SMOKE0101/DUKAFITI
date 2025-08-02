@@ -36,7 +36,7 @@ const SimpleTemplateSearch: React.FC<SimpleTemplateSearchProps> = ({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search templates... (e.g., 'kabras', 'sugar', 'omo')"
+          placeholder={`Search ${totalItems.toLocaleString()} templates... (e.g., 'kabras', 'sugar', 'omo')`}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10 pr-10"
@@ -84,6 +84,11 @@ const SimpleTemplateSearch: React.FC<SimpleTemplateSearchProps> = ({
           {hasActiveFilters && (
             <Badge variant="secondary" className="text-xs">
               Filtered
+            </Badge>
+          )}
+          {totalItems >= 7000 && (
+            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800">
+              ✓ {totalItems.toLocaleString()}+ templates loaded
             </Badge>
           )}
         </div>

@@ -3,6 +3,8 @@ import { useBulkAdd } from './BulkAddProvider';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
 import TemplatesGrid from './TemplatesGrid';
 import SimpleTemplateSearch from './SimpleTemplateSearch';
+import TemplateLoadingStatus from './TemplateLoadingStatus';
+import TemplateDebugPanel from './TemplateDebugPanel';
 
 
 const TemplatesView: React.FC = () => {
@@ -29,15 +31,30 @@ const TemplatesView: React.FC = () => {
           <div>
             <h3 className="font-semibold text-lg">Browse Product Templates</h3>
             <p className="text-sm text-muted-foreground">
-              Select templates to add to your spreadsheet
+              Select from {totalTemplates.toLocaleString()}+ templates to add to your spreadsheet
             </p>
           </div>
-          {!isOnline && (
-            <div className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-3 py-1 rounded-full text-xs font-medium">
-              Offline Mode
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {!isOnline && (
+              <div className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-3 py-1 rounded-full text-xs font-medium">
+                Offline Mode
+              </div>
+            )}
+            {loading && (
+              <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-xs font-medium">
+                Loading templates...
+              </div>
+            )}
+          </div>
         </div>
+        
+        <TemplateLoadingStatus
+          totalTemplates={totalTemplates}
+          loading={loading}
+          error={error}
+          isOnline={isOnline}
+          className="mb-4"
+        />
         
         <SimpleTemplateSearch
           searchTerm={searchTerm}
@@ -50,6 +67,11 @@ const TemplatesView: React.FC = () => {
           totalItems={totalTemplates}
           loading={loading}
         />
+
+        {/* Debug Panel - for troubleshooting template loading issues */}
+        {(error || totalTemplates < 7000) && (
+          <TemplateDebugPanel className="mt-4" />
+        )}
         
       </div>
       
