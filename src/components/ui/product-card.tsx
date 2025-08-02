@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -39,6 +39,60 @@ interface ProductCardProps {
   className?: string;
 }
 
+// Image component with proper error handling
+const ProductImage: React.FC<{ 
+  src?: string; 
+  alt: string; 
+  productName: string;
+  className?: string;
+}> = ({ src, alt, productName, className }) => {
+  const [imageError, setImageError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+    setIsLoading(false);
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  // Show fallback if no src or error occurred
+  if (!src || imageError) {
+    return (
+      <div className={cn("w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-900", className)}>
+        <div className="w-12 h-12 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center shadow-sm">
+          <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+            {productName.charAt(0).toUpperCase()}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("relative w-full h-full", className)}>
+      {isLoading && (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-900">
+          <div className="w-12 h-12 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+            <Package className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          </div>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+        loading="lazy"
+        onError={handleImageError}
+        onLoad={handleImageLoad}
+        style={{ display: imageError ? 'none' : 'block' }}
+      />
+    </div>
+  );
+};
+
 const ProductCard: React.FC<ProductCardProps> = ({
   product,
   variant,
@@ -57,8 +111,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onSelect,
   className
 }) => {
-  const fallbackImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik03NS41IDExNS41SDE0MS41VjE2NS41SDc1LjVWMTE1LjVaIiBmaWxsPSIjRTVFN0VCIi8+CjxwYXRoIGQ9Ik05NS41IDc1LjVIMTIxLjVWMTE1LjVIOTUuNVY3NS41WiIgZmlsbD0iI0U1RTdFQiIvPgo8L3N2Zz4K';
-
   const getStockStatus = () => {
     if (variant !== 'inventory') return null;
     if (currentStock === undefined || currentStock === null) return { label: 'N/A', variant: 'secondary' as const };
@@ -94,31 +146,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       )}
 
       {/* Product Image */}
-      <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden rounded-t-lg">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-            loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-900"><div class="w-12 h-12 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center shadow-sm"><span class="text-lg font-bold text-purple-600 dark:text-purple-400">${product.name.charAt(0).toUpperCase()}</span></div></div>`;
-              }
-            }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-900">
-            <div className="w-12 h-12 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center shadow-sm">
-              <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                {product.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          </div>
-        )}
+      <div className="aspect-square overflow-hidden rounded-t-lg">
+        <ProductImage
+          src={product.image_url}
+          alt={product.name}
+          productName={product.name}
+        />
       </div>
       
       {/* Product Info */}
@@ -187,7 +220,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
 
-      {/* Action Overlays - Exactly like template design */}
+      {/* Action Overlays */}
       <div className={cn(
         "absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-200",
         variant === 'template' && isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
