@@ -69,6 +69,7 @@ export const useProductTemplates = () => {
       const cached = getCache<ProductTemplate[]>('product_templates');
       if (cached && Array.isArray(cached) && cached.length > 0) {
         console.log('[ProductTemplates] Using cached data:', cached.length, 'templates');
+        console.log('[ProductTemplates] Sample cached items:', cached.slice(0, 5).map(t => ({ name: t.name, category: t.category })));
         setTemplates(cached);
         setLoading(false);
         
@@ -109,6 +110,9 @@ export const useProductTemplates = () => {
           console.error('[ProductTemplates] Fetch error:', fetchError);
         } else {
           console.log('[ProductTemplates] Fetched from server:', data?.length || 0, 'templates');
+          console.log('[ProductTemplates] Sample fetched items:', data.slice(0, 5).map(t => ({ name: t.name, category: t.category })));
+          const kabrasItems = data.filter(t => t.name.toLowerCase().includes('kabras'));
+          console.log('[ProductTemplates] Kabras items found:', kabrasItems.length, kabrasItems.map(t => t.name));
           setCache('product_templates', data || []);
           setTemplates(data || []);
         }

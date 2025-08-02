@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { useDebounce } from './useProductionOptimization';
 import { useLocalStorage } from './useLocalStorage';
@@ -48,7 +48,7 @@ export function useFuseSearch<T extends SearchableItem>(
     includeScore: true,                   // For result ranking
     includeMatches: true,                 // For highlighting
     ignoreCase: true,                     // Case insensitive
-    minMatchCharLength: 2,                // Reasonable minimum
+    minMatchCharLength: 1,                // Allow single character matches
     shouldSort: true,                     // Sort by relevance
     ignoreLocation: true,                 // Don't care about position in string
     findAllMatches: true,                 // Find all matches
@@ -81,14 +81,14 @@ export function useFuseSearch<T extends SearchableItem>(
     return applyFilters(results, filters);
   }, [debouncedSearchTerm, fuse, filters, items, maxResults]);
 
-  // Loading state
-  useState(() => {
+  // Loading state effect
+  useEffect(() => {
     if (searchTerm !== debouncedSearchTerm && searchTerm.length >= 1) {
       setIsSearching(true);
     } else {
       setIsSearching(false);
     }
-  });
+  }, [searchTerm, debouncedSearchTerm]);
 
   // Search suggestions
   const searchSuggestions = useMemo(() => {

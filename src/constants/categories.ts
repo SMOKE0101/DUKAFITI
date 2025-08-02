@@ -1,15 +1,13 @@
-// Product categories for inventory management
+// Product categories from duka_products_templates database - using exact case as stored
 export const PRODUCT_CATEGORIES = [
-  'Beverages',
-  'Grains & Staples',
-  'Snacks & Confectionery',
-  'Cooking Essentials',
-  'Dairy & Eggs',
-  'Household Supplies',
-  'Cleaning & Laundry',
-  'Personal Care',
-  'Stationery & Misc',
-  'Other / Custom'
+  'electronics',
+  'foods', 
+  'fresh products',
+  'homecare',
+  'households',
+  'liquor',
+  'personal care',
+  'textile'
 ] as const;
 
 export type ProductCategory = typeof PRODUCT_CATEGORIES[number];
