@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import EmptyState from './ui/empty-state';
 import LoadingSkeleton from './ui/loading-skeleton';
-import ProductCard from './ui/product-card';
+import ResponsiveProductGrid from './ui/responsive-product-grid';
 import { Product } from '../types';
 
 interface ProductGridProps {
@@ -61,19 +61,18 @@ const ProductGrid = ({ products, onAddToCart, isLoading }: ProductGridProps) => 
               onAction={!searchQuery ? () => window.location.href = '#/products' : undefined}
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-              {displayProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  variant="sales"
-                  onAddToCart={onAddToCart}
-                  price={product.sellingPrice}
-                  stock={product.currentStock}
-                  isInStock={product.currentStock > 0 || product.currentStock === -1}
-                />
-              ))}
-            </div>
+            <ResponsiveProductGrid
+              products={displayProducts}
+              variant="sales"
+              onAddToCart={onAddToCart}
+              getPriceForProduct={(product) => product.sellingPrice}
+              getStockForProduct={(product) => product.currentStock}
+              getInStockStatus={(product) => product.currentStock > 0 || product.currentStock === -1}
+              gridConfig={{
+                cols: { mobile: 2, tablet: 3, desktop: 6 },
+                gap: 'gap-2'
+              }}
+            />
           )}
           
           {filteredProducts.length > 12 && (

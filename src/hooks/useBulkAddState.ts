@@ -140,7 +140,7 @@ export const useBulkAddState = () => {
             ...updated[emptyRowIndex],
             name: template.name,
             category: template.category || '',
-            image_url: template.image_url || '',
+            image_url: template.image_url || null, // Properly handle null values
             isValid: false,
             errors: ['Selling price is required and must be > 0'],
           };
@@ -170,7 +170,7 @@ export const useBulkAddState = () => {
       currentStock: row.currentStock === '' ? -1 : Number(row.currentStock),
       lowStockThreshold: row.lowStockThreshold === '' ? 10 : Number(row.lowStockThreshold),
       sku: '',
-      image_url: row.image_url || '',
+      image_url: row.image_url || null, // Ensure image_url is properly transferred
     }));
   }, [spreadsheetData]);
 
