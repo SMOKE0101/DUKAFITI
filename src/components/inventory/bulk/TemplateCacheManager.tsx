@@ -1,10 +1,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Trash2, Database } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
 
 const TemplateCacheManager: React.FC = () => {
-  const { toast } = useToast();
+  // No need for useToast anymore, using sonner directly
 
   const clearTemplateCache = () => {
     try {
@@ -17,8 +17,7 @@ const TemplateCacheManager: React.FC = () => {
       
       templateKeys.forEach(key => localStorage.removeItem(key));
       
-      toast({
-        title: "Cache Cleared",
+      toast.success("Cache Cleared", {
         description: `Cleared ${templateKeys.length} template cache entries. Refreshing page...`,
       });
       
@@ -28,10 +27,8 @@ const TemplateCacheManager: React.FC = () => {
       }, 1000);
       
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to clear cache",
-        variant: "destructive"
       });
     }
   };

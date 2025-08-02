@@ -32,7 +32,7 @@ const TemplatesView: React.FC = () => {
           <div>
             <h3 className="font-semibold text-lg">Browse Product Templates</h3>
             <p className="text-sm text-muted-foreground">
-              Select from {totalTemplates.toLocaleString()}+ templates to add to your spreadsheet
+              Select from {totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates to add to your spreadsheet
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -73,7 +73,7 @@ const TemplatesView: React.FC = () => {
         <TemplateCacheManager />
 
         {/* Debug Panel - for troubleshooting template loading issues */}
-        {(error || totalTemplates < 7000) && (
+        {(error || totalTemplates < 7344) && (
           <TemplateDebugPanel className="mt-4" />
         )}
         

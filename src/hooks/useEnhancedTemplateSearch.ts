@@ -31,10 +31,13 @@ export const useEnhancedTemplateSearch = () => {
     setLoadingProgress(0);
 
     try {
-      // Clear old cache with wrong item count to force fresh fetch
+      // Clear old cache with wrong item count or version to force fresh fetch
       const currentCacheInfo = getCacheInfo('all_product_templates');
-      if (currentCacheInfo.exists && currentCacheInfo.itemCount && currentCacheInfo.itemCount < 7000) {
-        console.log('[EnhancedTemplateSearch] Clearing outdated cache with only', currentCacheInfo.itemCount, 'items');
+      if (currentCacheInfo.exists && (
+        (currentCacheInfo.itemCount && currentCacheInfo.itemCount < 7000) || 
+        currentCacheInfo.version !== '2.0'
+      )) {
+        console.log('[EnhancedTemplateSearch] Clearing outdated cache - items:', currentCacheInfo.itemCount, 'version:', currentCacheInfo.version);
         localStorage.removeItem('public_cache_all_product_templates');
       }
 
@@ -42,7 +45,7 @@ export const useEnhancedTemplateSearch = () => {
       const cacheInfo = getCacheInfo('all_product_templates');
       console.log('[EnhancedTemplateSearch] Cache info after clearing:', cacheInfo);
       
-      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000) {
+      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000 && cacheInfo.version === '2.0') {
         console.log('[EnhancedTemplateSearch] Using cached data:', cacheInfo.itemCount, 'templates');
         const cached = getCache<ProductTemplate[]>('all_product_templates');
         if (cached && Array.isArray(cached)) {
@@ -53,9 +56,9 @@ export const useEnhancedTemplateSearch = () => {
         }
       }
 
-      // Fetch fresh data if online
+      // Fetch fresh data if online using pagination to bypass 1,000 limit
       if (isOnline) {
-        console.log('[EnhancedTemplateSearch] Fetching all templates from database...');
+        console.log('[EnhancedTemplateSearch] Fetching all templates using pagination...');
         setLoadingProgress(10);
         
         // Get total count first
@@ -70,41 +73,64 @@ export const useEnhancedTemplateSearch = () => {
         console.log('[EnhancedTemplateSearch] Total templates available:', count);
         setLoadingProgress(20);
         
-        // Fetch ALL templates using range-based query to bypass limits
-        const { data, error: fetchError, count: totalCount } = await supabase
-          .from('duka_products_templates')
-          .select('*', { count: 'exact' })
-          .order('name')
-          .range(0, 9999); // Use range instead of limit to get all templates
+        // Fetch ALL templates using pagination (1000 per batch)
+        const allTemplates: ProductTemplate[] = [];
+        const batchSize = 1000;
+        let totalFetched = 0;
+        let hasMore = true;
+        
+        while (hasMore && totalFetched < (count || 0)) {
+          const batchNum = Math.floor(totalFetched / batchSize) + 1;
+          console.log(`[EnhancedTemplateSearch] Fetching batch ${batchNum}, offset: ${totalFetched}`);
+          
+          const { data: batch, error: batchError } = await supabase
+            .from('duka_products_templates')
+            .select('*')
+            .order('name')
+            .range(totalFetched, totalFetched + batchSize - 1);
 
-        setLoadingProgress(80);
+          if (batchError) {
+            throw new Error(`Failed to load templates batch ${batchNum}: ${batchError.message}`);
+          }
 
-        if (fetchError) {
-          throw new Error(`Failed to load templates: ${fetchError.message}`);
+          if (batch && batch.length > 0) {
+            allTemplates.push(...batch);
+            totalFetched += batch.length;
+            
+            // Update progress
+            const progress = Math.min(80, 20 + (totalFetched / (count || 1)) * 60);
+            setLoadingProgress(progress);
+            
+            console.log(`[EnhancedTemplateSearch] Fetched batch ${batchNum} of ${batch.length}, total: ${totalFetched}`);
+            
+            // Stop if we got less than expected (end of data)
+            if (batch.length < batchSize) {
+              hasMore = false;
+            }
+          } else {
+            hasMore = false;
+          }
+          
+          // Safety check to prevent infinite loops
+          if (totalFetched >= 10000) {
+            console.warn('[EnhancedTemplateSearch] Safety limit reached, stopping pagination');
+            break;
+          }
         }
 
-        const templates = data || [];
-        console.log('[EnhancedTemplateSearch] Successfully loaded', templates.length, 'templates');
+        setLoadingProgress(90);
+        console.log('[EnhancedTemplateSearch] Pagination complete. Total fetched:', totalFetched);
         
         // Cache the results
-        setCache('all_product_templates', templates, '1.1');
-        setAllTemplates(templates);
+        setCache('all_product_templates', allTemplates, '2.0');
+        setAllTemplates(allTemplates);
         setLoadingProgress(100);
         
-        // Log some sample data for verification
-        const testItems = [
-          'kabras',
-          'sugar', 
-          'omo',
-          'bread',
-          'milk'
-        ];
-        
-        testItems.forEach(item => {
-          const found = templates.filter(t => 
-            t.name.toLowerCase().includes(item.toLowerCase())
-          );
-          console.log(`[EnhancedTemplateSearch] ${item} items:`, found.length);
+        // Verify search targets exist
+        const testSearches = ['kabras', 'sugar', 'omo', 'bread'];
+        testSearches.forEach(term => {
+          const found = allTemplates.filter(t => t.name.toLowerCase().includes(term.toLowerCase()));
+          console.log(`[EnhancedTemplateSearch] ${term} items:`, found.length, found.map(t => t.name));
         });
       } else {
         // Offline - check if we have any cached data
