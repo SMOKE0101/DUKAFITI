@@ -2,7 +2,7 @@ import React from 'react';
 import { useBulkAdd } from './BulkAddProvider';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
 import TemplatesGrid from './TemplatesGrid';
-import TemplatesSearch from './TemplatesSearch';
+import SimpleTemplateSearch from './SimpleTemplateSearch';
 
 
 const TemplatesView: React.FC = () => {
@@ -13,18 +13,12 @@ const TemplatesView: React.FC = () => {
     error,
     searchTerm,
     selectedCategory,
-    selectedCategories,
     categories,
     searchTemplates,
     filterByCategory,
-    toggleCategory,
     clearFilters,
     isOnline,
-    templateCounts,
-    searchSuggestions,
-    searchHistory,
-    isSearching,
-    totalItems
+    totalTemplates
   } = useProductTemplates();
 
   return (
@@ -45,22 +39,16 @@ const TemplatesView: React.FC = () => {
           )}
         </div>
         
-        <TemplatesSearch
+        <SimpleTemplateSearch
           searchTerm={searchTerm}
           onSearchChange={searchTemplates}
           selectedCategory={selectedCategory}
-          selectedCategories={selectedCategories}
           categories={categories}
           onCategoryChange={filterByCategory}
-          onCategoryToggle={toggleCategory}
           onClearFilters={clearFilters}
-          templatesCount={templates.length}
-          templateCounts={templateCounts}
-          searchSuggestions={searchSuggestions}
-          searchHistory={searchHistory}
-          onSearchSuggestionSelect={searchTemplates}
-          isSearching={isSearching}
-          totalItems={totalItems}
+          resultsCount={templates.length}
+          totalItems={totalTemplates}
+          loading={loading}
         />
         
       </div>
