@@ -62,30 +62,45 @@ const ProductGrid = ({ products, onAddToCart, isLoading }: ProductGridProps) => 
               onAction={!searchQuery ? () => window.location.href = '#/products' : undefined}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {displayProducts.map((product) => (
-                <TouchFriendlyButton
+                <div
                   key={product.id}
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col gap-2 text-center hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 min-h-[88px] justify-center"
+                  className="group relative bg-white dark:bg-gray-800 rounded-lg border border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:border-purple-300 overflow-hidden"
                   onClick={() => onAddToCart(product)}
-                  disabled={isLoading}
                 >
-                  <span className="font-medium text-sm sm:text-base line-clamp-2" title={product.name}>
-                    {product.name}
-                  </span>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs sm:text-sm text-green-600 font-semibold">
-                      {formatCurrency(product.sellingPrice)}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      Stock: {product.currentStock === -1 ? 'Unspecified' : product.currentStock}
-                    </span>
+                  {/* Product Image Placeholder */}
+                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <span className="text-lg font-semibold text-primary">
+                        {product.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center mt-1">
-                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                  
+                  {/* Product Info */}
+                  <div className="p-2">
+                    <h4 className="font-medium text-xs mb-1 line-clamp-2 leading-tight" title={product.name}>
+                      {product.name}
+                    </h4>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-green-600 font-semibold">
+                        {formatCurrency(product.sellingPrice)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Stock: {product.currentStock === -1 ? 'N/A' : product.currentStock}
+                      </span>
+                    </div>
                   </div>
-                </TouchFriendlyButton>
+                  
+                  {/* Add Button Overlay - Matching Template Style */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                    <div className="bg-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-medium shadow-lg hover:bg-purple-700 transition-all duration-200">
+                      <Plus className="w-3 h-3 inline mr-1" />
+                      Add
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, Package, AlertCircle, CheckSquare, Square } from 'lucide-react';
+import { Check, Package, AlertCircle, CheckSquare, Square, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductTemplate } from '../../../hooks/useProductTemplates';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -87,11 +87,11 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-4">
-        {Array.from({ length: 12 }).map((_, index) => (
-          <div key={index} className="p-3 border border-border rounded-lg">
-            <Skeleton className="h-32 w-full mb-3 rounded" />
-            <Skeleton className="h-4 w-3/4 mb-2" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-4">
+        {Array.from({ length: 24 }).map((_, index) => (
+          <div key={index} className="rounded-lg overflow-hidden">
+            <Skeleton className="aspect-square w-full mb-2" />
+            <Skeleton className="h-3 w-3/4 mb-1" />
             <Skeleton className="h-3 w-1/2" />
           </div>
         ))}
@@ -154,7 +154,7 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-4 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-4 pt-2">
         {visibleTemplates.map((template) => {
           const selected = isSelected(template);
           
@@ -162,46 +162,78 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
             <div
               key={template.id}
               className={cn(
-                "group relative border border-border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer",
-                selected && "ring-2 ring-primary border-primary bg-primary/5"
+                "group relative bg-white dark:bg-gray-800 rounded-lg border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md overflow-hidden",
+                selected 
+                  ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500/50" 
+                  : "border-border hover:border-purple-300"
               )}
               onClick={() => onTemplateSelect(template)}
             >
               {/* Selection Indicator */}
               {selected && (
-                <div className="absolute top-2 right-2 z-10 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                  <Check className="w-4 h-4 text-primary-foreground" />
+                <div className="absolute top-1 right-1 z-10 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
+                  <Check className="w-3 h-3 text-white" />
                 </div>
               )}
               
               {/* Template Image */}
-              <div className="aspect-square bg-muted flex items-center justify-center">
+              <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                 {template.image_url ? (
                   <img
                     src={template.image_url}
                     alt={template.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                     loading="lazy"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg class="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>`;
+                      }
+                    }}
                   />
                 ) : (
-                  <Package className="w-12 h-12 text-muted-foreground" />
+                  <Package className="w-8 h-8 text-muted-foreground" />
                 )}
               </div>
               
               {/* Template Info */}
-              <div className="p-3">
-                <h4 className="font-medium text-sm mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+              <div className="p-2">
+                <h4 className="font-medium text-xs mb-1 line-clamp-2 leading-tight">
                   {template.name}
                 </h4>
                 {template.category && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground capitalize">
                     {template.category}
                   </p>
                 )}
               </div>
               
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+              {/* Add Button Overlay - Similar to Sales Page */}
+              <div className={cn(
+                "absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-200",
+                selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              )}>
+                <div className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
+                  selected 
+                    ? "bg-white text-purple-600 shadow-lg" 
+                    : "bg-purple-600 text-white shadow-lg hover:bg-purple-700"
+                )}>
+                  {selected ? (
+                    <>
+                      <Check className="w-3 h-3 inline mr-1" />
+                      Selected
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3 h-3 inline mr-1" />
+                      Add
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           );
         })}
