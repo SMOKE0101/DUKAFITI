@@ -67,7 +67,8 @@ export const useEnhancedTemplateSearch = () => {
         const { data, error: fetchError } = await supabase
           .from('duka_products_templates')
           .select('*')
-          .order('name');
+          .order('name')
+          .limit(10000); // Explicitly set high limit to get all templates
 
         setLoadingProgress(80);
 
