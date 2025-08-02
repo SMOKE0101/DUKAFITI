@@ -74,7 +74,7 @@ const TemplateLoadingStatus: React.FC<TemplateLoadingStatusProps> = ({
     );
   }
 
-  if (totalTemplates >= 7000) {
+  if (totalTemplates >= 7344) {
     return (
       <div className={cn("flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg", className)}>
         <CheckCircle className="w-4 h-4 text-green-600" />
@@ -112,7 +112,7 @@ const TemplateLoadingStatus: React.FC<TemplateLoadingStatusProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 border-yellow-300">
-              Only {totalTemplates.toLocaleString()} of 7,000+ templates loaded
+              Only {totalTemplates.toLocaleString()} of 7,344+ templates loaded
             </Badge>
             <Badge variant="outline" className="text-xs">
               {isOnline ? 'Online' : 'Offline'}

@@ -121,19 +121,32 @@ export const useSimpleTemplateSearch = () => {
   // Filter and search templates
   const filteredTemplates = useMemo(() => {
     let results = allTemplates;
+    
+    console.log('[SimpleTemplateSearch] Starting filter with', allTemplates.length, 'total templates');
+    console.log('[SimpleTemplateSearch] Search term:', searchTerm);
+    console.log('[SimpleTemplateSearch] Selected category:', selectedCategory);
 
     // Apply category filter first
     if (selectedCategory !== 'all') {
       results = results.filter(t => t.category === selectedCategory);
+      console.log('[SimpleTemplateSearch] After category filter:', results.length, 'templates');
     }
 
     // Apply search if there's a search term
     if (searchTerm.trim() && fuse) {
       const searchResults = fuse.search(searchTerm.trim());
+      console.log('[SimpleTemplateSearch] Fuse search results:', searchResults.length);
       const searchIds = new Set(searchResults.map(result => result.item.id));
       results = results.filter(t => searchIds.has(t.id));
+      console.log('[SimpleTemplateSearch] After search filter:', results.length, 'templates');
+      
+      // Debug: show first few search results
+      if (searchResults.length > 0) {
+        console.log('[SimpleTemplateSearch] First few matches:', searchResults.slice(0, 3).map(r => r.item.name));
+      }
     }
 
+    console.log('[SimpleTemplateSearch] Final filtered results:', results.length);
     return results;
   }, [allTemplates, searchTerm, selectedCategory, fuse]);
 
