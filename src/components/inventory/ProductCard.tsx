@@ -46,6 +46,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
     return (
       <Card className="bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700">
         <CardContent className="p-4">
+          {/* Product Image */}
+          {product.image_url && (
+            <div className="mb-3 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="w-full h-24 object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+          
           {/* Header with name, ID and badge */}
           <div className="flex justify-between items-start mb-3">
             <div className="flex-1 min-w-0 mr-3">
@@ -146,6 +162,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
     return (
       <Card className="bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700">
         <CardContent className="p-5">
+          {/* Product Image */}
+          {product.image_url && (
+            <div className="mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="w-full h-32 object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+          
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1 min-w-0 mr-4">
               <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>
@@ -232,6 +264,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
   return (
     <Card className={`bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 border border-gray-200 dark:border-gray-700 ${isUnspecifiedQuantity ? 'opacity-90' : ''} flex flex-col h-full`}>
       <CardContent className="p-6 flex flex-col h-full">
+        {/* Product Image */}
+        {product.image_url && (
+          <div className="mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-36 object-cover"
+              loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+        
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1 truncate">{product.name}</h3>

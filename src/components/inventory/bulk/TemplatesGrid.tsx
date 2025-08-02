@@ -189,12 +189,16 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
                       target.style.display = 'none';
                       const parent = target.parentElement;
                       if (parent) {
-                        parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg class="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>`;
+                        parent.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600"><div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-sm font-semibold text-primary">${template.name.charAt(0).toUpperCase()}</span></div></div>`;
                       }
                     }}
                   />
                 ) : (
-                  <Package className="w-8 h-8 text-muted-foreground" />
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold text-primary">
+                      {template.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                 )}
               </div>
               

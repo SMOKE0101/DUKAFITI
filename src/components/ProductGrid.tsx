@@ -69,13 +69,30 @@ const ProductGrid = ({ products, onAddToCart, isLoading }: ProductGridProps) => 
                   className="group relative bg-white dark:bg-gray-800 rounded-lg border border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:border-purple-300 overflow-hidden"
                   onClick={() => onAddToCart(product)}
                 >
-                  {/* Product Image Placeholder */}
-                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                      <span className="text-lg font-semibold text-primary">
-                        {product.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                  {/* Product Image */}
+                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            parent.innerHTML = `<div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-lg font-semibold text-primary">${product.name.charAt(0).toUpperCase()}</span></div>`;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-lg font-semibold text-primary">
+                          {product.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   
                   {/* Product Info */}

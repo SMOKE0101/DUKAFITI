@@ -27,6 +27,7 @@ const SpreadsheetView: React.FC = () => {
       sellingPrice: '',
       currentStock: '',
       lowStockThreshold: '',
+      image_url: '',
       isValid: false,
       errors: [],
     }));
@@ -56,6 +57,7 @@ const SpreadsheetView: React.FC = () => {
             sellingPrice: values[3] ? parseFloat(values[3]) || '' : '',
             currentStock: values[4] ? parseInt(values[4]) || '' : '',
             lowStockThreshold: values[5] ? parseInt(values[5]) || '' : '',
+            image_url: values[6] || '',
             isValid: false,
             errors: [],
           };
@@ -175,6 +177,9 @@ const SpreadsheetView: React.FC = () => {
                 <th className="border border-border p-2 text-left text-xs font-medium uppercase tracking-wider min-w-[100px]">
                   Low Stock Alert
                 </th>
+                <th className="border border-border p-2 text-left text-xs font-medium uppercase tracking-wider min-w-[180px]">
+                  Image URL
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -260,6 +265,15 @@ const SpreadsheetView: React.FC = () => {
                         value={row.lowStockThreshold}
                         onChange={(e) => updateRow(index, 'lowStockThreshold', e.target.value ? parseInt(e.target.value) : '')}
                         placeholder="10"
+                        className="border-0 h-9 text-sm focus-visible:ring-1"
+                      />
+                    </td>
+                    <td className="border border-border p-1">
+                      <Input
+                        type="url"
+                        value={row.image_url || ''}
+                        onChange={(e) => updateRow(index, 'image_url', e.target.value)}
+                        placeholder="https://example.com/image.jpg"
                         className="border-0 h-9 text-sm focus-visible:ring-1"
                       />
                     </td>

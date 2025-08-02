@@ -10,6 +10,7 @@ export interface BulkProductRow {
   sellingPrice: number | '';
   currentStock: number | '';
   lowStockThreshold: number | '';
+  image_url?: string;
   isValid: boolean;
   errors: string[];
 }
@@ -46,6 +47,7 @@ export const useBulkAddState = () => {
       sellingPrice: '',
       currentStock: '',
       lowStockThreshold: '',
+      image_url: '',
       isValid: false,
       errors: [],
     }));
@@ -104,7 +106,7 @@ export const useBulkAddState = () => {
       setSpreadsheetData(prev => 
         prev.map(row => 
           row.name === template.name 
-            ? { ...row, name: '', category: '', isValid: false, errors: [] } 
+            ? { ...row, name: '', category: '', image_url: '', isValid: false, errors: [] } 
             : row
         )
       );
@@ -127,6 +129,7 @@ export const useBulkAddState = () => {
             sellingPrice: '',
             currentStock: '',
             lowStockThreshold: '',
+            image_url: template.image_url || '',
             isValid: false,
             errors: ['Selling price is required and must be > 0'],
           };
@@ -137,6 +140,7 @@ export const useBulkAddState = () => {
             ...updated[emptyRowIndex],
             name: template.name,
             category: template.category || '',
+            image_url: template.image_url || '',
             isValid: false,
             errors: ['Selling price is required and must be > 0'],
           };
@@ -166,6 +170,7 @@ export const useBulkAddState = () => {
       currentStock: row.currentStock === '' ? -1 : Number(row.currentStock),
       lowStockThreshold: row.lowStockThreshold === '' ? 10 : Number(row.lowStockThreshold),
       sku: '',
+      image_url: row.image_url || '',
     }));
   }, [spreadsheetData]);
 
