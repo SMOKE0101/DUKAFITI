@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Check, Package, AlertCircle, CheckSquare, Square, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Package, AlertCircle } from 'lucide-react';
 import { ProductTemplate } from '../../../hooks/useProductTemplates';
 import { Skeleton } from '@/components/ui/skeleton';
+import ProductCard from '../../ui/product-card';
 import BulkSelectionTools from './BulkSelectionTools';
 
 interface TemplatesGridProps {
@@ -155,92 +154,20 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
         }}
       >
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-4 pt-2">
-        {visibleTemplates.map((template) => {
-          const selected = isSelected(template);
-          
-          return (
-            <div
-              key={template.id}
-              className={cn(
-                "group relative bg-white dark:bg-gray-800 rounded-lg border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md overflow-hidden",
-                selected 
-                  ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500/50" 
-                  : "border-border hover:border-purple-300"
-              )}
-              onClick={() => onTemplateSelect(template)}
-            >
-              {/* Selection Indicator */}
-              {selected && (
-                <div className="absolute top-1 right-1 z-10 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
-                  <Check className="w-3 h-3 text-white" />
-                </div>
-              )}
-              
-              {/* Template Image */}
-              <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
-                {template.image_url ? (
-                  <img
-                    src={template.image_url}
-                    alt={template.name}
-                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600"><div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-sm font-semibold text-primary">${template.name.charAt(0).toUpperCase()}</span></div></div>`;
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold text-primary">
-                      {template.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Template Info */}
-              <div className="p-2">
-                <h4 className="font-medium text-xs mb-1 line-clamp-2 leading-tight">
-                  {template.name}
-                </h4>
-                {template.category && (
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {template.category}
-                  </p>
-                )}
-              </div>
-              
-              {/* Add Button Overlay - Similar to Sales Page */}
-              <div className={cn(
-                "absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-200",
-                selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              )}>
-                <div className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-                  selected 
-                    ? "bg-white text-purple-600 shadow-lg" 
-                    : "bg-purple-600 text-white shadow-lg hover:bg-purple-700"
-                )}>
-                  {selected ? (
-                    <>
-                      <Check className="w-3 h-3 inline mr-1" />
-                      Selected
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-3 h-3 inline mr-1" />
-                      Add
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {visibleTemplates.map((template) => (
+          <ProductCard
+            key={template.id}
+            product={{
+              id: String(template.id),
+              name: template.name,
+              image_url: template.image_url,
+              category: template.category
+            }}
+            variant="template"
+            isSelected={isSelected(template)}
+            onSelect={() => onTemplateSelect(template)}
+          />
+        ))}
         </div>
         
         {/* Load More Trigger */}

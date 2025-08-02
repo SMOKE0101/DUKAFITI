@@ -1,6 +1,6 @@
 import React from 'react';
 import { Product } from '../../types';
-import ProductCard from './ProductCard';
+import ProductCard from '../ui/product-card';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 
 interface InventoryProductGridProps {
@@ -38,50 +38,21 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
     );
   }
 
-  // Mobile layout - Enhanced with full width utilization and minimal gaps
-  if (isMobile) {
-    return (
-      <div className="grid grid-cols-1 gap-3 w-full">
-        {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onRestock={handleRestockClick}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  // Tablet layout - Enhanced for better space utilization with optimized columns
-  if (isTablet) {
-    return (
-      <div className="grid grid-cols-2 gap-4 w-full">
-        {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onRestock={handleRestockClick}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  // Desktop layout - Keep existing responsive grid with enhanced spacing
+  // Use unified grid layout for all screen sizes - matches template design
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 w-full">
       {products.map((product) => (
         <ProductCard
           key={product.id}
           product={product}
+          variant="inventory"
           onEdit={onEdit}
           onDelete={onDelete}
           onRestock={handleRestockClick}
+          sellingPrice={product.sellingPrice}
+          costPrice={product.costPrice}
+          currentStock={product.currentStock}
+          lowStockThreshold={product.lowStockThreshold}
         />
       ))}
     </div>

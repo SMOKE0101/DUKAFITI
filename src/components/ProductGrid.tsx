@@ -1,12 +1,11 @@
 
 import { useState } from 'react';
-import { Search, Package, Plus } from 'lucide-react';
+import { Search, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { TouchFriendlyButton } from '@/components/ui/touch-friendly-button';
 import EmptyState from './ui/empty-state';
 import LoadingSkeleton from './ui/loading-skeleton';
-import { formatCurrency } from '../utils/currency';
+import ProductCard from './ui/product-card';
 import { Product } from '../types';
 
 interface ProductGridProps {
@@ -64,60 +63,15 @@ const ProductGrid = ({ products, onAddToCart, isLoading }: ProductGridProps) => 
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {displayProducts.map((product) => (
-                <div
+                <ProductCard
                   key={product.id}
-                  className="group relative bg-white dark:bg-gray-800 rounded-lg border border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:border-purple-300 overflow-hidden"
-                  onClick={() => onAddToCart(product)}
-                >
-                  {/* Product Image */}
-                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            parent.innerHTML = `<div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-lg font-semibold text-primary">${product.name.charAt(0).toUpperCase()}</span></div>`;
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-lg font-semibold text-primary">
-                          {product.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Product Info */}
-                  <div className="p-2">
-                    <h4 className="font-medium text-xs mb-1 line-clamp-2 leading-tight" title={product.name}>
-                      {product.name}
-                    </h4>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs text-green-600 font-semibold">
-                        {formatCurrency(product.sellingPrice)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Stock: {product.currentStock === -1 ? 'N/A' : product.currentStock}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Add Button Overlay - Matching Template Style */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                    <div className="bg-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-medium shadow-lg hover:bg-purple-700 transition-all duration-200">
-                      <Plus className="w-3 h-3 inline mr-1" />
-                      Add
-                    </div>
-                  </div>
-                </div>
+                  product={product}
+                  variant="sales"
+                  onAddToCart={onAddToCart}
+                  price={product.sellingPrice}
+                  stock={product.currentStock}
+                  isInStock={product.currentStock > 0 || product.currentStock === -1}
+                />
               ))}
             </div>
           )}
