@@ -94,7 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       )}
 
       {/* Product Image */}
-      <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+      <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden rounded-t-lg">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -106,15 +106,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
               target.style.display = 'none';
               const parent = target.parentElement;
               if (parent) {
-                parent.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600"><div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-sm font-semibold text-primary">${product.name.charAt(0).toUpperCase()}</span></div></div>`;
+                parent.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-900"><div class="w-12 h-12 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center shadow-sm"><span class="text-lg font-bold text-purple-600 dark:text-purple-400">${product.name.charAt(0).toUpperCase()}</span></div></div>`;
               }
             }}
           />
         ) : (
-          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-            <span className="text-sm font-semibold text-primary">
-              {product.name.charAt(0).toUpperCase()}
-            </span>
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-900">
+            <div className="w-12 h-12 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                {product.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
           </div>
         )}
       </div>
