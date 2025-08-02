@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useCacheManager } from './useCacheManager';
-import { useEnhancedSearch } from './useEnhancedSearch';
+import { useFuseSearch } from './useFuseSearch';
 
 export interface ProductTemplate {
   id: number;
@@ -39,12 +39,10 @@ export const useProductTemplates = () => {
     hasActiveSearch,
     hasActiveFilters,
     totalResults
-  } = useEnhancedSearch(templates, {
-    searchFields: ['name', 'category'],
-    minSearchLength: 1,
-    debounceMs: 150, // Faster response
-    maxResults: 1000,
-    enableAnalytics: true
+  } = useFuseSearch(templates, {
+    threshold: 0.35,
+    debounceMs: 150,
+    maxResults: 1000
   });
 
   // Get unique categories from templates

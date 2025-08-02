@@ -3,7 +3,7 @@ import { useBulkAdd } from './BulkAddProvider';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
 import TemplatesGrid from './TemplatesGrid';
 import TemplatesSearch from './TemplatesSearch';
-import SearchTips from './SearchTips';
+
 
 const TemplatesView: React.FC = () => {
   const { selectedTemplates, toggleTemplate } = useBulkAdd();
@@ -63,12 +63,6 @@ const TemplatesView: React.FC = () => {
           totalItems={totalItems}
         />
         
-        {/* Search Tips - only show when no search or few results */}
-        {(!searchTerm || templates.length === 0) && (
-          <div className="mt-4">
-            <SearchTips onSearchExample={searchTemplates} />
-          </div>
-        )}
       </div>
       
       {/* Templates Grid */}
