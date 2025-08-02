@@ -29,11 +29,19 @@ export const useSimpleTemplateSearch = () => {
     setError(null);
 
     try {
-      // Check cache first with validation
+      // Clear old cache with wrong item count to force fresh fetch
+      const currentCacheInfo = getCacheInfo('all_product_templates');
+      if (currentCacheInfo.exists && currentCacheInfo.itemCount && currentCacheInfo.itemCount < 7000) {
+        console.log('[SimpleTemplateSearch] Clearing outdated cache with only', currentCacheInfo.itemCount, 'items');
+        // Clear the cache by removing the key
+        localStorage.removeItem('public_cache_all_product_templates');
+      }
+
+      // Check cache again after potential clearing
       const cacheInfo = getCacheInfo('all_product_templates');
-      console.log('[SimpleTemplateSearch] Cache info:', cacheInfo);
+      console.log('[SimpleTemplateSearch] Cache info after clearing:', cacheInfo);
       
-      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount > 7000) {
+      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000) {
         console.log('[SimpleTemplateSearch] Using cached data:', cacheInfo.itemCount, 'templates');
         const cached = getCache<ProductTemplate[]>('all_product_templates');
         if (cached && Array.isArray(cached)) {
@@ -54,11 +62,12 @@ export const useSimpleTemplateSearch = () => {
           
         console.log('[SimpleTemplateSearch] Total templates in DB:', count);
         
-        const { data, error: fetchError } = await supabase
+        // Fetch ALL templates using range-based query to bypass limits
+        const { data, error: fetchError, count: totalCount } = await supabase
           .from('duka_products_templates')
-          .select('*')
+          .select('*', { count: 'exact' })
           .order('name')
-          .limit(10000); // Explicitly set high limit to get all templates
+          .range(0, 9999); // Use range instead of limit to get all templates
 
         if (fetchError) {
           setError('Failed to load templates');

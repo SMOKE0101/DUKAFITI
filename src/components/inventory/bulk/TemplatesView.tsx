@@ -5,6 +5,7 @@ import TemplatesGrid from './TemplatesGrid';
 import SimpleTemplateSearch from './SimpleTemplateSearch';
 import TemplateLoadingStatus from './TemplateLoadingStatus';
 import TemplateDebugPanel from './TemplateDebugPanel';
+import TemplateCacheManager from './TemplateCacheManager';
 
 
 const TemplatesView: React.FC = () => {
@@ -67,6 +68,9 @@ const TemplatesView: React.FC = () => {
           totalItems={totalTemplates}
           loading={loading}
         />
+
+        {/* Cache Manager - always show for manual control */}
+        <TemplateCacheManager />
 
         {/* Debug Panel - for troubleshooting template loading issues */}
         {(error || totalTemplates < 7000) && (
