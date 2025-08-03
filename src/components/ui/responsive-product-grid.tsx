@@ -128,9 +128,8 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   return (
     <div className={gridClasses}>
       {products.map((product) => {
-        // Build props based on variant
+        // Build props based on variant (excluding key from spread)
         const cardProps: any = {
-          key: product.id,
           product,
           variant,
         };
@@ -161,7 +160,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
           cardProps.onSelect = onSelect;
         }
 
-        return <UnifiedProductCard {...cardProps} />;
+        return <UnifiedProductCard key={product.id} {...cardProps} />;
       })}
     </div>
   );

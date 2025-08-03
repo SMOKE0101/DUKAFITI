@@ -38,12 +38,10 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
   }, [src]);
 
   const handleLoad = () => {
-    console.log('[ExternalProductImage] Successfully loaded:', src);
     setImageState('loaded');
   };
 
   const handleError = () => {
-    console.log('[ExternalProductImage] Failed to load:', src);
     setImageState('error');
   };
 
@@ -116,8 +114,8 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
           imageRendering: 'auto',
           objectFit: 'cover'
         }}
-        // Remove CORS attributes that might cause issues with external CDNs
-        referrerPolicy="no-referrer"
+        // Use basic attributes that work with most CDNs
+        decoding="async"
       />
     </div>
   );
