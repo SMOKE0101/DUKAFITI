@@ -6,6 +6,7 @@ import SimpleTemplateSearch from './SimpleTemplateSearch';
 import TemplateLoadingStatus from './TemplateLoadingStatus';
 import TemplateDebugPanel from './TemplateDebugPanel';
 import TemplateCacheManager from './TemplateCacheManager';
+import ImageDownloadButton from './ImageDownloadButton';
 
 
 const TemplatesView: React.FC = () => {
@@ -70,8 +71,11 @@ const TemplatesView: React.FC = () => {
           loading={loading}
         />
 
-        {/* Cache Manager - always show for manual control */}
-        <TemplateCacheManager />
+        {/* Cache Manager and Image Download */}
+        <div className="flex items-center gap-4 mt-4">
+          <TemplateCacheManager />
+          <ImageDownloadButton />
+        </div>
 
         {/* Debug Panel - for troubleshooting template loading issues */}
         {(error || totalTemplates < 7344) && (
