@@ -86,19 +86,21 @@ const TemplatesView: React.FC = () => {
       </div>
       
       {/* Templates Grid */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 relative">
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
-            {Array.from({ length: 24 }).map((_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 dark:bg-gray-700 rounded-lg aspect-square mb-2"></div>
-                <div className="bg-gray-200 dark:bg-gray-700 rounded h-4 mb-1"></div>
-                <div className="bg-gray-200 dark:bg-gray-700 rounded h-3 w-2/3"></div>
-              </div>
-            ))}
+          <div className="absolute inset-0 overflow-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
+              {Array.from({ length: 24 }).map((_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg aspect-square mb-2"></div>
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded h-4 mb-1"></div>
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded h-3 w-2/3"></div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="absolute inset-0 flex items-center justify-center overflow-auto">
             <div className="text-center p-8">
               <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Failed to load templates
@@ -107,19 +109,21 @@ const TemplatesView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="overflow-auto h-full p-4">
-            <ResponsiveProductGrid
-              products={templates}
-              variant="template"
-              selectedProducts={selectedTemplates}
-              onSelect={toggleTemplate}
-              gridConfig={{
-                cols: { mobile: 2, tablet: 3, desktop: 5 },
-                gap: 'gap-3'
-              }}
-              emptyStateMessage="No templates found"
-              emptyStateDescription="Try adjusting your search or category filter"
-            />
+          <div className="absolute inset-0 overflow-auto">
+            <div className="p-4">
+              <ResponsiveProductGrid
+                products={templates}
+                variant="template"
+                selectedProducts={selectedTemplates}
+                onSelect={toggleTemplate}
+                gridConfig={{
+                  cols: { mobile: 2, tablet: 3, desktop: 5 },
+                  gap: 'gap-3'
+                }}
+                emptyStateMessage="No templates found"
+                emptyStateDescription="Try adjusting your search or category filter"
+              />
+            </div>
           </div>
         )}
       </div>

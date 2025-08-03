@@ -40,7 +40,14 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
     setImageState('loading');
     setWorkingUrl(null);
     
-    // Try to load the image, using proxy if needed
+    // Check if it's already a local Supabase storage URL - use directly
+    if (src.includes('/storage/v1/object/public/')) {
+      setWorkingUrl(src);
+      setImageState('loaded');
+      return;
+    }
+    
+    // For external URLs, try to load with proxy
     const loadImage = async () => {
       try {
         const workingImageUrl = await loadImageWithProxy(src);

@@ -52,10 +52,17 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
       clearTimeout(retryTimeoutRef.current);
     }
 
+    // Check if it's already a local Supabase storage URL - use directly
+    if (src.includes('/storage/v1/object/public/')) {
+      setCurrentSrc(src);
+      setImageState('loaded');
+      return;
+    }
+
     const optimizedSrc = getOptimizedImageUrl(src, width, height);
     setCurrentSrc(optimizedSrc);
 
-    // Preload the image if priority is set or if it's a template
+    // Preload the image if priority is set
     if (priority) {
       preloadImage(optimizedSrc).then((success) => {
         if (success) {
