@@ -81,8 +81,8 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
     </div>
   );
 
-  // Show fallback if no src or error occurred  
-  if (!src || imageState === 'error') {
+  // Show fallback if no src
+  if (!src) {
     return renderFallback();
   }
 
@@ -107,11 +107,7 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
         loading="lazy"
         onLoad={handleLoad}
         onError={handleError}
-        // Use referrerPolicy and crossOrigin for better compatibility
-        referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
         style={{ 
-          display: imageState === 'loaded' ? 'block' : 'none',
           imageRendering: 'auto',
           objectFit: 'cover'
         }}

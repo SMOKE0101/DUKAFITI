@@ -101,23 +101,26 @@ const VirtualizedTemplateGrid: React.FC<VirtualizedTemplateGridProps> = ({
   }
 
   return (
-    <Grid
-      columnCount={gridConfig.itemsPerRow}
-      columnWidth={gridConfig.itemWidth}
-      width={gridConfig.totalWidth}
-      height={600} // Fixed height for the modal
-      rowCount={gridConfig.rowCount}
-      rowHeight={gridConfig.itemHeight}
-      itemData={{
-        templates,
-        selectedTemplates,
-        onToggleTemplate,
-        itemsPerRow: gridConfig.itemsPerRow
-      }}
-      className="p-4"
-    >
-      {GridItem}
-    </Grid>
+    <div className="w-full h-full overflow-auto">
+      <Grid
+        columnCount={gridConfig.itemsPerRow}
+        columnWidth={gridConfig.itemWidth}
+        width={Math.min(gridConfig.totalWidth, window.innerWidth - 100)}
+        height={Math.min(gridConfig.rowCount * gridConfig.itemHeight, window.innerHeight - 200)}
+        rowCount={gridConfig.rowCount}
+        rowHeight={gridConfig.itemHeight}
+        itemData={{
+          templates,
+          selectedTemplates,
+          onToggleTemplate,
+          itemsPerRow: gridConfig.itemsPerRow
+        }}
+        className="p-4"
+        style={{ overflowY: 'auto' }}
+      >
+        {GridItem}
+      </Grid>
+    </div>
   );
 };
 

@@ -55,7 +55,7 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
     // Check if it's already a local Supabase storage URL - use directly
     if (src.includes('/storage/v1/object/public/')) {
       setCurrentSrc(src);
-      setImageState('loaded');
+      // Don't set to loaded immediately, let the onLoad event handle it
       return;
     }
 
@@ -165,7 +165,6 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
         onLoad={handleLoad}
         onError={handleError}
         style={{ 
-          display: imageState === 'loaded' ? 'block' : 'none',
           imageRendering: 'auto',
           objectFit: 'cover'
         }}
