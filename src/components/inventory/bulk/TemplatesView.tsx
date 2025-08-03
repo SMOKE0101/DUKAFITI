@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBulkAdd } from './BulkAddProvider';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
+import { Button } from '../../ui/button';
 import ResponsiveProductGrid from '../../ui/responsive-product-grid';
 import SimpleTemplateSearch from './SimpleTemplateSearch';
 import TemplateLoadingStatus from './TemplateLoadingStatus';
@@ -8,7 +9,7 @@ import TemplateDebugPanel from './TemplateDebugPanel';
 import TemplateCacheManager from './TemplateCacheManager';
 import ImageDownloadButton from './ImageDownloadButton';
 import VirtualizedTemplateGrid from './VirtualizedTemplateGrid';
-import ProxyImage from '../../ui/proxy-image';
+import FastTemplateImage from '../../ui/fast-template-image';
 
 
 const TemplatesView: React.FC = () => {
@@ -36,7 +37,7 @@ const TemplatesView: React.FC = () => {
           <div>
             <h3 className="font-semibold text-lg">Browse Product Templates</h3>
             <p className="text-sm text-muted-foreground">
-              Select from {totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates to add to your spreadsheet
+              Select from {totalTemplates && totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates to add to your spreadsheet
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -109,13 +110,79 @@ const TemplatesView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
-            {templates.slice(0, 100).map((template) => {
+          <PaginatedTemplateGrid templates={templates} selectedTemplates={selectedTemplates} onToggleTemplate={toggleTemplate} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Pagination component for efficient template display
+const PaginatedTemplateGrid: React.FC<{
+  templates: any[];
+  selectedTemplates: any[];
+  onToggleTemplate: (template: any) => void;
+}> = ({ templates, selectedTemplates, onToggleTemplate }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const templatesPerPage = 50; // Reduced for faster loading
+  
+  const totalPages = Math.ceil(templates.length / templatesPerPage);
+  const startIndex = (currentPage - 1) * templatesPerPage;
+  const endIndex = startIndex + templatesPerPage;
+  const currentTemplates = templates.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top of templates grid
+    const templatesContainer = document.querySelector('.templates-grid-container');
+    if (templatesContainer) {
+      templatesContainer.scrollTop = 0;
+    }
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, start + maxVisiblePages - 1);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Page Info */}
+      <div className="px-4 py-2 border-b border-border bg-muted/20">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            Showing {startIndex + 1}-{Math.min(endIndex, templates.length)} of {templates.length.toLocaleString()} templates
+          </span>
+          <span className="text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+        </div>
+      </div>
+
+      {/* Templates Grid Container */}
+      <div className="flex-1 overflow-auto templates-grid-container">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
+          {currentTemplates.map((template) => {
               const isSelected = selectedTemplates.some(t => t.id === template.id);
               return (
                 <div
                   key={template.id}
-                  onClick={() => toggleTemplate(template)}
+                  onClick={() => onToggleTemplate(template)}
                   className={`relative bg-card rounded-xl border transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl overflow-hidden ${
                     isSelected 
                       ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500/30 shadow-lg" 
@@ -133,34 +200,12 @@ const TemplatesView: React.FC = () => {
 
                   {/* Product Image */}
                   <div className="aspect-square overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
-                    {template.image_url ? (
-                      <ProxyImage 
-                        src={template.image_url}
-                        alt={template.name}
-                        className="w-full h-full object-cover"
-                        fallbackContent={
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-pink-900/30">
-                            <div className="w-12 h-12 bg-white/90 dark:bg-gray-800/90 rounded-2xl flex items-center justify-center shadow-lg border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
-                              <span className="font-bold text-blue-700 dark:text-blue-300 text-lg">
-                                {template.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          </div>
-                        }
-                      />
-                    ) : null}
-                    
-                    {/* Fallback */}
-                    <div 
-                      className={`image-fallback w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-pink-900/30 ${template.image_url ? 'hidden' : 'flex'}`}
-                      style={{ display: template.image_url ? 'none' : 'flex' }}
-                    >
-                      <div className="w-12 h-12 bg-white/90 dark:bg-gray-800/90 rounded-2xl flex items-center justify-center shadow-lg border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
-                        <span className="font-bold text-blue-700 dark:text-blue-300 text-lg">
-                          {template.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
+                    <FastTemplateImage 
+                      src={template.image_url}
+                      alt={template.name}
+                      productName={template.name}
+                      className="w-full h-full"
+                    />
                   </div>
                   
                   {/* Product Information */}
@@ -180,9 +225,98 @@ const TemplatesView: React.FC = () => {
                 </div>
               );
             })}
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="px-4 py-3 border-t border-border bg-muted/20">
+          <div className="flex items-center justify-center gap-2">
+            {/* Previous Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="gap-1"
+            >
+              ← Previous
+            </Button>
+
+            {/* Page Numbers */}
+            <div className="flex gap-1">
+              {currentPage > 3 && (
+                <>
+                  <Button
+                    variant={1 === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => goToPage(1)}
+                    className="w-8 h-8 p-0"
+                  >
+                    1
+                  </Button>
+                  {currentPage > 4 && <span className="px-2 text-muted-foreground">...</span>}
+                </>
+              )}
+              
+              {getPageNumbers().map((page) => (
+                <Button
+                  key={page}
+                  variant={page === currentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(page)}
+                  className="w-8 h-8 p-0"
+                >
+                  {page}
+                </Button>
+              ))}
+              
+              {currentPage < totalPages - 2 && (
+                <>
+                  {currentPage < totalPages - 3 && <span className="px-2 text-muted-foreground">...</span>}
+                  <Button
+                    variant={totalPages === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => goToPage(totalPages)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {totalPages}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Next Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="gap-1"
+            >
+              Next →
+            </Button>
+          </div>
+          
+          {/* Quick Jump */}
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="text-xs text-muted-foreground">Jump to page:</span>
+            <input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= totalPages) {
+                  goToPage(page);
+                }
+              }}
+              className="w-16 px-2 py-1 text-xs border rounded text-center"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

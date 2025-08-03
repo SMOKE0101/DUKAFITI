@@ -106,12 +106,12 @@ const ImageDownloadButton: React.FC<ImageDownloadButtonProps> = ({ onComplete })
         <div className="flex justify-between items-center mb-2">
           <span className="font-medium">Download Progress</span>
           <span className="text-muted-foreground">
-            {downloadStats.totalRemaining.toLocaleString()} remaining
+            {downloadStats.totalRemaining ? downloadStats.totalRemaining.toLocaleString() : '0'} remaining
           </span>
         </div>
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Processed: {downloadStats.totalProcessed.toLocaleString()}</span>
-          <span>Batch: {downloadStats.currentBatch}</span>
+          <span>Processed: {downloadStats.totalProcessed ? downloadStats.totalProcessed.toLocaleString() : '0'}</span>
+          <span>Batch: {downloadStats.currentBatch || 0}</span>
         </div>
       </div>
 
