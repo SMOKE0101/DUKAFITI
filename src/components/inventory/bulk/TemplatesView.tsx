@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import { useBulkAdd } from './BulkAddProvider';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
 import { Button } from '../../ui/button';
@@ -9,7 +10,8 @@ import TemplateDebugPanel from './TemplateDebugPanel';
 import TemplateCacheManager from './TemplateCacheManager';
 import ImageDownloadButton from './ImageDownloadButton';
 import VirtualizedTemplateGrid from './VirtualizedTemplateGrid';
-import FastTemplateImage from '../../ui/fast-template-image';
+import TemplateImage from '../../ui/template-image';
+import TemplateSelectionOverlay from './TemplateSelectionOverlay';
 
 
 const TemplatesView: React.FC = () => {
@@ -124,12 +126,52 @@ const PaginatedTemplateGrid: React.FC<{
   onToggleTemplate: (template: any) => void;
 }> = ({ templates, selectedTemplates, onToggleTemplate }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [isOverlayVisible, setIsOverlayVisible] = useState(false);
+  const { updateSpreadsheetData, spreadsheetData } = useBulkAdd();
   const templatesPerPage = 50; // Reduced for faster loading
   
   const totalPages = Math.ceil(templates.length / templatesPerPage);
   const startIndex = (currentPage - 1) * templatesPerPage;
   const endIndex = startIndex + templatesPerPage;
   const currentTemplates = templates.slice(startIndex, endIndex);
+
+  const handleTemplateClick = (template: any) => {
+    setSelectedTemplate(template);
+    setIsOverlayVisible(true);
+  };
+
+  const handleCloseOverlay = () => {
+    setIsOverlayVisible(false);
+    setSelectedTemplate(null);
+  };
+
+  const handleAddToSpreadsheet = (productData: any) => {
+    // Find first empty row in spreadsheet
+    const emptyRowIndex = spreadsheetData.findIndex(row => !row.name.trim());
+    const newSpreadsheetData = [...spreadsheetData];
+    
+    const newRow = {
+      id: emptyRowIndex >= 0 ? spreadsheetData[emptyRowIndex].id : `template_${productData.name}_${Date.now()}`,
+      name: productData.name,
+      category: productData.category || '',
+      costPrice: productData.cost_price,
+      sellingPrice: productData.selling_price,
+      currentStock: productData.current_stock,
+      lowStockThreshold: productData.low_stock_threshold,
+      image_url: productData.image_url || '',
+      isValid: true,
+      errors: []
+    };
+    
+    if (emptyRowIndex >= 0) {
+      newSpreadsheetData[emptyRowIndex] = newRow;
+    } else {
+      newSpreadsheetData.push(newRow);
+    }
+    
+    updateSpreadsheetData(newSpreadsheetData);
+  };
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -182,7 +224,7 @@ const PaginatedTemplateGrid: React.FC<{
               return (
                 <div
                   key={template.id}
-                  onClick={() => onToggleTemplate(template)}
+                  onClick={() => handleTemplateClick(template)}
                   className={`relative bg-card rounded-xl border transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl overflow-hidden ${
                     isSelected 
                       ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500/30 shadow-lg" 
@@ -200,7 +242,7 @@ const PaginatedTemplateGrid: React.FC<{
 
                   {/* Product Image */}
                   <div className="aspect-square overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
-                    <FastTemplateImage 
+                    <TemplateImage 
                       src={template.image_url}
                       alt={template.name}
                       productName={template.name}
@@ -218,9 +260,9 @@ const PaginatedTemplateGrid: React.FC<{
                         {template.category}
                       </p>
                     )}
-                    <div className="text-xs text-muted-foreground">
-                      Click to {isSelected ? 'remove' : 'select'}
-                    </div>
+                     <div className="text-xs text-muted-foreground">
+                       Click to configure
+                     </div>
                   </div>
                 </div>
               );
@@ -317,6 +359,14 @@ const PaginatedTemplateGrid: React.FC<{
           </div>
         </div>
       )}
+      
+      {/* Template Selection Overlay */}
+      <TemplateSelectionOverlay
+        template={selectedTemplate}
+        isVisible={isOverlayVisible}
+        onClose={handleCloseOverlay}
+        onAddToSpreadsheet={handleAddToSpreadsheet}
+      />
     </div>
   );
 };
