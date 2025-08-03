@@ -33,6 +33,10 @@ const ImageChangeModal: React.FC<ImageChangeModalProps> = ({
       });
 
       toast.success('Product image updated successfully!');
+      
+      // Trigger a refresh of the inventory page
+      window.dispatchEvent(new CustomEvent('product-updated'));
+      
       onClose();
     } catch (error) {
       console.error('Error updating product image:', error);

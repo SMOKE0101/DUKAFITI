@@ -53,6 +53,20 @@ const InventoryPage = () => {
   
   const { globalSyncInProgress } = useUnifiedSyncManager();
 
+  // Listen for product updates to refresh the page
+  useEffect(() => {
+    const handleProductUpdate = () => {
+      console.log('[InventoryPage] Product updated, refreshing data');
+      refetch();
+    };
+
+    window.addEventListener('product-updated', handleProductUpdate);
+    
+    return () => {
+      window.removeEventListener('product-updated', handleProductUpdate);
+    };
+  }, [refetch]);
+
   // Get unique categories from products
   const categories = useMemo(() => {
     const uniqueCategories = ['all', ...new Set(products.map(p => p.category))];

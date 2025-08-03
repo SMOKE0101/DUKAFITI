@@ -19,6 +19,7 @@ import { usePersistedCart } from '../hooks/usePersistedCart';
 import { useSidebar } from '@/components/ui/sidebar';
 import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
+import ResponsiveProductGrid from './ui/responsive-product-grid';
 import { 
   Search, 
   ShoppingCart, 
@@ -436,139 +437,55 @@ const RebuiltModernSalesPage = () => {
                   </div>
                 </Button>
                 
-                 <div 
+                <div 
                   ref={productListRef}
                   className="h-full overflow-y-auto"
+                  style={{ paddingBottom: '100px' }}
                 >
-                     <div 
-                        className="px-4 pt-4 grid grid-cols-2 gap-3"
-                        style={{ paddingBottom: '100px' }}
-                   >
-                     {/* Special debt card */}
-                     <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
-                       <CardContent className="p-2.5 md:p-3">
-                         <div className="flex flex-col h-full">
-                           <h3 className="font-medium text-xs md:text-sm mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
-                           <p className="text-[10px] md:text-xs text-red-600 dark:text-red-500 mb-2 truncate">Add customer debt</p>
-                           
-                           <Button
-                             onClick={() => setIsAddDebtModalOpen(true)}
-                             size="sm"
-                             className="w-full bg-red-600 hover:bg-red-700 text-white h-6 md:h-7 text-xs mt-auto"
-                           >
-                             <Receipt size={14} className="mr-1" />
-                             Add
-                           </Button>
-                         </div>
-                       </CardContent>
-                     </Card>
-
-                     {/* Regular product cards */}
-                     {filteredProducts.filter(product => !('isDebtCard' in product)).map(product => {
-                       const cartItem = cart.find(item => item.id === product.id);
-                       const quantity = cartItem?.quantity || 0;
-                       
-                       return (
-                         <Card key={product.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
-                           <CardContent className="p-0">
-                             <div className="flex flex-col h-full">
-                               {/* Product Image */}
-                               <div className="aspect-square overflow-hidden rounded-t-lg">
-                                 {product.image_url ? (
-                                   <img
-                                     src={product.image_url}
-                                     alt={product.name}
-                                     className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
-                                     loading="lazy"
-                                     onError={(e) => {
-                                       const target = e.target as HTMLImageElement;
-                                       target.style.display = 'none';
-                                       if (target.nextElementSibling) {
-                                         (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                                       }
-                                     }}
-                                   />
-                                 ) : null}
-                                 <div 
-                                   className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 dark:from-purple-900 dark:via-purple-800 dark:to-purple-700 ${product.image_url ? 'hidden' : 'flex'}`}
-                                 >
-                                   <div className="w-12 h-12 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 dark:border-gray-700/50">
-                                     <span className="text-xl font-bold text-purple-700 dark:text-purple-300">
-                                       {product.name.charAt(0).toUpperCase()}
-                                     </span>
-                                   </div>
-                                 </div>
-                               </div>
-                               
-                                {/* Product Info */}
-                                <div className="p-2.5 md:p-3">
-                                  <h3 className="font-medium text-xs md:text-sm mb-1 truncate leading-tight">{product.name}</h3>
-                                  <p className="text-[10px] md:text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
-                                  
-                                  <div className="flex justify-between items-center mb-2 gap-1">
-                                    <span className="font-bold text-xs md:text-sm text-primary truncate">
-                                      {formatCurrency(product.sellingPrice)}
-                                    </span>
-                                    <Badge 
-                                      variant={product.currentStock > 0 ? 'default' : product.currentStock === -1 ? 'secondary' : 'destructive'} 
-                                      className="text-[9px] md:text-xs px-1 py-0.5 min-w-0 max-w-[60px] md:max-w-[80px] truncate whitespace-nowrap"
-                                      title={product.currentStock === -1 ? "Unspecified" : `Stock: ${product.currentStock}`}
-                                    >
-                                      {product.currentStock === -1 ? 'Unspec.' : product.currentStock}
-                                    </Badge>
-                                  </div>
-                                  
-                                  {product.currentStock > 0 || product.currentStock === -1 ? (
-                                    quantity > 0 ? (
-                                      <div className="flex items-center justify-between bg-muted rounded-lg p-1">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 w-8 p-0"
-                                          onClick={() => handleQuantityChange(product.id, quantity - 1)}
-                                        >
-                                          <Minus size={14} />
-                                        </Button>
-                                        <span className="font-medium text-sm">{quantity}</span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 w-8 p-0"
-                                          onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                                        >
-                                          <Plus size={14} />
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <Button
-                                        onClick={() => addToCart(product.id)}
-                                        size="sm"
-                                        className="w-full text-xs md:text-sm h-7 md:h-8"
-                                      >
-                                        <Plus size={12} className="mr-1" />
-                                        Add
-                                      </Button>
-                                    )
-                                  ) : (
-                                    <Button disabled size="sm" className="w-full">
-                                      Out of Stock
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                           </CardContent>
-                         </Card>
-                       );
-                     })}
-                   </div>
-                  
-                  {filteredProducts.length === 0 && (
+                  {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 text-center">
                       <Search size={48} className="text-muted-foreground mb-4" />
                       <h3 className="font-medium mb-2">No products found</h3>
                       <p className="text-sm text-muted-foreground">
                         Try adjusting your search or category filter
                       </p>
+                    </div>
+                  ) : (
+                    <div className="px-4 pt-4 space-y-4">
+                      {/* Special debt card */}
+                      <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
+                        <CardContent className="p-2.5">
+                          <div className="flex flex-col h-full">
+                            <h3 className="font-medium text-xs mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
+                            <p className="text-[10px] text-red-600 dark:text-red-500 mb-2 truncate">Add customer debt</p>
+                            
+                            <Button
+                              onClick={() => setIsAddDebtModalOpen(true)}
+                              size="sm"
+                              className="w-full bg-red-600 hover:bg-red-700 text-white h-6 text-xs mt-auto"
+                            >
+                              <Receipt size={14} className="mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Mobile Product Grid */}
+                      <ResponsiveProductGrid
+                        products={filteredProducts.filter(product => !('isDebtCard' in product))}
+                        variant="sales"
+                        onAddToCart={(product) => addToCart(product.id)}
+                        getPriceForProduct={(product) => product.sellingPrice}
+                        getStockForProduct={(product) => product.currentStock}
+                        getInStockStatus={(product) => product.currentStock > 0 || product.currentStock === -1}
+                        gridConfig={{
+                          cols: { mobile: 2, tablet: 2, desktop: 2 },
+                          gap: 'gap-3'
+                        }}
+                        emptyStateMessage="No products found"
+                        emptyStateDescription="Try adjusting your search or filters"
+                      />
                     </div>
                   )}
                 </div>
@@ -748,107 +665,9 @@ const RebuiltModernSalesPage = () => {
           </div>
         </div>
 
-        {/* Products Grid */}
+        {/* Products Grid - Desktop/Tablet */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Responsive grid based on sidebar state:
-              Desktop: 4x4 when sidebar open, 5x5 when sidebar closed  
-              Tablet: 1x1 when sidebar open, 2x2 when sidebar closed */}
-          <div className={`grid gap-3 ${
-            sidebarOpen 
-              ? 'grid-cols-4 lg:grid-cols-4 xl:grid-cols-4' // 4x4 when open
-              : 'grid-cols-5 lg:grid-cols-5 xl:grid-cols-5' // 5x5 when closed
-          }`}>
-            {filteredProducts.map(product => {
-              // Special handling for debt card - same size as other product cards
-              if ('isDebtCard' in product && product.isDebtCard) {
-                return (
-                  <Card key={product.id} className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
-                    <CardContent className="p-2.5">
-                      <div className="flex flex-col h-full">
-                        <h3 className="font-medium text-xs mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
-                        <p className="text-[10px] text-red-600 dark:text-red-500 mb-2 truncate">Add customer debt</p>
-                        
-                        <Button
-                          onClick={() => setIsAddDebtModalOpen(true)}
-                          size="sm"
-                          className="w-full bg-red-600 hover:bg-red-700 text-white h-6 text-xs mt-auto"
-                        >
-                          <Receipt size={14} className="mr-1" />
-                          Add
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              }
-
-              const cartItem = cart.find(item => item.id === product.id);
-              const quantity = cartItem?.quantity || 0;
-              
-              return (
-                <Card key={product.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
-                  <CardContent className="p-2.5">
-                    <div className="flex flex-col h-full">
-                      <h3 className="font-medium text-sm mb-1 truncate leading-tight">{product.name}</h3>
-                      <p className="text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
-                      
-                      <div className="flex justify-between items-center mb-2 gap-1">
-                        <span className="font-bold text-sm text-primary truncate">
-                          {formatCurrency(product.sellingPrice)}
-                        </span>
-                        <Badge 
-                          variant={product.currentStock > 0 ? 'default' : product.currentStock === -1 ? 'secondary' : 'destructive'} 
-                          className="text-xs px-1 py-0.5 min-w-0 max-w-[80px] truncate whitespace-nowrap"
-                          title={product.currentStock === -1 ? "Unspecified" : `Stock: ${product.currentStock}`}
-                        >
-                          {product.currentStock === -1 ? 'Unspec.' : product.currentStock}
-                        </Badge>
-                      </div>
-                      
-                      {product.currentStock > 0 || product.currentStock === -1 ? (
-                        quantity > 0 ? (
-                          <div className="flex items-center justify-between bg-muted rounded-lg p-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleQuantityChange(product.id, quantity - 1)}
-                            >
-                              <Minus size={14} />
-                            </Button>
-                            <span className="font-medium text-sm">{quantity}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                            >
-                              <Plus size={14} />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            onClick={() => addToCart(product.id)}
-                            size="sm"
-                            className="w-full text-sm h-8"
-                          >
-                            <Plus size={12} className="mr-1" />
-                            Add
-                          </Button>
-                        )
-                      ) : (
-                        <Button disabled size="sm" className="w-full h-8">
-                          Out of Stock
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-          
-          {filteredProducts.length === 0 && (
+          {filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <Search size={64} className="text-muted-foreground mb-4" />
               <h3 className="text-xl font-medium mb-2">No products found</h3>
@@ -856,6 +675,49 @@ const RebuiltModernSalesPage = () => {
                 Try adjusting your search or category filter
               </p>
             </div>
+          ) : (
+            <>
+              <ResponsiveProductGrid
+                products={filteredProducts.filter(product => !('isDebtCard' in product))}
+                variant="sales"
+                onAddToCart={(product) => addToCart(product.id)}
+                getPriceForProduct={(product) => product.sellingPrice}
+                getStockForProduct={(product) => product.currentStock}
+                getInStockStatus={(product) => product.currentStock > 0 || product.currentStock === -1}
+                gridConfig={{
+                  cols: { 
+                    mobile: 2, 
+                    tablet: isTablet ? 2 : 3,  // 2x2 for tablet, 3 for small desktop
+                    desktop: sidebarOpen ? 4 : 5  // 4x4 when sidebar open, 5x5 when closed
+                  },
+                  gap: 'gap-3'
+                }}
+                className="pb-8"
+                emptyStateMessage="No products found"
+                emptyStateDescription="Try adjusting your search or filters"
+              />
+              
+              {/* Special Debt Card - Fixed position */}
+              {filteredProducts.some(product => 'isDebtCard' in product && product.isDebtCard) && (
+                <div className="fixed bottom-24 right-6 z-30">
+                  <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-lg shadow-xl">
+                    <CardContent className="p-3">
+                      <div className="flex flex-col items-center gap-2">
+                        <Receipt className="w-6 h-6 text-red-600" />
+                        <h3 className="font-medium text-xs text-red-700 dark:text-red-400 text-center">Record Cash Lending</h3>
+                        <Button
+                          onClick={() => setIsAddDebtModalOpen(true)}
+                          size="sm"
+                          className="w-full bg-red-600 hover:bg-red-700 text-white h-7 text-xs"
+                        >
+                          Add Debt
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
