@@ -82,7 +82,7 @@ const TemplatesView: React.FC = () => {
       {/* Templates Grid */}
       <div className="flex-1 overflow-hidden">
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
             {Array.from({ length: 24 }).map((_, index) => (
               <div key={index} className="animate-pulse">
                 <div className="bg-gray-200 dark:bg-gray-700 rounded-lg aspect-square mb-2"></div>
@@ -107,7 +107,7 @@ const TemplatesView: React.FC = () => {
             selectedProducts={selectedTemplates}
             onSelect={toggleTemplate}
             gridConfig={{
-              cols: { mobile: 2, tablet: 4, desktop: 6 },
+              cols: { mobile: 2, tablet: 3, desktop: 5 },
               gap: 'gap-3'
             }}
             emptyStateMessage="No templates found"

@@ -299,13 +299,32 @@ const TopPicksSection = ({ products, onAddToCart }: TopPicksSectionProps) => {
                   )}
 
                   {/* Product content */}
-                  <div className="p-2 flex flex-col items-center justify-center h-full">
-                    {/* Product icon/initial */}
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-1">
-                      <span className="text-lg font-semibold text-primary">
-                        {getProductInitial(product.name)}
-                      </span>
-                    </div>
+                  <div className="p-1 flex flex-col items-center justify-center h-full">
+                    {/* Product image or initial */}
+                    {product.image_url ? (
+                      <div className="w-12 h-12 rounded-lg overflow-hidden mb-1 bg-gray-100 dark:bg-gray-800">
+                        <img 
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.removeAttribute('style');
+                          }}
+                        />
+                        <div className="w-full h-full bg-primary/10 rounded-lg flex items-center justify-center" style={{ display: 'none' }}>
+                          <span className="text-lg font-semibold text-primary">
+                            {getProductInitial(product.name)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-1">
+                        <span className="text-lg font-semibold text-primary">
+                          {getProductInitial(product.name)}
+                        </span>
+                      </div>
+                    )}
                     
                     {/* Product name */}
                     <span className="text-xs font-medium text-center truncate w-full leading-tight">

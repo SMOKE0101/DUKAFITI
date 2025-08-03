@@ -34,8 +34,8 @@ const GRID_CONFIGS: Record<string, GridConfig> = {
     aspectRatio: 'aspect-square'
   },
   template: {
-    cols: { mobile: 2, tablet: 4, desktop: 6 },
-    gap: 'gap-2',
+    cols: { mobile: 2, tablet: 3, desktop: 5 },
+    gap: 'gap-3',
     aspectRatio: 'aspect-square'
   }
 };

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Check, Plus, Edit, Trash2, AlertTriangle, Camera } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import EnhancedProductImage from './enhanced-product-image';
+import ExternalProductImage from './external-product-image';
 import SimpleProductImage from './simple-product-image';
 
 // Base product interface
@@ -134,16 +135,26 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
       )}
 
       {/* Product Image */}
-      <div className="aspect-square overflow-hidden rounded-t-xl">
-        <EnhancedProductImage
-          src={product.image_url}
-          alt={product.name}
-          productName={product.name}
-          width={300}
-          height={300}
-          priority={variant === 'sales'}
-          className="w-full h-full"
-        />
+      <div className="aspect-square overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+        {variant === 'template' ? (
+          <ExternalProductImage
+            src={product.image_url}
+            alt={product.name}
+            productName={product.name}
+            className="w-full h-full"
+            size="md"
+          />
+        ) : (
+          <EnhancedProductImage
+            src={product.image_url}
+            alt={product.name}
+            productName={product.name}
+            width={300}
+            height={300}
+            priority={variant === 'sales'}
+            className="w-full h-full"
+          />
+        )}
       </div>
       
       {/* Product Information */}

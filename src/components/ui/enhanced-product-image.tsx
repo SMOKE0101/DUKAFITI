@@ -55,7 +55,7 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
     const optimizedSrc = getOptimizedImageUrl(src, width, height);
     setCurrentSrc(optimizedSrc);
 
-    // Preload the image if priority is set
+    // Preload the image if priority is set or if it's a template
     if (priority) {
       preloadImage(optimizedSrc).then((success) => {
         if (success) {
@@ -85,13 +85,9 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
       retryTimeoutRef.current = setTimeout(() => {
         setImageState('loading');
         
-        // Force reload by adding cache buster
-        const url = new URL(currentSrc);
-        url.searchParams.set('retry', retryCount.toString());
-        url.searchParams.set('t', Date.now().toString());
-        
+        // For external CDN URLs, try without cache buster first
         if (imgRef.current) {
-          imgRef.current.src = url.toString();
+          imgRef.current.src = currentSrc;
         }
       }, delay);
     } else {
