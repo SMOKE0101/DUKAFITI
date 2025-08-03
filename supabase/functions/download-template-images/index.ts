@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       .select('id, name, image_url')
       .not('image_url', 'is', null)
       .not('image_url', 'like', '%/storage/v1/object/public/%')
-      .limit(100) // Process more templates per batch
+      .limit(200) // Process more templates per batch for faster completion
 
     if (fetchError) {
       console.error('Error fetching templates:', fetchError)
