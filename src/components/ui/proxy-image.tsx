@@ -43,15 +43,18 @@ export const ProxyImage: React.FC<ProxyImageProps> = ({
       return;
     }
 
-    // If it's already a Supabase storage URL, use it directly
-    if (src.includes('/storage/v1/object/public/')) {
+    // Always prioritize Supabase storage URLs - use them directly without any proxy
+    if (src.includes('/storage/v1/object/public/') || src.includes('supabase.co/storage/')) {
+      console.log('[ProxyImage] Using direct Supabase storage URL:', src);
       setCurrentUrl(src);
       setIsLoading(false);
       setHasError(false);
+      setProxyIndex(0);
       return;
     }
 
-    // Try the first proxy service
+    // For external URLs, try proxies
+    console.log('[ProxyImage] Using proxy for external URL:', src);
     setProxyIndex(0);
     setCurrentUrl(PROXY_SERVICES[0](src));
     setIsLoading(true);

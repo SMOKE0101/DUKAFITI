@@ -1,11 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProductInitial } from '@/utils/imageUtils';
-import ProxyImage from './proxy-image';
-import SupabaseImage from './supabase-image';
 
-interface TemplateImageProps {
+interface SupabaseImageProps {
   src?: string | null;
   alt: string;
   productName: string;
@@ -14,10 +12,10 @@ interface TemplateImageProps {
 }
 
 /**
- * Optimized image component for template cards
- * Uses direct loading with simplified fallback for performance
+ * Optimized image component specifically for Supabase storage URLs
+ * Always uses direct URLs without proxy for maximum reliability
  */
-const TemplateImage: React.FC<TemplateImageProps> = ({
+const SupabaseImage: React.FC<SupabaseImageProps> = ({
   src,
   alt,
   productName,
@@ -25,35 +23,25 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
   size = 'md',
 }) => {
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading');
-  const imgRef = useRef<HTMLImageElement>(null);
 
-  // Reset state when src changes
-  useEffect(() => {
-    if (!src) {
-      setImageState('error');
-      return;
-    }
-    
-    setImageState('loading');
-  }, [src]);
+  // Size configurations for fallback
+  const sizeConfig = {
+    sm: 'w-6 h-6',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12'
+  };
 
   const handleLoad = () => {
     setImageState('loaded');
   };
 
   const handleError = () => {
+    console.log('[SupabaseImage] Failed to load image:', src);
     setImageState('error');
   };
 
   // Get the product initial for fallback
   const productInitial = getProductInitial(productName);
-
-  // Size configurations
-  const sizeConfig = {
-    sm: 'w-6 h-6',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12'
-  };
 
   // Render fallback
   const renderFallback = () => (
@@ -88,31 +76,40 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
     return renderFallback();
   }
 
-  // Check if this is a Supabase storage URL - use direct component for better reliability
-  const isSupabaseImage = src && (src.includes('/storage/v1/object/public/') || src.includes('supabase.co/storage/'));
-
-  if (isSupabaseImage) {
-    return (
-      <SupabaseImage
-        src={src}
-        alt={alt}
-        productName={productName}
-        className={className}
-        size={size}
-      />
-    );
-  }
+  // Force direct Supabase URL usage if it's not already
+  const imageUrl = src.includes('/storage/v1/object/public/') ? src : src;
 
   return (
     <div className={cn("relative w-full h-full overflow-hidden", className)}>
-      <ProxyImage
-        src={src || ''}
+      {/* Loading state */}
+      {imageState === 'loading' && (
+        <div className="absolute inset-0 w-full h-full">
+          {renderFallback()}
+        </div>
+      )}
+      
+      {/* Actual image - Always load directly from Supabase */}
+      <img
+        src={imageUrl}
         alt={alt}
-        className="w-full h-full object-cover"
-        fallbackContent={renderFallback()}
+        className={cn(
+          "w-full h-full object-cover transition-opacity duration-300",
+          imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
+        )}
+        style={{ 
+          display: imageState === 'loaded' ? 'block' : 'none',
+          imageRendering: 'auto',
+          objectFit: 'cover'
+        }}
+        loading="lazy"
+        onLoad={handleLoad}
+        onError={handleError}
+        // Remove CORS restrictions for Supabase storage
+        crossOrigin={src.includes('supabase.co') ? undefined : 'anonymous'}
+        referrerPolicy="no-referrer"
       />
     </div>
   );
 };
 
-export default TemplateImage;
+export default SupabaseImage;

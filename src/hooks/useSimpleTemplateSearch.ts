@@ -29,13 +29,15 @@ export const useSimpleTemplateSearch = () => {
     setError(null);
 
     try {
-      // Clear old cache with wrong item count or version to force fresh fetch
+      // Force cache refresh to ensure we get updated image URLs after download
       const currentCacheInfo = getCacheInfo('all_product_templates');
-      if (currentCacheInfo.exists && (
+      const shouldRefreshCache = !currentCacheInfo.exists || 
         (currentCacheInfo.itemCount && currentCacheInfo.itemCount < 7000) || 
-        currentCacheInfo.version !== '2.0'
-      )) {
-        console.log('[SimpleTemplateSearch] Clearing outdated cache - items:', currentCacheInfo.itemCount, 'version:', currentCacheInfo.version);
+        currentCacheInfo.version !== '3.0' || // Bumped version to force refresh
+        !currentCacheInfo.isValid;
+        
+      if (shouldRefreshCache) {
+        console.log('[SimpleTemplateSearch] Refreshing cache for updated images - items:', currentCacheInfo.itemCount, 'version:', currentCacheInfo.version);
         // Clear the cache by removing the key
         localStorage.removeItem('public_cache_all_product_templates');
       }
@@ -44,7 +46,7 @@ export const useSimpleTemplateSearch = () => {
       const cacheInfo = getCacheInfo('all_product_templates');
       console.log('[SimpleTemplateSearch] Cache info after clearing:', cacheInfo);
       
-      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000 && cacheInfo.version === '2.0') {
+      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000 && cacheInfo.version === '3.0') {
         console.log('[SimpleTemplateSearch] Using cached data:', cacheInfo.itemCount, 'templates');
         const cached = getCache<ProductTemplate[]>('all_product_templates');
         if (cached && Array.isArray(cached)) {
@@ -107,7 +109,7 @@ export const useSimpleTemplateSearch = () => {
         }
 
         console.log('[SimpleTemplateSearch] Pagination complete. Total fetched:', totalFetched);
-        setCache('all_product_templates', allTemplates, '2.0'); // New version for paginated data
+        setCache('all_product_templates', allTemplates, '3.0'); // New version with downloaded images
         setAllTemplates(allTemplates);
         
         // Verify search targets exist
