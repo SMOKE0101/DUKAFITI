@@ -17,6 +17,7 @@ const transformDbProduct = (dbProduct: any): Product => ({
   lowStockThreshold: dbProduct.low_stock_threshold || 10,
   createdAt: dbProduct.created_at,
   updatedAt: dbProduct.updated_at,
+  image_url: dbProduct.image_url || null,
 });
 
 export const useUnifiedProducts = () => {
@@ -203,6 +204,7 @@ export const useUnifiedProducts = () => {
           selling_price: productData.sellingPrice,
           current_stock: productData.currentStock || 0,
           low_stock_threshold: productData.lowStockThreshold || 10,
+          image_url: productData.image_url || null,
           user_id: user.id,
         };
 
@@ -285,6 +287,7 @@ export const useUnifiedProducts = () => {
         if (updates.sellingPrice !== undefined) dbUpdates.selling_price = updates.sellingPrice;
         if (updates.currentStock !== undefined) dbUpdates.current_stock = updates.currentStock;
         if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
+        if (updates.image_url !== undefined) dbUpdates.image_url = updates.image_url;
 
         const { error } = await supabase
           .from('products')
@@ -406,6 +409,7 @@ export const useUnifiedProducts = () => {
                   selling_price: operation.data.sellingPrice,
                   current_stock: operation.data.currentStock || 0,
                   low_stock_threshold: operation.data.lowStockThreshold || 10,
+                  image_url: operation.data.image_url || null,
                   user_id: user.id,
                 }])
                 .select()
@@ -432,6 +436,7 @@ export const useUnifiedProducts = () => {
               if (updates.sellingPrice !== undefined) dbUpdates.selling_price = updates.sellingPrice;
               if (updates.currentStock !== undefined) dbUpdates.current_stock = updates.currentStock;
               if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
+              if (updates.image_url !== undefined) dbUpdates.image_url = updates.image_url;
 
               const { error: updateError } = await supabase
                 .from('products')

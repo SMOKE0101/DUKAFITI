@@ -470,61 +470,92 @@ const RebuiltModernSalesPage = () => {
                        
                        return (
                          <Card key={product.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
-                           <CardContent className="p-2.5 md:p-3">
+                           <CardContent className="p-0">
                              <div className="flex flex-col h-full">
-                               <h3 className="font-medium text-xs md:text-sm mb-1 truncate leading-tight">{product.name}</h3>
-                               <p className="text-[10px] md:text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
-                               
-                               <div className="flex justify-between items-center mb-2 gap-1">
-                                 <span className="font-bold text-xs md:text-sm text-primary truncate">
-                                   {formatCurrency(product.sellingPrice)}
-                                 </span>
-                                 <Badge 
-                                   variant={product.currentStock > 0 ? 'default' : product.currentStock === -1 ? 'secondary' : 'destructive'} 
-                                   className="text-[9px] md:text-xs px-1 py-0.5 min-w-0 max-w-[60px] md:max-w-[80px] truncate whitespace-nowrap"
-                                   title={product.currentStock === -1 ? "Unspecified" : `Stock: ${product.currentStock}`}
+                               {/* Product Image */}
+                               <div className="aspect-square overflow-hidden rounded-t-lg">
+                                 {product.image_url ? (
+                                   <img
+                                     src={product.image_url}
+                                     alt={product.name}
+                                     className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
+                                     loading="lazy"
+                                     onError={(e) => {
+                                       const target = e.target as HTMLImageElement;
+                                       target.style.display = 'none';
+                                       if (target.nextElementSibling) {
+                                         (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                                       }
+                                     }}
+                                   />
+                                 ) : null}
+                                 <div 
+                                   className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 dark:from-purple-900 dark:via-purple-800 dark:to-purple-700 ${product.image_url ? 'hidden' : 'flex'}`}
                                  >
-                                   {product.currentStock === -1 ? 'Unspec.' : product.currentStock}
-                                 </Badge>
+                                   <div className="w-12 h-12 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 dark:border-gray-700/50">
+                                     <span className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                                       {product.name.charAt(0).toUpperCase()}
+                                     </span>
+                                   </div>
+                                 </div>
                                </div>
                                
-                               {product.currentStock > 0 || product.currentStock === -1 ? (
-                                 quantity > 0 ? (
-                                   <div className="flex items-center justify-between bg-muted rounded-lg p-1">
-                                     <Button
-                                       variant="ghost"
-                                       size="sm"
-                                       className="h-8 w-8 p-0"
-                                       onClick={() => handleQuantityChange(product.id, quantity - 1)}
-                                     >
-                                       <Minus size={14} />
-                                     </Button>
-                                     <span className="font-medium text-sm">{quantity}</span>
-                                     <Button
-                                       variant="ghost"
-                                       size="sm"
-                                       className="h-8 w-8 p-0"
-                                       onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                                     >
-                                       <Plus size={14} />
-                                     </Button>
-                                   </div>
-                                 ) : (
-                                   <Button
-                                     onClick={() => addToCart(product.id)}
-                                     size="sm"
-                                     className="w-full text-xs md:text-sm h-7 md:h-8"
-                                   >
-                                     <Plus size={12} className="mr-1" />
-                                     Add
-                                   </Button>
-                                 )
-                               ) : (
-                                 <Button disabled size="sm" className="w-full">
-                                   Out of Stock
-                                 </Button>
-                               )}
-                             </div>
+                                {/* Product Info */}
+                                <div className="p-2.5 md:p-3">
+                                  <h3 className="font-medium text-xs md:text-sm mb-1 truncate leading-tight">{product.name}</h3>
+                                  <p className="text-[10px] md:text-xs text-muted-foreground mb-2 truncate">{product.category}</p>
+                                  
+                                  <div className="flex justify-between items-center mb-2 gap-1">
+                                    <span className="font-bold text-xs md:text-sm text-primary truncate">
+                                      {formatCurrency(product.sellingPrice)}
+                                    </span>
+                                    <Badge 
+                                      variant={product.currentStock > 0 ? 'default' : product.currentStock === -1 ? 'secondary' : 'destructive'} 
+                                      className="text-[9px] md:text-xs px-1 py-0.5 min-w-0 max-w-[60px] md:max-w-[80px] truncate whitespace-nowrap"
+                                      title={product.currentStock === -1 ? "Unspecified" : `Stock: ${product.currentStock}`}
+                                    >
+                                      {product.currentStock === -1 ? 'Unspec.' : product.currentStock}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {product.currentStock > 0 || product.currentStock === -1 ? (
+                                    quantity > 0 ? (
+                                      <div className="flex items-center justify-between bg-muted rounded-lg p-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          onClick={() => handleQuantityChange(product.id, quantity - 1)}
+                                        >
+                                          <Minus size={14} />
+                                        </Button>
+                                        <span className="font-medium text-sm">{quantity}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          onClick={() => handleQuantityChange(product.id, quantity + 1)}
+                                        >
+                                          <Plus size={14} />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        onClick={() => addToCart(product.id)}
+                                        size="sm"
+                                        className="w-full text-xs md:text-sm h-7 md:h-8"
+                                      >
+                                        <Plus size={12} className="mr-1" />
+                                        Add
+                                      </Button>
+                                    )
+                                  ) : (
+                                    <Button disabled size="sm" className="w-full">
+                                      Out of Stock
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
                            </CardContent>
                          </Card>
                        );

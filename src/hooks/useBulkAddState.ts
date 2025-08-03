@@ -140,7 +140,7 @@ export const useBulkAddState = () => {
             ...updated[emptyRowIndex],
             name: template.name,
             category: template.category || '',
-            image_url: template.image_url || null, // Properly handle null values
+            image_url: template.image_url || '', // Properly handle null values
             isValid: false,
             errors: ['Selling price is required and must be > 0'],
           };

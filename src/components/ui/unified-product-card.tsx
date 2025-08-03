@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Check, Plus, Edit, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { Check, Plus, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
+import EnhancedProductImage from './enhanced-product-image';
 
 // Base product interface
 interface BaseProductData {
@@ -43,94 +44,6 @@ interface ProductCardProps {
   className?: string;
 }
 
-// Optimized image component with advanced loading states
-const ProductImage: React.FC<{ 
-  src?: string | null; 
-  alt: string; 
-  productName: string;
-  className?: string;
-}> = ({ src, alt, productName, className }) => {
-  const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading');
-  const [retryCount, setRetryCount] = useState(0);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  const handleLoad = useCallback(() => {
-    setImageState('loaded');
-  }, []);
-
-  const handleError = useCallback(() => {
-    if (retryCount < 2) {
-      // Retry loading the image up to 2 times
-      setRetryCount(prev => prev + 1);
-      if (imgRef.current) {
-        imgRef.current.src = src || '';
-      }
-    } else {
-      setImageState('error');
-    }
-  }, [retryCount, src]);
-
-  // Reset state when src changes
-  useEffect(() => {
-    if (src) {
-      setImageState('loading');
-      setRetryCount(0);
-    } else {
-      setImageState('error');
-    }
-  }, [src]);
-
-  // Generate fallback with product initial
-  const getProductInitial = () => {
-    return productName.charAt(0).toUpperCase();
-  };
-
-  // Show fallback if no src or error occurred
-  if (!src || imageState === 'error') {
-    return (
-      <div className={cn(
-        "w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 dark:from-purple-900 dark:via-purple-800 dark:to-purple-700",
-        className
-      )}>
-        <div className="w-16 h-16 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 dark:border-gray-700/50">
-          <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-            {getProductInitial()}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={cn("relative w-full h-full overflow-hidden", className)}>
-      {/* Loading state */}
-      {imageState === 'loading' && (
-        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 dark:from-purple-900 dark:via-purple-800 dark:to-purple-700">
-          <div className="w-16 h-16 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 dark:border-gray-700/50 animate-pulse">
-            <Package className="w-8 h-8 text-purple-700 dark:text-purple-300" />
-          </div>
-        </div>
-      )}
-      
-      {/* Actual image */}
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt}
-        className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
-        loading="lazy"
-        onLoad={handleLoad}
-        onError={handleError}
-        style={{ 
-          display: imageState === 'loaded' ? 'block' : 'none',
-          imageRendering: 'auto',
-          objectFit: 'cover'
-        }}
-        crossOrigin="anonymous"
-      />
-    </div>
-  );
-};
 
 // Main ProductCard component
 const UnifiedProductCard: React.FC<ProductCardProps> = ({
@@ -219,10 +132,13 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
 
       {/* Product Image */}
       <div className="aspect-square overflow-hidden rounded-t-xl">
-        <ProductImage
+        <EnhancedProductImage
           src={product.image_url}
           alt={product.name}
           productName={product.name}
+          width={300}
+          height={300}
+          priority={variant === 'sales'}
         />
       </div>
       

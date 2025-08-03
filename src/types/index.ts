@@ -60,5 +60,5 @@ export interface Product {
   lowStockThreshold: number;
   createdAt: string;
   updatedAt: string;
-  image_url?: string;
+  image_url?: string | null;
 }

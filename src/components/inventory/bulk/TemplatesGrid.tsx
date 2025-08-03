@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Package, AlertCircle } from 'lucide-react';
 import { ProductTemplate } from '../../../hooks/useProductTemplates';
 import { Skeleton } from '@/components/ui/skeleton';
-import ProductCard from '../../ui/product-card';
+import UnifiedProductCard from '../../ui/unified-product-card';
 import BulkSelectionTools from './BulkSelectionTools';
 
 interface TemplatesGridProps {
@@ -155,7 +155,7 @@ const TemplatesGrid: React.FC<TemplatesGridProps> = ({
       >
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-4 pt-2">
         {visibleTemplates.map((template) => (
-          <ProductCard
+          <UnifiedProductCard
             key={template.id}
             product={{
               id: String(template.id),
