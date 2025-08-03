@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       .select('id, name, image_url')
       .not('image_url', 'is', null)
       .not('image_url', 'like', '%/storage/v1/object/public/%')
-      .limit(50) // Process in batches to avoid timeout
+      .limit(100) // Process more templates per batch
 
     if (fetchError) {
       console.error('Error fetching templates:', fetchError)
@@ -54,10 +54,12 @@ Deno.serve(async (req) => {
     let errorCount = 0
     const results = []
 
-    // Process templates in parallel batches of 5 to improve speed
-    const batchSize = 5
+    // Process templates in parallel batches of 10 to improve speed
+    const batchSize = 10
     for (let i = 0; i < templates.length; i += batchSize) {
       const batch = templates.slice(i, i + batchSize)
+      
+      console.log(`Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(templates.length/batchSize)} (templates ${i + 1}-${Math.min(i + batchSize, templates.length)})`)
       
       await Promise.allSettled(batch.map(async (template) => {
         try {
@@ -65,7 +67,7 @@ Deno.serve(async (req) => {
           
           // Add timeout to fetch request
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
           
           // Download the image
           const response = await fetch(template.image_url, {

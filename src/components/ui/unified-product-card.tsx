@@ -8,6 +8,7 @@ import EnhancedProductImage from './enhanced-product-image';
 import ExternalProductImage from './external-product-image';
 import SimpleProductImage from './simple-product-image';
 import TemplateImage from './template-image';
+import ProxyImage from './proxy-image';
 
 // Base product interface
 interface BaseProductData {
@@ -146,14 +147,19 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
             size="md"
           />
         ) : (
-          <EnhancedProductImage
-            src={product.image_url}
+          <ProxyImage
+            src={product.image_url || ''}
             alt={product.name}
-            productName={product.name}
-            width={300}
-            height={300}
-            priority={variant === 'sales'}
-            className="w-full h-full"
+            className="w-full h-full object-cover"
+            fallbackContent={
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-pink-900/30">
+                <div className="w-12 h-12 bg-white/90 dark:bg-gray-800/90 rounded-2xl flex items-center justify-center shadow-lg border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
+                  <span className="font-bold text-blue-700 dark:text-blue-300 text-lg">
+                    {product.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            }
           />
         )}
       </div>

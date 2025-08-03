@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProductInitial } from '@/utils/imageUtils';
+import ProxyImage from './proxy-image';
 
 interface TemplateImageProps {
   src?: string | null;
@@ -88,29 +89,11 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
 
   return (
     <div className={cn("relative w-full h-full overflow-hidden", className)}>
-      {/* Loading state */}
-      {imageState === 'loading' && (
-        <div className="absolute inset-0 w-full h-full">
-          {renderFallback()}
-        </div>
-      )}
-      
-      {/* Actual image */}
-      <img
-        ref={imgRef}
-        src={src}
+      <ProxyImage
+        src={src || ''}
         alt={alt}
-        className={cn(
-          "w-full h-full object-cover transition-opacity duration-300",
-          imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
-        )}
-        loading="lazy"
-        onLoad={handleLoad}
-        onError={handleError}
-        style={{ 
-          imageRendering: 'auto',
-          objectFit: 'cover'
-        }}
+        className="w-full h-full object-cover"
+        fallbackContent={renderFallback()}
       />
     </div>
   );
