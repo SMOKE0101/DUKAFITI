@@ -9,6 +9,7 @@ import { Product } from '../../types';
 import { useToast } from '../../hooks/use-toast';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
+import ImageUpload from '../ui/image-upload';
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -25,7 +26,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     costPrice: '',
     sellingPrice: '',
     lowStockThreshold: '',
-    currentStock: ''
+    currentStock: '',
+    image_url: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -49,7 +51,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
         costPrice: product.costPrice.toString(),
         sellingPrice: product.sellingPrice.toString(),
         lowStockThreshold: product.lowStockThreshold?.toString() || '10',
-        currentStock: product.currentStock.toString()
+        currentStock: product.currentStock.toString(),
+        image_url: product.image_url || ''
       });
       setCustomCategory(isCustom ? product.category : '');
       setShowCustomInput(isCustom);
@@ -96,7 +99,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
         costPrice: isUnspecifiedStock ? 0 : parseFloat(formData.costPrice),
         sellingPrice: parseFloat(formData.sellingPrice),
         currentStock: isUnspecifiedStock ? -1 : parseInt(formData.currentStock),
-        lowStockThreshold: isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold)
+        lowStockThreshold: isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold),
+        image_url: formData.image_url || null
       };
 
       await onSave(product.id, updatedProduct);
@@ -159,6 +163,20 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
         
         <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
           <div className="space-y-6">
+            
+            {/* Product Image */}
+            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+              <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                Product Image
+              </Label>
+              <ImageUpload
+                value={formData.image_url}
+                onChange={(url) => setFormData(prev => ({ ...prev, image_url: url || '' }))}
+                placeholder="Upload product image"
+                compact={true}
+                productId={product?.id}
+              />
+            </div>
             
             {/* Product Name */}
             <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">

@@ -55,6 +55,7 @@ interface ResponsiveProductGridProps {
   onEdit?: (product: any) => void;
   onDelete?: (product: any) => void;
   onRestock?: (product: any) => void;
+  onChangeImage?: (product: any) => void;
   getSellingPrice?: (product: any) => number;
   getCostPrice?: (product: any) => number;
   getCurrentStock?: (product: any) => number;
@@ -81,6 +82,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   onEdit,
   onDelete,
   onRestock,
+  onChangeImage,
   getSellingPrice,
   getCostPrice,
   getCurrentStock,
@@ -146,6 +148,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
           cardProps.onEdit = onEdit;
           cardProps.onDelete = onDelete;
           cardProps.onRestock = onRestock;
+          cardProps.onChangeImage = onChangeImage;
           cardProps.sellingPrice = getSellingPrice?.(product);
           cardProps.costPrice = getCostPrice?.(product);
           cardProps.currentStock = getCurrentStock?.(product);

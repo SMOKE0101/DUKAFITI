@@ -17,6 +17,7 @@ import InventoryProductGrid from './inventory/InventoryProductGrid';
 import InventoryHeader from './inventory/InventoryHeader';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
 import { TooltipWrapper } from './TooltipWrapper';
+import ImageChangeModal from './inventory/ImageChangeModal';
 import { Product } from '../types';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
@@ -31,6 +32,7 @@ const InventoryPage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
+  const [showImageChangeModal, setShowImageChangeModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
@@ -317,6 +319,12 @@ const InventoryPage = () => {
     }
   };
 
+  const handleChangeImage = (product: Product) => {
+    console.log('[InventoryPage] Opening image change modal for product:', product.id);
+    setSelectedProduct(product);
+    setShowImageChangeModal(true);
+  };
+
   if (error) {
     return (
       <div className="p-6">
@@ -392,6 +400,7 @@ const InventoryPage = () => {
           onEdit={handleEditProduct}
           onDelete={handleDeleteProduct}
           onRestock={handleRestock}
+          onChangeImage={handleChangeImage}
         />
 
         {/* Modals */}
@@ -447,6 +456,15 @@ const InventoryPage = () => {
             setSelectedProduct(null);
           }}
           onSave={handleRestockProduct}
+          product={selectedProduct}
+        />
+
+        <ImageChangeModal
+          isOpen={showImageChangeModal}
+          onClose={() => {
+            setShowImageChangeModal(false);
+            setSelectedProduct(null);
+          }}
           product={selectedProduct}
         />
       </div>

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Check, Plus, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Check, Plus, Edit, Trash2, AlertTriangle, Camera } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import EnhancedProductImage from './enhanced-product-image';
 
@@ -31,6 +31,7 @@ interface ProductCardProps {
   onEdit?: (product: any) => void;
   onDelete?: (product: any) => void;
   onRestock?: (product: any) => void;
+  onChangeImage?: (product: any) => void;
   sellingPrice?: number;
   costPrice?: number;
   currentStock?: number;
@@ -56,6 +57,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
   onEdit,
   onDelete,
   onRestock,
+  onChangeImage,
   sellingPrice,
   costPrice,
   currentStock,
@@ -234,6 +236,15 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
         {/* Inventory Actions */}
         {variant === 'inventory' && (
           <div className="flex items-center gap-2">
+            {onChangeImage && (
+              <button
+                onClick={(e) => handleActionClick(e, () => onChangeImage(product))}
+                className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                title="Change Image"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+            )}
             {onEdit && (
               <button
                 onClick={(e) => handleActionClick(e, () => onEdit(product))}

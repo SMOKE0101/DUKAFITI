@@ -10,6 +10,7 @@ import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
 import { Shuffle } from 'lucide-react';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
+import ImageUpload from '../ui/image-upload';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     sellingPrice: 0,
     currentStock: 0,
     lowStockThreshold: 0,
+    image_url: '',
   });
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -48,6 +50,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         sellingPrice: editingProduct.sellingPrice,
         currentStock: editingProduct.currentStock,
         lowStockThreshold: editingProduct.lowStockThreshold,
+        image_url: editingProduct.image_url || '',
       });
       setCustomCategory(isCustom ? editingProduct.category : '');
       setShowCustomInput(isCustom);
@@ -60,6 +63,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         sellingPrice: 0,
         currentStock: 0,
         lowStockThreshold: 0,
+        image_url: '',
       });
       setCustomCategory('');
       setShowCustomInput(false);
@@ -173,6 +177,19 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           
           <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Product Image */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product Image
+                </Label>
+                <ImageUpload
+                  value={formData.image_url}
+                  onChange={(url) => handleInputChange('image_url', url || '')}
+                  placeholder="Upload product image"
+                  compact={true}
+                />
+              </div>
+
               {/* Product Name */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
