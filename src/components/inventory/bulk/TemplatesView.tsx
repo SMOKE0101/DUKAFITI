@@ -134,22 +134,28 @@ const TemplatesView: React.FC = () => {
                   <div className="aspect-square overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
                     {template.image_url ? (
                       <img
-                        src={template.image_url}
+                        src={template.image_url.includes('/storage/v1/object/public/') 
+                          ? template.image_url 
+                          : `https://images.weserv.nl/?url=${encodeURIComponent(template.image_url)}&w=300&h=300&fit=cover&output=webp`
+                        }
                         alt={template.name}
                         className="w-full h-full object-cover"
-                        onLoad={() => console.log('[TemplatesView] Image loaded:', template.name)}
+                        loading="lazy"
                         onError={(e) => {
-                          console.log('[TemplatesView] Image error for:', template.name, template.image_url);
-                          // Show fallback
+                          // Show fallback on error
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
+                          const fallback = target.parentElement?.querySelector('.image-fallback') as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
                         }}
                       />
                     ) : null}
                     
                     {/* Fallback */}
-                    <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-pink-900/30 ${template.image_url ? 'hidden' : ''}`}>
+                    <div 
+                      className={`image-fallback w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-pink-900/30 ${template.image_url ? 'hidden' : 'flex'}`}
+                      style={{ display: template.image_url ? 'none' : 'flex' }}
+                    >
                       <div className="w-12 h-12 bg-white/90 dark:bg-gray-800/90 rounded-2xl flex items-center justify-center shadow-lg border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
                         <span className="font-bold text-blue-700 dark:text-blue-300 text-lg">
                           {template.name.charAt(0).toUpperCase()}
