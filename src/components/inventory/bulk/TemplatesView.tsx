@@ -7,6 +7,7 @@ import TemplateLoadingStatus from './TemplateLoadingStatus';
 import TemplateDebugPanel from './TemplateDebugPanel';
 import TemplateCacheManager from './TemplateCacheManager';
 import ImageDownloadButton from './ImageDownloadButton';
+import VirtualizedTemplateGrid from './VirtualizedTemplateGrid';
 
 
 const TemplatesView: React.FC = () => {
@@ -100,7 +101,7 @@ const TemplatesView: React.FC = () => {
             </div>
           </div>
         ) : error ? (
-          <div className="absolute inset-0 flex items-center justify-center overflow-auto">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center p-8">
               <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Failed to load templates
@@ -109,21 +110,12 @@ const TemplatesView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="absolute inset-0 overflow-auto">
-            <div className="p-4">
-              <ResponsiveProductGrid
-                products={templates}
-                variant="template"
-                selectedProducts={selectedTemplates}
-                onSelect={toggleTemplate}
-                gridConfig={{
-                  cols: { mobile: 2, tablet: 3, desktop: 5 },
-                  gap: 'gap-3'
-                }}
-                emptyStateMessage="No templates found"
-                emptyStateDescription="Try adjusting your search or category filter"
-              />
-            </div>
+          <div className="h-full overflow-hidden">
+            <VirtualizedTemplateGrid
+              templates={templates}
+              selectedTemplates={selectedTemplates}
+              onToggleTemplate={toggleTemplate}
+            />
           </div>
         )}
       </div>

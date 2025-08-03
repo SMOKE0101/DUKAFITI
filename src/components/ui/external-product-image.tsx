@@ -47,16 +47,40 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
       return;
     }
     
-    // For external URLs, try to load with proxy
+    // For external URLs, try direct load first (many CDN images work without proxy)
     const loadImage = async () => {
       try {
-        const workingImageUrl = await loadImageWithProxy(src);
-        setWorkingUrl(workingImageUrl);
+        // Try direct load first - faster if it works
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Direct load timeout')), 3000);
+          img.onload = () => {
+            clearTimeout(timeout);
+            resolve(img);
+          };
+          img.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Direct load failed'));
+          };
+          img.src = src;
+        });
+        
+        // Direct load succeeded
+        setWorkingUrl(src);
         setImageState('loaded');
-      } catch (error) {
-        console.log(`[ExternalProductImage] All load attempts failed for: ${src}`, error);
-        setImageState('error');
-        setWorkingUrl(null);
+      } catch (directError) {
+        // Direct load failed, try with proxy
+        try {
+          const workingImageUrl = await loadImageWithProxy(src);
+          setWorkingUrl(workingImageUrl);
+          setImageState('loaded');
+        } catch (proxyError) {
+          console.log(`[ExternalProductImage] All load attempts failed for: ${src}`, { directError, proxyError });
+          setImageState('error');
+          setWorkingUrl(null);
+        }
       }
     };
 

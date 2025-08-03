@@ -4,8 +4,8 @@
 
 // List of public CORS proxy services (use with caution in production)
 const CORS_PROXIES = [
-  'https://cors.bridged.cc/',
   'https://api.allorigins.win/raw?url=',
+  'https://cors.bridged.cc/',
   'https://corsproxy.io/?',
 ];
 
@@ -75,11 +75,12 @@ const testImageLoad = (url: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     
+    // Shorter timeout for better performance with many images
     const timeout = setTimeout(() => {
       img.onload = null;
       img.onerror = null;
       reject(new Error('Timeout'));
-    }, 5000);
+    }, 3000);
     
     img.onload = () => {
       clearTimeout(timeout);
@@ -91,7 +92,9 @@ const testImageLoad = (url: string): Promise<void> => {
       reject(new Error('Load failed'));
     };
     
+    // Set crossOrigin after assigning handlers but before src
     img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
     img.src = url;
   });
 };

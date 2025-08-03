@@ -7,6 +7,7 @@ import { formatCurrency } from '@/utils/currency';
 import EnhancedProductImage from './enhanced-product-image';
 import ExternalProductImage from './external-product-image';
 import SimpleProductImage from './simple-product-image';
+import TemplateImage from './template-image';
 
 // Base product interface
 interface BaseProductData {
@@ -137,7 +138,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
       {/* Product Image */}
       <div className="aspect-square overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
         {variant === 'template' ? (
-          <ExternalProductImage
+          <TemplateImage
             src={product.image_url}
             alt={product.name}
             productName={product.name}
