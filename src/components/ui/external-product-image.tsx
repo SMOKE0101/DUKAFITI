@@ -35,6 +35,30 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
     }
     
     setImageState('loading');
+    
+    // Preload the image to test if it's accessible
+    const testImg = new Image();
+    testImg.onload = () => {
+      setImageState('loaded');
+    };
+    testImg.onerror = () => {
+      setImageState('error');
+    };
+    
+    // Set a timeout in case the image takes too long
+    const timeoutId = setTimeout(() => {
+      setImageState('error');
+    }, 10000); // 10 second timeout
+    
+    // Start loading
+    testImg.src = src;
+    
+    // Cleanup
+    return () => {
+      clearTimeout(timeoutId);
+      testImg.onload = null;
+      testImg.onerror = null;
+    };
   }, [src]);
 
   const handleLoad = () => {
@@ -83,8 +107,14 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
     </div>
   );
 
-  // Show fallback if no src or error occurred
-  if (!src || imageState === 'error') {
+  // Show fallback if no src or error occurred  
+  if (!src) {
+    console.log('[ExternalProductImage] No src provided for:', productName);
+    return renderFallback();
+  }
+  
+  if (imageState === 'error') {
+    console.log('[ExternalProductImage] Error state for:', src);
     return renderFallback();
   }
 
@@ -114,7 +144,9 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
           imageRendering: 'auto',
           objectFit: 'cover'
         }}
-        // Use basic attributes that work with most CDNs
+        // Try different approaches for external images
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
         decoding="async"
       />
     </div>

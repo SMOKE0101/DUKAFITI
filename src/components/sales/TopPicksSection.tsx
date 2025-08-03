@@ -309,10 +309,14 @@ const TopPicksSection = ({ products, onAddToCart }: TopPicksSectionProps) => {
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling?.removeAttribute('style');
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
                           }}
                         />
-                        <div className="w-full h-full bg-primary/10 rounded-lg flex items-center justify-center" style={{ display: 'none' }}>
+                        <div 
+                          className="w-full h-full bg-primary/10 rounded-lg flex items-center justify-center" 
+                          style={{ display: 'none' }}
+                        >
                           <span className="text-lg font-semibold text-primary">
                             {getProductInitial(product.name)}
                           </span>
