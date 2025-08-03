@@ -80,6 +80,8 @@ const SimpleProductImage: React.FC<SimpleProductImageProps> = ({
         loading="lazy"
         onLoad={handleLoad}
         onError={handleError}
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
         style={{ 
           display: isLoading ? 'none' : 'block',
           imageRendering: 'auto',

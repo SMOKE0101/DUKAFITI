@@ -13,7 +13,7 @@ import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
 import { ProductMode } from './inventory/AddProductDropdown';
 import InventoryFilters from './inventory/InventoryFilters';
-import InventoryProductGrid from './inventory/InventoryProductGrid';
+import ResponsiveProductGrid from './ui/responsive-product-grid';
 import InventoryHeader from './inventory/InventoryHeader';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
 import { TooltipWrapper } from './TooltipWrapper';
@@ -57,12 +57,14 @@ const InventoryPage = () => {
   useEffect(() => {
     const handleProductUpdate = () => {
       console.log('[InventoryPage] Product updated, refreshing data');
+      // Force a complete refetch to ensure fresh data
       refetch();
     };
 
     const handleLocalProductUpdate = () => {
       console.log('[InventoryPage] Local product updated, refreshing data');
-      refetch();
+      // Small delay to ensure the update is propagated
+      setTimeout(() => refetch(), 100);
     };
 
     window.addEventListener('product-updated', handleProductUpdate);
@@ -416,12 +418,23 @@ const InventoryPage = () => {
         )}
 
         {/* Products Grid */}
-        <InventoryProductGrid
+        <ResponsiveProductGrid
           products={filteredProducts}
+          variant="inventory"
           onEdit={handleEditProduct}
           onDelete={handleDeleteProduct}
           onRestock={handleRestock}
           onChangeImage={handleChangeImage}
+          getSellingPrice={(product) => product.sellingPrice}
+          getCostPrice={(product) => product.costPrice}
+          getCurrentStock={(product) => product.currentStock}
+          getLowStockThreshold={(product) => product.lowStockThreshold}
+          gridConfig={{
+            cols: { mobile: 2, tablet: 3, desktop: 5 },
+            gap: 'gap-2'
+          }}
+          emptyStateMessage="No products found"
+          emptyStateDescription="Try adjusting your search or filters"
         />
 
         {/* Modals */}
