@@ -53,9 +53,9 @@ const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-7xl w-[98vw] h-[95vh] p-0 flex flex-col">
+      <DialogContent className="max-w-7xl w-[98vw] h-[95vh] p-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
+        <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
               <Package2 className="w-4 h-4 text-primary" />
@@ -127,7 +127,7 @@ const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {activeView === 'spreadsheet' ? (
             <SpreadsheetView />
           ) : (

@@ -36,21 +36,29 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
     
     setImageState('loading');
     
-    // Preload the image to test if it's accessible
+    // Create a direct img element for testing - more reliable than fetch
     const testImg = new Image();
+    
+    // Set a shorter timeout for better UX
+    const timeoutId = setTimeout(() => {
+      console.log('[ExternalProductImage] Timeout for:', src);
+      setImageState('error');
+    }, 5000); // 5 second timeout
+    
     testImg.onload = () => {
+      console.log('[ExternalProductImage] Loaded successfully:', src);
+      clearTimeout(timeoutId);
       setImageState('loaded');
     };
-    testImg.onerror = () => {
+    
+    testImg.onerror = (e) => {
+      console.log('[ExternalProductImage] Load failed:', src, e);
+      clearTimeout(timeoutId);
       setImageState('error');
     };
     
-    // Set a timeout in case the image takes too long
-    const timeoutId = setTimeout(() => {
-      setImageState('error');
-    }, 10000); // 10 second timeout
-    
-    // Start loading
+    // For CDN images, try without CORS first
+    testImg.crossOrigin = null;
     testImg.src = src;
     
     // Cleanup
@@ -144,8 +152,7 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
           imageRendering: 'auto',
           objectFit: 'cover'
         }}
-        // Try different approaches for external images
-        crossOrigin="anonymous"
+        // Remove CORS attributes for better compatibility with CDNs
         referrerPolicy="no-referrer"
         decoding="async"
       />
