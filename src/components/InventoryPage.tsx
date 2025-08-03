@@ -67,12 +67,20 @@ const InventoryPage = () => {
       setTimeout(() => refetch(), 100);
     };
 
+    const handleImageUpdate = () => {
+      console.log('[InventoryPage] Image updated, force refreshing data');
+      // Force immediate refresh for image updates
+      setTimeout(() => refetch(), 50);
+    };
+
     window.addEventListener('product-updated', handleProductUpdate);
     window.addEventListener('product-updated-locally', handleLocalProductUpdate);
+    window.addEventListener('image-updated', handleImageUpdate);
     
     return () => {
       window.removeEventListener('product-updated', handleProductUpdate);
       window.removeEventListener('product-updated-locally', handleLocalProductUpdate);
+      window.removeEventListener('image-updated', handleImageUpdate);
     };
   }, [refetch]);
 

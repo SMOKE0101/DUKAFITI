@@ -33,8 +33,13 @@ const ImageChangeModal: React.FC<ImageChangeModalProps> = ({
 
       toast.success('Product image updated successfully!');
       
-      // Force immediate UI refresh - this will trigger both local and server updates
-      window.dispatchEvent(new CustomEvent('product-updated'));
+      // Force multiple refresh events to ensure all components update
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('product-updated'));
+        window.dispatchEvent(new CustomEvent('product-updated-locally'));
+        window.dispatchEvent(new CustomEvent('data-refresh-product'));
+        window.dispatchEvent(new CustomEvent('image-updated', { detail: { productId: product.id } }));
+      }, 100);
       
       onClose();
     } catch (error) {

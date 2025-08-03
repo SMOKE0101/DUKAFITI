@@ -135,23 +135,15 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
 
       {/* Product Image */}
       <div className="aspect-square overflow-hidden rounded-t-xl">
-        {variant === 'template' ? (
-          <SimpleProductImage
-            src={product.image_url}
-            alt={product.name}
-            productName={product.name}
-            className="w-full h-full"
-          />
-        ) : (
-          <EnhancedProductImage
-            src={product.image_url}
-            alt={product.name}
-            productName={product.name}
-            width={300}
-            height={300}
-            priority={variant === 'sales'}
-          />
-        )}
+        <EnhancedProductImage
+          src={product.image_url}
+          alt={product.name}
+          productName={product.name}
+          width={300}
+          height={300}
+          priority={variant === 'sales'}
+          className="w-full h-full"
+        />
       </div>
       
       {/* Product Information */}

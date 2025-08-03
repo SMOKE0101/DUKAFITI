@@ -273,10 +273,13 @@ export const useUnifiedProducts = () => {
       return updated;
     });
 
-    // Dispatch immediate local update event
-    window.dispatchEvent(new CustomEvent('product-updated-locally', {
-      detail: { productId: id, product: updatedProduct }
-    }));
+    // Dispatch immediate local update event with delay to ensure UI consistency
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('product-updated-locally', {
+        detail: { productId: id, product: updatedProduct }
+      }));
+      window.dispatchEvent(new CustomEvent('product-updated'));
+    }, 50);
 
     if (isOnline) {
       try {

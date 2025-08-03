@@ -1,99 +1,103 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  getProductInitial, 
-  getCachedImageUrl, 
-  getOptimizedImageUrl, 
-  preloadImage,
-  MAX_RETRY_COUNT,
-  RETRY_DELAY 
-} from '@/utils/imageUtils';
+import { getOptimizedImageUrl, getProductInitial, preloadImage, MAX_RETRY_COUNT, RETRY_DELAY } from '@/utils/imageUtils';
 
 export interface EnhancedProductImageProps {
   src?: string | null;
   alt: string;
   productName: string;
   className?: string;
+  fallbackClassName?: string;
   width?: number;
   height?: number;
   priority?: boolean;
-  fallbackClassName?: string;
 }
 
 type ImageState = 'loading' | 'loaded' | 'error' | 'retrying';
 
 /**
- * Enhanced product image component with advanced loading states, retry logic, and fallbacks
+ * Enhanced product image component with advanced loading states and retry logic
  */
 const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
   src,
   alt,
   productName,
   className,
-  width = 400,
-  height = 400,
-  priority = false,
   fallbackClassName,
+  width = 300,
+  height = 300,
+  priority = false,
 }) => {
   const [imageState, setImageState] = useState<ImageState>('loading');
   const [retryCount, setRetryCount] = useState(0);
-  const [currentSrc, setCurrentSrc] = useState<string>('');
+  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout>();
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Process the image URL
-  const processedSrc = src ? getOptimizedImageUrl(src, width, height) : '';
-
-  // Reset state when src changes
+  // Process and optimize the source URL
   useEffect(() => {
-    if (processedSrc !== currentSrc) {
-      setCurrentSrc(processedSrc);
-      setImageState(processedSrc ? 'loading' : 'error');
-      setRetryCount(0);
-      
-      // Clear any pending retry
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    }
-  }, [processedSrc, currentSrc]);
-
-  // Handle image load success
-  const handleLoad = useCallback(() => {
-    setImageState('loaded');
-    setRetryCount(0);
-  }, []);
-
-  // Handle image load error with retry logic
-  const handleError = useCallback(() => {
-    if (retryCount < MAX_RETRY_COUNT) {
-      setImageState('retrying');
-      
-      retryTimeoutRef.current = setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-        setImageState('loading');
-        
-        // Force reload by updating the src
-        if (imgRef.current && currentSrc) {
-          imgRef.current.src = currentSrc + `?retry=${retryCount + 1}`;
-        }
-      }, RETRY_DELAY);
-    } else {
+    if (!src) {
+      setCurrentSrc(null);
       setImageState('error');
+      return;
     }
-  }, [retryCount, currentSrc]);
 
-  // Preload image if priority is set
-  useEffect(() => {
-    if (priority && currentSrc) {
-      preloadImage(currentSrc).then(success => {
-        if (!success && retryCount === 0) {
+    // Reset state for new source
+    setImageState('loading');
+    setRetryCount(0);
+    
+    // Clear any pending retry
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+    }
+
+    const optimizedSrc = getOptimizedImageUrl(src, width, height);
+    setCurrentSrc(optimizedSrc);
+
+    // Preload the image if priority is set
+    if (priority) {
+      preloadImage(optimizedSrc).then((success) => {
+        if (success) {
+          setImageState('loaded');
+        } else {
           setImageState('error');
         }
       });
     }
-  }, [currentSrc, priority, retryCount]);
+  }, [src, width, height, priority]);
+
+  const handleLoad = useCallback(() => {
+    console.log('[EnhancedProductImage] Image loaded successfully:', currentSrc);
+    setImageState('loaded');
+    setRetryCount(0);
+  }, [currentSrc]);
+
+  const handleError = useCallback(() => {
+    console.log('[EnhancedProductImage] Image error:', currentSrc, 'Retry count:', retryCount);
+    
+    if (retryCount < MAX_RETRY_COUNT && currentSrc) {
+      setImageState('retrying');
+      setRetryCount(prev => prev + 1);
+      
+      // Use progressive delay for retries
+      const delay = RETRY_DELAY * (retryCount + 1);
+      retryTimeoutRef.current = setTimeout(() => {
+        setImageState('loading');
+        
+        // Force reload by adding cache buster
+        const url = new URL(currentSrc);
+        url.searchParams.set('retry', retryCount.toString());
+        url.searchParams.set('t', Date.now().toString());
+        
+        if (imgRef.current) {
+          imgRef.current.src = url.toString();
+        }
+      }, delay);
+    } else {
+      setImageState('error');
+    }
+  }, [currentSrc, retryCount]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -125,7 +129,7 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
       </div>
       {imageState === 'retrying' && (
         <div className="absolute bottom-2 right-2 text-xs text-purple-600 dark:text-purple-400 bg-white/80 dark:bg-gray-800/80 px-2 py-1 rounded">
-          Retrying... ({retryCount + 1}/{MAX_RETRY_COUNT})
+          Retrying... ({retryCount}/{MAX_RETRY_COUNT})
         </div>
       )}
     </div>
