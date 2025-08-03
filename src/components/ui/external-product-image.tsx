@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProductInitial } from '@/utils/imageUtils';
+import { loadImageWithProxy, needsProxy } from '@/utils/imageProxy';
 
 interface ExternalProductImageProps {
   src?: string | null;
@@ -25,48 +26,34 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
   size = 'md',
 }) => {
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [workingUrl, setWorkingUrl] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Reset state when src changes
   useEffect(() => {
     if (!src) {
       setImageState('error');
+      setWorkingUrl(null);
       return;
     }
     
     setImageState('loading');
+    setWorkingUrl(null);
     
-    // Create a direct img element for testing - more reliable than fetch
-    const testImg = new Image();
-    
-    // Set a shorter timeout for better UX
-    const timeoutId = setTimeout(() => {
-      console.log('[ExternalProductImage] Timeout for:', src);
-      setImageState('error');
-    }, 5000); // 5 second timeout
-    
-    testImg.onload = () => {
-      console.log('[ExternalProductImage] Loaded successfully:', src);
-      clearTimeout(timeoutId);
-      setImageState('loaded');
+    // Try to load the image, using proxy if needed
+    const loadImage = async () => {
+      try {
+        const workingImageUrl = await loadImageWithProxy(src);
+        setWorkingUrl(workingImageUrl);
+        setImageState('loaded');
+      } catch (error) {
+        console.log(`[ExternalProductImage] All load attempts failed for: ${src}`, error);
+        setImageState('error');
+        setWorkingUrl(null);
+      }
     };
-    
-    testImg.onerror = (e) => {
-      console.log('[ExternalProductImage] Load failed:', src, e);
-      clearTimeout(timeoutId);
-      setImageState('error');
-    };
-    
-    // For CDN images, try without CORS first
-    testImg.crossOrigin = null;
-    testImg.src = src;
-    
-    // Cleanup
-    return () => {
-      clearTimeout(timeoutId);
-      testImg.onload = null;
-      testImg.onerror = null;
-    };
+
+    loadImage();
   }, [src]);
 
   const handleLoad = () => {
@@ -90,27 +77,45 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
   // Render fallback
   const renderFallback = () => (
     <div className={cn(
-      "w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 dark:from-purple-900 dark:via-purple-800 dark:to-purple-700",
+      "w-full h-full flex items-center justify-center relative overflow-hidden",
       fallbackClassName,
       className
     )}>
+      {/* Attractive gradient background based on product name */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-pink-900/30" />
+      
+      {/* Pattern overlay for visual interest */}
+      <div className="absolute inset-0 opacity-10 dark:opacity-5" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+      }} />
+      
+      {/* Center content */}
       <div className={cn(
-        "bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 dark:border-gray-700/50",
+        "relative bg-white/90 dark:bg-gray-800/90 rounded-2xl flex items-center justify-center shadow-lg border border-white/50 dark:border-gray-700/50 backdrop-blur-sm",
         sizeConfig[size]
       )}>
         {imageState === 'loading' ? (
           <Package className={cn(
-            "text-purple-700 dark:text-purple-300 animate-pulse",
+            "text-blue-600 dark:text-blue-400 animate-pulse",
             size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-6 h-6' : 'w-8 h-8'
           )} />
         ) : (
           <span className={cn(
-            "font-bold text-purple-700 dark:text-purple-300",
+            "font-bold text-blue-700 dark:text-blue-300",
             size === 'sm' ? 'text-sm' : size === 'md' ? 'text-lg' : 'text-2xl'
           )}>
             {productInitial}
           </span>
         )}
+      </div>
+      
+      {/* Product name overlay for context */}
+      <div className="absolute bottom-1 left-1 right-1 text-center">
+        <div className="bg-black/20 dark:bg-white/20 backdrop-blur-sm rounded-md px-1 py-0.5">
+          <span className="text-xs text-white dark:text-gray-200 font-medium truncate block">
+            {productName.slice(0, 20)}{productName.length > 20 ? '...' : ''}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -136,26 +141,27 @@ const ExternalProductImage: React.FC<ExternalProductImageProps> = ({
       )}
       
       {/* Actual image */}
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt}
-        className={cn(
-          "w-full h-full object-cover transition-opacity duration-300",
-          imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
-        )}
-        loading="lazy"
-        onLoad={handleLoad}
-        onError={handleError}
-        style={{ 
-          display: imageState === 'loaded' ? 'block' : 'none',
-          imageRendering: 'auto',
-          objectFit: 'cover'
-        }}
-        // Remove CORS attributes for better compatibility with CDNs
-        referrerPolicy="no-referrer"
-        decoding="async"
-      />
+      {workingUrl && (
+        <img
+          ref={imgRef}
+          src={workingUrl}
+          alt={alt}
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-300",
+            imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
+          )}
+          loading="lazy"
+          onLoad={handleLoad}
+          onError={handleError}
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+          style={{ 
+            display: imageState === 'loaded' ? 'block' : 'none',
+            imageRendering: 'auto',
+            objectFit: 'cover'
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useBulkAdd } from './BulkAddProvider';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
 import ResponsiveProductGrid from '../../ui/responsive-product-grid';
-import VirtualizedProductGrid from '../../ui/virtualized-product-grid';
 import SimpleTemplateSearch from './SimpleTemplateSearch';
 import TemplateLoadingStatus from './TemplateLoadingStatus';
 import TemplateDebugPanel from './TemplateDebugPanel';
@@ -25,26 +24,6 @@ const TemplatesView: React.FC = () => {
     totalTemplates
   } = useProductTemplates();
   
-  // State for container dimensions for virtualization
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Update container size on resize
-  useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: rect.width, height: rect.height });
-      }
-    };
-
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
-
-  // Use virtualization for large datasets to prevent freezing
-  const shouldUseVirtualization = templates.length > 100;
 
   return (
     <div className="flex flex-col h-full">
@@ -98,11 +77,12 @@ const TemplatesView: React.FC = () => {
         {(error || totalTemplates < 7344) && (
           <TemplateDebugPanel className="mt-4" />
         )}
+
         
       </div>
       
       {/* Templates Grid */}
-      <div ref={containerRef} className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
             {Array.from({ length: 24 }).map((_, index) => (
@@ -122,19 +102,8 @@ const TemplatesView: React.FC = () => {
               <p className="text-gray-500 dark:text-gray-400">{error}</p>
             </div>
           </div>
-        ) : shouldUseVirtualization && containerSize.width > 0 && containerSize.height > 0 ? (
-          <VirtualizedProductGrid
-            products={templates}
-            variant="template"
-            height={containerSize.height}
-            width={containerSize.width}
-            selectedProducts={selectedTemplates}
-            onSelect={toggleTemplate}
-            emptyStateMessage="No templates found"
-            emptyStateDescription="Try adjusting your search or category filter"
-          />
         ) : (
-          <div className="overflow-auto h-full">
+          <div className="overflow-auto h-full p-4">
             <ResponsiveProductGrid
               products={templates}
               variant="template"
