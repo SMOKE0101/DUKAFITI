@@ -60,10 +60,17 @@ const InventoryPage = () => {
       refetch();
     };
 
+    const handleLocalProductUpdate = () => {
+      console.log('[InventoryPage] Local product updated, refreshing data');
+      refetch();
+    };
+
     window.addEventListener('product-updated', handleProductUpdate);
+    window.addEventListener('product-updated-locally', handleLocalProductUpdate);
     
     return () => {
       window.removeEventListener('product-updated', handleProductUpdate);
+      window.removeEventListener('product-updated-locally', handleLocalProductUpdate);
     };
   }, [refetch]);
 

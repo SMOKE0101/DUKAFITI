@@ -28,13 +28,12 @@ const ImageChangeModal: React.FC<ImageChangeModalProps> = ({
       setIsUpdating(true);
       
       await updateProduct(product.id, {
-        ...product,
         image_url: imageUrl
       });
 
       toast.success('Product image updated successfully!');
       
-      // Trigger a refresh of the inventory page
+      // Force immediate UI refresh - this will trigger both local and server updates
       window.dispatchEvent(new CustomEvent('product-updated'));
       
       onClose();

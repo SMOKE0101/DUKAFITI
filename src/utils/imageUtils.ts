@@ -30,7 +30,18 @@ export const getCachedImageUrl = (originalUrl: string): string => {
   if (!originalUrl) return '';
   
   // If it's already a local URL, return as is
-  if (originalUrl.startsWith('/') || originalUrl.startsWith('data:') || originalUrl.includes(window.location.host)) {
+  if (originalUrl.startsWith('/') || originalUrl.startsWith('data:') || originalUrl.startsWith('blob:')) {
+    return originalUrl;
+  }
+  
+  // Check if it's from the same domain
+  try {
+    const url = new URL(originalUrl);
+    if (url.host === window.location.host) {
+      return originalUrl;
+    }
+  } catch (e) {
+    // Invalid URL, return as is
     return originalUrl;
   }
   

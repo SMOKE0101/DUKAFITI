@@ -43,7 +43,7 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
   const retryTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Process the image URL
-  const processedSrc = src ? getCachedImageUrl(getOptimizedImageUrl(src, width, height)) : '';
+  const processedSrc = src ? getOptimizedImageUrl(src, width, height) : '';
 
   // Reset state when src changes
   useEffect(() => {
@@ -163,6 +163,7 @@ const EnhancedProductImage: React.FC<EnhancedProductImageProps> = ({
           objectFit: 'cover'
         }}
         crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
         width={width}
         height={height}
       />
