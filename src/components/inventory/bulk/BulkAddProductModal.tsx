@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from '@/components/ui/button';
 import { X, Package2, Grid3X3, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,27 @@ interface BulkAddProductModalProps {
   onClose: () => void;
   onSave: (products: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[]) => void;
 }
+
+// Custom DialogContent without the built-in close button
+const CustomDialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPortal>
+));
+CustomDialogContent.displayName = "CustomDialogContent";
 
 const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
   isOpen,
@@ -53,7 +75,7 @@ const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] p-0 flex flex-col bg-background">
+      <CustomDialogContent className="max-w-7xl w-[98vw] max-h-[95vh] p-0 flex flex-col bg-background">
         <DialogTitle className="sr-only">Bulk Add Products</DialogTitle>
         {/* Header */}
         <div className="flex items-center justify-between p-2 sm:p-4 border-b border-border bg-muted/30 flex-shrink-0 z-10">
@@ -133,7 +155,7 @@ const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
             </div>
           )}
         </div>
-      </DialogContent>
+      </CustomDialogContent>
     </Dialog>
   );
 };

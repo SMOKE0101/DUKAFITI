@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNetworkStatus } from './useNetworkStatus';
 
 export interface ImageUploadState {
   isUploading: boolean;
@@ -14,6 +15,8 @@ export const useImageUpload = () => {
     progress: 0,
     error: null,
   });
+  
+  const { isOnline } = useNetworkStatus();
 
   const uploadImage = async (file: File, productId?: string): Promise<string | null> => {
     try {
@@ -26,6 +29,23 @@ export const useImageUpload = () => {
 
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         throw new Error('Image size must be less than 5MB');
+      }
+
+      // If offline, store the image locally
+      if (!isOnline) {
+        const reader = new FileReader();
+        return new Promise((resolve) => {
+          reader.onload = (e) => {
+            const result = e.target?.result as string;
+            // Store in localStorage for offline use
+            const offlineKey = `offline-image-${productId || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem(offlineKey, result);
+            setState({ isUploading: false, progress: 0, error: null });
+            toast.success('Image stored offline. Will sync when online.');
+            resolve(result); // Return base64 data URL for offline use
+          };
+          reader.readAsDataURL(file);
+        });
       }
 
       // Generate unique filename
@@ -66,6 +86,26 @@ export const useImageUpload = () => {
 
   const deleteImage = async (imageUrl: string): Promise<boolean> => {
     try {
+      // Check if it's an offline image (base64 or localStorage key)
+      if (imageUrl.startsWith('data:') || imageUrl.startsWith('offline-image-')) {
+        // Handle offline image deletion
+        if (imageUrl.startsWith('offline-image-')) {
+          localStorage.removeItem(imageUrl);
+        }
+        toast.success('Image removed from offline storage!');
+        return true;
+      }
+
+      // If offline, defer deletion
+      if (!isOnline) {
+        toast.info('Image will be deleted when connection is restored');
+        // Store deletion request for later
+        const deletionQueue = JSON.parse(localStorage.getItem('pending-deletions') || '[]');
+        deletionQueue.push(imageUrl);
+        localStorage.setItem('pending-deletions', JSON.stringify(deletionQueue));
+        return true;
+      }
+
       // Extract file path from URL
       const urlParts = imageUrl.split('/');
       const filePath = urlParts.slice(-2).join('/'); // products/filename.ext

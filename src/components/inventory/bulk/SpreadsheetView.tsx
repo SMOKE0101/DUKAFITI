@@ -2,11 +2,12 @@ import React, { useCallback, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Upload, Plus, Star, Download } from 'lucide-react';
+import { Upload, Plus, Star, Download, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BulkProductRow } from '../../../hooks/useBulkAddState';
 import { useBulkAdd } from './BulkAddProvider';
 import { PRODUCT_CATEGORIES } from '../../../constants/categories';
+import ImageUpload from '@/components/ui/image-upload';
 
 const SpreadsheetView: React.FC = () => {
   const { spreadsheetData, selectedTemplates, updateSpreadsheetData, stats } = useBulkAdd();
@@ -148,8 +149,8 @@ const SpreadsheetView: React.FC = () => {
                 <th className="border border-border p-2 text-left text-xs font-medium uppercase tracking-wider min-w-[100px]">
                   Low Stock Alert
                 </th>
-                <th className="border border-border p-2 text-left text-xs font-medium uppercase tracking-wider min-w-[180px]">
-                  Image URL
+                <th className="border border-border p-2 text-left text-xs font-medium uppercase tracking-wider min-w-[120px]">
+                  Image
                 </th>
               </tr>
             </thead>
@@ -240,13 +241,15 @@ const SpreadsheetView: React.FC = () => {
                       />
                     </td>
                     <td className="border border-border p-1">
-                      <Input
-                        type="url"
-                        value={row.image_url || ''}
-                        onChange={(e) => updateRow(index, 'image_url', e.target.value)}
-                        placeholder="https://example.com/image.jpg"
-                        className="border-0 h-9 text-sm focus-visible:ring-1"
-                      />
+                      <div className="flex items-center justify-center h-9">
+                        <ImageUpload
+                          value={row.image_url}
+                          onChange={(url) => updateRow(index, 'image_url', url)}
+                          productId={row.id}
+                          compact={true}
+                          className="w-full"
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

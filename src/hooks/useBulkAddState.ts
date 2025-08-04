@@ -10,7 +10,7 @@ export interface BulkProductRow {
   sellingPrice: number | '';
   currentStock: number | '';
   lowStockThreshold: number | '';
-  image_url?: string;
+  image_url?: string | null;
   isValid: boolean;
   errors: string[];
 }
