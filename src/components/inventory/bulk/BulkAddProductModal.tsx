@@ -73,40 +73,33 @@ const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
           
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {/* View Toggle */}
-            <div className="flex items-center bg-muted rounded-lg p-0.5 sm:p-1">
-              <Button
-                variant={activeView === 'spreadsheet' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveView('spreadsheet')}
-                className="h-6 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
-              >
-                <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Spreadsheet</span>
-              </Button>
-              <Button
-                variant={activeView === 'templates' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveView('templates')}
-                className="h-6 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
-              >
-                <Package2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Templates</span>
-              </Button>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center bg-muted rounded-lg p-0.5 sm:p-1">
+                <Button
+                  variant={activeView === 'spreadsheet' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveView('spreadsheet')}
+                  className="h-6 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                >
+                  <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Spreadsheet</span>
+                </Button>
+                <Button
+                  variant={activeView === 'templates' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveView('templates')}
+                  className="h-6 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                >
+                  <Package2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Templates</span>
+                </Button>
+              </div>
+              <span className="text-[9px] text-muted-foreground/70 mt-0.5 font-medium">
+                {activeView === 'spreadsheet' ? 'Manual Entry' : 'From Library'}
+              </span>
             </div>
             
             {/* Action Buttons */}
-            {stats.totalCount > 0 && (
-              <Button
-                onClick={clearAll}
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive h-6 sm:h-8 px-2 text-xs sm:text-sm hidden sm:flex"
-              >
-                <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Clear</span>
-              </Button>
-            )}
-            
             <Button
               onClick={handleSave}
               disabled={!stats.hasValidProducts}

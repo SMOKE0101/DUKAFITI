@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,29 @@ const SpreadsheetView: React.FC = () => {
     const updated = [...spreadsheetData];
     updated[index] = { ...updated[index], [field]: value };
     updateSpreadsheetData(updated);
+  }, [spreadsheetData, updateSpreadsheetData]);
+
+  // Auto-expand rows when user fills them
+  useEffect(() => {
+    const filledRows = spreadsheetData.filter(row => row.name.trim() || row.category.trim() || row.sellingPrice).length;
+    const emptyRows = spreadsheetData.length - filledRows;
+    
+    // Add 10 more rows when there are less than 5 empty rows and user has filled at least 10 rows
+    if (emptyRows < 5 && filledRows >= 10) {
+      const newRows: BulkProductRow[] = Array.from({ length: 10 }, (_, index) => ({
+        id: `auto_row_${spreadsheetData.length + index}_${Date.now()}`,
+        name: '',
+        category: '',
+        costPrice: '',
+        sellingPrice: '',
+        currentStock: '',
+        lowStockThreshold: '',
+        image_url: '',
+        isValid: false,
+        errors: [],
+      }));
+      updateSpreadsheetData([...spreadsheetData, ...newRows]);
+    }
   }, [spreadsheetData, updateSpreadsheetData]);
 
   const addMoreRows = useCallback(() => {
@@ -97,58 +120,6 @@ const SpreadsheetView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Controls */}
-      <div className="flex flex-wrap gap-2 p-3 border-b border-border bg-muted/30">
-        <input
-          type="file"
-          accept=".csv"
-          onChange={handleCSVUpload}
-          ref={fileInputRef}
-          className="hidden"
-        />
-        
-        <Button
-          onClick={() => fileInputRef.current?.click()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <Upload className="w-4 h-4" />
-          <span className="hidden sm:inline">Upload CSV</span>
-          <span className="sm:hidden">CSV</span>
-        </Button>
-        
-        <Button
-          onClick={downloadTemplate}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">CSV Template</span>
-          <span className="sm:hidden">Template</span>
-        </Button>
-        
-        <Button
-          onClick={addMoreRows}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add 10 Rows</span>
-          <span className="sm:hidden">+10</span>
-        </Button>
-
-        <div className="ml-auto flex items-center gap-2 text-sm">
-          <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
-            {stats.validCount} valid
-          </span>
-          <span className="bg-muted text-muted-foreground px-2 py-1 rounded-full text-xs font-medium">
-            {stats.totalCount} total
-          </span>
-        </div>
-      </div>
 
       {/* Spreadsheet */}
       <div className="flex-1 overflow-auto" style={{ 
