@@ -61,4 +61,10 @@ export interface Product {
   createdAt: string;
   updatedAt: string;
   image_url?: string | null;
+  // Variant support
+  parent_id?: string | null;
+  variant_name?: string | null;
+  variant_multiplier?: number;
+  stock_derivation_quantity?: number;
+  is_parent?: boolean;
 }

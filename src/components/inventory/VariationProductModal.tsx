@@ -24,7 +24,7 @@ interface ProductVariant {
 interface VariationProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (products: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[]) => void;
+  onSave: (parentProduct: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>, variants: ProductVariant[]) => void;
   existingProducts?: Product[];
 }
 
@@ -41,18 +41,16 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     id?: string;
     name: string;
     category: string;
-    costPrice: number;
-    sellingPrice: number;
     currentStock: number;
     lowStockThreshold: number;
+    stockDerivationQuantity: number;
   }>({
     type: 'new',
     name: '',
     category: '',
-    costPrice: 0,
-    sellingPrice: 0,
     currentStock: 0,
     lowStockThreshold: 0,
+    stockDerivationQuantity: 1,
   });
   
   const [variants, setVariants] = useState<ProductVariant[]>([
@@ -75,10 +73,9 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
       type: 'new',
       name: '',
       category: '',
-      costPrice: 0,
-      sellingPrice: 0,
       currentStock: 0,
       lowStockThreshold: 0,
+      stockDerivationQuantity: 1,
     });
     setVariants([
       { id: '1', name: '', multiplier: 0.5, sellingPrice: 0, costPrice: 0, showInQuickSelect: true },
@@ -156,6 +153,15 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
         });
         return false;
       }
+
+      if (parentProduct.stockDerivationQuantity <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Stock derivation quantity must be greater than 0",
+          variant: "destructive",
+        });
+        return false;
+      }
     }
     return true;
   };
@@ -178,40 +184,28 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   const handleSave = () => {
     if (!validateStep2()) return;
 
-    const products: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const finalCategory = isCustomCategory(parentProduct.category) ? customCategory : parentProduct.category;
-
-    // Add parent product if creating new
-    if (parentProduct.type === 'new') {
-      products.push({
-        name: parentProduct.name + ' (Parent)',
-        category: finalCategory,
-        costPrice: parentProduct.costPrice,
-        sellingPrice: parentProduct.sellingPrice,
-        currentStock: parentProduct.currentStock,
-        lowStockThreshold: parentProduct.lowStockThreshold,
-        sku: '', // Optional
-      });
-    }
-
-    // Add variants
     const validVariants = variants.filter(v => v.name.trim() && v.multiplier > 0 && v.sellingPrice > 0);
-    validVariants.forEach(variant => {
-      products.push({
-        name: `${parentProduct.name} - ${variant.name}`,
-        category: finalCategory,
-        costPrice: variant.costPrice,
-        sellingPrice: variant.sellingPrice,
-        currentStock: -1, // Variants don't have direct stock
-        lowStockThreshold: 0,
-        sku: `${parentProduct.name.substring(0, 3)}-${variant.name.substring(0, 3)}-${variant.multiplier}x`.toUpperCase(),
-      });
-    });
 
-    onSave(products);
+    // Create parent product
+    const parentProductData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+      name: parentProduct.name,
+      category: finalCategory,
+      costPrice: 0, // Parent product doesn't have pricing
+      sellingPrice: 0, // Parent product doesn't have pricing
+      currentStock: parentProduct.currentStock,
+      lowStockThreshold: parentProduct.lowStockThreshold,
+      stock_derivation_quantity: parentProduct.stockDerivationQuantity,
+      is_parent: true,
+      sku: '', // Optional
+      image_url: null,
+    };
+
+    onSave(parentProductData, validVariants);
+    
     toast({
       title: "Variation Products Created",
-      description: `Created ${products.length} products (${validVariants.length} variants)`,
+      description: `Created parent product with ${validVariants.length} variants`,
     });
   };
 
@@ -242,373 +236,296 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
         
         <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
           
-          {/* Step 1: Parent Product Selection */}
+          {/* Step 1: Parent Product Configuration */}
           {step === 1 && (
             <div className="space-y-6">
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Parent Product Type
+                  Product Name *
                 </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setParentProduct(prev => ({ ...prev, type: 'new' }))}
-                    className={cn(
-                      "p-4 border-2 rounded-lg text-left transition-all",
-                      parentProduct.type === 'new'
-                        ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                        : "border-gray-300 dark:border-gray-600 hover:border-gray-400"
-                    )}
-                  >
-                    <h3 className="font-bold">Create New Parent</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Create a new product as the parent for variations
-                    </p>
-                  </button>
-                  <button
-                    onClick={() => setParentProduct(prev => ({ ...prev, type: 'existing' }))}
-                    className={cn(
-                      "p-4 border-2 rounded-lg text-left transition-all",
-                      parentProduct.type === 'existing'
-                        ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                        : "border-gray-300 dark:border-gray-600 hover:border-gray-400"
-                    )}
-                  >
-                    <h3 className="font-bold">Use Existing Product</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Select an existing product as the parent
-                    </p>
-                  </button>
-                </div>
+                <Input
+                  value={parentProduct.name}
+                  onChange={(e) => setParentProduct(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter parent product name"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                />
               </div>
 
-              {parentProduct.type === 'existing' && (
-                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                  <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                    Select Existing Product
-                  </Label>
-                  <Select
-                    value={parentProduct.id}
-                    onValueChange={(value) => {
-                      const product = existingProducts.find(p => p.id === value);
-                      if (product) {
-                        setParentProduct({
-                          type: 'existing',
-                          id: product.id,
-                          name: product.name,
-                          category: product.category,
-                          costPrice: product.costPrice,
-                          sellingPrice: product.sellingPrice,
-                          currentStock: product.currentStock,
-                          lowStockThreshold: product.lowStockThreshold,
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono">
-                      <SelectValue placeholder="Select a product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {existingProducts.map(product => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} - {product.category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {parentProduct.type === 'new' && (
-                <>
-                  <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                    <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                      Product Name *
-                    </Label>
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Category *
+                </Label>
+                <Select 
+                  value={parentProduct.category} 
+                  onValueChange={handleCategoryChange}
+                >
+                  <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRODUCT_CATEGORIES.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {showCustomInput && (
+                  <div className="mt-3">
                     <Input
-                      value={parentProduct.name}
-                      onChange={(e) => setParentProduct(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter parent product name"
+                      placeholder="Enter custom category"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
                       className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                      maxLength={50}
                     />
                   </div>
+                )}
+              </div>
 
-                  <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                    <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                      Category *
-                    </Label>
-                    <Select 
-                      value={parentProduct.category} 
-                      onValueChange={handleCategoryChange}
-                    >
-                      <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRODUCT_CATEGORIES.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {showCustomInput && (
-                      <div className="mt-3">
-                        <Input
-                          placeholder="Enter custom category"
-                          value={customCategory}
-                          onChange={(e) => setCustomCategory(e.target.value)}
-                          className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                          maxLength={50}
-                        />
-                      </div>
-                    )}
-                  </div>
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Stock Derivation Quantity *
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={parentProduct.stockDerivationQuantity}
+                  onChange={(e) => setParentProduct(prev => ({ ...prev, stockDerivationQuantity: parseInt(e.target.value) || 1 }))}
+                  placeholder="1"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                />
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 font-mono">
+                  Base quantity used for variant multiplier calculations (e.g., if set to 10 and variant multiplier is 0.5, selling 1 variant deducts 5 from parent stock)
+                </p>
+              </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                      <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                        Base Cost Price (KES)
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={parentProduct.costPrice}
-                        onChange={(e) => setParentProduct(prev => ({ ...prev, costPrice: parseFloat(e.target.value) || 0 }))}
-                        placeholder="0.00"
-                        className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                      />
-                    </div>
-                    
-                    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                      <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                        Base Selling Price (KES)
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={parentProduct.sellingPrice}
-                        onChange={(e) => setParentProduct(prev => ({ ...prev, sellingPrice: parseFloat(e.target.value) || 0 }))}
-                        placeholder="0.00"
-                        className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                      <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                        Parent Stock
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={parentProduct.currentStock}
-                        onChange={(e) => setParentProduct(prev => ({ ...prev, currentStock: parseInt(e.target.value) || 0 }))}
-                        placeholder="0"
-                        className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                      />
-                    </div>
-                    
-                    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                      <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                        Low Stock Threshold
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={parentProduct.lowStockThreshold}
-                        onChange={(e) => setParentProduct(prev => ({ ...prev, lowStockThreshold: parseInt(e.target.value) || 0 }))}
-                        placeholder="0"
-                        className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Parent Stock
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={parentProduct.currentStock}
+                    onChange={(e) => setParentProduct(prev => ({ ...prev, currentStock: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                    className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                  />
+                </div>
+                
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Low Stock Threshold
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={parentProduct.lowStockThreshold}
+                    onChange={(e) => setParentProduct(prev => ({ ...prev, lowStockThreshold: parseInt(e.target.value) || 0 }))}
+                    placeholder="10"
+                    className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
           {/* Step 2: Define Variants */}
           {step === 2 && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-                  Product Variants for: {parentProduct.name}
+              <div className="text-center mb-6">
+                <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                  Define Product Variants
                 </h3>
+                <p className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  Create different variations of "{parentProduct.name}"
+                </p>
+              </div>
+
+              <ScrollArea className="h-[400px] w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 p-4">
+                <div className="space-y-4">
+                  {variants.map((variant, index) => (
+                    <div key={variant.id} className="border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white/50 dark:bg-gray-800/50">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-mono font-bold text-gray-900 dark:text-white">
+                          Variant {index + 1}
+                        </h4>
+                        {variants.length > 2 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeVariant(variant.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="font-mono text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2 block">
+                            Variant Name *
+                          </Label>
+                          <Input
+                            value={variant.name}
+                            onChange={(e) => updateVariant(variant.id, 'name', e.target.value)}
+                            placeholder="e.g., Small, Medium, Large"
+                            className="h-10 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="font-mono text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2 block">
+                            Multiplier *
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            value={variant.multiplier}
+                            onChange={(e) => updateVariant(variant.id, 'multiplier', parseFloat(e.target.value) || 0)}
+                            placeholder="1.0"
+                            className="h-10 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Stock multiplier factor
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label className="font-mono text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2 block">
+                            Cost Price (KES) *
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={variant.costPrice}
+                            onChange={(e) => updateVariant(variant.id, 'costPrice', parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="h-10 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="font-mono text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2 block">
+                            Selling Price (KES) *
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={variant.sellingPrice}
+                            onChange={(e) => updateVariant(variant.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="h-10 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
+                          />
+                        </div>
+
+                        <div className="flex items-center space-x-2 pt-6">
+                          <Checkbox
+                            id={`quickselect-${variant.id}`}
+                            checked={variant.showInQuickSelect}
+                            onCheckedChange={(checked) => updateVariant(variant.id, 'showInQuickSelect', checked)}
+                          />
+                          <Label htmlFor={`quickselect-${variant.id}`} className="font-mono text-xs text-gray-700 dark:text-gray-300">
+                            Show in Quick Select
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              <div className="flex justify-center">
                 <Button
+                  type="button"
                   onClick={addVariant}
-                  size="sm"
-                  className="flex items-center gap-2"
+                  className="bg-green-600 hover:bg-green-700 text-white font-mono font-bold uppercase tracking-wide"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 mr-2" />
                   Add Variant
                 </Button>
               </div>
+            </div>
+          )}
 
-              <div className="space-y-4">
-                {variants.map((variant, index) => (
-                  <div key={variant.id} className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-mono font-bold text-sm uppercase tracking-wider text-gray-900 dark:text-white">
-                        Variant {index + 1}
-                      </h4>
-                      {variants.length > 2 && (
-                        <Button
-                          onClick={() => removeVariant(variant.id)}
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div>
-                        <Label className="text-xs font-mono uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                          Variant Name *
-                        </Label>
-                        <Input
-                          value={variant.name}
-                          onChange={(e) => updateVariant(variant.id, 'name', e.target.value)}
-                          placeholder="e.g. Small, 500ml"
-                          className="h-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs font-mono uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                          Multiplier *
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          value={variant.multiplier}
-                          onChange={(e) => updateVariant(variant.id, 'multiplier', parseFloat(e.target.value) || 0)}
-                          placeholder="1.0"
-                          className="h-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs font-mono uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                          Sell Price *
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={variant.sellingPrice}
-                          onChange={(e) => updateVariant(variant.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          className="h-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs font-mono uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                          Cost Price
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={variant.costPrice}
-                          onChange={(e) => updateVariant(variant.id, 'costPrice', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          className="h-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {/* Step 3: Quick Select Configuration */}
+          {step === 3 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                  Quick Select Configuration
+                </h3>
+                <p className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  Configure which variants appear in quick select menu
+                </p>
               </div>
 
-              <div className="border-2 border-blue-300 dark:border-blue-600 rounded-xl p-4 bg-blue-50/50 dark:bg-blue-900/20">
-                <h3 className="font-mono font-bold uppercase tracking-wider text-blue-900 dark:text-blue-100 mb-2">
-                  How Variations Work
-                </h3>
-                <ul className="text-sm text-blue-700 dark:text-blue-300 font-mono space-y-1">
-                  <li>• Each variant deducts (multiplier × quantity) from parent stock</li>
-                  <li>• Example: Selling 2 "Small (0.5x)" deducts 1 from parent stock</li>
-                  <li>• Variants show nested under parent in inventory</li>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl p-6">
+                <h4 className="font-mono font-bold text-blue-900 dark:text-blue-100 mb-4">Selected for Quick Select:</h4>
+                <div className="space-y-2">
+                  {variants.filter(v => v.showInQuickSelect && v.name.trim()).map(variant => (
+                    <div key={variant.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg border">
+                      <div>
+                        <span className="font-mono font-semibold">{parentProduct.name} - {variant.name}</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                          (Multiplier: {variant.multiplier}x, Price: KES {variant.sellingPrice})
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl p-6">
+                <h4 className="font-mono font-bold text-gray-900 dark:text-white mb-4">Summary:</h4>
+                <ul className="space-y-2 font-mono text-sm text-gray-700 dark:text-gray-300">
+                  <li>• Parent Product: {parentProduct.name}</li>
+                  <li>• Category: {isCustomCategory(parentProduct.category) ? customCategory : parentProduct.category}</li>
+                  <li>• Initial Stock: {parentProduct.currentStock}</li>
+                  <li>• Stock Derivation Quantity: {parentProduct.stockDerivationQuantity}</li>
+                  <li>• Total Variants: {variants.filter(v => v.name.trim()).length}</li>
+                  <li>• Quick Select Variants: {variants.filter(v => v.showInQuickSelect && v.name.trim()).length}</li>
                 </ul>
               </div>
             </div>
           )}
 
-          {/* Step 3: Quick Select Options */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <h3 className="font-mono font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-                Sales Quick-Select Options
-              </h3>
-              
-              <div className="space-y-4">
-                {variants.filter(v => v.name.trim()).map((variant, index) => (
-                  <div key={variant.id} className="flex items-center justify-between p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-transparent">
-                    <div className="flex-1">
-                      <h4 className="font-mono font-bold text-gray-900 dark:text-white">
-                        {parentProduct.name} - {variant.name}
-                      </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-                        {variant.multiplier}x multiplier • KES {variant.sellingPrice}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`quickselect-${variant.id}`}
-                        checked={variant.showInQuickSelect}
-                        onCheckedChange={(checked) => updateVariant(variant.id, 'showInQuickSelect', checked)}
-                      />
-                      <Label htmlFor={`quickselect-${variant.id}`} className="text-sm font-mono">
-                        Show in quick-select
-                      </Label>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-2 border-green-300 dark:border-green-600 rounded-xl p-4 bg-green-50/50 dark:bg-green-900/20">
-                <h3 className="font-mono font-bold uppercase tracking-wider text-green-900 dark:text-green-100 mb-2">
-                  Ready to Create
-                </h3>
-                <p className="text-sm text-green-700 dark:text-green-300 font-mono">
-                  {parentProduct.type === 'new' ? '1 parent product + ' : ''}{variants.filter(v => v.name.trim()).length} variants will be created
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Navigation Buttons */}
-          <div className="flex justify-between pt-6">
-            <Button 
+          <div className="flex justify-between pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+            <Button
+              type="button"
               onClick={prevStep}
-              variant="outline"
               disabled={step === 1}
+              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white font-mono font-bold uppercase tracking-wide rounded-lg"
             >
               Previous
             </Button>
-            
-            <div className="flex gap-3">
-              <Button onClick={onClose} variant="outline">
-                Cancel
+
+            {step < 3 ? (
+              <Button
+                type="button"
+                onClick={nextStep}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg"
+              >
+                Next
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-              
-              {step < 3 ? (
-                <Button onClick={nextStep} className="bg-green-600 hover:bg-green-700">
-                  Next <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              ) : (
-                <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-                  Create Variations
-                </Button>
-              )}
-            </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleSave}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg"
+              >
+                Create Product Variants
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -17,6 +17,13 @@ export const useProductQueries = () => {
     lowStockThreshold: product.low_stock_threshold || 10,
     createdAt: product.created_at,
     updatedAt: product.updated_at,
+    image_url: product.image_url,
+    // Variant support
+    parent_id: product.parent_id,
+    variant_name: product.variant_name,
+    variant_multiplier: product.variant_multiplier,
+    stock_derivation_quantity: product.stock_derivation_quantity,
+    is_parent: product.is_parent,
   });
 
   const fetchProducts = async () => {

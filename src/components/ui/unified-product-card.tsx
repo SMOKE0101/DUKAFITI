@@ -207,7 +207,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
               <div className="flex items-center justify-between">
                 {sellingPrice !== undefined && (
                   <div className="text-sm font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(sellingPrice)}
+                    {(product as any).is_parent ? 'Unspecified' : formatCurrency(sellingPrice)}
                   </div>
                 )}
                 {stockStatus && (
@@ -217,9 +217,15 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
                 )}
               </div>
               
-              {costPrice !== undefined && costPrice > 0 && (
+              {costPrice !== undefined && costPrice > 0 && !((product as any).is_parent) && (
                 <div className="text-xs text-muted-foreground">
                   Cost: {formatCurrency(costPrice)}
+                </div>
+              )}
+              
+              {(product as any).is_parent && (
+                <div className="text-xs text-muted-foreground">
+                  Cost: Unspecified
                 </div>
               )}
               

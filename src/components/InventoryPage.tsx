@@ -109,6 +109,10 @@ const InventoryPage = () => {
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     let filtered = products.filter(product => {
+      // For variants system: only show parent products or non-variant products
+      const isVariantChild = product.parent_id !== null && product.parent_id !== undefined;
+      if (isVariantChild) return false;
+
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
@@ -239,6 +243,61 @@ const InventoryPage = () => {
       toast({
         title: "Error",
         description: "Failed to add products. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleVariationProducts = async (parentProduct: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>, variants: any[]) => {
+    try {
+      // First create the parent product
+      const parentResult = await createProduct(parentProduct);
+      
+      // Get the parent product ID (assuming createProduct returns the created product)
+      const parentId = typeof parentResult === 'object' && parentResult && 'id' in parentResult 
+        ? parentResult.id 
+        : undefined;
+
+      if (!parentId) {
+        throw new Error('Failed to get parent product ID');
+      }
+
+      // Create variant products linked to the parent
+      const variantProducts = variants.map(variant => ({
+        name: `${parentProduct.name} - ${variant.name}`,
+        category: parentProduct.category,
+        costPrice: variant.costPrice,
+        sellingPrice: variant.sellingPrice,
+        currentStock: -1, // Variants use parent stock
+        lowStockThreshold: 0,
+        parent_id: parentId,
+        variant_name: variant.name,
+        variant_multiplier: variant.multiplier,
+        stock_derivation_quantity: 0,
+        is_parent: false,
+        sku: `${parentProduct.name.substring(0, 3)}-${variant.name.substring(0, 3)}-${variant.multiplier}x`.toUpperCase(),
+        image_url: parentProduct.image_url,
+      }));
+
+      const variantResults = await Promise.allSettled(
+        variantProducts.map(variantData => createProduct(variantData))
+      );
+      
+      const successfulVariants = variantResults.filter(result => result.status === 'fulfilled').length;
+      
+      setShowVariationModal(false);
+      
+      toast({
+        title: "Variation Products Created",
+        description: `Created parent product "${parentProduct.name}" with ${successfulVariants} variants.`,
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error('Error creating variation products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create variation products. Please try again.",
         variant: "destructive",
       });
     }
@@ -467,7 +526,7 @@ const InventoryPage = () => {
         <VariationProductModal
           isOpen={showVariationModal}
           onClose={() => setShowVariationModal(false)}
-          onSave={handleBulkAddProducts}
+          onSave={handleVariationProducts}
           existingProducts={products}
         />
 

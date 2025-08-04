@@ -190,11 +190,16 @@ export type Database = {
           current_stock: number
           id: string
           image_url: string | null
+          is_parent: boolean | null
           low_stock_threshold: number | null
           name: string
+          parent_id: string | null
           selling_price: number
+          stock_derivation_quantity: number | null
           updated_at: string | null
           user_id: string
+          variant_multiplier: number | null
+          variant_name: string | null
         }
         Insert: {
           category: string
@@ -203,11 +208,16 @@ export type Database = {
           current_stock?: number
           id?: string
           image_url?: string | null
+          is_parent?: boolean | null
           low_stock_threshold?: number | null
           name: string
+          parent_id?: string | null
           selling_price: number
+          stock_derivation_quantity?: number | null
           updated_at?: string | null
           user_id: string
+          variant_multiplier?: number | null
+          variant_name?: string | null
         }
         Update: {
           category?: string
@@ -216,13 +226,26 @@ export type Database = {
           current_stock?: number
           id?: string
           image_url?: string | null
+          is_parent?: boolean | null
           low_stock_threshold?: number | null
           name?: string
+          parent_id?: string | null
           selling_price?: number
+          stock_derivation_quantity?: number | null
           updated_at?: string | null
           user_id?: string
+          variant_multiplier?: number | null
+          variant_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
