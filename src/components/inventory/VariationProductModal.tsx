@@ -12,7 +12,7 @@ import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '..
 import { ArrowRight, Plus, Trash2, Package2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ImageUpload from '../ui/image-upload';
-import TemplateSelectionModal from './TemplateSelectionModal';
+import UnifiedTemplateSelectionModal from './shared/UnifiedTemplateSelectionModal';
 
 interface ProductVariant {
   id: string;
@@ -628,7 +628,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
         </div>
 
         {/* Template Selection Modal */}
-        <TemplateSelectionModal
+        <UnifiedTemplateSelectionModal
           isOpen={showTemplateModal}
           onClose={() => setShowTemplateModal(false)}
           onTemplateSelect={handleTemplateSelect}

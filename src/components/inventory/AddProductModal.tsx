@@ -11,7 +11,7 @@ import { Product } from '../../types';
 import { Sparkles } from 'lucide-react';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
-import TemplateSelectionModal from './TemplateSelectionModal';
+import UnifiedTemplateSelectionModal from './shared/UnifiedTemplateSelectionModal';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -437,13 +437,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         </DialogContent>
         
         {/* Template Selection Modal */}
-        {templatesInitialized && (
-          <TemplateSelectionModal
-            isOpen={showTemplateModal}
-            onClose={() => setShowTemplateModal(false)}
-            onTemplateSelect={handleTemplateSelect}
-          />
-        )}
+        <UnifiedTemplateSelectionModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onTemplateSelect={handleTemplateSelect}
+          mode="normal"
+        />
       </Dialog>
   );
 };

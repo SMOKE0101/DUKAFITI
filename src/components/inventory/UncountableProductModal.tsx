@@ -9,7 +9,7 @@ import { Sparkles } from 'lucide-react';
 import { Product } from '../../types';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
-import TemplateSelectionModal from './TemplateSelectionModal';
+import UnifiedTemplateSelectionModal from './shared/UnifiedTemplateSelectionModal';
 
 interface UncountableProductModalProps {
   isOpen: boolean;
@@ -343,7 +343,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       </DialogContent>
       
       {/* Template Selection Modal */}
-      <TemplateSelectionModal
+      <UnifiedTemplateSelectionModal
         isOpen={showTemplateModal}
         onClose={() => setShowTemplateModal(false)}
         onTemplateSelect={handleTemplateSelect}
