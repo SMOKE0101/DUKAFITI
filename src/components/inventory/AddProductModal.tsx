@@ -40,6 +40,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templatesInitialized, setTemplatesInitialized] = useState(false);
 
   useEffect(() => {
     if (editingProduct) {
@@ -225,7 +226,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   </Label>
                   <Button
                     type="button"
-                    onClick={() => setShowTemplateModal(true)}
+                    onClick={() => {
+                      setTemplatesInitialized(true);
+                      setShowTemplateModal(true);
+                    }}
                     className="h-8 px-3 border-2 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 text-xs"
                   >
                     <Package2 className="w-3 h-3 mr-1" />
@@ -422,11 +426,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         </DialogContent>
         
         {/* Template Selection Modal */}
-        <TemplateSelectionModal
-          isOpen={showTemplateModal}
-          onClose={() => setShowTemplateModal(false)}
-          onTemplateSelect={handleTemplateSelect}
-        />
+        {templatesInitialized && (
+          <TemplateSelectionModal
+            isOpen={showTemplateModal}
+            onClose={() => setShowTemplateModal(false)}
+            onTemplateSelect={handleTemplateSelect}
+          />
+        )}
       </Dialog>
   );
 };

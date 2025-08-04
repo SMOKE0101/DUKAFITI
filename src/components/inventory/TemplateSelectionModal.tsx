@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Package2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useProductTemplates, ProductTemplate } from '../../hooks/useProductTemplates';
+import { useLazyTemplateSearch, ProductTemplate } from '../../hooks/useLazyTemplateSearch';
 import SimpleTemplateSearch from './bulk/SimpleTemplateSearch';
-import TemplateImage from '../ui/template-image';
+import VirtualizedTemplateGrid from './VirtualizedTemplateGrid';
 import TemplateSelectionOverlay from './bulk/TemplateSelectionOverlay';
 
 interface TemplateSelectionModalProps {
@@ -29,11 +29,20 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     searchTerm,
     selectedCategory,
     categories,
-    searchTemplates,
-    filterByCategory,
+    handleSearch: searchTemplates,
+    handleCategoryChange: filterByCategory,
     clearFilters,
-    totalTemplates
-  } = useProductTemplates();
+    totalTemplates,
+    initializeTemplates,
+    initialized
+  } = useLazyTemplateSearch();
+
+  // Initialize templates when modal opens
+  React.useEffect(() => {
+    if (isOpen && !initialized) {
+      initializeTemplates();
+    }
+  }, [isOpen, initialized, initializeTemplates]);
 
   const handleTemplateClick = (template: ProductTemplate) => {
     setSelectedTemplate(template);
@@ -124,47 +133,11 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    onClick={() => handleTemplateClick(template)}
-                    className={cn(
-                      "group relative overflow-hidden rounded-xl bg-card border border-border hover:border-primary/50 transition-all duration-200 cursor-pointer",
-                      "hover:shadow-lg hover:shadow-primary/10 hover:scale-[1.02]"
-                    )}
-                  >
-                    {/* Template Image */}
-                    <div className="aspect-square bg-muted/30 overflow-hidden">
-                      <TemplateImage
-                        src={template.image_url}
-                        alt={template.name}
-                        productName={template.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      />
-                    </div>
-                    
-                    {/* Template Info */}
-                    <div className="p-3">
-                      <h3 className="font-medium text-sm text-foreground truncate mb-1">
-                        {template.name}
-                      </h3>
-                      {template.category && (
-                        <p className="text-xs text-muted-foreground capitalize truncate">
-                          {template.category}
-                        </p>
-                      )}
-                    </div>
-                    
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                      <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">
-                        Select Template
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <VirtualizedTemplateGrid
+                templates={templates}
+                onTemplateClick={handleTemplateClick}
+                className="p-4"
+              />
             )}
           </div>
         </DialogContent>
