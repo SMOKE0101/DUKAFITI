@@ -148,15 +148,17 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Configuration Overlay - Render outside Dialog to avoid z-index issues */}
+      {/* Configuration Overlay - Force highest z-index and portal-like rendering */}
       {selectedTemplate && showConfigOverlay && (
-        <TemplateSelectionOverlay
-          template={selectedTemplate}
-          isVisible={showConfigOverlay}
-          onClose={handleConfigClose}
-          onAddToSpreadsheet={handleUseTemplate}
-          mode="single"
-        />
+        <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 99999 }}>
+          <TemplateSelectionOverlay
+            template={selectedTemplate}
+            isVisible={showConfigOverlay}
+            onClose={handleConfigClose}
+            onAddToSpreadsheet={handleUseTemplate}
+            mode="single"
+          />
+        </div>
       )}
     </>
   );
