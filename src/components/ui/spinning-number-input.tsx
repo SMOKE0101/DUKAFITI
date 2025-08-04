@@ -113,7 +113,10 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
       <div className="relative">
         {/* Up Arrow - Properly positioned */}
         <button
-          onClick={handleIncrement}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleIncrement();
+          }}
           disabled={value >= max}
           className="absolute -top-6 left-1/2 transform -translate-x-1/2 z-20 w-6 h-6 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-background/80 rounded-full shadow-sm border border-border/30"
         >
@@ -151,7 +154,10 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
                 "absolute inset-0 flex flex-col items-center justify-center transition-all duration-300",
                 isScrolling && "ease-out"
               )}
-              onClick={() => setIsFocused(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsFocused(true);
+              }}
               style={{
                 cursor: 'text'
               }}
@@ -194,7 +200,10 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
         
         {/* Down Arrow - Properly positioned */}
         <button
-          onClick={handleDecrement}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDecrement();
+          }}
           disabled={value <= min}
           className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 z-20 w-6 h-6 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-background/80 rounded-full shadow-sm border border-border/30"
         >

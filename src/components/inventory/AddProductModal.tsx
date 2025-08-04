@@ -163,7 +163,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
-  const handleTemplateSelect = (templateData: any) => {
+  const handleTemplateSelect = React.useCallback((templateData: any) => {
+    console.log('Template data received:', templateData);
+    
     setFormData(prev => ({
       ...prev,
       name: templateData.name || '',
@@ -185,8 +187,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setCustomCategory('');
     }
     
+    // Close template modal and ensure template is not shown again
     setShowTemplateModal(false);
-  };
+    setTemplatesInitialized(false);
+  }, []);
 
   const showProfitCalculation = formData.costPrice > 0 && formData.sellingPrice > 0;
 

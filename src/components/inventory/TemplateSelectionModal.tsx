@@ -42,31 +42,26 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     if (isOpen && !initialized) {
       initializeTemplates();
     }
-  }, [isOpen, initialized, initializeTemplates]);
+  }, [isOpen, initialized]);
 
-  const handleTemplateClick = (template: ProductTemplate) => {
-    console.log('Template clicked in modal:', template.name, template);
+  const handleTemplateClick = React.useCallback((template: ProductTemplate) => {
+    console.log('Template clicked in modal:', template.name);
     setSelectedTemplate(template);
     setShowConfigOverlay(true);
-  };
+  }, []);
 
-  const handleConfigClose = () => {
+  const handleConfigClose = React.useCallback(() => {
     setShowConfigOverlay(false);
     setSelectedTemplate(null);
-  };
+  }, []);
 
-  const handleUseTemplate = (templateData: any) => {
+  const handleUseTemplate = React.useCallback((templateData: any) => {
     onTemplateSelect(templateData);
     setShowConfigOverlay(false);
     setSelectedTemplate(null);
     onClose();
-  };
+  }, [onTemplateSelect, onClose]);
 
-  console.log('TemplateSelectionModal render:', { 
-    selectedTemplate: selectedTemplate?.name, 
-    showConfigOverlay,
-    hasSelectedTemplate: !!selectedTemplate 
-  });
 
   if (!isOpen) return null;
 

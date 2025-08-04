@@ -61,7 +61,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
     onClose();
   };
 
-  console.log('TemplateSelectionOverlay render:', { isVisible, templateName: template?.name });
+  
   
   if (!isVisible) return null;
 
@@ -82,7 +82,11 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       {/* Overlay Background */}
       <div 
         className="absolute inset-0" 
-        onClick={onClose}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }}
       />
       
       {/* Content Container - Positioned slightly above middle */}
@@ -93,7 +97,10 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
           background: 'linear-gradient(135deg, hsl(var(--card) / 0.98), hsl(var(--muted) / 0.95))',
           backdropFilter: 'blur(20px)',
         }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
       >
         {/* Elegant Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-border/30">
