@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Package2 } from 'lucide-react';
@@ -45,17 +46,19 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   }, [isOpen, initialized]);
 
   const handleTemplateClick = React.useCallback((template: ProductTemplate) => {
-    console.log('Template clicked in modal:', template.name);
+    console.log('[TemplateSelectionModal] Template clicked:', template.name);
     setSelectedTemplate(template);
     setShowConfigOverlay(true);
   }, []);
 
   const handleConfigClose = React.useCallback(() => {
+    console.log('[TemplateSelectionModal] handleConfigClose called');
     setShowConfigOverlay(false);
     setSelectedTemplate(null);
   }, []);
 
   const handleUseTemplate = React.useCallback((templateData: any) => {
+    console.log('[TemplateSelectionModal] handleUseTemplate called with:', templateData);
     onTemplateSelect(templateData);
     setShowConfigOverlay(false);
     setSelectedTemplate(null);
@@ -67,7 +70,10 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        console.log('[TemplateSelectionModal] Dialog onOpenChange called with:', open);
+        if (!open) onClose();
+      }}>
         <DialogContent className="max-w-6xl w-[98vw] max-h-[95vh] p-0 flex flex-col bg-background">
           <DialogTitle className="sr-only">Select Template</DialogTitle>
           
@@ -145,8 +151,8 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Configuration Overlay - Render directly with portal-like behavior */}
-      {selectedTemplate && showConfigOverlay && (
+      {/* Configuration Overlay - Render as portal to avoid Dialog interference */}
+      {selectedTemplate && showConfigOverlay && createPortal(
         <TemplateSelectionOverlay
           template={selectedTemplate}
           isVisible={showConfigOverlay}
@@ -154,7 +160,8 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
           onAddToSpreadsheet={handleUseTemplate}
           mode="single"
           className="z-[100000]"
-        />
+        />,
+        document.body
       )}
     </>
   );

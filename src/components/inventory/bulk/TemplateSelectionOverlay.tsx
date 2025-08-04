@@ -40,6 +40,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
   });
 
   const handleFieldChange = (field: keyof ProductFormData, value: number) => {
+    console.log('[TemplateSelectionOverlay] Field change:', field, value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -47,6 +48,10 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
   };
 
   const handleAddProduct = () => {
+    console.log('[TemplateSelectionOverlay] handleAddProduct called');
+    console.log('[TemplateSelectionOverlay] formData:', formData);
+    console.log('[TemplateSelectionOverlay] template:', template);
+    
     const productData = {
       name: template.name,
       category: template.category,
@@ -57,7 +62,9 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       low_stock_threshold: formData.lowStockThreshold
     };
     
+    console.log('[TemplateSelectionOverlay] Calling onAddToSpreadsheet with:', productData);
     onAddToSpreadsheet(productData);
+    console.log('[TemplateSelectionOverlay] Calling onClose');
     onClose();
   };
 
