@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
+import { SalesService } from '../../services/salesService';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
@@ -38,7 +39,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const { createSale } = useUnifiedSales();
-  const { updateProduct } = useUnifiedProducts();
+  const { updateProduct, forceRefetch: forceReloadProducts } = useUnifiedProducts();
   const { updateCustomer, customers: hookCustomers, createCustomer, refetch: refetchCustomers } = useUnifiedCustomers();
 
   // Get all available customers (unified from hook) - ensure we always have the most up-to-date list
@@ -263,18 +264,23 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         console.log('[NewSalesCheckout] Creating sale for item:', item.name);
         await createSale(saleData);
 
-        // Update product stock (skip for unspecified quantity products)
-        if (item.currentStock !== -1) {
-          const currentStock = item.currentStock || 0;
-          const newStock = Math.max(0, currentStock - item.quantity);
-          await updateProduct(item.id, { 
-            currentStock: newStock,
-            updatedAt: new Date().toISOString()
-          });
-          console.log('[NewSalesCheckout] Product stock updated:', item.name, 'New stock:', newStock);
+        // Update product stock using SalesService which handles variants properly
+        console.log('[NewSalesCheckout] Updating stock for product:', item.id, item.name, 'Quantity sold:', item.quantity);
+        try {
+          await SalesService.updateProductStock(item.id, item.quantity);
+          console.log('[NewSalesCheckout] Stock update completed for:', item.name);
+        } catch (error) {
+          console.error('[NewSalesCheckout] Stock update failed for:', item.name, error);
+          // Don't fail the sale if stock update fails
         }
 
         salesProcessed++;
+      }
+
+      // Force reload products to refresh stock display
+      console.log('[NewSalesCheckout] Forcing product reload to refresh stock displays');
+      if (forceReloadProducts) {
+        await forceReloadProducts();
       }
 
       // Show success message
