@@ -250,21 +250,31 @@ const InventoryPage = () => {
 
   const handleVariationProducts = async (parentProduct: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>, variants: any[]) => {
     try {
-      // First create the parent product
-      const parentResult = await createProduct(parentProduct);
+      console.log('[InventoryPage] Creating variation products:', { parentProduct, variants });
       
-      // Get the parent product ID (assuming createProduct returns the created product)
-      const parentId = typeof parentResult === 'object' && parentResult && 'id' in parentResult 
-        ? parentResult.id 
+      // Create ONE parent product that will be displayed in inventory
+      const parentProductData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+        ...parentProduct,
+        is_parent: true,
+        costPrice: 0, // Parent shows "Unspecified"
+        sellingPrice: 0, // Parent shows "Unspecified"
+      };
+      
+      const createdParent = await createProduct(parentProductData);
+      console.log('[InventoryPage] Created parent product:', createdParent);
+      
+      // Get parent ID
+      const parentId = typeof createdParent === 'object' && createdParent && 'id' in createdParent 
+        ? createdParent.id 
         : undefined;
 
       if (!parentId) {
         throw new Error('Failed to get parent product ID');
       }
-
-      // Create variant products linked to the parent
-      const variantProducts = variants.map(variant => ({
-        name: `${parentProduct.name} - ${variant.name}`,
+      
+      // Create child variant records (these won't appear in main inventory)
+      const variantInserts = variants.map(variant => ({
+        name: variant.name, // Just the variant name, not full product name
         category: parentProduct.category,
         costPrice: variant.costPrice,
         sellingPrice: variant.sellingPrice,
@@ -275,12 +285,12 @@ const InventoryPage = () => {
         variant_multiplier: variant.multiplier,
         stock_derivation_quantity: 0,
         is_parent: false,
-        sku: `${parentProduct.name.substring(0, 3)}-${variant.name.substring(0, 3)}-${variant.multiplier}x`.toUpperCase(),
+        sku: `${parentProduct.name.substring(0, 3)}-${variant.name.substring(0, 3)}`.toUpperCase(),
         image_url: parentProduct.image_url,
       }));
 
       const variantResults = await Promise.allSettled(
-        variantProducts.map(variantData => createProduct(variantData))
+        variantInserts.map(variantData => createProduct(variantData))
       );
       
       const successfulVariants = variantResults.filter(result => result.status === 'fulfilled').length;
@@ -288,8 +298,8 @@ const InventoryPage = () => {
       setShowVariationModal(false);
       
       toast({
-        title: "Variation Products Created",
-        description: `Created parent product "${parentProduct.name}" with ${successfulVariants} variants.`,
+        title: "Product with Variants Created",
+        description: `Created "${parentProduct.name}" with ${successfulVariants} variants. Only parent product is shown in inventory.`,
         duration: 3000,
       });
       

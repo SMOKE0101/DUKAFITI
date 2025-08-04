@@ -18,6 +18,12 @@ const transformDbProduct = (dbProduct: any): Product => ({
   createdAt: dbProduct.created_at,
   updatedAt: dbProduct.updated_at,
   image_url: dbProduct.image_url || null,
+  // Variant support
+  parent_id: dbProduct.parent_id,
+  variant_name: dbProduct.variant_name,
+  variant_multiplier: dbProduct.variant_multiplier,
+  stock_derivation_quantity: dbProduct.stock_derivation_quantity,
+  is_parent: dbProduct.is_parent,
 });
 
 export const useUnifiedProducts = () => {
@@ -102,6 +108,7 @@ export const useUnifiedProducts = () => {
               .from('products')
               .select('*')
               .eq('user_id', user.id)
+              .or('parent_id.is.null,is_parent.eq.true') // Only show parent products and non-variant products
               .order('created_at', { ascending: false });
 
             if (!fetchError && data) {
@@ -129,6 +136,7 @@ export const useUnifiedProducts = () => {
           .from('products')
           .select('*')
           .eq('user_id', user.id)
+          .or('parent_id.is.null,is_parent.eq.true') // Only show parent products and non-variant products
           .order('created_at', { ascending: false });
 
         if (fetchError) {
@@ -162,6 +170,7 @@ export const useUnifiedProducts = () => {
         .from('products')
         .select('*')
         .eq('user_id', user.id)
+        .or('parent_id.is.null,is_parent.eq.true') // Only show parent products and non-variant products
         .order('created_at', { ascending: false });
 
       if (!fetchError && data) {
@@ -206,6 +215,12 @@ export const useUnifiedProducts = () => {
           low_stock_threshold: productData.lowStockThreshold || 10,
           image_url: productData.image_url || null,
           user_id: user.id,
+          // Variant support
+          parent_id: productData.parent_id,
+          variant_name: productData.variant_name,
+          variant_multiplier: productData.variant_multiplier,
+          stock_derivation_quantity: productData.stock_derivation_quantity,
+          is_parent: productData.is_parent,
         };
 
         const { data, error } = await supabase
@@ -291,6 +306,12 @@ export const useUnifiedProducts = () => {
         if (updates.currentStock !== undefined) dbUpdates.current_stock = updates.currentStock;
         if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
         if (updates.image_url !== undefined) dbUpdates.image_url = updates.image_url;
+        // Variant support
+        if (updates.parent_id !== undefined) dbUpdates.parent_id = updates.parent_id;
+        if (updates.variant_name !== undefined) dbUpdates.variant_name = updates.variant_name;
+        if (updates.variant_multiplier !== undefined) dbUpdates.variant_multiplier = updates.variant_multiplier;
+        if (updates.stock_derivation_quantity !== undefined) dbUpdates.stock_derivation_quantity = updates.stock_derivation_quantity;
+        if (updates.is_parent !== undefined) dbUpdates.is_parent = updates.is_parent;
 
         const { error } = await supabase
           .from('products')
@@ -414,6 +435,12 @@ export const useUnifiedProducts = () => {
                   low_stock_threshold: operation.data.lowStockThreshold || 10,
                   image_url: operation.data.image_url || null,
                   user_id: user.id,
+                  // Variant support
+                  parent_id: operation.data.parent_id,
+                  variant_name: operation.data.variant_name,
+                  variant_multiplier: operation.data.variant_multiplier,
+                  stock_derivation_quantity: operation.data.stock_derivation_quantity,
+                  is_parent: operation.data.is_parent,
                 }])
                 .select()
                 .single();
@@ -440,6 +467,12 @@ export const useUnifiedProducts = () => {
               if (updates.currentStock !== undefined) dbUpdates.current_stock = updates.currentStock;
               if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
               if (updates.image_url !== undefined) dbUpdates.image_url = updates.image_url;
+              // Variant support
+              if (updates.parent_id !== undefined) dbUpdates.parent_id = updates.parent_id;
+              if (updates.variant_name !== undefined) dbUpdates.variant_name = updates.variant_name;
+              if (updates.variant_multiplier !== undefined) dbUpdates.variant_multiplier = updates.variant_multiplier;
+              if (updates.stock_derivation_quantity !== undefined) dbUpdates.stock_derivation_quantity = updates.stock_derivation_quantity;
+              if (updates.is_parent !== undefined) dbUpdates.is_parent = updates.is_parent;
 
               const { error: updateError } = await supabase
                 .from('products')

@@ -41,6 +41,7 @@ export const useProductQueries = () => {
         .from('products')
         .select('*')
         .eq('user_id', user.id)
+        .or('parent_id.is.null,is_parent.eq.true') // Only show parent products and non-variant products
         .order('created_at', { ascending: false });
 
       if (error) {
