@@ -163,6 +163,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
         {/* Header */}
@@ -342,14 +343,16 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
         </div>
       </DialogContent>
       
-      {/* Template Selection Modal */}
-      <UnifiedTemplateSelectionModal
-        isOpen={showTemplateModal}
-        onClose={() => setShowTemplateModal(false)}
-        onTemplateSelect={handleTemplateSelect}
-        mode="uncountable"
-      />
     </Dialog>
+    
+    {/* Template Selection Modal - Rendered outside Dialog */}
+    <UnifiedTemplateSelectionModal
+      isOpen={showTemplateModal}
+      onClose={() => setShowTemplateModal(false)}
+      onTemplateSelect={handleTemplateSelect}
+      mode="uncountable"
+    />
+    </>
   );
 };
 
