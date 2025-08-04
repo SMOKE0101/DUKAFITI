@@ -66,6 +66,7 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (Math.abs(e.deltaY) > 10) { // Add threshold for smoother scrolling
       if (e.deltaY > 0) {
         handleDecrement();
@@ -76,6 +77,7 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     const newValue = e.target.value;
     setInputValue(newValue);
     
@@ -91,6 +93,15 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
     const clampedValue = Math.max(min, Math.min(max, numValue));
     onChange(clampedValue);
     setInputValue(clampedValue.toString());
+  };
+
+  // Prevent any event bubbling that could interfere with modal
+  const handleContainerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleContainerMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   useEffect(() => {
@@ -131,6 +142,8 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
             background: 'linear-gradient(135deg, hsl(var(--background) / 0.8), hsl(var(--muted) / 0.6))',
           }}
           onWheel={handleWheel}
+          onClick={handleContainerClick}
+          onMouseDown={handleContainerMouseDown}
         >
           {/* Subtle gradient overlay for depth */}
           <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-transparent to-background/10 pointer-events-none z-10" />
