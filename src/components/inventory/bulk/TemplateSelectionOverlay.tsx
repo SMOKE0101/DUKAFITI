@@ -74,17 +74,17 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       />
       
       {/* Content Container - Positioned slightly above middle */}
-      <div className="relative z-10 bg-card/98 backdrop-blur-xl rounded-3xl border border-border/50 shadow-2xl max-w-3xl w-full mx-4 transform transition-all duration-300 ease-out"
+      <div className="relative z-10 bg-card/98 backdrop-blur-xl rounded-2xl md:rounded-3xl border border-border/50 shadow-2xl max-w-2xl md:max-w-3xl w-full mx-2 md:mx-4 transform transition-all duration-300 ease-out"
         style={{ 
           background: 'linear-gradient(135deg, hsl(var(--card) / 0.98), hsl(var(--muted) / 0.95))',
           backdropFilter: 'blur(20px)',
         }}
       >
         {/* Elegant Header */}
-        <div className="flex items-center justify-between p-8 border-b border-border/30">
-          <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-border/30">
+          <div className="flex items-center gap-3 md:gap-6">
             {/* Template Image */}
-            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex-shrink-0 ring-2 ring-primary/20">
+            <div className="w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex-shrink-0 ring-2 ring-primary/20">
               {template.image_url ? (
                 <img 
                   src={template.image_url} 
@@ -101,10 +101,10 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
             </div>
             
             {/* Template Info */}
-            <div>
-              <h3 className="font-bold text-xl text-foreground mb-1">{template.name}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-lg md:text-xl text-foreground mb-1 truncate">{template.name}</h3>
               {template.category && (
-                <p className="text-muted-foreground capitalize font-medium">{template.category}</p>
+                <p className="text-sm md:text-base text-muted-foreground capitalize font-medium">{template.category}</p>
               )}
             </div>
           </div>
@@ -114,25 +114,25 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="w-10 h-10 p-0 hover:bg-muted/50 rounded-full"
+            className="w-8 h-8 md:w-10 md:h-10 p-0 hover:bg-muted/50 rounded-full flex-shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 md:w-5 md:h-5" />
           </Button>
         </div>
         
         {/* Content */}
-        <div className="p-8">
-          <div className="text-center mb-10">
-            <h4 className="text-2xl font-bold mb-3 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+        <div className="p-4 md:p-6">
+          <div className="text-center mb-6">
+            <h4 className="text-lg md:text-xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               Configure Product Details
             </h4>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-sm md:text-base">
               Use the spinning dials to set pricing and stock information
             </p>
           </div>
           
-          {/* Spinning Number Inputs - Styled like lock interface */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-10">
+          {/* Spinning Number Inputs - Responsive Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-6 md:mb-8">
             <SpinningNumberInput
               label="Cost"
               value={formData.costPrice}
@@ -175,7 +175,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
           </div>
           
           {/* Enhanced Profit Calculation */}
-          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 mb-8 border border-primary/20">
+          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl md:rounded-2xl p-4 md:p-6 mb-6 md:mb-8 border border-primary/20">
             <h5 className="font-semibold text-center mb-4 text-foreground">Profit Analysis</h5>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
@@ -207,21 +207,21 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
           </div>
           
           {/* Action Buttons */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
             <Button
               onClick={onClose}
               variant="outline"
-              className="flex-1 h-12 text-base"
+              className="w-full sm:flex-1 h-10 md:h-12 text-sm md:text-base"
               size="lg"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddProduct}
-              className="flex-1 h-12 text-base gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+              className="w-full sm:flex-1 h-10 md:h-12 text-sm md:text-base gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
               size="lg"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4 md:w-5 md:h-5" />
               Add to Spreadsheet
             </Button>
           </div>

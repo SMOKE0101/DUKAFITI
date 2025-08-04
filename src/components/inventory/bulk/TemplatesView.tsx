@@ -86,6 +86,7 @@ const PaginatedTemplateGrid: React.FC<{
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [isOverlayVisible, setIsOverlayVisible] = useState(false);
+  const [addedTemplateIds, setAddedTemplateIds] = useState<Set<number>>(new Set());
   const { updateSpreadsheetData, spreadsheetData } = useBulkAdd();
   const templatesPerPage = 50; // Reduced for faster loading
   
@@ -129,6 +130,9 @@ const PaginatedTemplateGrid: React.FC<{
     }
     
     updateSpreadsheetData(newSpreadsheetData);
+    
+    // Track this template as added for highlighting
+    setAddedTemplateIds(prev => new Set([...prev, selectedTemplate.id]));
   };
 
   const goToPage = (page: number) => {
@@ -172,20 +176,25 @@ const PaginatedTemplateGrid: React.FC<{
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2 p-3">
           {currentTemplates.map((template) => {
               const isSelected = selectedTemplates.some(t => t.id === template.id);
+              const isAdded = addedTemplateIds.has(template.id);
               return (
                 <div
                   key={template.id}
                   onClick={() => handleTemplateClick(template)}
                   className={`relative bg-card rounded-lg border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-lg overflow-hidden ${
-                    isSelected 
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
-                      : "border-border hover:border-primary/40"
+                    isAdded
+                      ? "border-green-500 bg-green-50 dark:bg-green-950/20 ring-2 ring-green-500/30 shadow-md"
+                      : isSelected 
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
+                        : "border-border hover:border-primary/40"
                   }`}
                 >
-                  {/* Selection indicator */}
-                  {isSelected && (
-                    <div className="absolute top-1 right-1 z-20 w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-md">
-                      <svg className="w-3 h-3 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
+                  {/* Selection/Added indicator */}
+                  {(isSelected || isAdded) && (
+                    <div className={`absolute top-1 right-1 z-20 w-5 h-5 rounded-full flex items-center justify-center shadow-md ${
+                      isAdded ? "bg-green-500" : "bg-primary"
+                    }`}>
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>

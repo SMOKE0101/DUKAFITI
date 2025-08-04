@@ -48,7 +48,7 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
     setIsScrolling(true);
     
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setIsScrolling(false), 200);
+    timeoutRef.current = setTimeout(() => setIsScrolling(false), 150);
   };
 
   const handleDecrement = () => {
@@ -57,7 +57,7 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
     setIsScrolling(true);
     
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setIsScrolling(false), 200);
+    timeoutRef.current = setTimeout(() => setIsScrolling(false), 150);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -105,8 +105,8 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
           {/* Spinning values container */}
           <div 
             className={cn(
-              "absolute inset-0 flex flex-col items-center justify-center transition-transform duration-200",
-              isScrolling && "ease-out"
+              "absolute inset-0 flex flex-col items-center justify-center transition-all duration-150",
+              isScrolling && "ease-in-out"
             )}
             style={{
               transform: `translateY(0px)` // Center position for current value

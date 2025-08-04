@@ -34,11 +34,16 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
       return;
     }
     
-    // For Supabase storage URLs, try to load immediately without loading state
+    // For Supabase storage URLs, show immediately without loading state
     if (src.includes('/storage/v1/object/public/') || src.includes('supabase.co/storage/')) {
       setImageState('loaded');
     } else {
+      // For external URLs, start with loading state but try to preload
       setImageState('loading');
+      const img = new Image();
+      img.onload = () => setImageState('loaded');
+      img.onerror = () => setImageState('error');
+      img.src = src;
     }
   }, [src]);
 
@@ -99,23 +104,22 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
   if (isSupabaseImage) {
     return (
       <div className={cn("relative w-full h-full overflow-hidden", className)}>
-        {imageState === 'loading' && renderFallback()}
         <img
           ref={imgRef}
           src={src}
           alt={alt}
-          className={cn(
-            "w-full h-full object-cover transition-opacity duration-200",
-            imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
-          )}
-          style={{ 
-            display: imageState === 'loaded' ? 'block' : 'none'
-          }}
+          className="w-full h-full object-cover"
           loading="eager"
           onLoad={handleLoad}
           onError={handleError}
           referrerPolicy="no-referrer"
         />
+        {/* Show fallback only on error */}
+        {imageState === 'error' && (
+          <div className="absolute inset-0">
+            {renderFallback()}
+          </div>
+        )}
       </div>
     );
   }
