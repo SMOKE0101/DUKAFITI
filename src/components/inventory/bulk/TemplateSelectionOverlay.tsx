@@ -63,8 +63,8 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
 
   return (
     <div className={cn(
-      "fixed inset-0 z-50 flex items-center justify-center",
-      "bg-black/60 backdrop-blur-sm",
+      "fixed inset-0 z-50 flex items-start justify-center pt-[15vh]",
+      "bg-black/70 backdrop-blur-sm",
       className
     )}>
       {/* Overlay Background */}
@@ -73,13 +73,18 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
         onClick={onClose}
       />
       
-      {/* Content Container */}
-      <div className="relative z-10 bg-card/95 backdrop-blur-md rounded-2xl border border-border/50 shadow-2xl max-w-2xl w-full mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border/50">
-          <div className="flex items-center gap-4">
+      {/* Content Container - Positioned slightly above middle */}
+      <div className="relative z-10 bg-card/98 backdrop-blur-xl rounded-3xl border border-border/50 shadow-2xl max-w-3xl w-full mx-4 transform transition-all duration-300 ease-out"
+        style={{ 
+          background: 'linear-gradient(135deg, hsl(var(--card) / 0.98), hsl(var(--muted) / 0.95))',
+          backdropFilter: 'blur(20px)',
+        }}
+      >
+        {/* Elegant Header */}
+        <div className="flex items-center justify-between p-8 border-b border-border/30">
+          <div className="flex items-center gap-6">
             {/* Template Image */}
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 flex-shrink-0">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex-shrink-0 ring-2 ring-primary/20">
               {template.image_url ? (
                 <img 
                   src={template.image_url} 
@@ -88,7 +93,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  <span className="text-3xl font-bold text-primary">
                     {template.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -97,9 +102,9 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
             
             {/* Template Info */}
             <div>
-              <h3 className="font-semibold text-lg text-foreground">{template.name}</h3>
+              <h3 className="font-bold text-xl text-foreground mb-1">{template.name}</h3>
               {template.category && (
-                <p className="text-sm text-muted-foreground capitalize">{template.category}</p>
+                <p className="text-muted-foreground capitalize font-medium">{template.category}</p>
               )}
             </div>
           </div>
@@ -109,40 +114,42 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="w-8 h-8 p-0 hover:bg-muted"
+            className="w-10 h-10 p-0 hover:bg-muted/50 rounded-full"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </Button>
         </div>
         
         {/* Content */}
         <div className="p-8">
-          <div className="text-center mb-8">
-            <h4 className="text-xl font-semibold mb-2">Configure Product Details</h4>
-            <p className="text-muted-foreground">
-              Set the pricing and stock information for this product
+          <div className="text-center mb-10">
+            <h4 className="text-2xl font-bold mb-3 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Configure Product Details
+            </h4>
+            <p className="text-muted-foreground text-lg">
+              Use the spinning dials to set pricing and stock information
             </p>
           </div>
           
-          {/* Spinning Number Inputs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          {/* Spinning Number Inputs - Styled like lock interface */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-10">
             <SpinningNumberInput
-              label="Cost Price"
+              label="Cost"
               value={formData.costPrice}
               onChange={(value) => handleFieldChange('costPrice', value)}
               min={0}
               max={999999}
-              step={1}
+              step={5}
               suffix="KES"
             />
             
             <SpinningNumberInput
-              label="Selling Price"
+              label="Selling"
               value={formData.sellingPrice}
               onChange={(value) => handleFieldChange('sellingPrice', value)}
               min={0}
               max={999999}
-              step={1}
+              step={5}
               suffix="KES"
             />
             
@@ -152,7 +159,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
               onChange={(value) => handleFieldChange('currentStock', value)}
               min={0}
               max={999999}
-              step={1}
+              step={10}
               suffix="units"
             />
             
@@ -162,54 +169,59 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
               onChange={(value) => handleFieldChange('lowStockThreshold', value)}
               min={0}
               max={999999}
-              step={1}
+              step={5}
               suffix="units"
             />
           </div>
           
-          {/* Profit Calculation */}
-          <div className="bg-muted/50 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Estimated Profit per Unit:</span>
-              <span className={cn(
-                "font-semibold",
-                formData.sellingPrice > formData.costPrice 
-                  ? "text-green-600 dark:text-green-400" 
-                  : "text-red-600 dark:text-red-400"
-              )}>
-                {(formData.sellingPrice - formData.costPrice).toLocaleString()} KES
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-muted-foreground">Profit Margin:</span>
-              <span className={cn(
-                "font-semibold",
-                formData.sellingPrice > formData.costPrice 
-                  ? "text-green-600 dark:text-green-400" 
-                  : "text-red-600 dark:text-red-400"
-              )}>
-                {formData.costPrice > 0 
-                  ? (((formData.sellingPrice - formData.costPrice) / formData.costPrice) * 100).toFixed(1)
-                  : '0'
-                }%
-              </span>
+          {/* Enhanced Profit Calculation */}
+          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-6 mb-8 border border-primary/20">
+            <h5 className="font-semibold text-center mb-4 text-foreground">Profit Analysis</h5>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground mb-1">Profit per Unit</div>
+                <div className={cn(
+                  "text-2xl font-bold",
+                  formData.sellingPrice > formData.costPrice 
+                    ? "text-green-600 dark:text-green-400" 
+                    : "text-red-600 dark:text-red-400"
+                )}>
+                  {(formData.sellingPrice - formData.costPrice).toLocaleString()} KES
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground mb-1">Profit Margin</div>
+                <div className={cn(
+                  "text-2xl font-bold",
+                  formData.sellingPrice > formData.costPrice 
+                    ? "text-green-600 dark:text-green-400" 
+                    : "text-red-600 dark:text-red-400"
+                )}>
+                  {formData.costPrice > 0 
+                    ? (((formData.sellingPrice - formData.costPrice) / formData.costPrice) * 100).toFixed(1)
+                    : '0'
+                  }%
+                </div>
+              </div>
             </div>
           </div>
           
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Button
               onClick={onClose}
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-12 text-base"
+              size="lg"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddProduct}
-              className="flex-1 gap-2"
+              className="flex-1 h-12 text-base gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+              size="lg"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Add to Spreadsheet
             </Button>
           </div>

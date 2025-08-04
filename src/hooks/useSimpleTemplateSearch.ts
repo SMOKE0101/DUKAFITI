@@ -33,7 +33,7 @@ export const useSimpleTemplateSearch = () => {
       const currentCacheInfo = getCacheInfo('all_product_templates');
       const shouldRefreshCache = !currentCacheInfo.exists || 
         (currentCacheInfo.itemCount && currentCacheInfo.itemCount < 7000) || 
-        currentCacheInfo.version !== '3.0' || // Bumped version to force refresh
+        currentCacheInfo.version !== '4.0' || // Version bump for instant image loading
         !currentCacheInfo.isValid;
         
       if (shouldRefreshCache) {
@@ -46,7 +46,7 @@ export const useSimpleTemplateSearch = () => {
       const cacheInfo = getCacheInfo('all_product_templates');
       console.log('[SimpleTemplateSearch] Cache info after clearing:', cacheInfo);
       
-      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000 && cacheInfo.version === '3.0') {
+      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000 && cacheInfo.version === '4.0') {
         console.log('[SimpleTemplateSearch] Using cached data:', cacheInfo.itemCount, 'templates');
         const cached = getCache<ProductTemplate[]>('all_product_templates');
         if (cached && Array.isArray(cached)) {
@@ -109,7 +109,7 @@ export const useSimpleTemplateSearch = () => {
         }
 
         console.log('[SimpleTemplateSearch] Pagination complete. Total fetched:', totalFetched);
-        setCache('all_product_templates', allTemplates, '3.0'); // New version with downloaded images
+        setCache('all_product_templates', allTemplates, '4.0'); // New version with instant image loading
         setAllTemplates(allTemplates);
         
         // Verify search targets exist

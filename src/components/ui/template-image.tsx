@@ -27,14 +27,19 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Reset state when src changes
+  // Reset state when src changes - optimize for instant display
   useEffect(() => {
     if (!src) {
       setImageState('error');
       return;
     }
     
-    setImageState('loading');
+    // For Supabase storage URLs, try to load immediately without loading state
+    if (src.includes('/storage/v1/object/public/') || src.includes('supabase.co/storage/')) {
+      setImageState('loaded');
+    } else {
+      setImageState('loading');
+    }
   }, [src]);
 
   const handleLoad = () => {
@@ -88,18 +93,30 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
     return renderFallback();
   }
 
-  // Check if this is a Supabase storage URL - use direct component for better reliability
+  // Check if this is a Supabase storage URL - use direct image for instant loading
   const isSupabaseImage = src && (src.includes('/storage/v1/object/public/') || src.includes('supabase.co/storage/'));
 
   if (isSupabaseImage) {
     return (
-      <SupabaseImage
-        src={src}
-        alt={alt}
-        productName={productName}
-        className={className}
-        size={size}
-      />
+      <div className={cn("relative w-full h-full overflow-hidden", className)}>
+        {imageState === 'loading' && renderFallback()}
+        <img
+          ref={imgRef}
+          src={src}
+          alt={alt}
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-200",
+            imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
+          )}
+          style={{ 
+            display: imageState === 'loaded' ? 'block' : 'none'
+          }}
+          loading="eager"
+          onLoad={handleLoad}
+          onError={handleError}
+          referrerPolicy="no-referrer"
+        />
+      </div>
     );
   }
 
