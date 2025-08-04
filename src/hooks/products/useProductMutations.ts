@@ -25,6 +25,7 @@ export const useProductMutations = () => {
           selling_price: productData.sellingPrice,
           current_stock: productData.currentStock,
           low_stock_threshold: productData.lowStockThreshold,
+          image_url: productData.image_url,
           user_id: user.id,
         }])
         .select()
@@ -66,6 +67,7 @@ export const useProductMutations = () => {
           selling_price: productData.sellingPrice,
           current_stock: productData.currentStock,
           low_stock_threshold: productData.lowStockThreshold,
+          image_url: productData.image_url,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)

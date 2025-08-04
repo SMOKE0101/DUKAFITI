@@ -45,11 +45,9 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   }, [isOpen, initialized, initializeTemplates]);
 
   const handleTemplateClick = (template: ProductTemplate) => {
-    console.log('Template clicked in modal:', template.name);
-    console.log('Setting selectedTemplate and showConfigOverlay to true');
+    console.log('Template clicked in modal:', template.name, template);
     setSelectedTemplate(template);
     setShowConfigOverlay(true);
-    console.log('State should be updated now');
   };
 
   const handleConfigClose = () => {
@@ -64,7 +62,11 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     onClose();
   };
 
-  console.log('TemplateSelectionModal render:', { selectedTemplate: selectedTemplate?.name, showConfigOverlay });
+  console.log('TemplateSelectionModal render:', { 
+    selectedTemplate: selectedTemplate?.name, 
+    showConfigOverlay,
+    hasSelectedTemplate: !!selectedTemplate 
+  });
 
   if (!isOpen) return null;
 
@@ -148,17 +150,16 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Configuration Overlay - Force highest z-index and portal-like rendering */}
+      {/* Configuration Overlay - Render directly with portal-like behavior */}
       {selectedTemplate && showConfigOverlay && (
-        <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 99999 }}>
-          <TemplateSelectionOverlay
-            template={selectedTemplate}
-            isVisible={showConfigOverlay}
-            onClose={handleConfigClose}
-            onAddToSpreadsheet={handleUseTemplate}
-            mode="single"
-          />
-        </div>
+        <TemplateSelectionOverlay
+          template={selectedTemplate}
+          isVisible={showConfigOverlay}
+          onClose={handleConfigClose}
+          onAddToSpreadsheet={handleUseTemplate}
+          mode="single"
+          className="z-[100000]"
+        />
       )}
     </>
   );
