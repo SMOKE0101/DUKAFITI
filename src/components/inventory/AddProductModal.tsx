@@ -209,7 +209,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog 
+      open={isOpen && !showTemplateModal} 
+      onOpenChange={(open) => {
+        if (!open && !showTemplateModal) {
+          onClose();
+        }
+      }}
+    >
         <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
           {/* Modern Header */}
           <div className="border-b-4 border-green-600 bg-white dark:bg-gray-900 p-6 text-center flex-shrink-0">

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Package2, Search, Filter } from 'lucide-react';
+import { X, Package2, Search, Filter, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
 import TemplateImage from '../../ui/template-image';
-import TemplateSelectionOverlay from '../bulk/TemplateSelectionOverlay';
+import SpinningNumberInput from '../../ui/spinning-number-input';
 
 interface UnifiedTemplateSelectionModalProps {
   isOpen: boolean;
@@ -22,7 +22,13 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
-  const [isOverlayVisible, setIsOverlayVisible] = useState(false);
+  const [showConfigOverlay, setShowConfigOverlay] = useState(false);
+  const [formData, setFormData] = useState({
+    costPrice: 10,
+    sellingPrice: 15,
+    currentStock: 50,
+    lowStockThreshold: 10
+  });
   
   const {
     templates,
@@ -48,32 +54,54 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
     if (!isOpen) {
       setCurrentPage(1);
       setSelectedTemplate(null);
-      setIsOverlayVisible(false);
+      setShowConfigOverlay(false);
+      setFormData({
+        costPrice: 10,
+        sellingPrice: 15,
+        currentStock: 50,
+        lowStockThreshold: 10
+      });
       searchTemplates('');
       filterByCategory('all');
     }
   }, [isOpen]);
 
   const handleTemplateClick = (template: any) => {
+    console.log('[UnifiedTemplateSelectionModal] Template clicked:', template);
     setSelectedTemplate(template);
-    setIsOverlayVisible(true);
+    setShowConfigOverlay(true);
   };
 
   const handleCloseOverlay = () => {
-    setIsOverlayVisible(false);
+    console.log('[UnifiedTemplateSelectionModal] Closing overlay');
+    setShowConfigOverlay(false);
     setSelectedTemplate(null);
   };
 
-  const handleUseTemplate = (productData: any) => {
+  const handleFieldChange = (field: string, value: number) => {
+    console.log('[UnifiedTemplateSelectionModal] Field change:', field, value);
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveTemplate = () => {
+    console.log('[UnifiedTemplateSelectionModal] Save template called');
+    console.log('[UnifiedTemplateSelectionModal] formData:', formData);
+    console.log('[UnifiedTemplateSelectionModal] selectedTemplate:', selectedTemplate);
+    
+    if (!selectedTemplate) return;
+    
     // Transform data based on mode
     let transformedData = {
-      name: productData.name,
-      category: productData.category,
-      image_url: productData.image_url,
-      cost_price: productData.costPrice,
-      selling_price: productData.sellingPrice,
-      current_stock: productData.currentStock,
-      low_stock_threshold: productData.lowStockThreshold
+      name: selectedTemplate.name,
+      category: selectedTemplate.category,
+      image_url: selectedTemplate.image_url,
+      cost_price: formData.costPrice,
+      selling_price: formData.sellingPrice,
+      current_stock: formData.currentStock,
+      low_stock_threshold: formData.lowStockThreshold
     };
 
     // Mode-specific transformations
@@ -85,11 +113,12 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
       // For variations, we mainly need the base info
       transformedData = {
         ...transformedData,
-        current_stock: productData.currentStock,
-        low_stock_threshold: productData.lowStockThreshold
+        current_stock: formData.currentStock,
+        low_stock_threshold: formData.lowStockThreshold
       };
     }
 
+    console.log('[UnifiedTemplateSelectionModal] Calling onTemplateSelect with:', transformedData);
     onTemplateSelect(transformedData);
     onClose();
   };
@@ -128,7 +157,9 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onClose();
+          if (!showConfigOverlay) {
+            onClose();
+          }
         }}
       />
       
@@ -225,7 +256,7 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-auto">
+          <div className={cn("flex-1 overflow-auto", showConfigOverlay && "hidden")}>
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
                 {Array.from({ length: 24 }).map((_, index) => (
@@ -386,17 +417,178 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
               </>
             )}
           </div>
+          
+          {/* Inline Configuration Overlay */}
+          {showConfigOverlay && selectedTemplate && (
+            <div className="flex-1 overflow-auto p-4 md:p-6">
+              {/* Template Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3 md:gap-4">
+                  {/* Template Image */}
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex-shrink-0 ring-2 ring-primary/20">
+                    {selectedTemplate.image_url ? (
+                      <img 
+                        src={selectedTemplate.image_url} 
+                        alt={selectedTemplate.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-2xl font-bold text-primary">
+                          {selectedTemplate.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Template Info */}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-xl text-foreground mb-1 truncate">{selectedTemplate.name}</h3>
+                    {selectedTemplate.category && (
+                      <p className="text-sm text-muted-foreground capitalize font-medium">{selectedTemplate.category}</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Back Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCloseOverlay();
+                  }}
+                  className="w-10 h-10 p-0 hover:bg-muted/50 rounded-full flex-shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              {/* Configure Title */}
+              <div className="text-center mb-6">
+                <h4 className="text-lg font-semibold mb-2 text-foreground">
+                  Configure Product Details
+                </h4>
+                <p className="text-muted-foreground text-sm">
+                  Scroll or tap to adjust values
+                </p>
+              </div>
+              
+              {/* Spinning Number Inputs Grid */}
+              <div className={cn(
+                "gap-4 md:gap-6 mb-6",
+                mode === 'uncountable' 
+                  ? "grid grid-cols-2 md:grid-cols-2"
+                  : "grid grid-cols-2 md:grid-cols-4"
+              )}>
+                <SpinningNumberInput
+                  label="Cost"
+                  value={formData.costPrice}
+                  onChange={(value) => handleFieldChange('costPrice', value)}
+                  min={0}
+                  max={999999}
+                  step={1}
+                  suffix="KES"
+                />
+                
+                <SpinningNumberInput
+                  label="Selling"
+                  value={formData.sellingPrice}
+                  onChange={(value) => handleFieldChange('sellingPrice', value)}
+                  min={0}
+                  max={999999}
+                  step={1}
+                  suffix="KES"
+                />
+                
+                {mode !== 'uncountable' && (
+                  <>
+                    <SpinningNumberInput
+                      label="In Stock"
+                      value={formData.currentStock}
+                      onChange={(value) => handleFieldChange('currentStock', value)}
+                      min={0}
+                      max={999999}
+                      step={1}
+                      suffix="units"
+                    />
+                    
+                    <SpinningNumberInput
+                      label="Low Stock Alert"
+                      value={formData.lowStockThreshold}
+                      onChange={(value) => handleFieldChange('lowStockThreshold', value)}
+                      min={0}
+                      max={999999}
+                      step={1}
+                      suffix="units"
+                    />
+                  </>
+                )}
+              </div>
+              
+              {/* Profit Calculation */}
+              <div className="bg-gradient-to-r from-primary/3 to-primary/5 rounded-lg p-4 mb-6 border border-primary/10">
+                <h5 className="font-medium text-center mb-3 text-foreground">Profit Analysis</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground mb-1">Profit per Unit</div>
+                    <div className={cn(
+                      "text-xl font-semibold",
+                      formData.sellingPrice > formData.costPrice 
+                        ? "text-green-600 dark:text-green-400" 
+                        : "text-red-600 dark:text-red-400"
+                    )}>
+                      {(formData.sellingPrice - formData.costPrice).toLocaleString()} KES
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground mb-1">Profit Margin</div>
+                    <div className={cn(
+                      "text-xl font-semibold",
+                      formData.sellingPrice > formData.costPrice 
+                        ? "text-green-600 dark:text-green-400" 
+                        : "text-red-600 dark:text-red-400"
+                    )}>
+                      {formData.costPrice > 0 
+                        ? (((formData.sellingPrice - formData.costPrice) / formData.costPrice) * 100).toFixed(1)
+                        : '0'
+                      }%
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <Button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCloseOverlay();
+                  }}
+                  variant="outline"
+                  className="w-full sm:w-auto h-12 text-sm px-6"
+                >
+                  ← Back to Templates
+                </Button>
+                <Button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSaveTemplate();
+                  }}
+                  size="lg"
+                  className="w-full sm:flex-1 h-12 text-base font-semibold gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  Save & Use Template
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Template Configuration Overlay */}
-      <TemplateSelectionOverlay
-        template={selectedTemplate}
-        isVisible={isOverlayVisible}
-        onClose={handleCloseOverlay}
-        onAddToSpreadsheet={handleUseTemplate}
-        mode="single"
-      />
     </>
   );
 };
