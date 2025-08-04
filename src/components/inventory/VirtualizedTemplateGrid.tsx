@@ -30,10 +30,15 @@ const TemplateItem = memo(({ columnIndex, rowIndex, style, data }: TemplateItemP
     return <div style={style} />;
   }
 
+  const handleClick = () => {
+    console.log('Template clicked:', template.name);
+    onTemplateClick(template);
+  };
+
   return (
     <div style={style} className="p-1">
       <div
-        onClick={() => onTemplateClick(template)}
+        onClick={handleClick}
         className={cn(
           "group relative overflow-hidden rounded-xl bg-card border border-border hover:border-primary/50 transition-all duration-200 cursor-pointer h-full",
           "hover:shadow-lg hover:shadow-primary/10 hover:scale-[1.02]"
@@ -81,26 +86,27 @@ const VirtualizedTemplateGrid: React.FC<VirtualizedTemplateGridProps> = ({
 }) => {
   // Calculate grid dimensions based on container
   const getGridDimensions = () => {
-    const containerWidth = window.innerWidth > 768 ? 800 : window.innerWidth - 32;
-    const itemWidth = window.innerWidth > 768 ? 140 : 120;
-    const columnsPerRow = Math.floor(containerWidth / itemWidth);
+    const containerWidth = Math.min(1200, window.innerWidth - 64); // Max width with padding
+    const itemWidth = window.innerWidth > 768 ? 160 : 140;
+    const columnsPerRow = Math.max(1, Math.floor(containerWidth / itemWidth));
     const rowCount = Math.ceil(templates.length / columnsPerRow);
     
     return {
       columnsPerRow,
       rowCount,
       itemWidth,
-      itemHeight: itemWidth + 60 // Add space for text
+      itemHeight: itemWidth + 80, // Add space for text
+      containerWidth
     };
   };
 
-  const { columnsPerRow, rowCount, itemWidth, itemHeight } = getGridDimensions();
+  const { columnsPerRow, rowCount, itemWidth, itemHeight, containerWidth } = getGridDimensions();
 
-  const itemData = {
+  const itemData = useCallback(() => ({
     templates,
     columnsPerRow,
     onTemplateClick
-  };
+  }), [templates, columnsPerRow, onTemplateClick]);
 
   if (templates.length === 0) {
     return (
@@ -114,15 +120,15 @@ const VirtualizedTemplateGrid: React.FC<VirtualizedTemplateGridProps> = ({
   }
 
   return (
-    <div className={cn("flex-1 overflow-hidden", className)}>
+    <div className={cn("flex-1 overflow-hidden flex justify-center", className)}>
       <Grid
         columnCount={columnsPerRow}
         columnWidth={itemWidth}
-        height={400} // Fixed height for the grid
+        height={500} // Increased height for better viewing
         rowCount={rowCount}
         rowHeight={itemHeight}
-        itemData={itemData}
-        width={800}
+        itemData={itemData()}
+        width={containerWidth}
         overscanRowCount={2}
         overscanColumnCount={1}
       >

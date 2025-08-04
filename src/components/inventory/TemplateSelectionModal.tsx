@@ -45,6 +45,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   }, [isOpen, initialized, initializeTemplates]);
 
   const handleTemplateClick = (template: ProductTemplate) => {
+    console.log('Template clicked in modal:', template.name);
     setSelectedTemplate(template);
     setShowConfigOverlay(true);
   };
@@ -144,7 +145,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
       </Dialog>
 
       {/* Configuration Overlay */}
-      {selectedTemplate && (
+      {selectedTemplate && showConfigOverlay && (
         <TemplateSelectionOverlay
           template={selectedTemplate}
           isVisible={showConfigOverlay}
