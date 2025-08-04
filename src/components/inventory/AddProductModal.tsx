@@ -8,9 +8,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
-import { Shuffle } from 'lucide-react';
+import { Shuffle, Package2 } from 'lucide-react';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
+import TemplateSelectionModal from './TemplateSelectionModal';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   });
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   useEffect(() => {
     if (editingProduct) {
@@ -160,6 +162,31 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
+  const handleTemplateSelect = (templateData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      name: templateData.name || '',
+      category: templateData.category || '',
+      costPrice: templateData.cost_price || 0,
+      sellingPrice: templateData.selling_price || 0,
+      currentStock: templateData.current_stock || 0,
+      lowStockThreshold: templateData.low_stock_threshold || 10,
+      image_url: templateData.image_url || '',
+    }));
+    
+    // Handle custom category
+    if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
+      setCustomCategory(templateData.category);
+      setShowCustomInput(true);
+      setFormData(prev => ({ ...prev, category: 'Other / Custom' }));
+    } else {
+      setShowCustomInput(false);
+      setCustomCategory('');
+    }
+    
+    setShowTemplateModal(false);
+  };
+
   const showProfitCalculation = formData.costPrice > 0 && formData.sellingPrice > 0;
 
   return (
@@ -192,9 +219,19 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
               {/* Product Name */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Product Name *
-                </Label>
+                <div className="flex items-center justify-between mb-3">
+                  <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+                    Product Name *
+                  </Label>
+                  <Button
+                    type="button"
+                    onClick={() => setShowTemplateModal(true)}
+                    className="h-8 px-3 border-2 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 text-xs"
+                  >
+                    <Package2 className="w-3 h-3 mr-1" />
+                    Use Template
+                  </Button>
+                </div>
                 <Input
                   id="name"
                   value={formData.name}
@@ -383,6 +420,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             </form>
           </div>
         </DialogContent>
+        
+        {/* Template Selection Modal */}
+        <TemplateSelectionModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onTemplateSelect={handleTemplateSelect}
+        />
       </Dialog>
   );
 };

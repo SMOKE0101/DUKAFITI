@@ -10,6 +10,7 @@ interface TemplateSelectionOverlayProps {
   onClose: () => void;
   onAddToSpreadsheet: (productData: any) => void;
   className?: string;
+  mode?: 'bulk' | 'single';
 }
 
 interface ProductFormData {
@@ -28,7 +29,8 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
   isVisible,
   onClose,
   onAddToSpreadsheet,
-  className
+  className,
+  mode = 'bulk'
 }) => {
   const [formData, setFormData] = useState<ProductFormData>({
     costPrice: 10,
@@ -220,7 +222,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
               className="w-full sm:flex-1 h-9 text-sm gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
             >
               <Plus className="w-3 h-3" />
-              Add to Spreadsheet
+              {mode === 'single' ? 'Use Template' : 'Add to Spreadsheet'}
             </Button>
           </div>
         </div>
