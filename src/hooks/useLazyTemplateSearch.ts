@@ -25,7 +25,7 @@ export const useLazyTemplateSearch = () => {
 
   // Fast initialization - only load templates when actually needed
   const initializeTemplates = useCallback(async () => {
-    if (initialized || !isInitialized) return;
+    if (initialized) return;
     
     setLoading(true);
     setError(null);
@@ -83,7 +83,7 @@ export const useLazyTemplateSearch = () => {
     } finally {
       setLoading(false);
     }
-  }, [isOnline, getCache, setCache, getCacheInfo, isInitialized, initialized]);
+  }, [isOnline, getCache, setCache, getCacheInfo, initialized]);
 
   // Load remaining templates in background
   const loadRemainingTemplates = useCallback(async (offset: number) => {
