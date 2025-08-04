@@ -25,6 +25,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
+    sku: '',
     category: '',
     costPrice: 0,
     sellingPrice: 0,
@@ -38,6 +39,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
     if (isOpen) {
       setFormData({
         name: '',
+        sku: '',
         category: '',
         costPrice: 0,
         sellingPrice: 0,
@@ -93,7 +95,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       category: isCustomCategory(formData.category) ? customCategory : formData.category,
       currentStock: -1, // Unspecified quantity
       lowStockThreshold: 0, // No threshold for uncountable items
-      sku: '', // Optional for uncountable
+      sku: formData.sku, // Auto-generated SKU
     };
     
     onSave(finalFormData);
@@ -122,6 +124,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
     // Pre-fill form with template data
     setFormData({
       name: templateData.name || '',
+      sku: generateSKU(templateData.category || '', templateData.name || ''),
       category: templateData.category || '',
       costPrice: templateData.cost_price || 0,
       sellingPrice: templateData.selling_price || 0,
@@ -139,6 +142,21 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
     
     setShowTemplateModal(false);
   };
+
+  const generateSKU = (category: string = '', name: string = '') => {
+    const prefix = category ? category.substring(0, 3).toUpperCase() : 'UNC';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+  };
+
+  // Auto-generate SKU when form data changes
+  useEffect(() => {
+    if (formData.name || formData.category) {
+      const autoSKU = generateSKU(formData.category, formData.name);
+      setFormData(prev => ({ ...prev, sku: autoSKU }));
+    }
+  }, [formData.name, formData.category]);
 
   const handleUseTemplates = () => {
     setShowTemplateModal(true);
@@ -159,6 +177,18 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
         
         <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Use Templates Button */}
+            <div className="mb-6">
+              <Button 
+                type="button" 
+                onClick={handleUseTemplates}
+                className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                ✨ USE TEMPLATES
+              </Button>
+            </div>
+
             {/* Product Image */}
             <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
               <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
@@ -184,6 +214,21 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
                 placeholder="Enter product name"
                 className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:border-orange-500"
                 required
+              />
+            </div>
+
+            {/* Product SKU */}
+            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+              <Label htmlFor="sku" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                Product SKU (Auto-Generated)
+              </Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                readOnly
+                disabled
+                placeholder="Auto-generated SKU"
+                className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 font-mono text-gray-600 dark:text-gray-400"
               />
             </div>
             
@@ -276,17 +321,6 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
               </p>
             </div>
 
-            {/* Use Templates Button */}
-            <div className="mb-6">
-              <Button 
-                type="button" 
-                onClick={handleUseTemplates}
-                className="w-full px-6 py-3 border-2 border-purple-500 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 hover:border-purple-600 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Use Templates
-              </Button>
-            </div>
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-6">

@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
-import { Shuffle, Package2 } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
 import TemplateSelectionModal from './TemplateSelectionModal';
@@ -78,8 +78,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     const timestamp = Date.now().toString().slice(-6);
     const random = Math.random().toString(36).substring(2, 5).toUpperCase();
     const generatedSKU = `${prefix}-${timestamp}-${random}`;
-    setFormData(prev => ({ ...prev, sku: generatedSKU }));
+    return generatedSKU;
   };
+
+  // Auto-generate SKU when form data changes
+  useEffect(() => {
+    if (!editingProduct && (formData.name || formData.category)) {
+      const autoSKU = generateSKU();
+      setFormData(prev => ({ ...prev, sku: autoSKU }));
+    }
+  }, [formData.name, formData.category, editingProduct]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,6 +222,21 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           
           <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Use Templates Button */}
+              <div className="mb-6">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setTemplatesInitialized(true);
+                    setShowTemplateModal(true);
+                  }}
+                  className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  ✨ USE TEMPLATES
+                </Button>
+              </div>
+
               {/* Product Image */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
@@ -229,22 +252,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
               {/* Product Name */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <div className="flex items-center justify-between mb-3">
-                  <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-                    Product Name *
-                  </Label>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setTemplatesInitialized(true);
-                      setShowTemplateModal(true);
-                    }}
-                    className="h-8 px-3 border-2 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 text-xs"
-                  >
-                    <Package2 className="w-3 h-3 mr-1" />
-                    Use Template
-                  </Button>
-                </div>
+                <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product Name *
+                </Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -258,24 +268,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               {/* Product SKU */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label htmlFor="sku" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Product SKU
+                  Product SKU (Auto-Generated)
                 </Label>
-                <div className="flex gap-3">
-                  <Input
-                    id="sku"
-                    value={formData.sku}
-                    onChange={(e) => handleInputChange('sku', e.target.value)}
-                    placeholder="Enter or generate SKU"
-                    className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500 flex-1"
-                  />
-                  <Button
-                    type="button"
-                    onClick={generateSKU}
-                    className="h-12 px-4 border-2 border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200"
-                  >
-                    <Shuffle className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  readOnly
+                  disabled
+                  placeholder="Auto-generated SKU"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 font-mono text-gray-600 dark:text-gray-400"
+                />
               </div>
               
               {/* Category */}

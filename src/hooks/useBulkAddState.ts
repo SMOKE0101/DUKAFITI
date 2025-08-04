@@ -158,21 +158,29 @@ export const useBulkAddState = () => {
     setError(null);
   }, [initializeSpreadsheet]);
 
+  // Generate SKU for bulk products
+  const generateSKU = useCallback((category: string, name: string, index: number) => {
+    const prefix = category ? category.substring(0, 3).toUpperCase() : 'BLK';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${prefix}-${timestamp}-${random}-${index.toString().padStart(3, '0')}`;
+  }, []);
+
   // Get valid products for saving
   const getValidProducts = useCallback((): Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[] => {
     const validRows = spreadsheetData.filter(row => row.isValid && row.name.trim());
     
-    return validRows.map(row => ({
+    return validRows.map((row, index) => ({
       name: row.name.trim(),
       category: row.category || 'General',
       costPrice: row.costPrice === '' ? 0 : Number(row.costPrice),
       sellingPrice: Number(row.sellingPrice),
       currentStock: row.currentStock === '' ? -1 : Number(row.currentStock),
       lowStockThreshold: row.lowStockThreshold === '' ? 10 : Number(row.lowStockThreshold),
-      sku: '',
+      sku: generateSKU(row.category || 'General', row.name, index + 1), // Auto-generated SKU
       image_url: row.image_url || null, // Ensure image_url is properly transferred
     }));
-  }, [spreadsheetData]);
+  }, [spreadsheetData, generateSKU]);
 
   // Calculate stats
   const stats = useMemo(() => {

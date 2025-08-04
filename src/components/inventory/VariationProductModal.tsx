@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '../../types';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
-import { ArrowRight, Plus, Trash2, Package2 } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Package2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ImageUpload from '../ui/image-upload';
 import TemplateSelectionModal from './TemplateSelectionModal';
@@ -42,6 +42,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     type: 'new' | 'existing';
     id?: string;
     name: string;
+    sku: string;
     category: string;
     currentStock: number;
     lowStockThreshold: number;
@@ -50,6 +51,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   }>({
     type: 'new',
     name: '',
+    sku: '',
     category: '',
     currentStock: 0,
     lowStockThreshold: 0,
@@ -78,6 +80,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     setParentProduct({
       type: 'new',
       name: '',
+      sku: '',
       category: '',
       currentStock: 0,
       lowStockThreshold: 0,
@@ -190,12 +193,28 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     return true;
   };
 
+  const generateSKU = (category: string = '', name: string = '') => {
+    const prefix = category ? category.substring(0, 3).toUpperCase() : 'VAR';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+  };
+
+  // Auto-generate SKU when parent product data changes
+  useEffect(() => {
+    if (parentProduct.name || parentProduct.category) {
+      const autoSKU = generateSKU(parentProduct.category, parentProduct.name);
+      setParentProduct(prev => ({ ...prev, sku: autoSKU }));
+    }
+  }, [parentProduct.name, parentProduct.category]);
+
   const handleTemplateSelect = React.useCallback((templateData: any) => {
     console.log('[VariationProductModal] Template data received:', templateData);
     
     setParentProduct(prev => ({
       ...prev,
       name: templateData.name || '',
+      sku: generateSKU(templateData.category || '', templateData.name || ''),
       category: templateData.category || '',
       image_url: templateData.image_url || '',
       currentStock: templateData.current_stock || 0,
@@ -234,7 +253,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
       lowStockThreshold: parentProduct.lowStockThreshold,
       stock_derivation_quantity: parentProduct.stockDerivationQuantity,
       is_parent: true,
-      sku: '', // Optional
+      sku: parentProduct.sku, // Auto-generated SKU
       image_url: parentProduct.image_url || null,
     };
 
@@ -276,6 +295,21 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
           {/* Step 1: Parent Product Configuration */}
           {step === 1 && (
             <div className="space-y-6">
+              {/* Use Templates Button */}
+              <div className="mb-6">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setTemplatesInitialized(true);
+                    setShowTemplateModal(true);
+                  }}
+                  className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  ✨ USE TEMPLATES
+                </Button>
+              </div>
+
               {/* Product Image */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
@@ -290,27 +324,28 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
               </div>
 
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <div className="flex items-center justify-between mb-3">
-                  <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-                    Product Name *
-                  </Label>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setTemplatesInitialized(true);
-                      setShowTemplateModal(true);
-                    }}
-                    className="h-8 px-3 border-2 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 text-xs"
-                  >
-                    <Package2 className="w-3 h-3 mr-1" />
-                    Use Template
-                  </Button>
-                </div>
+                <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product Name *
+                </Label>
                 <Input
                   value={parentProduct.name}
                   onChange={(e) => setParentProduct(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter parent product name"
                   className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                />
+              </div>
+
+              {/* Product SKU */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Product SKU (Auto-Generated)
+                </Label>
+                <Input
+                  value={parentProduct.sku}
+                  readOnly
+                  disabled
+                  placeholder="Auto-generated SKU"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 font-mono text-gray-600 dark:text-gray-400"
                 />
               </div>
 
