@@ -32,7 +32,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const { createSale } = useUnifiedSales();
-  const { updateProduct } = useUnifiedProducts();
+  const { updateProduct, products } = useUnifiedProducts();
   const { updateCustomer } = useUnifiedCustomers();
   const { pendingOperations } = useUnifiedSyncManager();
 
@@ -159,13 +159,38 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
         // Update product stock (skip for unspecified quantity products)
         if (item.currentStock !== -1) {
-          const currentStock = item.currentStock || 0;
-          const newStock = Math.max(0, currentStock - item.quantity);
-          await updateProduct(item.id, { 
-            currentStock: newStock,
-            updatedAt: new Date().toISOString()
-          });
-          console.log('[SalesCheckout] Product stock updated:', item.name, 'New stock:', newStock);
+          // Check if this is a variant product
+          if (item.parent_id) {
+            // For variants, update parent stock using multiplier calculation
+            const variantMultiplier = item.variant_multiplier || 1;
+            const stockDerivationQty = item.stock_derivation_quantity || 1;
+            const parentStockReduction = item.quantity * variantMultiplier * stockDerivationQty;
+            
+            // Get current parent product from products array
+            const parentProduct = products.find(p => p.id === item.parent_id);
+            
+            if (parentProduct) {
+              const currentParentStock = parentProduct.currentStock || 0;
+              const newParentStock = Math.max(0, currentParentStock - parentStockReduction);
+              
+              await updateProduct(item.parent_id, { 
+                currentStock: newParentStock,
+                updatedAt: new Date().toISOString()
+              });
+              console.log('[SalesCheckout] Parent product stock updated for variant:', item.name, 'Parent stock reduction:', parentStockReduction, 'New parent stock:', newParentStock);
+            } else {
+              console.log('[SalesCheckout] Warning: Parent product not found for variant:', item.name);
+            }
+          } else {
+            // Regular product stock update
+            const currentStock = item.currentStock || 0;
+            const newStock = Math.max(0, currentStock - item.quantity);
+            await updateProduct(item.id, { 
+              currentStock: newStock,
+              updatedAt: new Date().toISOString()
+            });
+            console.log('[SalesCheckout] Product stock updated:', item.name, 'New stock:', newStock);
+          }
         } else {
           console.log('[SalesCheckout] Skipping stock update for unspecified quantity product:', item.name);
         }

@@ -10,6 +10,7 @@ import { useToast } from '../../hooks/use-toast';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
+import VariantManagementSection from './VariantManagementSection';
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -352,6 +353,21 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
               )}
               {errors.category && <p className="text-red-500 text-sm mt-2 font-mono">{errors.category}</p>}
             </div>
+
+            {/* Variant Management Section */}
+            {product.is_parent && (
+              <VariantManagementSection 
+                product={product}
+                onVariantUpdate={() => {
+                  // Refresh parent product when variants are updated
+                  toast({
+                    title: "Variant Updated",
+                    description: "Variant information has been updated successfully.",
+                  });
+                }}
+                disabled={loading}
+              />
+            )}
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 pt-6">

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/currency';
 import { CartItem } from '../types/cart';
-import { Customer } from '../types';
+import { Customer, Product } from '../types';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -20,6 +20,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
 import ResponsiveProductGrid from './ui/responsive-product-grid';
+import VariantSelectionModal from './sales/VariantSelectionModal';
 import { 
   Search, 
   ShoppingCart, 
@@ -172,6 +173,8 @@ const RebuiltModernSalesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [selectedParentProduct, setSelectedParentProduct] = useState<Product | null>(null);
   
   // Mobile panel state
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
@@ -209,6 +212,11 @@ const RebuiltModernSalesPage = () => {
     return Array.from(categorySet).sort();
   }, [products]);
 
+  // Get variants for a parent product
+  const getProductVariants = (parentProductId: string): Product[] => {
+    return products.filter(p => p.parent_id === parentProductId);
+  };
+
   // Calculate product sales frequency for sorting
   const productSalesFrequency = useMemo(() => {
     const frequency: Record<string, number> = {};
@@ -220,6 +228,10 @@ const RebuiltModernSalesPage = () => {
 
   const filteredProducts = useMemo((): FilteredProductType[] => {
     const filtered = products.filter(product => {
+      // Only show parent products or non-variant products in sales
+      const isVariantChild = product.parent_id !== null && product.parent_id !== undefined;
+      if (isVariantChild) return false;
+      
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
@@ -267,6 +279,16 @@ const RebuiltModernSalesPage = () => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
+    // Check if product has variants
+    if (product.is_parent) {
+      const variants = getProductVariants(product.id);
+      if (variants.length > 0) {
+        setSelectedParentProduct(product);
+        setIsVariantModalOpen(true);
+        return;
+      }
+    }
+
     // Allow adding products with unspecified stock (-1)
     if (product.currentStock !== -1 && product.currentStock < quantity) {
       toast({
@@ -286,7 +308,7 @@ const RebuiltModernSalesPage = () => {
       title: "Added to Cart",
       description: `${quantity}x ${product.name}`,
     });
-  }, [products, addToPersistedCart, refreshCartExpiry, toast]);
+  }, [products, addToPersistedCart, refreshCartExpiry, toast, getProductVariants]);
 
   const handleQuantityChange = useCallback((productId: string, newQuantity: number) => {
     const product = products.find(p => p.id === productId);
@@ -335,6 +357,44 @@ const RebuiltModernSalesPage = () => {
       productListRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [isMobile]);
+
+  const handleVariantSelect = useCallback((variant: Product) => {
+    // When a variant is selected, add it to cart with appropriate stock checking
+    if (selectedParentProduct) {
+      // Calculate available stock from parent using variant multiplier
+      const parentStock = selectedParentProduct.currentStock;
+      const stockDerivationQty = selectedParentProduct.stock_derivation_quantity || 1;
+      const availableVariantStock = parentStock !== -1 
+        ? Math.floor(parentStock / ((variant.variant_multiplier || 1) * stockDerivationQty))
+        : -1;
+
+      if (availableVariantStock !== -1 && availableVariantStock < 1) {
+        toast({
+          title: "Insufficient Stock",
+          description: `Not enough parent stock for ${variant.variant_name}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Add variant to cart with appropriate stock reference
+      const variantForCart = {
+        ...variant,
+        currentStock: availableVariantStock,
+        // Include parent reference for stock calculations
+        parent_id: selectedParentProduct.id,
+        stock_derivation_quantity: selectedParentProduct.stock_derivation_quantity
+      };
+
+      addToPersistedCart({ ...variantForCart, quantity: 1 });
+      refreshCartExpiry();
+      
+      toast({
+        title: "Added to Cart",
+        description: `1x ${variant.variant_name}`,
+      });
+    }
+  }, [selectedParentProduct, addToPersistedCart, refreshCartExpiry, toast]);
 
   // Get cart count
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -604,6 +664,17 @@ const RebuiltModernSalesPage = () => {
           isOpen={isAddDebtModalOpen}
           onClose={() => setIsAddDebtModalOpen(false)}
         />
+        
+        <VariantSelectionModal
+          isOpen={isVariantModalOpen}
+          onClose={() => {
+            setIsVariantModalOpen(false);
+            setSelectedParentProduct(null);
+          }}
+          parentProduct={selectedParentProduct}
+          variants={selectedParentProduct ? getProductVariants(selectedParentProduct.id) : []}
+          onVariantSelect={handleVariantSelect}
+        />
       </div>
     );
   }
@@ -817,6 +888,17 @@ const RebuiltModernSalesPage = () => {
       <AddDebtModal
         isOpen={isAddDebtModalOpen}
         onClose={() => setIsAddDebtModalOpen(false)}
+      />
+      
+      <VariantSelectionModal
+        isOpen={isVariantModalOpen}
+        onClose={() => {
+          setIsVariantModalOpen(false);
+          setSelectedParentProduct(null);
+        }}
+        parentProduct={selectedParentProduct}
+        variants={selectedParentProduct ? getProductVariants(selectedParentProduct.id) : []}
+        onVariantSelect={handleVariantSelect}
       />
     </div>
   );
