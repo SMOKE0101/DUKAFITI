@@ -9,8 +9,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '../../types';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
-import { ArrowRight, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Package2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ImageUpload from '../ui/image-upload';
+import TemplateSelectionModal from './TemplateSelectionModal';
 
 interface ProductVariant {
   id: string;
@@ -44,6 +46,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     currentStock: number;
     lowStockThreshold: number;
     stockDerivationQuantity: number;
+    image_url: string;
   }>({
     type: 'new',
     name: '',
@@ -51,6 +54,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     currentStock: 0,
     lowStockThreshold: 0,
     stockDerivationQuantity: 1,
+    image_url: '',
   });
   
   const [variants, setVariants] = useState<ProductVariant[]>([
@@ -60,6 +64,8 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templatesInitialized, setTemplatesInitialized] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -76,6 +82,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
       currentStock: 0,
       lowStockThreshold: 0,
       stockDerivationQuantity: 1,
+      image_url: '',
     });
     setVariants([
       { id: '1', name: '', multiplier: 0.5, sellingPrice: 0, costPrice: 0, showInQuickSelect: true },
@@ -83,6 +90,8 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     ]);
     setCustomCategory('');
     setShowCustomInput(false);
+    setShowTemplateModal(false);
+    setTemplatesInitialized(false);
   };
 
   const handleCategoryChange = (value: string) => {
@@ -181,6 +190,32 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     return true;
   };
 
+  const handleTemplateSelect = React.useCallback((templateData: any) => {
+    console.log('[VariationProductModal] Template data received:', templateData);
+    
+    setParentProduct(prev => ({
+      ...prev,
+      name: templateData.name || '',
+      category: templateData.category || '',
+      image_url: templateData.image_url || '',
+    }));
+    
+    // Handle custom category
+    if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
+      setCustomCategory(templateData.category);
+      setShowCustomInput(true);
+      setParentProduct(prev => ({ ...prev, category: 'Other / Custom' }));
+    } else {
+      setShowCustomInput(false);
+      setCustomCategory('');
+    }
+    
+    // Close template modal
+    setShowTemplateModal(false);
+    setTemplatesInitialized(false);
+    console.log('[VariationProductModal] Template selection complete, modal closed');
+  }, []);
+
   const handleSave = () => {
     if (!validateStep2()) return;
 
@@ -198,7 +233,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
       stock_derivation_quantity: parentProduct.stockDerivationQuantity,
       is_parent: true,
       sku: '', // Optional
-      image_url: null,
+      image_url: parentProduct.image_url || null,
     };
 
     onSave(parentProductData, validVariants);
@@ -239,10 +274,36 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
           {/* Step 1: Parent Product Configuration */}
           {step === 1 && (
             <div className="space-y-6">
+              {/* Product Image */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Product Name *
+                  Product Image
                 </Label>
+                <ImageUpload
+                  value={parentProduct.image_url}
+                  onChange={(url) => setParentProduct(prev => ({ ...prev, image_url: url || '' }))}
+                  placeholder="Upload product image"
+                  compact={true}
+                />
+              </div>
+
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+                    Product Name *
+                  </Label>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setTemplatesInitialized(true);
+                      setShowTemplateModal(true);
+                    }}
+                    className="h-8 px-3 border-2 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 text-xs"
+                  >
+                    <Package2 className="w-3 h-3 mr-1" />
+                    Use Template
+                  </Button>
+                </div>
                 <Input
                   value={parentProduct.name}
                   onChange={(e) => setParentProduct(prev => ({ ...prev, name: e.target.value }))}
@@ -528,6 +589,14 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Template Selection Modal */}
+        <TemplateSelectionModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onTemplateSelect={handleTemplateSelect}
+          mode="variation"
+        />
       </DialogContent>
     </Dialog>
   );

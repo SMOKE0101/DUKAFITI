@@ -12,7 +12,7 @@ interface TemplateSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTemplateSelect: (templateData: any) => void;
-  mode?: 'normal' | 'uncountable';
+  mode?: 'normal' | 'uncountable' | 'variation';
 }
 
 const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
@@ -268,33 +268,15 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 <div className={cn(
                   "gap-6 mb-6",
                   mode === 'uncountable' 
-                    ? "grid grid-cols-1 md:grid-cols-2" 
+                    ? "grid grid-cols-1 md:grid-cols-2"
+                    : mode === 'variation'
+                    ? "grid grid-cols-1 md:grid-cols-2"
                     : "grid grid-cols-2 md:grid-cols-4"
                 )}>
-                  <SpinningNumberInput
-                    label="Cost Price"
-                    value={formData.costPrice}
-                    onChange={(value) => handleFieldChange('costPrice', value)}
-                    min={0}
-                    max={999999}
-                    step={1}
-                    suffix="KES"
-                  />
-                  
-                  <SpinningNumberInput
-                    label="Selling Price"
-                    value={formData.sellingPrice}
-                    onChange={(value) => handleFieldChange('sellingPrice', value)}
-                    min={0}
-                    max={999999}
-                    step={1}
-                    suffix="KES"
-                  />
-                  
-                  {mode !== 'uncountable' && (
+                  {mode === 'variation' ? (
                     <>
                       <SpinningNumberInput
-                        label="Current Stock"
+                        label="Parent Stock Quantity"
                         value={formData.currentStock}
                         onChange={(value) => handleFieldChange('currentStock', value)}
                         min={0}
@@ -313,6 +295,52 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                         suffix="units"
                       />
                     </>
+                  ) : (
+                    <>
+                      <SpinningNumberInput
+                        label="Cost Price"
+                        value={formData.costPrice}
+                        onChange={(value) => handleFieldChange('costPrice', value)}
+                        min={0}
+                        max={999999}
+                        step={1}
+                        suffix="KES"
+                      />
+                      
+                      <SpinningNumberInput
+                        label="Selling Price"
+                        value={formData.sellingPrice}
+                        onChange={(value) => handleFieldChange('sellingPrice', value)}
+                        min={0}
+                        max={999999}
+                        step={1}
+                        suffix="KES"
+                      />
+                      
+                      {mode !== 'uncountable' && (
+                        <>
+                          <SpinningNumberInput
+                            label="Current Stock"
+                            value={formData.currentStock}
+                            onChange={(value) => handleFieldChange('currentStock', value)}
+                            min={0}
+                            max={999999}
+                            step={1}
+                            suffix="units"
+                          />
+                          
+                          <SpinningNumberInput
+                            label="Low Stock Alert"
+                            value={formData.lowStockThreshold}
+                            onChange={(value) => handleFieldChange('lowStockThreshold', value)}
+                            min={0}
+                            max={999999}
+                            step={1}
+                            suffix="units"
+                          />
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
                 
@@ -328,37 +356,51 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   </div>
                 )}
                 
-                {/* Profit Calculation */}
-                <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 mb-6 border border-primary/20">
-                  <h4 className="font-semibold text-center mb-3">Profit Analysis</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <div className="text-xs text-muted-foreground mb-1">Profit per Unit</div>
-                      <div className={cn(
-                        "text-lg font-semibold",
-                        formData.sellingPrice > formData.costPrice 
-                          ? "text-green-600 dark:text-green-400" 
-                          : "text-red-600 dark:text-red-400"
-                      )}>
-                        {(formData.sellingPrice - formData.costPrice).toLocaleString()} KES
+                {/* Variation Notice */}
+                {mode === 'variation' && (
+                  <div className="border-2 border-green-300 dark:border-green-600 rounded-xl p-4 bg-green-50/50 dark:bg-green-900/20 mb-6">
+                    <h4 className="font-semibold uppercase tracking-wider text-green-900 dark:text-green-100 mb-2">
+                      Variation Product Template
+                    </h4>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      This template will be used as the base for your product variations. You'll define individual variant prices and multipliers in the next steps.
+                    </p>
+                  </div>
+                )}
+
+                {/* Profit Calculation - Only show for non-variation modes */}
+                {mode !== 'variation' && (
+                  <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 mb-6 border border-primary/20">
+                    <h4 className="font-semibold text-center mb-3">Profit Analysis</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1">Profit per Unit</div>
+                        <div className={cn(
+                          "text-lg font-semibold",
+                          formData.sellingPrice > formData.costPrice 
+                            ? "text-green-600 dark:text-green-400" 
+                            : "text-red-600 dark:text-red-400"
+                        )}>
+                          {(formData.sellingPrice - formData.costPrice).toLocaleString()} KES
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xs text-muted-foreground mb-1">Profit Margin</div>
-                      <div className={cn(
-                        "text-lg font-semibold",
-                        formData.sellingPrice > formData.costPrice 
-                          ? "text-green-600 dark:text-green-400" 
-                          : "text-red-600 dark:text-red-400"
-                      )}>
-                        {formData.costPrice > 0 
-                          ? (((formData.sellingPrice - formData.costPrice) / formData.costPrice) * 100).toFixed(1)
-                          : '0'
-                        }%
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1">Profit Margin</div>
+                        <div className={cn(
+                          "text-lg font-semibold",
+                          formData.sellingPrice > formData.costPrice 
+                            ? "text-green-600 dark:text-green-400" 
+                            : "text-red-600 dark:text-red-400"
+                        )}>
+                          {formData.costPrice > 0 
+                            ? (((formData.sellingPrice - formData.costPrice) / formData.costPrice) * 100).toFixed(1)
+                            : '0'
+                          }%
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row items-center gap-3">

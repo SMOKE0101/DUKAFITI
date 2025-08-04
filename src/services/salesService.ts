@@ -152,10 +152,10 @@ export class SalesService {
     console.log('[SalesService] Updating product stock:', productId, quantitySold);
 
     try {
-      // First get current stock
+      // First get product details including variant information
       const { data: product, error: fetchError } = await supabase
         .from('products')
-        .select('current_stock')
+        .select('current_stock, parent_id, variant_multiplier, stock_derivation_quantity')
         .eq('id', productId)
         .single();
 
@@ -171,6 +171,14 @@ export class SalesService {
         return;
       }
 
+      // If this is a variant (has parent_id), update parent stock instead
+      if (product.parent_id) {
+        console.log('[SalesService] Variant detected, updating parent stock:', product.parent_id);
+        await this.updateParentStock(product.parent_id, quantitySold, product.variant_multiplier || 1);
+        return;
+      }
+
+      // For regular products or parent products, update normally
       const newStock = Math.max(0, (product.current_stock || 0) - quantitySold);
 
       const { error: updateError } = await supabase
@@ -190,6 +198,60 @@ export class SalesService {
     } catch (error) {
       console.error('[SalesService] Stock update failed:', error);
       // Don't throw here - stock update is not critical for sale completion
+    }
+  }
+
+  static async updateParentStock(parentId: string, variantQuantitySold: number, variantMultiplier: number): Promise<void> {
+    console.log('[SalesService] Updating parent stock:', { parentId, variantQuantitySold, variantMultiplier });
+
+    try {
+      // Get parent product details
+      const { data: parentProduct, error: fetchError } = await supabase
+        .from('products')
+        .select('current_stock, stock_derivation_quantity')
+        .eq('id', parentId)
+        .single();
+
+      if (fetchError) {
+        console.error('[SalesService] Error fetching parent product:', fetchError);
+        return;
+      }
+
+      // Skip stock update for unspecified quantity products
+      if (parentProduct.current_stock === -1) {
+        console.log('[SalesService] Skipping stock update for unspecified quantity parent product:', parentId);
+        return;
+      }
+
+      // Calculate stock deduction: variant_quantity * variant_multiplier * stock_derivation_quantity
+      const stockDerivationQty = parentProduct.stock_derivation_quantity || 1;
+      const stockDeduction = variantQuantitySold * variantMultiplier * stockDerivationQty;
+      const newStock = Math.max(0, (parentProduct.current_stock || 0) - stockDeduction);
+
+      console.log('[SalesService] Parent stock calculation:', {
+        currentStock: parentProduct.current_stock,
+        variantQuantitySold,
+        variantMultiplier,
+        stockDerivationQty,
+        stockDeduction,
+        newStock
+      });
+
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          current_stock: newStock,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', parentId);
+
+      if (updateError) {
+        console.error('[SalesService] Error updating parent stock:', updateError);
+      } else {
+        console.log('[SalesService] Parent stock updated successfully:', newStock);
+      }
+    } catch (error) {
+      console.error('[SalesService] Parent stock update failed:', error);
     }
   }
 
