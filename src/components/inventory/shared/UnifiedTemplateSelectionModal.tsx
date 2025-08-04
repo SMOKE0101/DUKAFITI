@@ -113,6 +113,11 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
       };
     }
 
+    // Close overlay first
+    setIsOverlayVisible(false);
+    setSelectedTemplate(null);
+    
+    // Pass data to parent and close modal
     onTemplateSelect(transformedData);
     onClose();
   };
@@ -146,7 +151,7 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <CustomDialogContent className="max-w-6xl w-[98vw] max-h-[95vh] p-0 flex flex-col bg-background">
+        <CustomDialogContent className="max-w-6xl w-[98vw] max-h-[95vh] p-0 flex flex-col bg-background relative">
           <DialogTitle className="sr-only">Select Product Template</DialogTitle>
           
           {/* Header */}
@@ -399,17 +404,19 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
               </>
             )}
           </div>
+          
+          {/* Template Configuration Overlay - Inside Dialog */}
+          {isOverlayVisible && selectedTemplate && (
+            <TemplateSelectionOverlay
+              template={selectedTemplate}
+              isVisible={isOverlayVisible}
+              onClose={handleCloseOverlay}
+              onAddToSpreadsheet={handleUseTemplate}
+              mode="single"
+            />
+          )}
         </CustomDialogContent>
       </Dialog>
-
-      {/* Template Configuration Overlay */}
-      <TemplateSelectionOverlay
-        template={selectedTemplate}
-        isVisible={isOverlayVisible}
-        onClose={handleCloseOverlay}
-        onAddToSpreadsheet={handleUseTemplate}
-        mode="single"
-      />
     </>
   );
 };
