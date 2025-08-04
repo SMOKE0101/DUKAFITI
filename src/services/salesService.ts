@@ -225,7 +225,7 @@ export class SalesService {
 
       // Calculate stock deduction: variant_quantity * variant_multiplier * stock_derivation_quantity
       const stockDerivationQty = parentProduct.stock_derivation_quantity || 1;
-      const stockDeduction = variantQuantitySold * variantMultiplier * stockDerivationQty;
+      const stockDeduction = Math.round(variantQuantitySold * variantMultiplier * stockDerivationQty);
       const newStock = Math.max(0, (parentProduct.current_stock || 0) - stockDeduction);
 
       console.log('[SalesService] Parent stock calculation:', {

@@ -198,6 +198,8 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
       name: templateData.name || '',
       category: templateData.category || '',
       image_url: templateData.image_url || '',
+      currentStock: templateData.current_stock || 0,
+      lowStockThreshold: templateData.low_stock_threshold || 10,
     }));
     
     // Handle custom category
