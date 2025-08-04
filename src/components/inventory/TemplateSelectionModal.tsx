@@ -46,8 +46,10 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
 
   const handleTemplateClick = (template: ProductTemplate) => {
     console.log('Template clicked in modal:', template.name);
+    console.log('Setting selectedTemplate and showConfigOverlay to true');
     setSelectedTemplate(template);
     setShowConfigOverlay(true);
+    console.log('State should be updated now');
   };
 
   const handleConfigClose = () => {
@@ -61,6 +63,8 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     setSelectedTemplate(null);
     onClose();
   };
+
+  console.log('TemplateSelectionModal render:', { selectedTemplate: selectedTemplate?.name, showConfigOverlay });
 
   if (!isOpen) return null;
 
@@ -144,7 +148,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Configuration Overlay */}
+      {/* Configuration Overlay - Render outside Dialog to avoid z-index issues */}
       {selectedTemplate && showConfigOverlay && (
         <TemplateSelectionOverlay
           template={selectedTemplate}

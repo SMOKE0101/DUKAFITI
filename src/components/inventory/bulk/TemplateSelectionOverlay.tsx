@@ -61,6 +61,8 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
     onClose();
   };
 
+  console.log('TemplateSelectionOverlay render:', { isVisible, templateName: template?.name });
+  
   if (!isVisible) return null;
 
   return (
