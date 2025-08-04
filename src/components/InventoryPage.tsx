@@ -274,7 +274,7 @@ const InventoryPage = () => {
       
       // Create child variant records (these won't appear in main inventory)
       const variantInserts = variants.map(variant => ({
-        name: variant.name, // Just the variant name, not full product name
+        name: `${parentProduct.name} - ${variant.name}`, // Include parent product name for identification
         category: parentProduct.category,
         costPrice: variant.costPrice,
         sellingPrice: variant.sellingPrice,
@@ -283,7 +283,7 @@ const InventoryPage = () => {
         parent_id: parentId,
         variant_name: variant.name,
         variant_multiplier: variant.multiplier,
-        stock_derivation_quantity: 0,
+        stock_derivation_quantity: 1, // Set to 1 for proper stock calculation
         is_parent: false,
         sku: `${parentProduct.name.substring(0, 3)}-${variant.name.substring(0, 3)}`.toUpperCase(),
         image_url: parentProduct.image_url,

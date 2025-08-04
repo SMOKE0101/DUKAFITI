@@ -223,16 +223,15 @@ export class SalesService {
         return;
       }
 
-      // Calculate stock deduction: variant_quantity * variant_multiplier * stock_derivation_quantity
-      const stockDerivationQty = parentProduct.stock_derivation_quantity || 1;
-      const stockDeduction = Math.round(variantQuantitySold * variantMultiplier * stockDerivationQty);
+      // Calculate stock deduction: variant_quantity * variant_multiplier
+      // Note: stock_derivation_quantity is set to 1 for variants, so we use variant_multiplier directly
+      const stockDeduction = Math.round(variantQuantitySold * variantMultiplier);
       const newStock = Math.max(0, (parentProduct.current_stock || 0) - stockDeduction);
 
       console.log('[SalesService] Parent stock calculation:', {
         currentStock: parentProduct.current_stock,
         variantQuantitySold,
         variantMultiplier,
-        stockDerivationQty,
         stockDeduction,
         newStock
       });

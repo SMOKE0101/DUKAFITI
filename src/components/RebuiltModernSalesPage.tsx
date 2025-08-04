@@ -17,6 +17,8 @@ import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useIsMobile, useIsTablet } from '../hooks/use-mobile';
 import { usePersistedCart } from '../hooks/usePersistedCart';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
 import ResponsiveProductGrid from './ui/responsive-product-grid';
@@ -175,6 +177,9 @@ const RebuiltModernSalesPage = () => {
   const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
   const [selectedParentProduct, setSelectedParentProduct] = useState<Product | null>(null);
+  const [currentVariants, setCurrentVariants] = useState<Product[]>([]);
+
+  const { user } = useAuth();
   
   // Mobile panel state
   const [activePanel, setActivePanel] = useState<'search' | 'cart'>('search');
@@ -212,10 +217,47 @@ const RebuiltModernSalesPage = () => {
     return Array.from(categorySet).sort();
   }, [products]);
 
-  // Get variants for a parent product
-  const getProductVariants = (parentProductId: string): Product[] => {
-    return products.filter(p => p.parent_id === parentProductId);
-  };
+  // Get variants for a parent product - need to query separately since variants are filtered out
+  const getProductVariants = useCallback(async (parentProductId: string): Promise<Product[]> => {
+    if (!user) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('parent_id', parentProductId);
+      
+      if (error) {
+        console.error('[SalesPage] Error fetching variants:', error);
+        return [];
+      }
+      
+      // Transform database products to app format
+      const transformedVariants = (data || []).map(dbProduct => ({
+        id: dbProduct.id,
+        name: dbProduct.name,
+        category: dbProduct.category,
+        costPrice: dbProduct.cost_price,
+        sellingPrice: dbProduct.selling_price,
+        currentStock: dbProduct.current_stock,
+        lowStockThreshold: dbProduct.low_stock_threshold,
+        createdAt: dbProduct.created_at,
+        updatedAt: dbProduct.updated_at,
+        image_url: dbProduct.image_url || null,
+        parent_id: dbProduct.parent_id,
+        variant_name: dbProduct.variant_name,
+        variant_multiplier: dbProduct.variant_multiplier,
+        stock_derivation_quantity: dbProduct.stock_derivation_quantity,
+        is_parent: dbProduct.is_parent,
+      }));
+      
+      return transformedVariants;
+    } catch (error) {
+      console.error('[SalesPage] Error fetching variants:', error);
+      return [];
+    }
+  }, [user]);
 
   // Calculate product sales frequency for sorting
   const productSalesFrequency = useMemo(() => {
@@ -281,12 +323,31 @@ const RebuiltModernSalesPage = () => {
 
     // Check if product has variants
     if (product.is_parent) {
-      const variants = getProductVariants(product.id);
-      if (variants.length > 0) {
-        setSelectedParentProduct(product);
-        setIsVariantModalOpen(true);
-        return;
-      }
+      // Fetch variants asynchronously
+      getProductVariants(product.id).then(variants => {
+        if (variants.length > 0) {
+          setCurrentVariants(variants);
+          setSelectedParentProduct(product);
+          setIsVariantModalOpen(true);
+        } else {
+          // No variants found, proceed with normal add to cart
+          if (product.currentStock !== -1 && product.currentStock < quantity) {
+            toast({
+              title: "Insufficient Stock",
+              description: `Only ${product.currentStock} units available for ${product.name}`,
+              variant: "destructive",
+            });
+            return;
+          }
+          addToPersistedCart({ ...product, quantity });
+          refreshCartExpiry();
+          toast({
+            title: "Added to Cart",
+            description: `${quantity}x ${product.name}`,
+          });
+        }
+      });
+      return;
     }
 
     // Allow adding products with unspecified stock (-1)
@@ -672,7 +733,7 @@ const RebuiltModernSalesPage = () => {
             setSelectedParentProduct(null);
           }}
           parentProduct={selectedParentProduct}
-          variants={selectedParentProduct ? getProductVariants(selectedParentProduct.id) : []}
+          variants={currentVariants}
           onVariantSelect={handleVariantSelect}
         />
       </div>
@@ -897,7 +958,7 @@ const RebuiltModernSalesPage = () => {
           setSelectedParentProduct(null);
         }}
         parentProduct={selectedParentProduct}
-        variants={selectedParentProduct ? getProductVariants(selectedParentProduct.id) : []}
+        variants={currentVariants}
         onVariantSelect={handleVariantSelect}
       />
     </div>
