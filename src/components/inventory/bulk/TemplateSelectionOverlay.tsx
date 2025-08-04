@@ -74,13 +74,13 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
 
   return (
     <div className={cn(
-      "absolute inset-0 flex items-start justify-center pt-[15vh]",
+      "fixed inset-0 flex items-start justify-center pt-[15vh]",
       "bg-black/70 backdrop-blur-sm",
       className
     )}
     style={{ 
-      zIndex: 1000, // Lower z-index since it's now inside the dialog
-      position: 'absolute',
+      zIndex: 100000,
+      position: 'fixed',
       top: 0,
       left: 0,
       right: 0,
@@ -100,7 +100,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       <div 
         className="relative bg-card/98 backdrop-blur-xl rounded-2xl md:rounded-3xl border border-border/50 shadow-2xl max-w-2xl md:max-w-3xl w-full mx-2 md:mx-4 transform transition-all duration-300 ease-out"
         style={{ 
-          zIndex: 1001, // One level above overlay background
+          zIndex: 10000,
           background: 'linear-gradient(135deg, hsl(var(--card) / 0.98), hsl(var(--muted) / 0.95))',
           backdropFilter: 'blur(20px)',
         }}
