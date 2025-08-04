@@ -160,6 +160,16 @@ const PaginatedTemplateGrid: React.FC<{
   };
 
   const handleAddToSpreadsheet = (productData: any) => {
+    // Prevent duplicates by checking if template is already added
+    const existingRowIndex = spreadsheetData.findIndex(row => 
+      row.name.trim() === productData.name.trim() && row.name.trim() !== ''
+    );
+    
+    if (existingRowIndex >= 0) {
+      console.log('[TemplatesView] Template already exists in spreadsheet, skipping');
+      return;
+    }
+    
     // Find first empty row in spreadsheet
     const emptyRowIndex = spreadsheetData.findIndex(row => !row.name.trim());
     const newSpreadsheetData = [...spreadsheetData];
@@ -168,10 +178,10 @@ const PaginatedTemplateGrid: React.FC<{
       id: emptyRowIndex >= 0 ? spreadsheetData[emptyRowIndex].id : `template_${productData.name}_${Date.now()}`,
       name: productData.name,
       category: productData.category || '',
-      costPrice: productData.cost_price,
-      sellingPrice: productData.selling_price,
-      currentStock: productData.current_stock,
-      lowStockThreshold: productData.low_stock_threshold,
+      costPrice: productData.costPrice, // Fix: use camelCase property names
+      sellingPrice: productData.sellingPrice,
+      currentStock: productData.currentStock,
+      lowStockThreshold: productData.lowStockThreshold,
       image_url: productData.image_url || '',
       isValid: true,
       errors: []

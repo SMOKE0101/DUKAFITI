@@ -56,10 +56,10 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       name: template.name,
       category: template.category,
       image_url: template.image_url,
-      cost_price: formData.costPrice,
-      selling_price: formData.sellingPrice,
-      current_stock: formData.currentStock,
-      low_stock_threshold: formData.lowStockThreshold
+      costPrice: formData.costPrice,
+      sellingPrice: formData.sellingPrice,
+      currentStock: formData.currentStock,
+      lowStockThreshold: formData.lowStockThreshold
     };
     
     console.log('[TemplateSelectionOverlay] Calling onAddToSpreadsheet with:', productData);
@@ -161,7 +161,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
           </div>
           
           {/* Compact Spinning Number Inputs Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
             <SpinningNumberInput
               label="Cost"
               value={formData.costPrice}
@@ -240,16 +240,17 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
             <Button
               onClick={onClose}
               variant="outline"
-              className="w-full sm:flex-1 h-9 text-sm"
+              className="w-full sm:w-auto h-10 text-sm px-6"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddProduct}
-              className="w-full sm:flex-1 h-9 text-sm gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+              size="lg"
+              className="w-full sm:flex-1 h-12 text-base font-semibold gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
             >
-              <Plus className="w-3 h-3" />
-              {mode === 'single' ? 'Use Template' : 'Add to Spreadsheet'}
+              <Plus className="w-4 h-4" />
+              Save
             </Button>
           </div>
         </div>

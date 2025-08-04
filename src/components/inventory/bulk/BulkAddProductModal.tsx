@@ -125,11 +125,11 @@ const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
             <Button
               onClick={handleSave}
               disabled={!stats.hasValidProducts}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white h-6 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
+              size="lg"
+              className="bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 px-4 sm:px-6 text-sm sm:text-base font-semibold shadow-lg"
             >
-              <span className="hidden sm:inline">Add {stats.validCount}</span>
-              <span className="sm:hidden">+{stats.validCount}</span>
+              <span className="hidden sm:inline">Save Products ({stats.validCount})</span>
+              <span className="sm:hidden">Save ({stats.validCount})</span>
             </Button>
             
             <Button
