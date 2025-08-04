@@ -122,24 +122,24 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
         
         {/* Content */}
         <div className="p-4 md:p-6">
-          <div className="text-center mb-6">
-            <h4 className="text-lg md:text-xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+          <div className="text-center mb-4">
+            <h4 className="text-base font-semibold mb-1 text-foreground">
               Configure Product Details
             </h4>
-            <p className="text-muted-foreground text-sm md:text-base">
-              Use the spinning dials to set pricing and stock information
+            <p className="text-muted-foreground text-xs">
+              Scroll or tap to adjust values
             </p>
           </div>
           
-          {/* Spinning Number Inputs - Responsive Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-6 md:mb-8">
+          {/* Compact Spinning Number Inputs Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4">
             <SpinningNumberInput
               label="Cost"
               value={formData.costPrice}
               onChange={(value) => handleFieldChange('costPrice', value)}
               min={0}
               max={999999}
-              step={5}
+              step={1}
               suffix="KES"
             />
             
@@ -149,7 +149,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
               onChange={(value) => handleFieldChange('sellingPrice', value)}
               min={0}
               max={999999}
-              step={5}
+              step={1}
               suffix="KES"
             />
             
@@ -159,7 +159,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
               onChange={(value) => handleFieldChange('currentStock', value)}
               min={0}
               max={999999}
-              step={10}
+              step={1}
               suffix="units"
             />
             
@@ -169,19 +169,19 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
               onChange={(value) => handleFieldChange('lowStockThreshold', value)}
               min={0}
               max={999999}
-              step={5}
+              step={1}
               suffix="units"
             />
           </div>
           
-          {/* Enhanced Profit Calculation */}
-          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl md:rounded-2xl p-4 md:p-6 mb-6 md:mb-8 border border-primary/20">
-            <h5 className="font-semibold text-center mb-4 text-foreground">Profit Analysis</h5>
-            <div className="grid grid-cols-2 gap-4">
+          {/* Compact Profit Calculation */}
+          <div className="bg-gradient-to-r from-primary/3 to-primary/5 rounded-lg p-3 mb-4 border border-primary/10">
+            <h5 className="font-medium text-center mb-2 text-foreground text-sm">Profit Analysis</h5>
+            <div className="grid grid-cols-2 gap-3">
               <div className="text-center">
-                <div className="text-sm text-muted-foreground mb-1">Profit per Unit</div>
+                <div className="text-xs text-muted-foreground mb-1">Profit per Unit</div>
                 <div className={cn(
-                  "text-2xl font-bold",
+                  "text-lg font-semibold",
                   formData.sellingPrice > formData.costPrice 
                     ? "text-green-600 dark:text-green-400" 
                     : "text-red-600 dark:text-red-400"
@@ -190,9 +190,9 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-muted-foreground mb-1">Profit Margin</div>
+                <div className="text-xs text-muted-foreground mb-1">Profit Margin</div>
                 <div className={cn(
-                  "text-2xl font-bold",
+                  "text-lg font-semibold",
                   formData.sellingPrice > formData.costPrice 
                     ? "text-green-600 dark:text-green-400" 
                     : "text-red-600 dark:text-red-400"
@@ -207,21 +207,19 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
           </div>
           
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
             <Button
               onClick={onClose}
               variant="outline"
-              className="w-full sm:flex-1 h-10 md:h-12 text-sm md:text-base"
-              size="lg"
+              className="w-full sm:flex-1 h-9 text-sm"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddProduct}
-              className="w-full sm:flex-1 h-10 md:h-12 text-sm md:text-base gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-              size="lg"
+              className="w-full sm:flex-1 h-9 text-sm gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
             >
-              <Plus className="w-4 h-4 md:w-5 md:h-5" />
+              <Plus className="w-3 h-3" />
               Add to Spreadsheet
             </Button>
           </div>

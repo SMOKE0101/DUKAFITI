@@ -27,24 +27,15 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Reset state when src changes - optimize for instant display
+  // Reset state when src changes - always start with loaded for existing images
   useEffect(() => {
     if (!src) {
       setImageState('error');
       return;
     }
     
-    // For Supabase storage URLs, show immediately without loading state
-    if (src.includes('/storage/v1/object/public/') || src.includes('supabase.co/storage/')) {
-      setImageState('loaded');
-    } else {
-      // For external URLs, start with loading state but try to preload
-      setImageState('loading');
-      const img = new Image();
-      img.onload = () => setImageState('loaded');
-      img.onerror = () => setImageState('error');
-      img.src = src;
-    }
+    // Always start with loaded state to show images immediately
+    setImageState('loaded');
   }, [src]);
 
   const handleLoad = () => {
@@ -98,40 +89,26 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
     return renderFallback();
   }
 
-  // Check if this is a Supabase storage URL - use direct image for instant loading
-  const isSupabaseImage = src && (src.includes('/storage/v1/object/public/') || src.includes('supabase.co/storage/'));
-
-  if (isSupabaseImage) {
-    return (
-      <div className={cn("relative w-full h-full overflow-hidden", className)}>
-        <img
-          ref={imgRef}
-          src={src}
-          alt={alt}
-          className="w-full h-full object-cover"
-          loading="eager"
-          onLoad={handleLoad}
-          onError={handleError}
-          referrerPolicy="no-referrer"
-        />
-        {/* Show fallback only on error */}
-        {imageState === 'error' && (
-          <div className="absolute inset-0">
-            {renderFallback()}
-          </div>
-        )}
-      </div>
-    );
-  }
-
+  // Always try to load the image directly first for maximum compatibility
   return (
     <div className={cn("relative w-full h-full overflow-hidden", className)}>
-      <ProxyImage
-        src={src || ''}
+      <img
+        ref={imgRef}
+        src={src}
         alt={alt}
         className="w-full h-full object-cover"
-        fallbackContent={renderFallback()}
+        loading="eager"
+        onLoad={handleLoad}
+        onError={handleError}
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
       />
+      {/* Show fallback only on error */}
+      {imageState === 'error' && (
+        <div className="absolute inset-0">
+          {renderFallback()}
+        </div>
+      )}
     </div>
   );
 };
