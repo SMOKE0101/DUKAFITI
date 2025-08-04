@@ -596,12 +596,12 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
             <Button
               type="button"
               onClick={prevStep}
               disabled={step === 1}
-              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white font-mono font-bold uppercase tracking-wide rounded-lg"
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white font-mono font-bold uppercase tracking-wide rounded-lg text-sm sm:text-base"
             >
               Previous
             </Button>
@@ -610,7 +610,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
               <Button
                 type="button"
                 onClick={nextStep}
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg"
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg text-sm sm:text-base"
               >
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -619,7 +619,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
               <Button
                 type="button"
                 onClick={handleSave}
-                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg"
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg text-sm sm:text-base"
               >
                 Create Product Variants
               </Button>

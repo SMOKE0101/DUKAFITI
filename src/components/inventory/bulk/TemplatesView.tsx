@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils';
 import { useBulkAdd } from './BulkAddProvider';
 import { useProductTemplates } from '../../../hooks/useProductTemplates';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Search, X, Filter } from 'lucide-react';
 import ResponsiveProductGrid from '../../ui/responsive-product-grid';
 import SimpleTemplateSearch from './SimpleTemplateSearch';
 import TemplateLoadingStatus from './TemplateLoadingStatus';
@@ -33,45 +35,97 @@ const TemplatesView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Simplified Header - Search and Categories Only */}
-      <div className="p-3 border-b border-border bg-muted/20">
-        <SimpleTemplateSearch
-          searchTerm={searchTerm}
-          onSearchChange={searchTemplates}
-          selectedCategory={selectedCategory}
-          categories={categories}
-          onCategoryChange={filterByCategory}
-          onClearFilters={clearFilters}
-          resultsCount={templates.length}
-          totalItems={totalTemplates}
-          loading={loading}
-        />
+      {/* Fixed Search Bar Only */}
+      <div className="p-2 sm:p-3 border-b border-border bg-muted/20 flex-shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={`Search ${totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates... (e.g., 'kabras', 'sugar', 'omo')`}
+            value={searchTerm}
+            onChange={(e) => searchTemplates(e.target.value)}
+            className="pl-10 pr-10 h-8 sm:h-10 text-sm"
+            disabled={loading}
+          />
+          {searchTerm && (
+            <Button
+              onClick={() => searchTemplates('')}
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 sm:h-7 sm:w-7 p-0"
+            >
+              <X className="w-3 h-3 sm:w-4 sm:h-4" />
+            </Button>
+          )}
+        </div>
       </div>
-      
-      {/* Templates Grid */}
+
+      {/* Scrollable Categories and Templates */}
       <div className="flex-1 overflow-auto">
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
-            {Array.from({ length: 24 }).map((_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 dark:bg-gray-700 rounded-lg aspect-square mb-2"></div>
-                <div className="bg-gray-200 dark:bg-gray-700 rounded h-4 mb-1"></div>
-                <div className="bg-gray-200 dark:bg-gray-700 rounded h-3 w-2/3"></div>
-              </div>
+        {/* Scrollable Category Filter */}
+        <div className="p-2 sm:p-3 bg-muted/10 border-b border-border/50">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {categories.map((category) => (
+              <Button
+                key={category}
+                onClick={() => filterByCategory(category)}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "capitalize whitespace-nowrap flex-shrink-0 h-7 px-3 text-xs",
+                  selectedCategory === category && "bg-primary text-primary-foreground"
+                )}
+                disabled={loading}
+              >
+                <Filter className="w-3 h-3 mr-1" />
+                {category === 'all' ? 'All Categories' : category}
+              </Button>
             ))}
           </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center p-8">
-              <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Failed to load templates
-              </div>
-              <p className="text-gray-500 dark:text-gray-400">{error}</p>
-            </div>
+          
+          {/* Compact Results Summary */}
+          <div className="flex items-center justify-between text-xs mt-2">
+            <span className="text-muted-foreground">
+              <span className="font-semibold text-primary">{templates.length.toLocaleString()}</span> of{' '}
+              <span className="font-semibold">{totalTemplates.toLocaleString()}</span> templates
+            </span>
+            {(searchTerm.trim() || selectedCategory !== 'all') && (
+              <Button
+                onClick={clearFilters}
+                variant="ghost"
+                size="sm"
+                className="text-xs h-6 px-2"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
-        ) : (
-          <PaginatedTemplateGrid templates={templates} selectedTemplates={selectedTemplates} onToggleTemplate={toggleTemplate} />
-        )}
+        </div>
+        
+        {/* Templates Grid */}
+        <div className="flex-1">
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
+              {Array.from({ length: 24 }).map((_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg aspect-square mb-2"></div>
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded h-4 mb-1"></div>
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded h-3 w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center p-8">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Failed to load templates
+                </div>
+                <p className="text-gray-500 dark:text-gray-400">{error}</p>
+              </div>
+            </div>
+          ) : (
+            <PaginatedTemplateGrid templates={templates} selectedTemplates={selectedTemplates} onToggleTemplate={toggleTemplate} />
+          )}
+        </div>
       </div>
     </div>
   );

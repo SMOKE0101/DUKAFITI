@@ -323,17 +323,17 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
 
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6">
               <Button 
                 type="button" 
                 onClick={onClose}
-                className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200"
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 text-sm sm:text-base"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
-                className="px-6 py-3 border-2 border-orange-600 bg-orange-600 text-white hover:bg-orange-700 hover:border-orange-700 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-orange-600 bg-orange-600 text-white hover:bg-orange-700 hover:border-orange-700 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base"
               >
                 Add Uncountable Item
               </Button>
