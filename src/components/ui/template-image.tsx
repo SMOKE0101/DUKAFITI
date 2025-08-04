@@ -105,28 +105,12 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
 
   return (
     <div className={cn("relative w-full h-full overflow-hidden", className)}>
-      {/* Direct image loading for better performance */}
-      <img
-        ref={imgRef}
-        src={src}
+      <ProxyImage
+        src={src || ''}
         alt={alt}
-        className={cn(
-          "w-full h-full object-cover transition-opacity duration-200",
-          imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
-        )}
-        onLoad={handleLoad}
-        onError={handleError}
-        loading="lazy"
-        crossOrigin="anonymous"
-        referrerPolicy="no-referrer"
+        className="w-full h-full object-cover"
+        fallbackContent={renderFallback()}
       />
-      
-      {/* Show fallback when loading or error */}
-      {imageState !== 'loaded' && (
-        <div className="absolute inset-0">
-          {renderFallback()}
-        </div>
-      )}
     </div>
   );
 };
