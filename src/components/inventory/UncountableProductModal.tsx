@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Sparkles } from 'lucide-react';
 import { Product } from '../../types';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
+import TemplateSelectionModal from './TemplateSelectionModal';
 
 interface UncountableProductModalProps {
   isOpen: boolean;
@@ -28,6 +30,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
   });
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,6 +42,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       });
       setCustomCategory('');
       setShowCustomInput(false);
+      setShowTemplateModal(false);
     }
   }, [isOpen]);
 
@@ -107,6 +111,33 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       setShowCustomInput(false);
       setCustomCategory('');
     }
+  };
+
+  const handleTemplateSelect = (templateData: any) => {
+    console.log('[UncountableProductModal] Template selected:', templateData);
+    
+    // Pre-fill form with template data
+    setFormData({
+      name: templateData.name || '',
+      category: templateData.category || '',
+      costPrice: templateData.cost_price || 0,
+      sellingPrice: templateData.selling_price || 0,
+    });
+    
+    // Handle custom category if needed
+    if (isCustomCategory(templateData.category)) {
+      setShowCustomInput(true);
+      setCustomCategory(templateData.category);
+    } else {
+      setShowCustomInput(false);
+      setCustomCategory('');
+    }
+    
+    setShowTemplateModal(false);
+  };
+
+  const handleUseTemplates = () => {
+    setShowTemplateModal(true);
   };
 
   return (
@@ -228,6 +259,18 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
               </p>
             </div>
 
+            {/* Use Templates Button */}
+            <div className="mb-6">
+              <Button 
+                type="button" 
+                onClick={handleUseTemplates}
+                className="w-full px-6 py-3 border-2 border-purple-500 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 hover:border-purple-600 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Use Templates
+              </Button>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-6">
               <Button 
@@ -247,6 +290,14 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
           </form>
         </div>
       </DialogContent>
+      
+      {/* Template Selection Modal */}
+      <TemplateSelectionModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onTemplateSelect={handleTemplateSelect}
+        mode="uncountable"
+      />
     </Dialog>
   );
 };

@@ -12,12 +12,14 @@ interface TemplateSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTemplateSelect: (templateData: any) => void;
+  mode?: 'normal' | 'uncountable';
 }
 
 const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   isOpen,
   onClose,
-  onTemplateSelect
+  onTemplateSelect,
+  mode = 'normal'
 }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
   const [modalStep, setModalStep] = useState<'selection' | 'configuration'>('selection');
@@ -131,12 +133,14 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Package2 className="w-4 h-4 text-primary" />
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold">Select Product Template</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Choose a template to pre-fill your product details
-                  </p>
-                </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Select {mode === 'uncountable' ? 'Uncountable Item' : 'Product'} Template
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Choose a template to pre-fill your {mode === 'uncountable' ? 'uncountable item' : 'product'} details
+                    </p>
+                  </div>
               </div>
               
               <Button
@@ -252,14 +256,21 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
             <div className="flex-1 overflow-auto p-6">
               <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Configure Product Details</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    Configure {mode === 'uncountable' ? 'Uncountable Item' : 'Product'} Details
+                  </h3>
                   <p className="text-muted-foreground text-sm">
-                    Adjust the values below to customize your product
+                    Adjust the values below to customize your {mode === 'uncountable' ? 'uncountable item' : 'product'}
                   </p>
                 </div>
                 
-                {/* Spinning Number Inputs Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+                 {/* Spinning Number Inputs Grid */}
+                <div className={cn(
+                  "gap-6 mb-6",
+                  mode === 'uncountable' 
+                    ? "grid grid-cols-1 md:grid-cols-2" 
+                    : "grid grid-cols-2 md:grid-cols-4"
+                )}>
                   <SpinningNumberInput
                     label="Cost Price"
                     value={formData.costPrice}
@@ -280,26 +291,42 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                     suffix="KES"
                   />
                   
-                  <SpinningNumberInput
-                    label="Current Stock"
-                    value={formData.currentStock}
-                    onChange={(value) => handleFieldChange('currentStock', value)}
-                    min={0}
-                    max={999999}
-                    step={1}
-                    suffix="units"
-                  />
-                  
-                  <SpinningNumberInput
-                    label="Low Stock Alert"
-                    value={formData.lowStockThreshold}
-                    onChange={(value) => handleFieldChange('lowStockThreshold', value)}
-                    min={0}
-                    max={999999}
-                    step={1}
-                    suffix="units"
-                  />
+                  {mode !== 'uncountable' && (
+                    <>
+                      <SpinningNumberInput
+                        label="Current Stock"
+                        value={formData.currentStock}
+                        onChange={(value) => handleFieldChange('currentStock', value)}
+                        min={0}
+                        max={999999}
+                        step={1}
+                        suffix="units"
+                      />
+                      
+                      <SpinningNumberInput
+                        label="Low Stock Alert"
+                        value={formData.lowStockThreshold}
+                        onChange={(value) => handleFieldChange('lowStockThreshold', value)}
+                        min={0}
+                        max={999999}
+                        step={1}
+                        suffix="units"
+                      />
+                    </>
+                  )}
                 </div>
+                
+                {/* Uncountable Notice */}
+                {mode === 'uncountable' && (
+                  <div className="border-2 border-orange-300 dark:border-orange-600 rounded-xl p-4 bg-orange-50/50 dark:bg-orange-900/20 mb-6">
+                    <h4 className="font-semibold uppercase tracking-wider text-orange-900 dark:text-orange-100 mb-2">
+                      Uncountable Item Template
+                    </h4>
+                    <p className="text-sm text-orange-700 dark:text-orange-300">
+                      This template will be configured for uncountable items (sold by scoops, cups, portions, etc.).
+                    </p>
+                  </div>
+                )}
                 
                 {/* Profit Calculation */}
                 <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 mb-6 border border-primary/20">
