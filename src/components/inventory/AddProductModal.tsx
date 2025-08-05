@@ -40,7 +40,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [templatesInitialized, setTemplatesInitialized] = useState(false);
 
   useEffect(() => {
     if (editingProduct) {
@@ -199,9 +198,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setCustomCategory('');
     }
     
-    // Close template modal and ensure template is not shown again
+    // Close template modal
     setShowTemplateModal(false);
-    setTemplatesInitialized(false);
     console.log('[AddProductModal] Template selection complete, modal closed');
   }, []);
 
@@ -226,10 +224,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               <div className="mb-6">
                 <Button
                   type="button"
-                  onClick={() => {
-                    setTemplatesInitialized(true);
-                    setShowTemplateModal(true);
-                  }}
+                  onClick={() => setShowTemplateModal(true)}
                   className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -436,13 +431,15 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           </div>
         </DialogContent>
         
-        {/* Template Selection Modal */}
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
         <UnifiedTemplateSelectionModal
           isOpen={showTemplateModal}
           onClose={() => setShowTemplateModal(false)}
           onTemplateSelect={handleTemplateSelect}
           mode="normal"
         />
+      )}
       </Dialog>
   );
 };

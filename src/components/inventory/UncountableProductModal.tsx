@@ -343,12 +343,14 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       </DialogContent>
       
       {/* Template Selection Modal */}
-      <UnifiedTemplateSelectionModal
-        isOpen={showTemplateModal}
-        onClose={() => setShowTemplateModal(false)}
-        onTemplateSelect={handleTemplateSelect}
-        mode="uncountable"
-      />
+      {showTemplateModal && (
+        <UnifiedTemplateSelectionModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onTemplateSelect={handleTemplateSelect}
+          mode="uncountable"
+        />
+      )}
     </Dialog>
   );
 };

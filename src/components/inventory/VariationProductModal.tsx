@@ -67,7 +67,6 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [templatesInitialized, setTemplatesInitialized] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -94,7 +93,6 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     setCustomCategory('');
     setShowCustomInput(false);
     setShowTemplateModal(false);
-    setTemplatesInitialized(false);
   };
 
   const handleCategoryChange = (value: string) => {
@@ -233,7 +231,6 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     
     // Close template modal
     setShowTemplateModal(false);
-    setTemplatesInitialized(false);
     console.log('[VariationProductModal] Template selection complete, modal closed');
   }, []);
 
@@ -299,10 +296,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
               <div className="mb-6">
                 <Button
                   type="button"
-                  onClick={() => {
-                    setTemplatesInitialized(true);
-                    setShowTemplateModal(true);
-                  }}
+                  onClick={() => setShowTemplateModal(true)}
                   className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -628,12 +622,14 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
         </div>
 
         {/* Template Selection Modal */}
-        <UnifiedTemplateSelectionModal
-          isOpen={showTemplateModal}
-          onClose={() => setShowTemplateModal(false)}
-          onTemplateSelect={handleTemplateSelect}
-          mode="variation"
-        />
+        {showTemplateModal && (
+          <UnifiedTemplateSelectionModal
+            isOpen={showTemplateModal}
+            onClose={() => setShowTemplateModal(false)}
+            onTemplateSelect={handleTemplateSelect}
+            mode="variation"
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
