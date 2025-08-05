@@ -208,7 +208,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const showProfitCalculation = formData.costPrice > 0 && formData.sellingPrice > 0;
 
   return (
-    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
           {/* Modern Header */}
@@ -437,16 +436,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           </div>
         </DialogContent>
         
+        {/* Template Selection Modal */}
+        <UnifiedTemplateSelectionModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onTemplateSelect={handleTemplateSelect}
+          mode="normal"
+        />
       </Dialog>
-      
-      {/* Template Selection Modal - Rendered outside Dialog */}
-      <UnifiedTemplateSelectionModal
-        isOpen={showTemplateModal}
-        onClose={() => setShowTemplateModal(false)}
-        onTemplateSelect={handleTemplateSelect}
-        mode="normal"
-      />
-    </>
   );
 };
 

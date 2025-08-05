@@ -79,7 +79,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       className
     )}
     style={{ 
-      zIndex: 80,
+      zIndex: 100000,
       position: 'fixed',
       top: 0,
       left: 0,
@@ -100,7 +100,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       <div 
         className="relative bg-card/98 backdrop-blur-xl rounded-2xl md:rounded-3xl border border-border/50 shadow-2xl max-w-2xl md:max-w-3xl w-full mx-2 md:mx-4 transform transition-all duration-300 ease-out"
         style={{ 
-          zIndex: 90,
+          zIndex: 10000,
           background: 'linear-gradient(135deg, hsl(var(--card) / 0.98), hsl(var(--muted) / 0.95))',
           backdropFilter: 'blur(20px)',
         }}
