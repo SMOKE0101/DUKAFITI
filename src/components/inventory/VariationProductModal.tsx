@@ -12,7 +12,7 @@ import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '..
 import { ArrowRight, Plus, Trash2, Package2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ImageUpload from '../ui/image-upload';
-import UnifiedTemplateSelectionModal from './shared/UnifiedTemplateSelectionModal';
+import TemplateSelectionModal from './TemplateSelectionModal';
 
 interface ProductVariant {
   id: string;
@@ -67,6 +67,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templatesInitialized, setTemplatesInitialized] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -93,6 +94,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     setCustomCategory('');
     setShowCustomInput(false);
     setShowTemplateModal(false);
+    setTemplatesInitialized(false);
   };
 
   const handleCategoryChange = (value: string) => {
@@ -207,48 +209,32 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   }, [parentProduct.name, parentProduct.category]);
 
   const handleTemplateSelect = React.useCallback((templateData: any) => {
-    console.log('[VariationProductModal] handleTemplateSelect called');
     console.log('[VariationProductModal] Template data received:', templateData);
-    console.log('[VariationProductModal] Template data type:', typeof templateData);
-    console.log('[VariationProductModal] Template data keys:', Object.keys(templateData || {}));
     
-    if (!templateData) {
-      console.error('[VariationProductModal] No template data received');
-      return;
-    }
-    
-    const newParentProductData = {
+    setParentProduct(prev => ({
+      ...prev,
       name: templateData.name || '',
       sku: generateSKU(templateData.category || '', templateData.name || ''),
       category: templateData.category || '',
       image_url: templateData.image_url || '',
       currentStock: templateData.current_stock || 0,
       lowStockThreshold: templateData.low_stock_threshold || 10,
-      stockDerivationQuantity: 1 // Keep the existing default
-    };
-    
-    console.log('[VariationProductModal] About to set parent product to:', newParentProductData);
-    setParentProduct(prev => ({
-      ...prev,
-      ...newParentProductData
     }));
     
     // Handle custom category
     if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
-      console.log('[VariationProductModal] Using custom category:', templateData.category);
       setCustomCategory(templateData.category);
       setShowCustomInput(true);
       setParentProduct(prev => ({ ...prev, category: 'Other / Custom' }));
     } else {
-      console.log('[VariationProductModal] Using standard category');
       setShowCustomInput(false);
       setCustomCategory('');
     }
     
     // Close template modal
-    console.log('[VariationProductModal] Closing template modal');
     setShowTemplateModal(false);
-    console.log('[VariationProductModal] Template selection complete');
+    setTemplatesInitialized(false);
+    console.log('[VariationProductModal] Template selection complete, modal closed');
   }, []);
 
   const handleSave = () => {
@@ -313,7 +299,10 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
               <div className="mb-6">
                 <Button
                   type="button"
-                  onClick={() => setShowTemplateModal(true)}
+                  onClick={() => {
+                    setTemplatesInitialized(true);
+                    setShowTemplateModal(true);
+                  }}
                   className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -639,14 +628,12 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
         </div>
 
         {/* Template Selection Modal */}
-        {showTemplateModal && (
-          <UnifiedTemplateSelectionModal
-            isOpen={showTemplateModal}
-            onClose={() => setShowTemplateModal(false)}
-            onTemplateSelect={handleTemplateSelect}
-            mode="variation"
-          />
-        )}
+        <TemplateSelectionModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onTemplateSelect={handleTemplateSelect}
+          mode="variation"
+        />
       </DialogContent>
     </Dialog>
   );

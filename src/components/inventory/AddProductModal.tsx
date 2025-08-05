@@ -11,7 +11,7 @@ import { Product } from '../../types';
 import { Sparkles } from 'lucide-react';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
-import UnifiedTemplateSelectionModal from './shared/UnifiedTemplateSelectionModal';
+import TemplateSelectionModal from './TemplateSelectionModal';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -40,6 +40,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templatesInitialized, setTemplatesInitialized] = useState(false);
 
   useEffect(() => {
     if (editingProduct) {
@@ -171,47 +172,38 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   const handleTemplateSelect = React.useCallback((templateData: any) => {
-    console.log('[AddProductModal] handleTemplateSelect called');
     console.log('[AddProductModal] Template data received:', templateData);
-    console.log('[AddProductModal] Template data type:', typeof templateData);
-    console.log('[AddProductModal] Template data keys:', Object.keys(templateData || {}));
     
-    if (!templateData) {
-      console.error('[AddProductModal] No template data received');
-      return;
-    }
-    
-    const newFormData = {
-      name: templateData.name || '',
-      category: templateData.category || '',
-      costPrice: templateData.cost_price || 0,
-      sellingPrice: templateData.selling_price || 0,
-      currentStock: templateData.current_stock || 0,
-      lowStockThreshold: templateData.low_stock_threshold || 10,
-      image_url: templateData.image_url || '',
-      sku: formData.sku // Keep existing SKU
-    };
-    
-    console.log('[AddProductModal] About to set form data to:', newFormData);
-    setFormData(newFormData);
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        name: templateData.name || '',
+        category: templateData.category || '',
+        costPrice: templateData.cost_price || 0,
+        sellingPrice: templateData.selling_price || 0,
+        currentStock: templateData.current_stock || 0,
+        lowStockThreshold: templateData.low_stock_threshold || 10,
+        image_url: templateData.image_url || '',
+      };
+      console.log('[AddProductModal] Setting form data to:', newData);
+      return newData;
+    });
     
     // Handle custom category
     if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
-      console.log('[AddProductModal] Setting custom category:', templateData.category);
       setCustomCategory(templateData.category);
       setShowCustomInput(true);
       setFormData(prev => ({ ...prev, category: 'Other / Custom' }));
     } else {
-      console.log('[AddProductModal] Using standard category');
       setShowCustomInput(false);
       setCustomCategory('');
     }
     
-    // Close template modal
-    console.log('[AddProductModal] Closing template modal');
+    // Close template modal and ensure template is not shown again
     setShowTemplateModal(false);
+    setTemplatesInitialized(false);
     console.log('[AddProductModal] Template selection complete, modal closed');
-  }, [formData.sku]);
+  }, []);
 
   const showProfitCalculation = formData.costPrice > 0 && formData.sellingPrice > 0;
 
@@ -234,7 +226,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               <div className="mb-6">
                 <Button
                   type="button"
-                  onClick={() => setShowTemplateModal(true)}
+                  onClick={() => {
+                    setTemplatesInitialized(true);
+                    setShowTemplateModal(true);
+                  }}
                   className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -441,15 +436,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           </div>
         </DialogContent>
         
-      {/* Template Selection Modal */}
-      {showTemplateModal && (
-        <UnifiedTemplateSelectionModal
-          isOpen={showTemplateModal}
-          onClose={() => setShowTemplateModal(false)}
-          onTemplateSelect={handleTemplateSelect}
-          mode="normal"
-        />
-      )}
+        {/* Template Selection Modal */}
+        {templatesInitialized && (
+          <TemplateSelectionModal
+            isOpen={showTemplateModal}
+            onClose={() => setShowTemplateModal(false)}
+            onTemplateSelect={handleTemplateSelect}
+          />
+        )}
       </Dialog>
   );
 };

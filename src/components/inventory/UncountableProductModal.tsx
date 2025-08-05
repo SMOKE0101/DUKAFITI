@@ -9,7 +9,7 @@ import { Sparkles } from 'lucide-react';
 import { Product } from '../../types';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
-import UnifiedTemplateSelectionModal from './shared/UnifiedTemplateSelectionModal';
+import TemplateSelectionModal from './TemplateSelectionModal';
 
 interface UncountableProductModalProps {
   isOpen: boolean;
@@ -119,44 +119,28 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
   };
 
   const handleTemplateSelect = (templateData: any) => {
-    console.log('[UncountableProductModal] handleTemplateSelect called');
-    console.log('[UncountableProductModal] Template data received:', templateData);
-    console.log('[UncountableProductModal] Template data type:', typeof templateData);
-    console.log('[UncountableProductModal] Template data keys:', Object.keys(templateData || {}));
-    
-    if (!templateData) {
-      console.error('[UncountableProductModal] No template data received');
-      return;
-    }
+    console.log('[UncountableProductModal] Template selected:', templateData);
     
     // Pre-fill form with template data
-    const newFormData = {
+    setFormData({
       name: templateData.name || '',
       sku: generateSKU(templateData.category || '', templateData.name || ''),
       category: templateData.category || '',
       costPrice: templateData.cost_price || 0,
       sellingPrice: templateData.selling_price || 0,
       image_url: templateData.image_url || '',
-    };
-    
-    console.log('[UncountableProductModal] About to set form data to:', newFormData);
-    setFormData(newFormData);
+    });
     
     // Handle custom category if needed
-    if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
-      console.log('[UncountableProductModal] Using custom category:', templateData.category);
+    if (isCustomCategory(templateData.category)) {
       setShowCustomInput(true);
       setCustomCategory(templateData.category);
-      setFormData(prev => ({ ...prev, category: 'Other / Custom' }));
     } else {
-      console.log('[UncountableProductModal] Using standard category');
       setShowCustomInput(false);
       setCustomCategory('');
     }
     
-    console.log('[UncountableProductModal] Closing template modal');
     setShowTemplateModal(false);
-    console.log('[UncountableProductModal] Template selection complete');
   };
 
   const generateSKU = (category: string = '', name: string = '') => {
@@ -359,14 +343,12 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       </DialogContent>
       
       {/* Template Selection Modal */}
-      {showTemplateModal && (
-        <UnifiedTemplateSelectionModal
-          isOpen={showTemplateModal}
-          onClose={() => setShowTemplateModal(false)}
-          onTemplateSelect={handleTemplateSelect}
-          mode="uncountable"
-        />
-      )}
+      <TemplateSelectionModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onTemplateSelect={handleTemplateSelect}
+        mode="uncountable"
+      />
     </Dialog>
   );
 };
