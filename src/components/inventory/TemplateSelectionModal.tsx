@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Package2, ArrowLeft, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { X, Package2, ArrowLeft, Plus, Search, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLazyTemplateSearch, ProductTemplate } from '../../hooks/useLazyTemplateSearch';
-import { useIsMobile } from '../../hooks/use-mobile';
-import SimpleTemplateSearch from './bulk/SimpleTemplateSearch';
 import VirtualizedTemplateGrid from './VirtualizedTemplateGrid';
 import SpinningNumberInput from '../ui/spinning-number-input';
-import MobileOptimizedTemplateModal from './MobileOptimizedTemplateModal';
+import TemplateImage from '../ui/template-image';
 
 interface TemplateSelectionModalProps {
   isOpen: boolean;
@@ -31,7 +30,6 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     currentStock: 50,
     lowStockThreshold: 10
   });
-  const isMobile = useIsMobile();
   
   const {
     templates,
@@ -97,14 +95,14 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
       image_url: selectedTemplate.image_url,
       cost_price: formData.costPrice,
       selling_price: formData.sellingPrice,
-      current_stock: formData.currentStock,
-      low_stock_threshold: formData.lowStockThreshold
+      current_stock: mode === 'uncountable' ? -1 : formData.currentStock,
+      low_stock_threshold: mode === 'uncountable' ? 0 : formData.lowStockThreshold
     };
     
     console.log('[TemplateSelectionModal] Using template with data:', templateData);
     onTemplateSelect(templateData);
     onClose();
-  }, [selectedTemplate, formData, onTemplateSelect, onClose]);
+  }, [selectedTemplate, formData, onTemplateSelect, onClose, mode]);
 
   // Handle dialog open change - prevent closing during configuration
   const handleDialogOpenChange = React.useCallback((open: boolean) => {
@@ -118,24 +116,11 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     }
   }, [modalStep, onClose, handleBackToSelection]);
 
-
   if (!isOpen) return null;
-
-  // Use mobile-optimized modal on mobile devices
-  if (isMobile) {
-    return (
-      <MobileOptimizedTemplateModal
-        isOpen={isOpen}
-        onClose={onClose}
-        onTemplateSelect={onTemplateSelect}
-        mode={mode}
-      />
-    );
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-w-6xl w-[98vw] max-h-[95vh] p-0 flex flex-col bg-background">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] p-0 flex flex-col bg-background">
         <DialogTitle className="sr-only">
           {modalStep === 'selection' ? 'Select Template' : 'Configure Template'}
         </DialogTitle>
@@ -148,14 +133,14 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Package2 className="w-4 h-4 text-primary" />
                 </div>
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Select {mode === 'uncountable' ? 'Uncountable Item' : 'Product'} Template
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Choose a template to pre-fill your {mode === 'uncountable' ? 'uncountable item' : 'product'} details
-                    </p>
-                  </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Select {mode === 'uncountable' ? 'Uncountable Item' : 'Product'} Template
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Choose a template to pre-fill your {mode === 'uncountable' ? 'uncountable item' : 'product'} details
+                  </p>
+                </div>
               </div>
               
               <Button
@@ -168,52 +153,136 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
               </Button>
             </div>
 
-            {/* Search */}
-            <div className="p-3 border-b border-border bg-muted/20">
-              <SimpleTemplateSearch
-                searchTerm={searchTerm}
-                onSearchChange={searchTemplates}
-                selectedCategory={selectedCategory}
-                categories={categories}
-                onCategoryChange={filterByCategory}
-                onClearFilters={clearFilters}
-                resultsCount={templates.length}
-                totalItems={totalTemplates}
-                loading={loading}
-              />
+            {/* Fixed Search Bar */}
+            <div className="bg-muted/20 border-b border-border flex-shrink-0">
+              <div className="p-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder={`Search ${totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates...`}
+                    value={searchTerm}
+                    onChange={(e) => searchTemplates(e.target.value)}
+                    className="pl-10 pr-10 h-10"
+                    disabled={loading}
+                  />
+                  {searchTerm && (
+                    <Button
+                      onClick={() => searchTemplates('')}
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Templates Grid */}
-            <div className="flex-1 overflow-auto p-4">
-              {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading templates...</p>
-                  </div>
+            {/* Scrollable Categories and Templates */}
+            <div className="flex-1 overflow-auto">
+              {/* Horizontal Scrollable Categories */}
+              <div className="p-3 bg-muted/10 border-b border-border/50">
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {categories.map((category) => (
+                    <Button
+                      key={category}
+                      onClick={() => filterByCategory(category)}
+                      variant={selectedCategory === category ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        "capitalize whitespace-nowrap flex-shrink-0 h-7 px-3 text-xs",
+                        selectedCategory === category && "bg-primary text-primary-foreground"
+                      )}
+                      disabled={loading}
+                    >
+                      <Filter className="w-3 h-3 mr-1" />
+                      {category === 'all' ? 'All Categories' : category}
+                    </Button>
+                  ))}
                 </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <p className="text-destructive mb-2">Error loading templates</p>
-                    <p className="text-sm text-muted-foreground">{error}</p>
-                  </div>
+                
+                {/* Results Summary */}
+                <div className="flex items-center justify-between text-xs mt-2">
+                  <span className="text-muted-foreground">
+                    <span className="font-semibold text-primary">{templates.length.toLocaleString()}</span> of{' '}
+                    <span className="font-semibold">{totalTemplates.toLocaleString()}</span> templates
+                  </span>
+                  {(searchTerm.trim() || selectedCategory !== 'all') && (
+                    <Button
+                      onClick={clearFilters}
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
                 </div>
-              ) : templates.length === 0 ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <Package2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No templates found</p>
-                    <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+              </div>
+
+              {/* Templates Grid */}
+              <div className="flex-1">
+                {loading ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
+                    {Array.from({ length: 20 }).map((_, index) => (
+                      <div key={index} className="animate-pulse">
+                        <div className="bg-muted rounded-lg aspect-square mb-2"></div>
+                        <div className="bg-muted rounded h-4 mb-1"></div>
+                        <div className="bg-muted rounded h-3 w-2/3"></div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <VirtualizedTemplateGrid
-                  templates={templates}
-                  onTemplateClick={handleTemplateClick}
-                  className="p-4"
-                />
-              )}
+                ) : error ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center p-8">
+                      <Package2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-2">Failed to load templates</p>
+                      <p className="text-sm text-muted-foreground">{error}</p>
+                    </div>
+                  </div>
+                ) : templates.length === 0 ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center p-8">
+                      <Package2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-2">No templates found</p>
+                      <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 p-4">
+                    {templates.map((template) => (
+                      <div
+                        key={template.id}
+                        onClick={() => handleTemplateClick(template)}
+                        className="relative bg-card rounded-lg border border-border hover:border-primary/40 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-lg overflow-hidden"
+                      >
+                        {/* Product Image */}
+                        <div className="aspect-square overflow-hidden rounded-t-lg bg-gradient-to-br from-muted/50 to-muted">
+                          <TemplateImage 
+                            src={template.image_url}
+                            alt={template.name}
+                            productName={template.name}
+                            className="w-full h-full"
+                          />
+                        </div>
+                        
+                        {/* Product Information */}
+                        <div className="p-2 flex flex-col gap-1">
+                          <h4 className="font-medium text-xs text-foreground line-clamp-2 leading-tight min-h-[2rem]" title={template.name}>
+                            {template.name}
+                          </h4>
+                          {template.category && (
+                            <p className="text-[10px] text-muted-foreground capitalize truncate">
+                              {template.category}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         ) : (
@@ -234,9 +303,10 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex-shrink-0">
                       {selectedTemplate.image_url ? (
-                        <img 
+                        <TemplateImage 
                           src={selectedTemplate.image_url} 
                           alt={selectedTemplate.name}
+                          productName={selectedTemplate.name}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -268,7 +338,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
             </div>
 
             {/* Configuration Content */}
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-4">
               <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-6">
                   <h3 className="text-lg font-semibold mb-2">
@@ -279,14 +349,14 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   </p>
                 </div>
                 
-                 {/* Spinning Number Inputs Grid */}
+                {/* Spinning Number Inputs Grid */}
                 <div className={cn(
-                  "gap-6 mb-6",
+                  "gap-4 mb-6",
                   mode === 'uncountable' 
-                    ? "grid grid-cols-1 md:grid-cols-2"
+                    ? "grid grid-cols-1 sm:grid-cols-2"
                     : mode === 'variation'
-                    ? "grid grid-cols-1 md:grid-cols-2"
-                    : "grid grid-cols-2 md:grid-cols-4"
+                    ? "grid grid-cols-1 sm:grid-cols-2"
+                    : "grid grid-cols-2 sm:grid-cols-4"
                 )}>
                   {mode === 'variation' ? (
                     <>
@@ -313,7 +383,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   ) : (
                     <>
                       <SpinningNumberInput
-                        label="Cost Price"
+                        label="Cost"
                         value={formData.costPrice}
                         onChange={(value) => handleFieldChange('costPrice', value)}
                         min={0}
@@ -323,7 +393,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                       />
                       
                       <SpinningNumberInput
-                        label="Selling Price"
+                        label="Selling"
                         value={formData.sellingPrice}
                         onChange={(value) => handleFieldChange('sellingPrice', value)}
                         min={0}
@@ -335,7 +405,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                       {mode !== 'uncountable' && (
                         <>
                           <SpinningNumberInput
-                            label="Current Stock"
+                            label="In Stock"
                             value={formData.currentStock}
                             onChange={(value) => handleFieldChange('currentStock', value)}
                             min={0}
@@ -359,39 +429,38 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   )}
                 </div>
                 
-                {/* Uncountable Notice */}
+                {/* Mode-specific Notices */}
                 {mode === 'uncountable' && (
-                  <div className="border-2 border-orange-300 dark:border-orange-600 rounded-xl p-4 bg-orange-50/50 dark:bg-orange-900/20 mb-6">
-                    <h4 className="font-semibold uppercase tracking-wider text-orange-900 dark:text-orange-100 mb-2">
+                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-3 mb-4 border border-orange-200 dark:border-orange-800">
+                    <h5 className="font-semibold text-orange-900 dark:text-orange-100 mb-1 text-sm">
                       Uncountable Item Template
-                    </h4>
-                    <p className="text-sm text-orange-700 dark:text-orange-300">
+                    </h5>
+                    <p className="text-xs text-orange-700 dark:text-orange-300">
                       This template will be configured for uncountable items (sold by scoops, cups, portions, etc.).
                     </p>
                   </div>
                 )}
                 
-                {/* Variation Notice */}
                 {mode === 'variation' && (
-                  <div className="border-2 border-green-300 dark:border-green-600 rounded-xl p-4 bg-green-50/50 dark:bg-green-900/20 mb-6">
-                    <h4 className="font-semibold uppercase tracking-wider text-green-900 dark:text-green-100 mb-2">
+                  <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-3 mb-4 border border-green-200 dark:border-green-800">
+                    <h5 className="font-semibold text-green-900 dark:text-green-100 mb-1 text-sm">
                       Variation Product Template
-                    </h4>
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                      This template will be used as the base for your product variations. You'll define individual variant prices and multipliers in the next steps.
+                    </h5>
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      This template will be used as the base for your product variations.
                     </p>
                   </div>
                 )}
 
                 {/* Profit Calculation - Only show for non-variation modes */}
                 {mode !== 'variation' && (
-                  <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 mb-6 border border-primary/20">
-                    <h4 className="font-semibold text-center mb-3">Profit Analysis</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-r from-primary/3 to-primary/5 rounded-lg p-3 mb-4 border border-primary/10">
+                    <h5 className="font-medium text-center mb-2 text-foreground text-sm">Profit Analysis</h5>
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="text-center">
                         <div className="text-xs text-muted-foreground mb-1">Profit per Unit</div>
                         <div className={cn(
-                          "text-lg font-semibold",
+                          "text-base font-semibold",
                           formData.sellingPrice > formData.costPrice 
                             ? "text-green-600 dark:text-green-400" 
                             : "text-red-600 dark:text-red-400"
@@ -402,7 +471,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                       <div className="text-center">
                         <div className="text-xs text-muted-foreground mb-1">Profit Margin</div>
                         <div className={cn(
-                          "text-lg font-semibold",
+                          "text-base font-semibold",
                           formData.sellingPrice > formData.costPrice 
                             ? "text-green-600 dark:text-green-400" 
                             : "text-red-600 dark:text-red-400"
@@ -418,20 +487,20 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 )}
                 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex flex-col gap-2">
                   <Button
                     onClick={handleBackToSelection}
                     variant="outline"
-                    className="w-full sm:flex-1"
+                    className="w-full h-10 text-sm"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Templates
                   </Button>
                   <Button
                     onClick={handleUseTemplate}
-                    className="w-full sm:flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                    className="w-full h-12 text-base font-semibold gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="w-4 h-4" />
                     Use Template
                   </Button>
                 </div>

@@ -164,7 +164,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] max-h-[90vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
         {/* Header */}
         <div className="border-b-4 border-orange-600 bg-white dark:bg-gray-900 p-4 sm:p-6 text-center flex-shrink-0">
           <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
@@ -175,14 +175,14 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
           </DialogDescription>
         </div>
         
-        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 sm:p-6">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-3 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6">
             {/* Use Templates Button */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <Button 
                 type="button" 
                 onClick={handleUseTemplates}
-                className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 ✨ USE TEMPLATES
@@ -190,7 +190,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
             </div>
 
             {/* Product Image */}
-            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-3 sm:p-4 bg-transparent">
               <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
                 Product Image
               </Label>
@@ -323,7 +323,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
 
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-3 sm:pt-6">
               <Button 
                 type="button" 
                 onClick={onClose}
