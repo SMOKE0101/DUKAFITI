@@ -207,8 +207,15 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   }, [parentProduct.name, parentProduct.category]);
 
   const handleTemplateSelect = React.useCallback((templateData: any) => {
+    console.log('[VariationProductModal] handleTemplateSelect called');
     console.log('[VariationProductModal] Template data received:', templateData);
-    console.log('[VariationProductModal] Template data structure:', JSON.stringify(templateData, null, 2));
+    console.log('[VariationProductModal] Template data type:', typeof templateData);
+    console.log('[VariationProductModal] Template data keys:', Object.keys(templateData || {}));
+    
+    if (!templateData) {
+      console.error('[VariationProductModal] No template data received');
+      return;
+    }
     
     const newParentProductData = {
       name: templateData.name || '',
@@ -217,9 +224,10 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
       image_url: templateData.image_url || '',
       currentStock: templateData.current_stock || 0,
       lowStockThreshold: templateData.low_stock_threshold || 10,
+      stockDerivationQuantity: 1 // Keep the existing default
     };
     
-    console.log('[VariationProductModal] Setting parent product to:', newParentProductData);
+    console.log('[VariationProductModal] About to set parent product to:', newParentProductData);
     setParentProduct(prev => ({
       ...prev,
       ...newParentProductData
@@ -232,6 +240,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
       setShowCustomInput(true);
       setParentProduct(prev => ({ ...prev, category: 'Other / Custom' }));
     } else {
+      console.log('[VariationProductModal] Using standard category');
       setShowCustomInput(false);
       setCustomCategory('');
     }
@@ -239,7 +248,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     // Close template modal
     console.log('[VariationProductModal] Closing template modal');
     setShowTemplateModal(false);
-    console.log('[VariationProductModal] Template selection complete, modal closed');
+    console.log('[VariationProductModal] Template selection complete');
   }, []);
 
   const handleSave = () => {

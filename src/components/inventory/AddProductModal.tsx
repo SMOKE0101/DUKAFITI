@@ -171,37 +171,47 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   const handleTemplateSelect = React.useCallback((templateData: any) => {
+    console.log('[AddProductModal] handleTemplateSelect called');
     console.log('[AddProductModal] Template data received:', templateData);
+    console.log('[AddProductModal] Template data type:', typeof templateData);
+    console.log('[AddProductModal] Template data keys:', Object.keys(templateData || {}));
     
-    setFormData(prev => {
-      const newData = {
-        ...prev,
-        name: templateData.name || '',
-        category: templateData.category || '',
-        costPrice: templateData.cost_price || 0,
-        sellingPrice: templateData.selling_price || 0,
-        currentStock: templateData.current_stock || 0,
-        lowStockThreshold: templateData.low_stock_threshold || 10,
-        image_url: templateData.image_url || '',
-      };
-      console.log('[AddProductModal] Setting form data to:', newData);
-      return newData;
-    });
+    if (!templateData) {
+      console.error('[AddProductModal] No template data received');
+      return;
+    }
+    
+    const newFormData = {
+      name: templateData.name || '',
+      category: templateData.category || '',
+      costPrice: templateData.cost_price || 0,
+      sellingPrice: templateData.selling_price || 0,
+      currentStock: templateData.current_stock || 0,
+      lowStockThreshold: templateData.low_stock_threshold || 10,
+      image_url: templateData.image_url || '',
+      sku: formData.sku // Keep existing SKU
+    };
+    
+    console.log('[AddProductModal] About to set form data to:', newFormData);
+    setFormData(newFormData);
     
     // Handle custom category
     if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
+      console.log('[AddProductModal] Setting custom category:', templateData.category);
       setCustomCategory(templateData.category);
       setShowCustomInput(true);
       setFormData(prev => ({ ...prev, category: 'Other / Custom' }));
     } else {
+      console.log('[AddProductModal] Using standard category');
       setShowCustomInput(false);
       setCustomCategory('');
     }
     
     // Close template modal
+    console.log('[AddProductModal] Closing template modal');
     setShowTemplateModal(false);
     console.log('[AddProductModal] Template selection complete, modal closed');
-  }, []);
+  }, [formData.sku]);
 
   const showProfitCalculation = formData.costPrice > 0 && formData.sellingPrice > 0;
 

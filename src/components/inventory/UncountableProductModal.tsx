@@ -119,8 +119,15 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
   };
 
   const handleTemplateSelect = (templateData: any) => {
-    console.log('[UncountableProductModal] Template selected:', templateData);
-    console.log('[UncountableProductModal] Template data structure:', JSON.stringify(templateData, null, 2));
+    console.log('[UncountableProductModal] handleTemplateSelect called');
+    console.log('[UncountableProductModal] Template data received:', templateData);
+    console.log('[UncountableProductModal] Template data type:', typeof templateData);
+    console.log('[UncountableProductModal] Template data keys:', Object.keys(templateData || {}));
+    
+    if (!templateData) {
+      console.error('[UncountableProductModal] No template data received');
+      return;
+    }
     
     // Pre-fill form with template data
     const newFormData = {
@@ -132,21 +139,24 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       image_url: templateData.image_url || '',
     };
     
-    console.log('[UncountableProductModal] Setting form data to:', newFormData);
+    console.log('[UncountableProductModal] About to set form data to:', newFormData);
     setFormData(newFormData);
     
     // Handle custom category if needed
-    if (isCustomCategory(templateData.category)) {
+    if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
       console.log('[UncountableProductModal] Using custom category:', templateData.category);
       setShowCustomInput(true);
       setCustomCategory(templateData.category);
+      setFormData(prev => ({ ...prev, category: 'Other / Custom' }));
     } else {
+      console.log('[UncountableProductModal] Using standard category');
       setShowCustomInput(false);
       setCustomCategory('');
     }
     
     console.log('[UncountableProductModal] Closing template modal');
     setShowTemplateModal(false);
+    console.log('[UncountableProductModal] Template selection complete');
   };
 
   const generateSKU = (category: string = '', name: string = '') => {

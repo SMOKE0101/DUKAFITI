@@ -272,6 +272,7 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
     console.log('[UnifiedTemplateSelectionModal] handleUseTemplate called');
     console.log('[UnifiedTemplateSelectionModal] productData received:', productData);
     console.log('[UnifiedTemplateSelectionModal] mode:', mode);
+    console.log('[UnifiedTemplateSelectionModal] onTemplateSelect function:', typeof onTemplateSelect);
     
     // Transform data based on mode
     let transformedData = {
@@ -299,10 +300,18 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
     }
 
     console.log('[UnifiedTemplateSelectionModal] transformedData:', transformedData);
-    console.log('[UnifiedTemplateSelectionModal] Calling onTemplateSelect...');
-    onTemplateSelect(transformedData);
-    console.log('[UnifiedTemplateSelectionModal] Calling onClose...');
+    console.log('[UnifiedTemplateSelectionModal] About to call onTemplateSelect...');
+    
+    try {
+      onTemplateSelect(transformedData);
+      console.log('[UnifiedTemplateSelectionModal] onTemplateSelect called successfully');
+    } catch (error) {
+      console.error('[UnifiedTemplateSelectionModal] Error calling onTemplateSelect:', error);
+    }
+    
+    console.log('[UnifiedTemplateSelectionModal] About to call onClose...');
     onClose();
+    console.log('[UnifiedTemplateSelectionModal] onClose called');
   };
 
   const goToPage = (page: number) => {
