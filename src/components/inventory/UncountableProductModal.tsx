@@ -120,19 +120,24 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
 
   const handleTemplateSelect = (templateData: any) => {
     console.log('[UncountableProductModal] Template selected:', templateData);
+    console.log('[UncountableProductModal] Template data structure:', JSON.stringify(templateData, null, 2));
     
     // Pre-fill form with template data
-    setFormData({
+    const newFormData = {
       name: templateData.name || '',
       sku: generateSKU(templateData.category || '', templateData.name || ''),
       category: templateData.category || '',
       costPrice: templateData.cost_price || 0,
       sellingPrice: templateData.selling_price || 0,
       image_url: templateData.image_url || '',
-    });
+    };
+    
+    console.log('[UncountableProductModal] Setting form data to:', newFormData);
+    setFormData(newFormData);
     
     // Handle custom category if needed
     if (isCustomCategory(templateData.category)) {
+      console.log('[UncountableProductModal] Using custom category:', templateData.category);
       setShowCustomInput(true);
       setCustomCategory(templateData.category);
     } else {
@@ -140,6 +145,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       setCustomCategory('');
     }
     
+    console.log('[UncountableProductModal] Closing template modal');
     setShowTemplateModal(false);
   };
 
