@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { X, Package2, ArrowLeft, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLazyTemplateSearch, ProductTemplate } from '../../hooks/useLazyTemplateSearch';
+import { useIsMobile } from '../../hooks/use-mobile';
 import SimpleTemplateSearch from './bulk/SimpleTemplateSearch';
 import VirtualizedTemplateGrid from './VirtualizedTemplateGrid';
 import SpinningNumberInput from '../ui/spinning-number-input';
+import MobileOptimizedTemplateModal from './MobileOptimizedTemplateModal';
 
 interface TemplateSelectionModalProps {
   isOpen: boolean;
@@ -29,6 +31,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     currentStock: 50,
     lowStockThreshold: 10
   });
+  const isMobile = useIsMobile();
   
   const {
     templates,
@@ -117,6 +120,18 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
 
 
   if (!isOpen) return null;
+
+  // Use mobile-optimized modal on mobile devices
+  if (isMobile) {
+    return (
+      <MobileOptimizedTemplateModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onTemplateSelect={onTemplateSelect}
+        mode={mode}
+      />
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>

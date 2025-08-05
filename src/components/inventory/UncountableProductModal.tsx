@@ -164,9 +164,9 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[500px] max-h-[90vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
         {/* Header */}
-        <div className="border-b-4 border-orange-600 bg-white dark:bg-gray-900 p-6 text-center flex-shrink-0">
+        <div className="border-b-4 border-orange-600 bg-white dark:bg-gray-900 p-4 sm:p-6 text-center flex-shrink-0">
           <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
             ADD UNCOUNTABLE ITEM
           </DialogTitle>
@@ -175,8 +175,8 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
           </DialogDescription>
         </div>
         
-        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Use Templates Button */}
             <div className="mb-6">
               <Button 
@@ -266,7 +266,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
             </div>
             
             {/* Pricing Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
                   Cost Price (KES)
@@ -323,7 +323,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
 
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 sm:pt-6">
               <Button 
                 type="button" 
                 onClick={onClose}
