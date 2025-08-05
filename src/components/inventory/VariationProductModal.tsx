@@ -208,26 +208,19 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
 
   const handleTemplateSelect = React.useCallback((templateData: any) => {
     console.log('[VariationProductModal] Template data received:', templateData);
-    console.log('[VariationProductModal] Template data structure:', JSON.stringify(templateData, null, 2));
     
-    const newParentProductData = {
+    setParentProduct(prev => ({
+      ...prev,
       name: templateData.name || '',
       sku: generateSKU(templateData.category || '', templateData.name || ''),
       category: templateData.category || '',
       image_url: templateData.image_url || '',
       currentStock: templateData.current_stock || 0,
       lowStockThreshold: templateData.low_stock_threshold || 10,
-    };
-    
-    console.log('[VariationProductModal] Setting parent product to:', newParentProductData);
-    setParentProduct(prev => ({
-      ...prev,
-      ...newParentProductData
     }));
     
     // Handle custom category
     if (templateData.category && !PRODUCT_CATEGORIES.includes(templateData.category)) {
-      console.log('[VariationProductModal] Using custom category:', templateData.category);
       setCustomCategory(templateData.category);
       setShowCustomInput(true);
       setParentProduct(prev => ({ ...prev, category: 'Other / Custom' }));
@@ -237,7 +230,6 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     }
     
     // Close template modal
-    console.log('[VariationProductModal] Closing template modal');
     setShowTemplateModal(false);
     console.log('[VariationProductModal] Template selection complete, modal closed');
   }, []);

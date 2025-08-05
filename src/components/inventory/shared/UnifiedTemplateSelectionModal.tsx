@@ -66,7 +66,6 @@ const InlineTemplateConfigurationForm: React.FC<InlineTemplateConfigurationFormP
   });
 
   const handleFieldChange = (field: keyof ProductFormData, value: number) => {
-    console.log('[InlineTemplateConfigurationForm] Field change:', field, value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -76,10 +75,6 @@ const InlineTemplateConfigurationForm: React.FC<InlineTemplateConfigurationFormP
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('[InlineTemplateConfigurationForm] handleSaveProduct called');
-    console.log('[InlineTemplateConfigurationForm] formData:', formData);
-    console.log('[InlineTemplateConfigurationForm] template:', template);
     
     const productData = {
       name: template.name,
@@ -91,7 +86,6 @@ const InlineTemplateConfigurationForm: React.FC<InlineTemplateConfigurationFormP
       lowStockThreshold: formData.lowStockThreshold
     };
     
-    console.log('[InlineTemplateConfigurationForm] Calling onSave with productData:', productData);
     onSave(productData);
   };
 
@@ -269,10 +263,6 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
   };
 
   const handleUseTemplate = (productData: any) => {
-    console.log('[UnifiedTemplateSelectionModal] handleUseTemplate called');
-    console.log('[UnifiedTemplateSelectionModal] productData received:', productData);
-    console.log('[UnifiedTemplateSelectionModal] mode:', mode);
-    
     // Transform data based on mode
     let transformedData = {
       name: productData.name,
@@ -298,10 +288,7 @@ const UnifiedTemplateSelectionModal: React.FC<UnifiedTemplateSelectionModalProps
       };
     }
 
-    console.log('[UnifiedTemplateSelectionModal] transformedData:', transformedData);
-    console.log('[UnifiedTemplateSelectionModal] Calling onTemplateSelect...');
     onTemplateSelect(transformedData);
-    console.log('[UnifiedTemplateSelectionModal] Calling onClose...');
     onClose();
   };
 
