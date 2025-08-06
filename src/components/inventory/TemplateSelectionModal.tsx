@@ -166,9 +166,19 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                     placeholder={`Search ${totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates...`}
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
-                    className="pl-10 h-10"
+                    className="pl-10 pr-10 h-10"
                     disabled={loading}
                   />
+                  {searchTerm && (
+                    <Button
+                      onClick={() => handleSearch('')}
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
