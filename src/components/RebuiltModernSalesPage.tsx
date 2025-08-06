@@ -24,6 +24,8 @@ import AddDebtModal from './sales/AddDebtModal';
 import ResponsiveProductGrid from './ui/responsive-product-grid';
 import VariantSelectionModal from './sales/VariantSelectionModal';
 import VariantSalesDebug from './debug/VariantSalesDebug';
+import EnhancedSalesCheckout from './sales/EnhancedSalesCheckout';
+import SplitPaymentTest from './debug/SplitPaymentTest';
 import { 
   Search, 
   ShoppingCart, 
@@ -871,10 +873,14 @@ const RebuiltModernSalesPage = () => {
           </div>
         </div>
 
-        {/* Debug Component - Temporary for testing */}
+        {/* Debug Components - Temporary for testing */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="p-6 pb-2">
+          <div className="p-6 pb-2 space-y-4">
             <VariantSalesDebug />
+            <div>
+              <h3 className="text-sm font-medium mb-2">Split Payment Test</h3>
+              <SplitPaymentTest />
+            </div>
           </div>
         )}
 
@@ -948,6 +954,73 @@ const RebuiltModernSalesPage = () => {
             )}
           </div>
 
+          {/* Customer Selection */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Customer</label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddCustomerModalOpen(true)}
+                className="h-8 px-2 text-xs"
+              >
+                <UserPlus size={12} className="mr-1" />
+                Add New
+              </Button>
+            </div>
+            
+            <Select 
+              value={selectedCustomerId || 'no-customer'} 
+              onValueChange={(value) => {
+                const newCustomerId = value === 'no-customer' ? null : value;
+                setSelectedCustomerId(newCustomerId);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {selectedCustomer ? (
+                    <div className="flex flex-col items-start w-full">
+                      <div className="flex items-center gap-2">
+                        <User size={12} className="text-primary" />
+                        <span className="font-medium text-sm">{selectedCustomer.name}</span>
+                      </div>
+                      {selectedCustomer.outstandingDebt > 0 && (
+                        <span className="text-xs text-red-600 font-medium">
+                          Debt: {formatCurrency(selectedCustomer.outstandingDebt)}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User size={12} />
+                      <span className="text-sm">No Customer Selected</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no-customer">
+                  <div className="flex items-center gap-2">
+                    <User size={14} />
+                    <span>No Customer</span>
+                  </div>
+                </SelectItem>
+                {customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <User size={14} />
+                        <span>{customer.name}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground ml-5">
+                        {customer.phone} {customer.outstandingDebt > 0 && `• Debt: ${formatCurrency(customer.outstandingDebt)}`}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Cart Items */}
@@ -1012,15 +1085,15 @@ const RebuiltModernSalesPage = () => {
           )}
         </div>
 
-        {/* New Checkout Section */}
+        {/* Enhanced Split Payment Checkout Section */}
         {cart.length > 0 && (
-          <div className="flex-shrink-0 border-t border-border">
-            <NewSalesCheckout
+          <div className="flex-shrink-0 border-t border-border p-6">
+            <EnhancedSalesCheckout
               cart={cart}
+              selectedCustomerId={selectedCustomerId}
+              customers={customers}
               onCheckoutComplete={handleCheckoutSuccess}
               isOnline={isOnline}
-              customers={customers}
-              onCustomersRefresh={handleCustomersRefresh}
             />
           </div>
         )}
