@@ -319,12 +319,27 @@ const RebuiltModernSalesPage = () => {
 
   const addToCart = useCallback((productId: string, quantity: number = 1) => {
     const product = products.find(p => p.id === productId);
-    if (!product) return;
+    if (!product) {
+      console.error('[SalesPage] Product not found for addToCart:', productId);
+      return;
+    }
+
+    console.log('[SalesPage] Adding product to cart:', {
+      productId,
+      name: product.name,
+      variant_name: product.variant_name,
+      parent_id: product.parent_id,
+      is_parent: product.is_parent,
+      quantity,
+      currentStock: product.currentStock
+    });
 
     // Check if product has variants
     if (product.is_parent) {
+      console.log('[SalesPage] Parent product selected, fetching variants');
       // Fetch variants asynchronously
       getProductVariants(product.id).then(variants => {
+        console.log('[SalesPage] Found variants:', variants.length);
         if (variants.length > 0) {
           setCurrentVariants(variants);
           setSelectedParentProduct(product);
@@ -367,31 +382,46 @@ const RebuiltModernSalesPage = () => {
     
     toast({
       title: "Added to Cart",
-      description: `${quantity}x ${product.name}`,
+      description: `${quantity}x ${product.name}${product.variant_name ? ` (${product.variant_name})` : ''}`,
     });
   }, [products, addToPersistedCart, refreshCartExpiry, toast, getProductVariants]);
 
   const handleQuantityChange = useCallback((productId: string, newQuantity: number) => {
+    console.log('[SalesPage] Quantity change requested:', { productId, newQuantity });
+    
+    // Find product in products array (could be variant)
     const product = products.find(p => p.id === productId);
-    if (!product) return;
+    
+    // If not found in products, check if it's a variant in cart
+    const cartItem = cart.find(item => item.id === productId);
+    
+    if (!product && !cartItem) {
+      console.error('[SalesPage] Product not found for quantity change:', productId);
+      return;
+    }
 
     if (newQuantity <= 0) {
+      console.log('[SalesPage] Removing item from cart:', productId);
       removeFromCart(productId);
       return;
     }
 
-    // Allow quantity changes for products with unspecified stock (-1)
-    if (product.currentStock !== -1 && newQuantity > product.currentStock) {
-      toast({
-        title: "Insufficient Stock",
-        description: `Only ${product.currentStock} units available`,
-        variant: "destructive",
-      });
-      return;
+    // For stock validation, use the product if available, otherwise allow change
+    if (product) {
+      // Allow quantity changes for products with unspecified stock (-1)
+      if (product.currentStock !== -1 && newQuantity > product.currentStock) {
+        toast({
+          title: "Insufficient Stock",
+          description: `Only ${product.currentStock} units available`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
+    console.log('[SalesPage] Updating quantity:', { productId, newQuantity });
     updateQuantity(productId, newQuantity);
-  }, [products, updateQuantity, removeFromCart, toast]);
+  }, [products, cart, updateQuantity, removeFromCart, toast]);
 
   const handleCheckoutSuccess = useCallback(() => {
     clearCart();

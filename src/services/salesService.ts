@@ -155,7 +155,7 @@ export class SalesService {
       // First get product details including variant information
       const { data: product, error: fetchError } = await supabase
         .from('products')
-        .select('current_stock, parent_id, variant_multiplier, stock_derivation_quantity')
+        .select('current_stock, parent_id, variant_multiplier, stock_derivation_quantity, name, variant_name')
         .eq('id', productId)
         .single();
 
@@ -164,6 +164,17 @@ export class SalesService {
         // Don't throw here - stock update is not critical for sale completion
         return;
       }
+
+      console.log('[SalesService] Product details:', {
+        id: productId,
+        name: product.name,
+        variant_name: product.variant_name,
+        current_stock: product.current_stock,
+        parent_id: product.parent_id,
+        variant_multiplier: product.variant_multiplier,
+        stock_derivation_quantity: product.stock_derivation_quantity,
+        quantitySold
+      });
 
       // Skip stock update for unspecified quantity products (current_stock = -1)
       if (product.current_stock === -1) {
@@ -180,6 +191,13 @@ export class SalesService {
 
       // For regular products or parent products, update normally
       const newStock = Math.max(0, (product.current_stock || 0) - quantitySold);
+
+      console.log('[SalesService] Updating regular product stock:', {
+        productId,
+        currentStock: product.current_stock,
+        quantitySold,
+        newStock
+      });
 
       const { error: updateError } = await supabase
         .from('products')
