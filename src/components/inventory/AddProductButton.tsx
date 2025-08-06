@@ -28,7 +28,7 @@ const AddProductButton: React.FC<AddProductButtonProps> = ({ onClick, className 
     >
       <Plus className={`${isMobile ? 'h-4 w-4' : 'h-4 w-4'}`} />
       <span className="whitespace-nowrap">
-        {isMobile ? 'Add Product' : 'Add New Product'}
+        {isMobile ? 'Add' : 'Add New Product'}
       </span>
     </Button>
   );
