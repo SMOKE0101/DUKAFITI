@@ -23,12 +23,12 @@ export const useLazyTemplateSearch = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const TEMPLATES_PER_PAGE = 1000; // Display 1000 templates at a time
+  const TEMPLATES_PER_PAGE = 100; // Display 100 templates at a time
   
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache, getCacheInfo, isInitialized } = usePublicTemplateCache();
 
-  // Fast initialization - only load first 1000 templates for display
+  // Fast initialization - only load first 100 templates for display
   const initializeTemplates = useCallback(async () => {
     if (initialized) return;
     
@@ -38,11 +38,11 @@ export const useLazyTemplateSearch = () => {
 
     try {
       // Check cache first
-      const cacheInfo = getCacheInfo('first_1000_templates');
+      const cacheInfo = getCacheInfo('first_100_templates');
       
-      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 1000) {
-        console.log('[LazyTemplateSearch] Using cached first 1000 templates:', cacheInfo.itemCount);
-        const cached = getCache<ProductTemplate[]>('first_1000_templates');
+      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 100) {
+        console.log('[LazyTemplateSearch] Using cached first 100 templates:', cacheInfo.itemCount);
+        const cached = getCache<ProductTemplate[]>('first_100_templates');
         if (cached && Array.isArray(cached)) {
           setAllTemplates(cached);
           // Get total count from another cache or estimate
@@ -58,7 +58,7 @@ export const useLazyTemplateSearch = () => {
 
       // Load from database if online
       if (isOnline) {
-        console.log('[LazyTemplateSearch] Loading first 1000 templates from database...');
+        console.log('[LazyTemplateSearch] Loading first 100 templates from database...');
         
         // Get total count first
         const { count, error: countError } = await supabase
@@ -72,7 +72,7 @@ export const useLazyTemplateSearch = () => {
         setTotalCount(count || 0);
         setCache('total_template_count', count || 0, '1.0');
         
-        // Load first 1000 templates only
+        // Load first 100 templates only
         const { data: firstBatch, error: batchError } = await supabase
           .from('duka_products_templates')
           .select('*')
@@ -85,12 +85,12 @@ export const useLazyTemplateSearch = () => {
 
         if (firstBatch) {
           setAllTemplates(firstBatch);
-          setCache('first_1000_templates', firstBatch, '1.0');
+          setCache('first_100_templates', firstBatch, '1.0');
           console.log('[LazyTemplateSearch] Loaded first batch:', firstBatch.length, 'templates out of', count);
         }
       } else {
         // Offline - check if we have any cached data
-        const cached = getCache<ProductTemplate[]>('first_1000_templates');
+        const cached = getCache<ProductTemplate[]>('first_100_templates');
         if (cached && Array.isArray(cached) && cached.length > 0) {
           console.log('[LazyTemplateSearch] Using offline cached data:', cached.length, 'templates');
           setAllTemplates(cached);
@@ -108,7 +108,7 @@ export const useLazyTemplateSearch = () => {
     }
   }, [isOnline, getCache, setCache, getCacheInfo, initialized]);
 
-  // Load more templates for pagination (loads next 1000 when needed)
+  // Load more templates for pagination (loads next 100 when needed)
   const loadMoreTemplates = useCallback(async (page: number) => {
     if (!isOnline) return;
     
@@ -116,6 +116,15 @@ export const useLazyTemplateSearch = () => {
     try {
       const offset = (page - 1) * TEMPLATES_PER_PAGE;
       console.log('[LazyTemplateSearch] Loading more templates, page:', page, 'offset:', offset);
+      
+      // Check cache first for this specific page
+      const pageCache = getCache<ProductTemplate[]>(`templates_page_${page}`);
+      if (pageCache && Array.isArray(pageCache) && pageCache.length > 0) {
+        console.log('[LazyTemplateSearch] Using cached page', page, ':', pageCache.length, 'templates');
+        setAllTemplates(pageCache);
+        setLoading(false);
+        return;
+      }
       
       const { data: moreBatch, error } = await supabase
         .from('duka_products_templates')
@@ -138,7 +147,7 @@ export const useLazyTemplateSearch = () => {
     } finally {
       setLoading(false);
     }
-  }, [isOnline, setCache]);
+  }, [isOnline, setCache, getCache]);
 
   // Initialize Fuse.js for search
   const fuse = useMemo(() => {

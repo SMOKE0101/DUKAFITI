@@ -279,9 +279,9 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   </div>
                 )}
                 
-                {/* Pagination for Templates */}
+                {/* Pagination for Templates - Scrollable, not fixed */}
                 {totalPages > 1 && (
-                  <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border p-4">
+                  <div className="bg-background/95 backdrop-blur-sm border-t border-border p-4">
                     <Pagination className="w-full">
                       <PaginationContent className="flex-wrap justify-center gap-1">
                         <PaginationItem>
