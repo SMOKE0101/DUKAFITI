@@ -108,7 +108,6 @@ export const useUnifiedProducts = () => {
               .from('products')
               .select('*')
               .eq('user_id', user.id)
-              .or('parent_id.is.null,is_parent.eq.true') // Only show parent products and non-variant products
               .order('created_at', { ascending: false });
 
             if (!fetchError && data) {
@@ -136,7 +135,6 @@ export const useUnifiedProducts = () => {
           .from('products')
           .select('*')
           .eq('user_id', user.id)
-          .or('parent_id.is.null,is_parent.eq.true') // Only show parent products and non-variant products
           .order('created_at', { ascending: false });
 
         if (fetchError) {
@@ -170,7 +168,6 @@ export const useUnifiedProducts = () => {
         .from('products')
         .select('*')
         .eq('user_id', user.id)
-        .or('parent_id.is.null,is_parent.eq.true') // Only show parent products and non-variant products
         .order('created_at', { ascending: false });
 
       if (!fetchError && data) {
@@ -563,6 +560,12 @@ export const useUnifiedProducts = () => {
       loadProducts();
     };
 
+    const handleStockUpdate = (event: CustomEvent) => {
+      console.log('[UnifiedProducts] Stock update event received:', event.detail);
+      // Force a reload when stock is updated
+      setTimeout(() => loadProducts(), 500); // Small delay to ensure DB is updated
+    };
+
     const events = [
       'data-refresh-product',
       'product-synced',
@@ -574,10 +577,13 @@ export const useUnifiedProducts = () => {
       window.addEventListener(event, handleDataRefresh);
     });
     
+    window.addEventListener('product-stock-updated', handleStockUpdate as EventListener);
+    
     return () => {
       events.forEach(event => {
         window.removeEventListener(event, handleDataRefresh);
       });
+      window.removeEventListener('product-stock-updated', handleStockUpdate as EventListener);
     };
   }, [loadProducts]);
 

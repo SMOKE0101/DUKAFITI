@@ -279,8 +279,13 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
       // Force reload products to refresh stock display
       console.log('[NewSalesCheckout] Forcing product reload to refresh stock displays');
-      if (forceReloadProducts) {
-        await forceReloadProducts();
+      try {
+        if (forceReloadProducts) {
+          await forceReloadProducts();
+          console.log('[NewSalesCheckout] Product reload completed successfully');
+        }
+      } catch (error) {
+        console.error('[NewSalesCheckout] Product reload failed:', error);
       }
 
       // Show success message

@@ -226,7 +226,7 @@ export class SalesService {
       // Get parent product details
       const { data: parentProduct, error: fetchError } = await supabase
         .from('products')
-        .select('current_stock, stock_derivation_quantity')
+        .select('current_stock, stock_derivation_quantity, name')
         .eq('id', parentId)
         .single();
 
@@ -234,6 +234,15 @@ export class SalesService {
         console.error('[SalesService] Error fetching parent product:', fetchError);
         return;
       }
+
+      console.log('[SalesService] Parent product details:', {
+        parentId,
+        name: parentProduct.name,
+        current_stock: parentProduct.current_stock,
+        stock_derivation_quantity: parentProduct.stock_derivation_quantity,
+        variantQuantitySold,
+        variantMultiplier
+      });
 
       // Skip stock update for unspecified quantity products
       if (parentProduct.current_stock === -1) {
@@ -266,6 +275,11 @@ export class SalesService {
         console.error('[SalesService] Error updating parent stock:', updateError);
       } else {
         console.log('[SalesService] Parent stock updated successfully:', newStock);
+        
+        // Emit event to notify UI components of stock change
+        window.dispatchEvent(new CustomEvent('product-stock-updated', {
+          detail: { productId: parentId, newStock, type: 'parent' }
+        }));
       }
     } catch (error) {
       console.error('[SalesService] Parent stock update failed:', error);

@@ -389,30 +389,62 @@ const RebuiltModernSalesPage = () => {
   const handleQuantityChange = useCallback((productId: string, newQuantity: number) => {
     console.log('[SalesPage] Quantity change requested:', { productId, newQuantity });
     
-    // Find product in products array (could be variant)
-    const product = products.find(p => p.id === productId);
-    
-    // If not found in products, check if it's a variant in cart
-    const cartItem = cart.find(item => item.id === productId);
-    
-    if (!product && !cartItem) {
-      console.error('[SalesPage] Product not found for quantity change:', productId);
-      return;
-    }
-
     if (newQuantity <= 0) {
       console.log('[SalesPage] Removing item from cart:', productId);
       removeFromCart(productId);
       return;
     }
 
-    // For stock validation, use the product if available, otherwise allow change
-    if (product) {
-      // Allow quantity changes for products with unspecified stock (-1)
-      if (product.currentStock !== -1 && newQuantity > product.currentStock) {
+    // Get cart item details
+    const cartItem = cart.find(item => item.id === productId);
+    if (!cartItem) {
+      console.error('[SalesPage] Cart item not found:', productId);
+      return;
+    }
+
+    console.log('[SalesPage] Cart item details:', {
+      id: cartItem.id,
+      name: cartItem.name,
+      variant_name: cartItem.variant_name,
+      parent_id: cartItem.parent_id,
+      currentStock: cartItem.currentStock,
+      current_quantity: cartItem.quantity,
+      new_quantity: newQuantity
+    });
+
+    // For variants, check parent stock availability
+    if (cartItem.parent_id) {
+      // Find parent product to check available stock
+      const parentProduct = products.find(p => p.id === cartItem.parent_id);
+      if (parentProduct) {
+        const variantMultiplier = cartItem.variant_multiplier || 1;
+        const stockDerivationQty = cartItem.stock_derivation_quantity || 1;
+        const stockNeeded = newQuantity * variantMultiplier * stockDerivationQty;
+        
+        console.log('[SalesPage] Variant stock check:', {
+          parentStock: parentProduct.currentStock,
+          variantMultiplier,
+          stockDerivationQty,
+          stockNeeded,
+          newQuantity
+        });
+
+        if (parentProduct.currentStock !== -1 && stockNeeded > parentProduct.currentStock) {
+          const maxPossible = Math.floor(parentProduct.currentStock / (variantMultiplier * stockDerivationQty));
+          toast({
+            title: "Insufficient Parent Stock",
+            description: `Only ${maxPossible} units of ${cartItem.variant_name} available (parent stock: ${parentProduct.currentStock})`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    } else {
+      // For regular products, check direct stock
+      if (cartItem.currentStock !== -1 && newQuantity > cartItem.currentStock) {
         toast({
           title: "Insufficient Stock",
-          description: `Only ${product.currentStock} units available`,
+          description: `Only ${cartItem.currentStock} units available`,
           variant: "destructive",
         });
         return;
