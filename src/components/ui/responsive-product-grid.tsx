@@ -92,7 +92,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   emptyStateMessage = "No products found",
   emptyStateDescription = "Try adjusting your search or filters"
 }) => {
-  // State for managing which card shows icons (only for inventory variant)
+  // State for managing which card shows icons (for both sales and inventory variants)
   const [activeCardId, setActiveCardId] = useState<string | number | null>(null);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -104,9 +104,9 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
     return selectedProducts.some(p => p.id === product.id);
   };
 
-  // Handle card tap for inventory variant
+  // Handle card tap for both sales and inventory variants
   const handleCardTap = useCallback((productId: string | number) => {
-    if (variant !== 'inventory') return;
+    if (variant !== 'inventory' && variant !== 'sales') return;
 
     // Clear existing timer
     if (hideTimerRef.current) {
@@ -195,8 +195,8 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
           cardProps.onSelect = onSelect;
         }
 
-        // Add tap-to-toggle props for inventory variant
-        if (variant === 'inventory') {
+        // Add tap-to-toggle props for both sales and inventory variants
+        if (variant === 'inventory' || variant === 'sales') {
           cardProps.showIcons = activeCardId === product.id;
           cardProps.onCardTap = () => handleCardTap(product.id);
         }

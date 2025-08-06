@@ -72,7 +72,8 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
   onCardTap,
   className
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
+  // Remove hover state since we're using tap-to-toggle for both sales and inventory
+  const [showAddToCart, setShowAddToCart] = useState(false);
 
   // Calculate stock status for inventory
   const getStockStatus = () => {
@@ -92,18 +93,19 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
     
     if (variant === 'template' && onSelect) {
       onSelect(product);
-    } else if (variant === 'sales' && onAddToCart && !isOutOfStock) {
-      onAddToCart(product);
+    } else if (variant === 'sales' && onCardTap) {
+      // For sales, only trigger tap handler (don't add to cart directly)
+      onCardTap();
     } else if (variant === 'inventory' && onCardTap) {
       onCardTap();
     }
-  }, [variant, onSelect, onAddToCart, product, isOutOfStock, onCardTap]);
+  }, [variant, onSelect, onCardTap, product]);
 
   const handleActionClick = useCallback((e: React.MouseEvent, action: () => void) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only allow action if icons are visible (for inventory)
-    if (variant === 'inventory' && !showIcons) return;
+    // Only allow action if icons are visible (for both sales and inventory)
+    if ((variant === 'inventory' || variant === 'sales') && !showIcons) return;
     action();
   }, [variant, showIcons]);
 
@@ -122,8 +124,6 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
         className
       )}
       onClick={handleCardClick}
-      onMouseEnter={() => variant === 'sales' && setIsHovered(true)}
-      onMouseLeave={() => variant === 'sales' && setIsHovered(false)}
     >
       {/* Selection indicator for templates */}
       {variant === 'template' && isSelected && (
@@ -255,18 +255,22 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
       {/* Action Overlay */}
       <div className={cn(
         "absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center transition-all duration-300",
-        // Show overlay for sales on hover, for templates when selected, and for inventory when showIcons is true
-        (variant === 'sales' && isHovered) || 
+        // Show overlay for sales when showIcons is true, for templates when selected, and for inventory when showIcons is true
+        (variant === 'sales' && showIcons) || 
         (variant === 'template' && isSelected) || 
         (variant === 'inventory' && showIcons) 
           ? "opacity-100" : "opacity-0"
       )}>
         {/* Sales Actions */}
         {variant === 'sales' && onAddToCart && !isOutOfStock && (
-          <div className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-medium shadow-lg transition-all duration-200 transform hover:scale-105">
+          <button
+            onClick={(e) => handleActionClick(e, () => onAddToCart(product))}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
+            disabled={!showIcons}
+          >
             <Plus className="w-4 h-4 inline mr-2" />
             Add to Cart
-          </div>
+          </button>
         )}
 
         {/* Inventory Actions */}
