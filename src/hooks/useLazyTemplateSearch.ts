@@ -108,6 +108,52 @@ export const useLazyTemplateSearch = () => {
     }
   }, [isOnline, getCache, setCache, getCacheInfo, initialized]);
 
+  // Search entire database for templates
+  const searchAllTemplates = useCallback(async (searchTerm: string) => {
+    if (!isOnline || !searchTerm.trim()) return [];
+    
+    setLoading(true);
+    try {
+      console.log('[LazyTemplateSearch] Searching entire database for:', searchTerm);
+      
+      // Check cache first for this search term
+      const searchCache = getCache<ProductTemplate[]>(`search_${searchTerm.toLowerCase()}`);
+      if (searchCache && Array.isArray(searchCache)) {
+        console.log('[LazyTemplateSearch] Using cached search results:', searchCache.length, 'templates');
+        setLoading(false);
+        return searchCache;
+      }
+      
+      // Search entire database using ilike for partial matching
+      const { data: searchResults, error } = await supabase
+        .from('duka_products_templates')
+        .select('*')
+        .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`)
+        .order('name')
+        .limit(1000); // Limit to 1000 search results for performance
+
+      if (error) {
+        console.error('[LazyTemplateSearch] Search error:', error);
+        return [];
+      }
+
+      if (searchResults) {
+        // Cache search results
+        setCache(`search_${searchTerm.toLowerCase()}`, searchResults, '1.0');
+        console.log('[LazyTemplateSearch] Found', searchResults.length, 'search results');
+        setLoading(false);
+        return searchResults;
+      }
+      
+      setLoading(false);
+      return [];
+    } catch (err) {
+      console.error('[LazyTemplateSearch] Search error:', err);
+      setLoading(false);
+      return [];
+    }
+  }, [isOnline, setCache, getCache]);
+
   // Load more templates for pagination (loads next 100 when needed)
   const loadMoreTemplates = useCallback(async (page: number) => {
     if (!isOnline) return;
@@ -167,40 +213,95 @@ export const useLazyTemplateSearch = () => {
     });
   }, [allTemplates]);
 
-  // Get unique categories
+  // Get unique categories - always show all categories, not just from current templates
   const categories = useMemo(() => {
+    // When searching, show standard categories to allow easy switching
+    if (searchTerm.trim()) {
+      return ['all', 'Electronics', 'Foods', 'Fresh Products', 'Homecare', 'Households', 'Liquor', 'Personal Care'];
+    }
+    // When browsing, show categories from current templates
     const uniqueCategories = [...new Set(allTemplates.map(t => t.category).filter(Boolean))];
     return ['all', ...uniqueCategories.sort()];
-  }, [allTemplates]);
+  }, [allTemplates, searchTerm]);
 
   // Filter and search templates 
   const filteredTemplates = useMemo(() => {
     let results = allTemplates;
     
-    // Apply category filter first
+    // If we're searching and have a search term
+    if (searchTerm.trim()) {
+      // For online: allTemplates already contains database search results
+      if (isOnline) {
+        return results; // Return search results as-is since they're already filtered by search
+      }
+      // For offline: use fuse.js search on cached data
+      else if (fuse) {
+        const searchResults = fuse.search(searchTerm.trim());
+        return searchResults.map(result => result.item);
+      }
+      return results;
+    }
+    
+    // Apply category filter only when not searching
     if (selectedCategory !== 'all') {
       results = results.filter(t => t.category === selectedCategory);
     }
 
-    // Apply search if there's a search term
-    if (searchTerm.trim() && fuse) {
-      const searchResults = fuse.search(searchTerm.trim());
-      const searchIds = new Set(searchResults.map(result => result.item.id));
-      results = results.filter(t => searchIds.has(t.id));
-    }
-
     return results;
-  }, [allTemplates, searchTerm, selectedCategory, fuse]);
+  }, [allTemplates, searchTerm, selectedCategory, isOnline, fuse]);
 
-  // Search function
-  const handleSearch = useCallback((term: string) => {
+  // Enhanced search function that automatically switches to "All Categories" and searches entire database
+  const handleSearch = useCallback(async (term: string) => {
     setSearchTerm(term);
-  }, []);
+    
+    // If search term is entered, automatically switch to "All Categories"
+    if (term.trim()) {
+      console.log('[LazyTemplateSearch] Search initiated, switching to All Categories');
+      setSelectedCategory('all');
+      setCurrentPage(1); // Reset to first page when searching
+      
+      // If online, search entire database
+      if (isOnline) {
+        const searchResults = await searchAllTemplates(term);
+        if (searchResults.length > 0) {
+          setAllTemplates(searchResults);
+        }
+      }
+      // For offline, load cached templates and perform fuse.js search
+      if (!isOnline) {
+        console.log('[LazyTemplateSearch] Offline search using cached data');
+        const cached = getCache<ProductTemplate[]>('first_100_templates');
+        if (cached && Array.isArray(cached)) {
+          setAllTemplates(cached);
+          // Fuse.js search will be applied in filteredTemplates memoization
+        }
+      }
+    } else {
+      // If search is cleared, reset to first 100 templates
+      if (!term.trim() && initialized) {
+        setCurrentPage(1);
+        const cached = getCache<ProductTemplate[]>('first_100_templates');
+        if (cached && Array.isArray(cached)) {
+          setAllTemplates(cached);
+        }
+      }
+    }
+  }, [isOnline, searchAllTemplates, initialized, getCache]);
 
   // Category filter function
   const handleCategoryChange = useCallback((category: string) => {
     setSelectedCategory(category);
-  }, []);
+    // If user manually selects a category, clear search to show category results
+    if (searchTerm.trim()) {
+      setSearchTerm('');
+      setCurrentPage(1);
+      // Restore default templates
+      const cached = getCache<ProductTemplate[]>('first_100_templates');
+      if (cached && Array.isArray(cached)) {
+        setAllTemplates(cached);
+      }
+    }
+  }, [searchTerm, getCache]);
 
   // Clear filters
   const clearFilters = useCallback(() => {
@@ -232,6 +333,7 @@ export const useLazyTemplateSearch = () => {
     handleCategoryChange,
     clearFilters,
     initializeTemplates,
+    searchAllTemplates,
     totalTemplates: totalCount > 0 ? totalCount : allTemplates.length, // Use total count from DB if available
     hasActiveSearch: searchTerm.trim().length > 0,
     hasActiveFilter: selectedCategory !== 'all',

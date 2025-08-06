@@ -39,7 +39,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     searchTerm,
     selectedCategory,
     categories,
-    handleSearch: searchTemplates,
+    handleSearch,
     handleCategoryChange: filterByCategory,
     clearFilters,
     totalTemplates,
@@ -147,6 +147,14 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 </div>
               </div>
               
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="sm"
+                className="p-2 absolute top-4 right-4"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
 
             {/* Fixed Search Bar */}
@@ -157,13 +165,13 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   <Input
                     placeholder={`Search ${totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates...`}
                     value={searchTerm}
-                    onChange={(e) => searchTemplates(e.target.value)}
+                    onChange={(e) => handleSearch(e.target.value)}
                     className="pl-10 pr-10 h-10"
                     disabled={loading}
                   />
                   {searchTerm && (
                     <Button
-                      onClick={() => searchTemplates('')}
+                      onClick={() => handleSearch('')}
                       variant="ghost"
                       size="sm"
                       className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
@@ -426,6 +434,14 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 )}
               </div>
               
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="sm"
+                className="p-2 absolute top-4 right-4"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
 
             {/* Configuration Content */}
