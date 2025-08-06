@@ -11,7 +11,7 @@ export interface ProductTemplate {
   image_url: string | null;
 }
 
-// Lazy loading hook that only loads templates when needed
+// Lazy loading hook that only loads templates when needed with pagination
 export const useLazyTemplateSearch = () => {
   const [allTemplates, setAllTemplates] = useState<ProductTemplate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,10 +20,15 @@ export const useLazyTemplateSearch = () => {
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const TEMPLATES_PER_PAGE = 1000; // Display 1000 templates at a time
+  
   const { isOnline } = useNetworkStatus();
   const { getCache, setCache, getCacheInfo, isInitialized } = usePublicTemplateCache();
 
-  // Fast initialization - only load templates when actually needed
+  // Fast initialization - only load first 1000 templates for display
   const initializeTemplates = useCallback(async () => {
     if (initialized) return;
     
@@ -33,13 +38,19 @@ export const useLazyTemplateSearch = () => {
 
     try {
       // Check cache first
-      const cacheInfo = getCacheInfo('all_product_templates');
+      const cacheInfo = getCacheInfo('first_1000_templates');
       
-      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 7000) {
-        console.log('[LazyTemplateSearch] Using cached data:', cacheInfo.itemCount, 'templates');
-        const cached = getCache<ProductTemplate[]>('all_product_templates');
+      if (cacheInfo.exists && cacheInfo.isValid && cacheInfo.itemCount && cacheInfo.itemCount >= 1000) {
+        console.log('[LazyTemplateSearch] Using cached first 1000 templates:', cacheInfo.itemCount);
+        const cached = getCache<ProductTemplate[]>('first_1000_templates');
         if (cached && Array.isArray(cached)) {
           setAllTemplates(cached);
+          // Get total count from another cache or estimate
+          const totalCacheInfo = getCacheInfo('total_template_count');
+          if (totalCacheInfo.exists) {
+            const totalCached = getCache<number>('total_template_count');
+            if (totalCached) setTotalCount(totalCached);
+          }
           setLoading(false);
           return;
         }
@@ -47,32 +58,44 @@ export const useLazyTemplateSearch = () => {
 
       // Load from database if online
       if (isOnline) {
-        console.log('[LazyTemplateSearch] Loading templates from database...');
+        console.log('[LazyTemplateSearch] Loading first 1000 templates from database...');
         
-        // Get a reasonable batch first (1000 items)
-        const { data: initialBatch, error: initialError } = await supabase
+        // Get total count first
+        const { count, error: countError } = await supabase
+          .from('duka_products_templates')
+          .select('*', { count: 'exact', head: true });
+          
+        if (countError) {
+          throw new Error(`Failed to get template count: ${countError.message}`);
+        }
+        
+        setTotalCount(count || 0);
+        setCache('total_template_count', count || 0, '1.0');
+        
+        // Load first 1000 templates only
+        const { data: firstBatch, error: batchError } = await supabase
           .from('duka_products_templates')
           .select('*')
           .order('name')
-          .limit(1000);
+          .limit(TEMPLATES_PER_PAGE);
 
-        if (initialError) {
-          throw new Error(`Failed to load templates: ${initialError.message}`);
+        if (batchError) {
+          throw new Error(`Failed to load templates: ${batchError.message}`);
         }
 
-        if (initialBatch) {
-          setAllTemplates(initialBatch);
-          console.log('[LazyTemplateSearch] Loaded initial batch:', initialBatch.length, 'templates');
-          
-          // Load remaining templates in background
-          loadRemainingTemplates(1000);
+        if (firstBatch) {
+          setAllTemplates(firstBatch);
+          setCache('first_1000_templates', firstBatch, '1.0');
+          console.log('[LazyTemplateSearch] Loaded first batch:', firstBatch.length, 'templates out of', count);
         }
       } else {
         // Offline - check if we have any cached data
-        const cached = getCache<ProductTemplate[]>('all_product_templates');
+        const cached = getCache<ProductTemplate[]>('first_1000_templates');
         if (cached && Array.isArray(cached) && cached.length > 0) {
           console.log('[LazyTemplateSearch] Using offline cached data:', cached.length, 'templates');
           setAllTemplates(cached);
+          const totalCached = getCache<number>('total_template_count');
+          if (totalCached) setTotalCount(totalCached);
         } else {
           setError('No cached templates available offline');
         }
@@ -85,28 +108,37 @@ export const useLazyTemplateSearch = () => {
     }
   }, [isOnline, getCache, setCache, getCacheInfo, initialized]);
 
-  // Load remaining templates in background
-  const loadRemainingTemplates = useCallback(async (offset: number) => {
+  // Load more templates for pagination (loads next 1000 when needed)
+  const loadMoreTemplates = useCallback(async (page: number) => {
+    if (!isOnline) return;
+    
+    setLoading(true);
     try {
-      const { data: remainingBatch, error } = await supabase
+      const offset = (page - 1) * TEMPLATES_PER_PAGE;
+      console.log('[LazyTemplateSearch] Loading more templates, page:', page, 'offset:', offset);
+      
+      const { data: moreBatch, error } = await supabase
         .from('duka_products_templates')
         .select('*')
         .order('name')
-        .range(offset, offset + 6000); // Load remaining
+        .range(offset, offset + TEMPLATES_PER_PAGE - 1);
 
-      if (!error && remainingBatch && remainingBatch.length > 0) {
-        setAllTemplates(prev => {
-          const combined = [...prev, ...remainingBatch];
-          // Cache the complete set
-          setCache('all_product_templates', combined, '4.0');
-          console.log('[LazyTemplateSearch] Background load complete:', combined.length, 'total templates');
-          return combined;
-        });
+      if (error) {
+        throw new Error(`Failed to load more templates: ${error.message}`);
       }
-    } catch (error) {
-      console.error('[LazyTemplateSearch] Background load error:', error);
+
+      if (moreBatch && moreBatch.length > 0) {
+        setAllTemplates(moreBatch);
+        setCache(`templates_page_${page}`, moreBatch, '1.0');
+        console.log('[LazyTemplateSearch] Loaded page', page, ':', moreBatch.length, 'templates');
+      }
+    } catch (err) {
+      setError('Failed to load more templates');
+      console.error('[LazyTemplateSearch] Load more error:', err);
+    } finally {
+      setLoading(false);
     }
-  }, [setCache]);
+  }, [isOnline, setCache]);
 
   // Initialize Fuse.js for search
   const fuse = useMemo(() => {
@@ -132,7 +164,7 @@ export const useLazyTemplateSearch = () => {
     return ['all', ...uniqueCategories.sort()];
   }, [allTemplates]);
 
-  // Filter and search templates with pagination
+  // Filter and search templates 
   const filteredTemplates = useMemo(() => {
     let results = allTemplates;
     
@@ -148,8 +180,7 @@ export const useLazyTemplateSearch = () => {
       results = results.filter(t => searchIds.has(t.id));
     }
 
-    // Limit results for performance (show first 1000 results)
-    return results.slice(0, 1000);
+    return results;
   }, [allTemplates, searchTerm, selectedCategory, fuse]);
 
   // Search function
@@ -168,6 +199,17 @@ export const useLazyTemplateSearch = () => {
     setSelectedCategory('all');
   }, []);
 
+  // Handle page change
+  const handlePageChange = useCallback((page: number) => {
+    if (page !== currentPage && page >= 1) {
+      setCurrentPage(page);
+      // Check if we need to load more templates for this page
+      if (page > 1) {
+        loadMoreTemplates(page);
+      }
+    }
+  }, [currentPage, loadMoreTemplates]);
+
   return {
     templates: filteredTemplates,
     allTemplates,
@@ -181,9 +223,15 @@ export const useLazyTemplateSearch = () => {
     handleCategoryChange,
     clearFilters,
     initializeTemplates,
-    totalTemplates: allTemplates.length,
+    totalTemplates: totalCount > 0 ? totalCount : allTemplates.length, // Use total count from DB if available
     hasActiveSearch: searchTerm.trim().length > 0,
     hasActiveFilter: selectedCategory !== 'all',
-    initialized
+    initialized,
+    // Pagination
+    currentPage,
+    totalPages: Math.ceil((totalCount > 0 ? totalCount : allTemplates.length) / TEMPLATES_PER_PAGE),
+    templatesPerPage: TEMPLATES_PER_PAGE,
+    handlePageChange,
+    loadMoreTemplates
   };
 };

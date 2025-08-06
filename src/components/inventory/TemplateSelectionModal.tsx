@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
 import { X, Package2, ArrowLeft, Plus, Search, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLazyTemplateSearch, ProductTemplate } from '../../hooks/useLazyTemplateSearch';
@@ -43,7 +44,10 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     clearFilters,
     totalTemplates,
     initializeTemplates,
-    initialized
+    initialized,
+    currentPage,
+    totalPages,
+    handlePageChange
   } = useLazyTemplateSearch();
 
   // Reset modal state when closing
@@ -143,14 +147,6 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 </div>
               </div>
               
-              <Button
-                onClick={onClose}
-                variant="ghost"
-                size="sm"
-                className="p-2"
-              >
-                <X className="w-4 h-4" />
-              </Button>
             </div>
 
             {/* Fixed Search Bar */}
@@ -282,6 +278,109 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                     ))}
                   </div>
                 )}
+                
+                {/* Pagination for Templates */}
+                {totalPages > 1 && (
+                  <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border p-4">
+                    <Pagination className="w-full">
+                      <PaginationContent className="flex-wrap justify-center gap-1">
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage > 1) handlePageChange(currentPage - 1);
+                            }}
+                            className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                        
+                        {/* Show first page */}
+                        {currentPage > 3 && (
+                          <>
+                            <PaginationItem>
+                              <PaginationLink 
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(1);
+                                }}
+                                isActive={currentPage === 1}
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+                            {currentPage > 4 && <PaginationEllipsis />}
+                          </>
+                        )}
+                        
+                        {/* Show pages around current */}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                          const pageNum = start + i;
+                          if (pageNum > totalPages || pageNum < 1) return null;
+                          
+                          // Skip if already shown in first/last sections
+                          if ((currentPage > 3 && pageNum === 1) || (currentPage < totalPages - 2 && pageNum === totalPages)) {
+                            return null;
+                          }
+                          
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink 
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(pageNum);
+                                }}
+                                isActive={currentPage === pageNum}
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+                        
+                        {/* Show last page */}
+                        {currentPage < totalPages - 2 && (
+                          <>
+                            {currentPage < totalPages - 3 && <PaginationEllipsis />}
+                            <PaginationItem>
+                              <PaginationLink 
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(totalPages);
+                                }}
+                                isActive={currentPage === totalPages}
+                              >
+                                {totalPages}
+                              </PaginationLink>
+                            </PaginationItem>
+                          </>
+                        )}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage < totalPages) handlePageChange(currentPage + 1);
+                            }}
+                            className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                    
+                    {/* Page info */}
+                    <div className="text-center mt-2">
+                      <span className="text-xs text-muted-foreground">
+                        Page {currentPage} of {totalPages} ({totalTemplates.toLocaleString()} total templates)
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -327,14 +426,6 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 )}
               </div>
               
-              <Button
-                onClick={onClose}
-                variant="ghost"
-                size="sm"
-                className="p-2"
-              >
-                <X className="w-4 h-4" />
-              </Button>
             </div>
 
             {/* Configuration Content */}
