@@ -144,18 +144,18 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                   <p className="text-sm text-muted-foreground">
                     Choose a template to pre-fill your {mode === 'uncountable' ? 'uncountable item' : 'product'} details
                   </p>
-                </div>
-              </div>
-              
-              <Button
-                onClick={onClose}
-                variant="ghost"
-                size="sm"
-                className="p-2 absolute top-4 right-4"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+                 </div>
+               </div>
+               
+               <Button
+                 onClick={onClose}
+                 variant="ghost"
+                 size="sm"
+                 className="p-2 absolute top-4 right-4"
+               >
+                 <X className="w-4 h-4" />
+               </Button>
+             </div>
 
             {/* Fixed Search Bar */}
             <div className="bg-muted/20 border-b border-border flex-shrink-0">

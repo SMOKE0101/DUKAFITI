@@ -23,6 +23,7 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
   onSave 
 }) => {
   const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -48,11 +49,14 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       setCustomCategory('');
       setShowCustomInput(false);
       setShowTemplateModal(false);
+      setIsSaving(false);
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSaving) return; // Prevent double submission
     
     if (!formData.name.trim()) {
       toast({
@@ -90,15 +94,29 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
       return;
     }
     
-    const finalFormData = {
-      ...formData,
-      category: isCustomCategory(formData.category) ? customCategory : formData.category,
-      currentStock: -1, // Unspecified quantity
-      lowStockThreshold: 0, // No threshold for uncountable items
-      sku: formData.sku, // Auto-generated SKU
-    };
+    setIsSaving(true);
     
-    onSave(finalFormData);
+    try {
+      const finalFormData = {
+        ...formData,
+        category: isCustomCategory(formData.category) ? customCategory : formData.category,
+        currentStock: -1, // Unspecified quantity
+        lowStockThreshold: 0, // No threshold for uncountable items
+        sku: formData.sku, // Auto-generated SKU
+      };
+      
+      await onSave(finalFormData);
+      onClose(); // Close modal immediately after save
+    } catch (error) {
+      console.error('Failed to save uncountable product:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to create uncountable product. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -333,9 +351,10 @@ const UncountableProductModal: React.FC<UncountableProductModalProps> = ({
               </Button>
               <Button 
                 type="submit"
-                className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-orange-600 bg-orange-600 text-white hover:bg-orange-700 hover:border-orange-700 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base"
+                disabled={isSaving}
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-orange-600 bg-orange-600 text-white hover:bg-orange-700 hover:border-orange-700 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Uncountable Item
+                {isSaving ? 'Adding...' : 'Add Uncountable Item'}
               </Button>
             </div>
           </form>

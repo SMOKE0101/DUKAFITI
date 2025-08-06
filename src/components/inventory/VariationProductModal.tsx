@@ -37,6 +37,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
   existingProducts = []
 }) => {
   const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
   const [step, setStep] = useState(1);
   const [parentProduct, setParentProduct] = useState<{
     type: 'new' | 'existing';
@@ -95,6 +96,7 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     setShowCustomInput(false);
     setShowTemplateModal(false);
     setTemplatesInitialized(false);
+    setIsSaving(false);
   };
 
   const handleCategoryChange = (value: string) => {
@@ -237,32 +239,47 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
     console.log('[VariationProductModal] Template selection complete, modal closed');
   }, []);
 
-  const handleSave = () => {
-    if (!validateStep2()) return;
+  const handleSave = async () => {
+    if (!validateStep2() || isSaving) return;
 
-    const finalCategory = isCustomCategory(parentProduct.category) ? customCategory : parentProduct.category;
-    const validVariants = variants.filter(v => v.name.trim() && v.multiplier > 0 && v.sellingPrice > 0);
+    setIsSaving(true);
 
-    // Create parent product
-    const parentProductData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
-      name: parentProduct.name,
-      category: finalCategory,
-      costPrice: 0, // Parent product doesn't have pricing
-      sellingPrice: 0, // Parent product doesn't have pricing
-      currentStock: parentProduct.currentStock,
-      lowStockThreshold: parentProduct.lowStockThreshold,
-      stock_derivation_quantity: parentProduct.stockDerivationQuantity,
-      is_parent: true,
-      sku: parentProduct.sku, // Auto-generated SKU
-      image_url: parentProduct.image_url || null,
-    };
+    try {
+      const finalCategory = isCustomCategory(parentProduct.category) ? customCategory : parentProduct.category;
+      const validVariants = variants.filter(v => v.name.trim() && v.multiplier > 0 && v.sellingPrice > 0);
 
-    onSave(parentProductData, validVariants);
-    
-    toast({
-      title: "Variation Products Created",
-      description: `Created parent product with ${validVariants.length} variants`,
-    });
+      // Create parent product
+      const parentProductData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+        name: parentProduct.name,
+        category: finalCategory,
+        costPrice: 0, // Parent product doesn't have pricing
+        sellingPrice: 0, // Parent product doesn't have pricing
+        currentStock: parentProduct.currentStock,
+        lowStockThreshold: parentProduct.lowStockThreshold,
+        stock_derivation_quantity: parentProduct.stockDerivationQuantity,
+        is_parent: true,
+        sku: parentProduct.sku, // Auto-generated SKU
+        image_url: parentProduct.image_url || null,
+      };
+
+      await onSave(parentProductData, validVariants);
+      
+      toast({
+        title: "Variation Products Created",
+        description: `Created parent product with ${validVariants.length} variants`,
+      });
+
+      onClose(); // Close modal immediately after save
+    } catch (error) {
+      console.error('Failed to save variation products:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to create variation products. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const nextStep = () => {
@@ -619,9 +636,10 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
               <Button
                 type="button"
                 onClick={handleSave}
-                className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg text-sm sm:text-base"
+                disabled={isSaving}
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-mono font-bold uppercase tracking-wide rounded-lg text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Product Variants
+                {isSaving ? 'Creating...' : 'Create Product Variants'}
               </Button>
             )}
           </div>
