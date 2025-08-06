@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Check, Plus, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Check, Plus, Edit, Trash2, AlertTriangle, Camera } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import EnhancedProductImage from './enhanced-product-image';
 import ExternalProductImage from './external-product-image';
@@ -246,10 +246,10 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
         </div>
       </div>
 
-      {/* Action Overlay - Always visible for inventory, hover for others */}
+      {/* Action Overlay */}
       <div className={cn(
         "absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center transition-all duration-300",
-        variant === 'inventory' ? "opacity-100" : (isHovered || (variant === 'template' && isSelected) ? "opacity-100" : "opacity-0")
+        isHovered || (variant === 'template' && isSelected) ? "opacity-100" : "opacity-0"
       )}>
         {/* Sales Actions */}
         {variant === 'sales' && onAddToCart && !isOutOfStock && (
@@ -261,57 +261,43 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
 
         {/* Inventory Actions */}
         {variant === 'inventory' && (
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2">
-              {onChangeImage && (
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onChangeImage(product))}
-                    className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
-                    title="Change Image"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                  <span className="text-white text-xs font-medium">Upload</span>
-                </div>
-              )}
-              {onEdit && (
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onEdit(product))}
-                    className="bg-white/90 hover:bg-white text-gray-700 p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
-                    title="Edit Product"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <span className="text-white text-xs font-medium">Edit</span>
-                </div>
-              )}
-              {onRestock && (
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onRestock(product))}
-                    className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
-                    title="Restock Product"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                  <span className="text-white text-xs font-medium">Restock</span>
-                </div>
-              )}
-              {onDelete && (
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onDelete(product))}
-                    className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
-                    title="Delete Product"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <span className="text-white text-xs font-medium">Delete</span>
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            {onChangeImage && (
+              <button
+                onClick={(e) => handleActionClick(e, () => onChangeImage(product))}
+                className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                title="Change Image"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+            )}
+            {onEdit && (
+              <button
+                onClick={(e) => handleActionClick(e, () => onEdit(product))}
+                className="bg-white/90 hover:bg-white text-gray-700 p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                title="Edit Product"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+            )}
+            {onRestock && (
+              <button
+                onClick={(e) => handleActionClick(e, () => onRestock(product))}
+                className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                title="Restock Product"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={(e) => handleActionClick(e, () => onDelete(product))}
+                className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                title="Delete Product"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 
