@@ -56,7 +56,7 @@ export interface Product {
   category: string;
   costPrice: number;
   sellingPrice: number;
-  currentStock: number;
+  currentStock: number; // Now supports decimal values for precise variant calculations
   lowStockThreshold: number;
   createdAt: string;
   updatedAt: string;

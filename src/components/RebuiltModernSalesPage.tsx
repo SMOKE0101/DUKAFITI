@@ -23,6 +23,7 @@ import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
 import ResponsiveProductGrid from './ui/responsive-product-grid';
 import VariantSelectionModal from './sales/VariantSelectionModal';
+import VariantSalesDebug from './debug/VariantSalesDebug';
 import { 
   Search, 
   ShoppingCart, 
@@ -869,6 +870,13 @@ const RebuiltModernSalesPage = () => {
             </Select>
           </div>
         </div>
+
+        {/* Debug Component - Temporary for testing */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="p-6 pb-2">
+            <VariantSalesDebug />
+          </div>
+        )}
 
         {/* Products Grid - Desktop/Tablet */}
         <div className="flex-1 overflow-y-auto p-6">

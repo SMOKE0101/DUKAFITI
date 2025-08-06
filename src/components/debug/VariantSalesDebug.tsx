@@ -38,7 +38,9 @@ const VariantSalesDebug: React.FC = () => {
         variantName: v.variant_name,
         parentId: v.parent_id,
         multiplier: v.variant_multiplier,
-        stock: v.currentStock
+        stock: v.currentStock,
+        parentName: parents.find(p => p.id === v.parent_id)?.name || 'Unknown',
+        parentStock: parents.find(p => p.id === v.parent_id)?.currentStock || 0
       })),
       cartVariantsList: cartVariants.map(item => ({
         id: item.id,
@@ -132,14 +134,17 @@ const VariantSalesDebug: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-40 overflow-y-auto">
-                {debugInfo.variantsList?.slice(0, 5).map((variant: any) => (
-                  <div key={variant.id} className="text-sm">
-                    <div className="font-medium truncate">{variant.variantName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Multiplier: {variant.multiplier}x
-                    </div>
-                  </div>
-                ))}
+                 {debugInfo.variantsList?.slice(0, 5).map((variant: any) => (
+                   <div key={variant.id} className="text-sm">
+                     <div className="font-medium truncate">{variant.variantName}</div>
+                     <div className="text-xs text-muted-foreground">
+                       Parent: {variant.parentName} ({variant.parentStock})
+                     </div>
+                     <div className="text-xs text-muted-foreground">
+                       Multiplier: {variant.multiplier}x
+                     </div>
+                   </div>
+                 ))}
                 {debugInfo.variantsList?.length > 5 && (
                   <div className="text-xs text-muted-foreground">
                     +{debugInfo.variantsList.length - 5} more...
