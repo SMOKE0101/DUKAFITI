@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, MoreVertical, Box } from 'lucide-react';
+import { Plus, Search, MoreVertical, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +12,7 @@ import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
 import { ProductMode } from './inventory/AddProductDropdown';
-import InventoryFilters from './inventory/InventoryFilters';
+
 import ResponsiveProductGrid from './ui/responsive-product-grid';
 import InventoryHeader from './inventory/InventoryHeader';
 import PremiumStatsCards from './inventory/PremiumStatsCards';
@@ -34,7 +34,7 @@ const InventoryPage = () => {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [showImageChangeModal, setShowImageChangeModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
 
   const { toast } = useToast();
@@ -457,7 +457,7 @@ const InventoryPage = () => {
           onAddProduct={handleAddProductMode}
         />
 
-        {/* Search and Filter Section */}
+        {/* Search Section */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -468,31 +468,7 @@ const InventoryPage = () => {
               className="pl-10"
             />
           </div>
-          
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2"
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </Button>
-          </div>
         </div>
-
-        {/* Filters Panel */}
-        {showFilters && (
-          <InventoryFilters
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-          />
-        )}
 
         {/* Products Grid */}
         <ResponsiveProductGrid
