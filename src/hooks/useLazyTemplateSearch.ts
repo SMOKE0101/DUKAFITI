@@ -250,8 +250,20 @@ export const useLazyTemplateSearch = () => {
     return results;
   }, [allTemplates, searchTerm, selectedCategory, isOnline, fuse]);
 
-  // Enhanced search function that automatically switches to "All Categories" and searches entire database
-  const handleSearch = useCallback(async (term: string) => {
+  // Debounced search to prevent excessive database calls
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  // Debounce search term updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Enhanced search function with debouncing
+  const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);
     
     // If search term is entered, automatically switch to "All Categories"
@@ -259,25 +271,8 @@ export const useLazyTemplateSearch = () => {
       console.log('[LazyTemplateSearch] Search initiated, switching to All Categories');
       setSelectedCategory('all');
       setCurrentPage(1); // Reset to first page when searching
-      
-      // If online, search entire database
-      if (isOnline) {
-        const searchResults = await searchAllTemplates(term);
-        if (searchResults.length > 0) {
-          setAllTemplates(searchResults);
-        }
-      }
-      // For offline, load cached templates and perform fuse.js search
-      if (!isOnline) {
-        console.log('[LazyTemplateSearch] Offline search using cached data');
-        const cached = getCache<ProductTemplate[]>('first_100_templates');
-        if (cached && Array.isArray(cached)) {
-          setAllTemplates(cached);
-          // Fuse.js search will be applied in filteredTemplates memoization
-        }
-      }
     } else {
-      // If search is cleared, reset to first 100 templates
+      // If search is cleared, reset to first 100 templates immediately
       if (!term.trim() && initialized) {
         setCurrentPage(1);
         const cached = getCache<ProductTemplate[]>('first_100_templates');
@@ -286,7 +281,37 @@ export const useLazyTemplateSearch = () => {
         }
       }
     }
-  }, [isOnline, searchAllTemplates, initialized, getCache]);
+  }, [initialized, getCache]);
+
+  // Effect to handle actual search execution after debounce
+  useEffect(() => {
+    const executeSearch = async () => {
+      const term = debouncedSearchTerm.trim();
+      
+      if (term) {
+        // If online, search entire database
+        if (isOnline) {
+          const searchResults = await searchAllTemplates(term);
+          if (searchResults.length > 0) {
+            setAllTemplates(searchResults);
+          }
+        }
+        // For offline, load cached templates and perform fuse.js search
+        else {
+          console.log('[LazyTemplateSearch] Offline search using cached data');
+          const cached = getCache<ProductTemplate[]>('first_100_templates');
+          if (cached && Array.isArray(cached)) {
+            setAllTemplates(cached);
+            // Fuse.js search will be applied in filteredTemplates memoization
+          }
+        }
+      }
+    };
+
+    if (debouncedSearchTerm !== searchTerm) {
+      executeSearch();
+    }
+  }, [debouncedSearchTerm, searchTerm, isOnline, searchAllTemplates, getCache]);
 
   // Category filter function
   const handleCategoryChange = useCallback((category: string) => {
