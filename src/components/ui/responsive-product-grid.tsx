@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import UnifiedProductCard from './unified-product-card';
 
@@ -55,7 +55,6 @@ interface ResponsiveProductGridProps {
   onEdit?: (product: any) => void;
   onDelete?: (product: any) => void;
   onRestock?: (product: any) => void;
-  onChangeImage?: (product: any) => void;
   getSellingPrice?: (product: any) => number;
   getCostPrice?: (product: any) => number;
   getCurrentStock?: (product: any) => number;
@@ -82,7 +81,6 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   onEdit,
   onDelete,
   onRestock,
-  onChangeImage,
   getSellingPrice,
   getCostPrice,
   getCurrentStock,
@@ -94,6 +92,10 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   emptyStateMessage = "No products found",
   emptyStateDescription = "Try adjusting your search or filters"
 }) => {
+  // State for managing which card shows icons (only for inventory variant)
+  const [activeCardId, setActiveCardId] = useState<string | number | null>(null);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Merge default config with custom config
   const config = { ...GRID_CONFIGS[variant], ...gridConfig };
   
@@ -101,6 +103,40 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   const isProductSelected = (product: BaseProduct) => {
     return selectedProducts.some(p => p.id === product.id);
   };
+
+  // Handle card tap for inventory variant
+  const handleCardTap = useCallback((productId: string | number) => {
+    if (variant !== 'inventory') return;
+
+    // Clear existing timer
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
+    if (activeCardId === productId) {
+      // If same card is tapped, hide icons
+      setActiveCardId(null);
+    } else {
+      // Show icons for this card and hide others
+      setActiveCardId(productId);
+      
+      // Set timer to auto-hide after 4 seconds
+      hideTimerRef.current = setTimeout(() => {
+        setActiveCardId(null);
+        hideTimerRef.current = null;
+      }, 4000);
+    }
+  }, [variant, activeCardId]);
+
+  // Cleanup timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+    };
+  }, []);
 
   // Empty state
   if (products.length === 0) {
@@ -147,7 +183,6 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
           cardProps.onEdit = onEdit;
           cardProps.onDelete = onDelete;
           cardProps.onRestock = onRestock;
-          cardProps.onChangeImage = onChangeImage;
           cardProps.sellingPrice = getSellingPrice?.(product);
           cardProps.costPrice = getCostPrice?.(product);
           cardProps.currentStock = getCurrentStock?.(product);
@@ -158,6 +193,12 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
         if (variant === 'template') {
           cardProps.isSelected = isProductSelected(product);
           cardProps.onSelect = onSelect;
+        }
+
+        // Add tap-to-toggle props for inventory variant
+        if (variant === 'inventory') {
+          cardProps.showIcons = activeCardId === product.id;
+          cardProps.onCardTap = () => handleCardTap(product.id);
         }
 
         return <UnifiedProductCard key={product.id} {...cardProps} />;

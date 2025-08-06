@@ -7,7 +7,6 @@ interface InventoryProductGridProps {
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
   onRestock: (product: Product) => void;
-  onChangeImage: (product: Product) => void;
 }
 
 const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
@@ -15,7 +14,6 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
   onEdit,
   onDelete,
   onRestock,
-  onChangeImage,
 }) => {
   return (
     <ResponsiveProductGrid
@@ -24,7 +22,6 @@ const InventoryProductGrid: React.FC<InventoryProductGridProps> = ({
       onEdit={onEdit}
       onDelete={onDelete}
       onRestock={onRestock}
-      onChangeImage={onChangeImage}
       getSellingPrice={(product) => product.sellingPrice}
       getCostPrice={(product) => product.costPrice}
       getCurrentStock={(product) => product.currentStock}

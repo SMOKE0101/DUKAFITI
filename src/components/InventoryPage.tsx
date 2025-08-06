@@ -501,7 +501,6 @@ const InventoryPage = () => {
           onEdit={handleEditProduct}
           onDelete={handleDeleteProduct}
           onRestock={handleRestock}
-          onChangeImage={handleChangeImage}
           getSellingPrice={(product) => product.sellingPrice}
           getCostPrice={(product) => product.costPrice}
           getCurrentStock={(product) => product.currentStock}
