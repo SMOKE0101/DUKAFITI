@@ -28,7 +28,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     sellingPrice: '',
     lowStockThreshold: '',
     currentStock: '',
-    image_url: ''
+    image_url: '',
+    stockDerivationQuantity: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -53,7 +54,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
         sellingPrice: product.sellingPrice.toString(),
         lowStockThreshold: product.lowStockThreshold?.toString() || '10',
         currentStock: product.currentStock.toString(),
-        image_url: product.image_url || ''
+        image_url: product.image_url || '',
+        stockDerivationQuantity: product.stock_derivation_quantity?.toString() || '1'
       });
       setCustomCategory(isCustom ? product.category : '');
       setShowCustomInput(isCustom);
@@ -66,12 +68,20 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
     if (!formData.name.trim()) newErrors.name = 'Product name is required';
     
-    if (!isUnspecifiedStock && (!formData.costPrice || parseFloat(formData.costPrice) <= 0)) {
-      newErrors.costPrice = 'Valid buying price is required';
-    }
-    
-    if (!formData.sellingPrice || parseFloat(formData.sellingPrice) <= 0) {
-      newErrors.sellingPrice = 'Valid selling price is required';
+    // For variant products (is_parent = true), don't validate cost/selling price
+    if (!product?.is_parent) {
+      if (!isUnspecifiedStock && (!formData.costPrice || parseFloat(formData.costPrice) <= 0)) {
+        newErrors.costPrice = 'Valid buying price is required';
+      }
+      
+      if (!formData.sellingPrice || parseFloat(formData.sellingPrice) <= 0) {
+        newErrors.sellingPrice = 'Valid selling price is required';
+      }
+    } else {
+      // For variant products, validate stock derivation quantity
+      if (!formData.stockDerivationQuantity || parseInt(formData.stockDerivationQuantity) <= 0) {
+        newErrors.stockDerivationQuantity = 'Valid stock derivation quantity is required';
+      }
     }
     
     if (!isUnspecifiedStock && (!formData.lowStockThreshold || parseInt(formData.lowStockThreshold) < 0)) {
@@ -94,15 +104,22 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     setLoading(true);
 
     try {
-      const updatedProduct = {
+      const updatedProduct: Partial<Product> = {
         name: formData.name.trim(),
         category: isCustomCategory(formData.category) ? customCategory : formData.category,
-        costPrice: isUnspecifiedStock ? 0 : parseFloat(formData.costPrice),
-        sellingPrice: parseFloat(formData.sellingPrice),
-        currentStock: isUnspecifiedStock ? -1 : parseInt(formData.currentStock),
-        lowStockThreshold: isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold),
         image_url: formData.image_url || null
       };
+
+      // For variant products, only update stock derivation quantity
+      if (product.is_parent) {
+        updatedProduct.stock_derivation_quantity = parseInt(formData.stockDerivationQuantity);
+      } else {
+        // For regular products, update pricing and stock info
+        updatedProduct.costPrice = isUnspecifiedStock ? 0 : parseFloat(formData.costPrice);
+        updatedProduct.sellingPrice = parseFloat(formData.sellingPrice);
+        updatedProduct.currentStock = isUnspecifiedStock ? -1 : parseInt(formData.currentStock);
+        updatedProduct.lowStockThreshold = isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold);
+      }
 
       await onSave(product.id, updatedProduct);
       
@@ -142,7 +159,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
     }
   };
 
-  const isFormValid = formData.name && formData.sellingPrice && formData.category;
+  const isFormValid = formData.name && formData.category && 
+    (product?.is_parent ? formData.stockDerivationQuantity : formData.sellingPrice);
 
   if (!product) return null;
 
@@ -211,63 +229,90 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
               />
             </div>
 
-            {/* Pricing Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Buying Price */}
-              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Buying Price (KES) *
-                </Label>
-                {isUnspecifiedStock && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">Disabled for unspecified-quantity items</p>
-                )}
-                <div className="relative">
-                  <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
-                    isUnspecifiedStock ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'
-                  } text-sm font-mono`}>
-                    KES
-                  </span>
-                  <Input
-                    id="costPrice"
-                    type="number"
-                    step="0.01"
-                    value={isUnspecifiedStock ? '' : formData.costPrice}
-                    onChange={(e) => setFormData(prev => ({ ...prev, costPrice: e.target.value }))}
-                    className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 ${
-                      errors.costPrice ? 'border-red-500' : ''
-                    } ${isUnspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    placeholder={isUnspecifiedStock ? "Disabled" : "0.00"}
-                    disabled={isUnspecifiedStock || loading}
-                  />
+            {/* Pricing Section - Hidden for variant products */}
+            {!product.is_parent && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Buying Price */}
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Buying Price (KES) *
+                  </Label>
+                  {isUnspecifiedStock && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">Disabled for unspecified-quantity items</p>
+                  )}
+                  <div className="relative">
+                    <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+                      isUnspecifiedStock ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'
+                    } text-sm font-mono`}>
+                      KES
+                    </span>
+                    <Input
+                      id="costPrice"
+                      type="number"
+                      step="0.01"
+                      value={isUnspecifiedStock ? '' : formData.costPrice}
+                      onChange={(e) => setFormData(prev => ({ ...prev, costPrice: e.target.value }))}
+                      className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 ${
+                        errors.costPrice ? 'border-red-500' : ''
+                      } ${isUnspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      placeholder={isUnspecifiedStock ? "Disabled" : "0.00"}
+                      disabled={isUnspecifiedStock || loading}
+                    />
+                  </div>
+                  {errors.costPrice && <p className="text-red-500 text-sm mt-2 font-mono">{errors.costPrice}</p>}
                 </div>
-                {errors.costPrice && <p className="text-red-500 text-sm mt-2 font-mono">{errors.costPrice}</p>}
-              </div>
 
-              {/* Selling Price */}
-              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <Label htmlFor="sellingPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Selling Price (KES) *
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
-                    KES
-                  </span>
-                  <Input
-                    id="sellingPrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.sellingPrice}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sellingPrice: e.target.value }))}
-                    className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 ${
-                      errors.sellingPrice ? 'border-red-500' : ''
-                    }`}
-                    placeholder="0.00"
-                    disabled={loading}
-                  />
+                {/* Selling Price */}
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                  <Label htmlFor="sellingPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                    Selling Price (KES) *
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
+                      KES
+                    </span>
+                    <Input
+                      id="sellingPrice"
+                      type="number"
+                      step="0.01"
+                      value={formData.sellingPrice}
+                      onChange={(e) => setFormData(prev => ({ ...prev, sellingPrice: e.target.value }))}
+                      className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 ${
+                        errors.sellingPrice ? 'border-red-500' : ''
+                      }`}
+                      placeholder="0.00"
+                      disabled={loading}
+                    />
+                  </div>
+                  {errors.sellingPrice && <p className="text-red-500 text-sm mt-2 font-mono">{errors.sellingPrice}</p>}
                 </div>
-                {errors.sellingPrice && <p className="text-red-500 text-sm mt-2 font-mono">{errors.sellingPrice}</p>}
               </div>
-            </div>
+            )}
+
+            {/* Stock Derivation Quantity - Only for variant products */}
+            {product.is_parent && (
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+                <Label htmlFor="stockDerivationQuantity" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
+                  Stock Derivation Quantity *
+                </Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">
+                  How many units of parent stock are consumed per variant sale
+                </p>
+                <Input
+                  id="stockDerivationQuantity"
+                  type="number"
+                  min="1"
+                  value={formData.stockDerivationQuantity}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stockDerivationQuantity: e.target.value }))}
+                  className={`h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 ${
+                    errors.stockDerivationQuantity ? 'border-red-500' : ''
+                  }`}
+                  placeholder="1"
+                  disabled={loading}
+                />
+                {errors.stockDerivationQuantity && <p className="text-red-500 text-sm mt-2 font-mono">{errors.stockDerivationQuantity}</p>}
+              </div>
+            )}
 
             {/* Stock Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
