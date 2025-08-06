@@ -112,6 +112,13 @@ export const useUnifiedProducts = () => {
 
             if (!fetchError && data) {
               const serverProducts = data.map(transformDbProduct);
+              console.log('[UnifiedProducts] Server products fetched:', {
+                total: serverProducts.length,
+                parents: serverProducts.filter(p => p.is_parent).length,
+                variants: serverProducts.filter(p => p.parent_id).length,
+                regular: serverProducts.filter(p => !p.is_parent && !p.parent_id).length
+              });
+              
               const mergedProducts = mergeProducts(serverProducts, cached);
               
               // Only update if data actually changed
@@ -142,7 +149,12 @@ export const useUnifiedProducts = () => {
           console.error('[UnifiedProducts] Fetch error:', fetchError);
         } else {
           const transformedData = (data || []).map(transformDbProduct);
-          console.log('[UnifiedProducts] Fetched from server:', transformedData.length, 'products');
+          console.log('[UnifiedProducts] Fetched from server:', {
+            total: transformedData.length,
+            parents: transformedData.filter(p => p.is_parent).length,
+            variants: transformedData.filter(p => p.parent_id).length,
+            regular: transformedData.filter(p => !p.is_parent && !p.parent_id).length
+          });
           setCache('products', transformedData);
           setProducts(transformedData);
         }

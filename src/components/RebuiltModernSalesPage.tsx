@@ -509,6 +509,17 @@ const RebuiltModernSalesPage = () => {
         stock_derivation_quantity: selectedParentProduct.stock_derivation_quantity
       };
 
+      console.log('[SalesPage] Adding variant to cart:', {
+        variantId: variant.id,
+        variantName: variant.variant_name,
+        parentId: selectedParentProduct.id,
+        parentName: selectedParentProduct.name,
+        parentStock: selectedParentProduct.currentStock,
+        variantMultiplier: variant.variant_multiplier,
+        stockDerivationQty: selectedParentProduct.stock_derivation_quantity,
+        cartItemData: variantForCart
+      });
+
       addToPersistedCart({ ...variantForCart, quantity: 1 });
       refreshCartExpiry();
       

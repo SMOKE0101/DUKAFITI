@@ -39,7 +39,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const { createSale } = useUnifiedSales();
-  const { updateProduct, forceRefetch: forceReloadProducts } = useUnifiedProducts();
+  const { updateProduct, forceRefetch: forceReloadProducts, products } = useUnifiedProducts();
   const { updateCustomer, customers: hookCustomers, createCustomer, refetch: refetchCustomers } = useUnifiedCustomers();
 
   // Get all available customers (unified from hook) - ensure we always have the most up-to-date list
@@ -264,10 +264,78 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         console.log('[NewSalesCheckout] Creating sale for item:', item.name);
         await createSale(saleData);
 
-        // Update product stock using SalesService which handles variants properly
-        console.log('[NewSalesCheckout] Updating stock for product:', item.id, item.name, 'Quantity sold:', item.quantity);
+        // Update product stock - use direct approach for variants like SalesCheckout
+        console.log('[NewSalesCheckout] Updating stock for product:', {
+          id: item.id,
+          name: item.name,
+          variant_name: item.variant_name,
+          parent_id: item.parent_id,
+          currentStock: item.currentStock,
+          quantity: item.quantity,
+          variant_multiplier: item.variant_multiplier,
+          stock_derivation_quantity: item.stock_derivation_quantity
+        });
+        
         try {
-          await SalesService.updateProductStock(item.id, item.quantity);
+          if (item.currentStock !== -1) {
+            // Check if this is a variant product
+            if (item.parent_id) {
+              // For variants, update parent stock using multiplier calculation
+              const variantMultiplier = item.variant_multiplier || 1;
+              const stockDerivationQty = item.stock_derivation_quantity || 1;
+              const parentStockReduction = item.quantity * variantMultiplier * stockDerivationQty;
+              
+              console.log('[NewSalesCheckout] Variant stock calculation:', {
+                quantity: item.quantity,
+                variantMultiplier,
+                stockDerivationQty,
+                parentStockReduction
+              });
+              
+              // Get current parent product from products array
+              const parentProduct = products.find(p => p.id === item.parent_id);
+              
+              if (parentProduct) {
+                const currentParentStock = parentProduct.currentStock || 0;
+                const newParentStock = Math.max(0, currentParentStock - parentStockReduction);
+                
+                console.log('[NewSalesCheckout] Updating parent stock:', {
+                  parentId: item.parent_id,
+                  currentParentStock,
+                  newParentStock,
+                  reduction: parentStockReduction
+                });
+                
+                await updateProduct(item.parent_id, { 
+                  currentStock: newParentStock,
+                  updatedAt: new Date().toISOString()
+                });
+                console.log('[NewSalesCheckout] Parent product stock updated for variant:', item.name, 'Parent stock reduction:', parentStockReduction, 'New parent stock:', newParentStock);
+              } else {
+                console.error('[NewSalesCheckout] Warning: Parent product not found for variant:', item.name, 'Parent ID:', item.parent_id);
+              }
+            } else {
+              // Regular product stock update
+              const currentStock = item.currentStock || 0;
+              const newStock = Math.max(0, currentStock - item.quantity);
+              
+              console.log('[NewSalesCheckout] Updating regular product stock:', {
+                productId: item.id,
+                currentStock,
+                newStock,
+                quantity: item.quantity
+              });
+              
+              await updateProduct(item.id, { 
+                currentStock: newStock,
+                updatedAt: new Date().toISOString()
+              });
+              console.log('[NewSalesCheckout] Regular product stock updated:', item.name, 'New stock:', newStock);
+            }
+          } else {
+            console.log('[NewSalesCheckout] Skipping stock update for unspecified quantity product:', item.name);
+          }
+          
           console.log('[NewSalesCheckout] Stock update completed for:', item.name);
         } catch (error) {
           console.error('[NewSalesCheckout] Stock update failed for:', item.name, error);
