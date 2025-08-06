@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Plus, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export type ProductMode = 'normal' | 'bulk' | 'uncountable' | 'variation';
 
@@ -13,6 +14,7 @@ interface AddProductDropdownProps {
 
 const AddProductDropdown: React.FC<AddProductDropdownProps> = ({ onModeSelect, className }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const modes = [
     { id: 'normal' as ProductMode, label: 'Normal', description: 'Add single product' },
@@ -37,7 +39,7 @@ const AddProductDropdown: React.FC<AddProductDropdownProps> = ({ onModeSelect, c
           size="sm"
         >
           <Plus className="w-4 h-4" />
-          Add Product
+          {isMobile ? 'Add' : 'Add Product'}
           <ChevronDown className="w-3 h-3 ml-1" />
         </Button>
       </DropdownMenuTrigger>
