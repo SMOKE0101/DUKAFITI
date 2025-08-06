@@ -15,6 +15,7 @@ import CustomerCard from './CustomerCard';
 import CustomerFormModal from './CustomerFormModal';
 import PaymentModal from './PaymentModal';
 import DeleteCustomerModal from './DeleteCustomerModal';
+import ImportContactsModal from './ImportContactsModal';
 import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -37,6 +38,7 @@ const CustomersPage = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [operationsInProgress, setOperationsInProgress] = useState<{
@@ -62,6 +64,10 @@ const CustomersPage = () => {
     setSelectedCustomer(null);
     setIsEditing(false);
     setShowFormModal(true);
+  };
+
+  const handleImportFromContacts = () => {
+    setShowImportModal(true);
   };
 
   const handleEditCustomer = (customer: Customer) => {
@@ -177,6 +183,30 @@ const CustomersPage = () => {
     }
   };
 
+  const handleImportCustomers = async (customersData: Omit<Customer, 'id' | 'createdDate'>[]) => {
+    try {
+      // Create all customers
+      const promises = customersData.map(customerData => createCustomer(customerData));
+      await Promise.all(promises);
+      
+      toast({
+        title: "Success",
+        description: isOnline 
+          ? `${customersData.length} customers imported successfully`
+          : `${customersData.length} customers imported (will sync when online)`,
+      });
+      
+      setShowImportModal(false);
+    } catch (error) {
+      console.error('Failed to import customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to import customers. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isMobile) {
     return (
       <TooltipWrapper>
@@ -189,6 +219,7 @@ const CustomersPage = () => {
               pendingOperations={pendingOperations}
               isOnline={isOnline}
               onAddCustomer={handleAddCustomer}
+              onImportFromContacts={handleImportFromContacts}
             />
 
             {/* Search Bar */}
@@ -284,6 +315,12 @@ const CustomersPage = () => {
               onDelete={handleConfirmDelete}
               isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
             />
+
+            <ImportContactsModal
+              isOpen={showImportModal}
+              onClose={() => setShowImportModal(false)}
+              onSave={handleImportCustomers}
+            />
           </div>
         </div>
       </TooltipWrapper>
@@ -301,6 +338,7 @@ const CustomersPage = () => {
             pendingOperations={pendingOperations}
             isOnline={isOnline}
             onAddCustomer={handleAddCustomer}
+            onImportFromContacts={handleImportFromContacts}
           />
 
           {/* Search Bar */}
@@ -382,16 +420,22 @@ const CustomersPage = () => {
             isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
           />
 
-          <DeleteCustomerModal
-            isOpen={showDeleteModal}
-            onClose={() => {
-              setShowDeleteModal(false);
-              setSelectedCustomer(null);
-            }}
-            customer={selectedCustomer}
-            onDelete={handleConfirmDelete}
-            isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
-          />
+            <DeleteCustomerModal
+              isOpen={showDeleteModal}
+              onClose={() => {
+                setShowDeleteModal(false);
+                setSelectedCustomer(null);
+              }}
+              customer={selectedCustomer}
+              onDelete={handleConfirmDelete}
+              isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
+            />
+
+            <ImportContactsModal
+              isOpen={showImportModal}
+              onClose={() => setShowImportModal(false)}
+              onSave={handleImportCustomers}
+            />
         </div>
       </div>
     </TooltipWrapper>

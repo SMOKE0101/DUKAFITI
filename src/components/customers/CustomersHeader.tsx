@@ -4,6 +4,7 @@ import { Plus, Users, DollarSign } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import AddCustomerDropdown from './AddCustomerDropdown';
 
 interface CustomersHeaderProps {
   totalCustomers: number;
@@ -11,6 +12,7 @@ interface CustomersHeaderProps {
   pendingOperations: number;
   isOnline: boolean;
   onAddCustomer: () => void;
+  onImportFromContacts: () => void;
 }
 
 const CustomersHeader: React.FC<CustomersHeaderProps> = ({ 
@@ -18,7 +20,8 @@ const CustomersHeader: React.FC<CustomersHeaderProps> = ({
   totalOutstandingDebt,
   pendingOperations,
   isOnline,
-  onAddCustomer
+  onAddCustomer,
+  onImportFromContacts
 }) => {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -47,14 +50,10 @@ const CustomersHeader: React.FC<CustomersHeaderProps> = ({
             </div>
           )}
           
-          <Button 
-            onClick={onAddCustomer}
-            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0"
-            size="sm"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            {isMobile ? 'Add' : 'Add Customer'}
-          </Button>
+          <AddCustomerDropdown
+            onAddNormalCustomer={onAddCustomer}
+            onImportFromContacts={onImportFromContacts}
+          />
         </div>
       </div>
 
