@@ -270,30 +270,34 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-border flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Showing {searchedData.length} products for <span className="font-medium">{getTimeFrameLabel()}</span>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-            <span className="px-3 py-1 text-sm text-foreground">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
+        <div className="px-4 md:px-6 py-4 border-t border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm text-muted-foreground text-center sm:text-left">
+              Showing {searchedData.length} products for <span className="font-medium">{getTimeFrameLabel()}</span>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3"
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1 text-sm text-foreground bg-muted rounded-md">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3"
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </div>
       )}

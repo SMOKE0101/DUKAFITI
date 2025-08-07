@@ -284,63 +284,71 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-border flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSales.length)} of {filteredSales.length} entries
-            {searchTerm && ` (filtered from ${filteredSalesByTime.length} total)`}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + 1;
-                const isActive = page === currentPage;
-                return (
-                  <Button
-                    key={page}
-                    variant={isActive ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    className="h-8 w-8 p-0"
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
-              {totalPages > 5 && (
-                <>
-                  <span className="text-muted-foreground px-2">...</span>
-                  <Button
-                    variant={currentPage === totalPages ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(totalPages)}
-                    className="h-8 w-8 p-0"
-                  >
-                    {totalPages}
-                  </Button>
-                </>
-              )}
+        <div className="px-4 md:px-6 py-4 border-t border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm text-muted-foreground text-center sm:text-left">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSales.length)} of {filteredSales.length} entries
+              {searchTerm && ` (filtered from ${filteredSalesByTime.length} total)`}
             </div>
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center justify-center gap-2 overflow-x-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0 flex-shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              {/* Mobile: Simple page indicator, Desktop: Page numbers */}
+              <div className="hidden sm:flex items-center gap-1">
+                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                  const page = i + 1;
+                  const isActive = page === currentPage;
+                  return (
+                    <Button
+                      key={page}
+                      variant={isActive ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="h-8 w-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+                {totalPages > 3 && (
+                  <>
+                    <span className="text-muted-foreground px-1">...</span>
+                    <Button
+                      variant={currentPage === totalPages ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      className="h-8 w-8 p-0"
+                    >
+                      {totalPages}
+                    </Button>
+                  </>
+                )}
+              </div>
+              
+              {/* Mobile page indicator */}
+              <span className="sm:hidden px-3 py-1 text-sm text-foreground bg-muted rounded-md flex-shrink-0">
+                {currentPage} / {totalPages}
+              </span>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0 flex-shrink-0"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
