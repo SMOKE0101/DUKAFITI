@@ -9,11 +9,12 @@ import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
 import { SalesService } from '../../services/salesService';
-import { CartItem } from '../../types/cart';
+import { CartItem, SplitPaymentData } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { User, UserPlus, Receipt, Banknote, DollarSign, AlertTriangle } from 'lucide-react';
 import AddCustomerModal from './AddCustomerModal';
+import SplitPaymentSelector from './SplitPaymentSelector';
 
 interface NewSalesCheckoutProps {
   cart: CartItem[];
@@ -31,7 +32,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   onCustomersRefresh
 }) => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
+  const [paymentData, setPaymentData] = useState<SplitPaymentData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -155,7 +156,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         name: selectedCustomer.name,
         debt: selectedCustomer.outstandingDebt
       } : null,
-      paymentMethod,
+      paymentData,
       total,
       isOnline
     });
@@ -178,7 +179,17 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       return;
     }
 
-    if (paymentMethod === 'debt' && !selectedCustomerId) {
+    if (!paymentData || !paymentData.isValid) {
+      toast({
+        title: "Invalid Payment",
+        description: "Please complete payment details before checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const hasDebtPayment = paymentData.methods.debt?.amount > 0;
+    if (hasDebtPayment && !selectedCustomerId) {
       toast({
         title: "Customer Required",
         description: "Please select a customer for debt transactions.",
@@ -187,7 +198,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       return;
     }
 
-    if (paymentMethod === 'debt' && selectedCustomerId && !selectedCustomer) {
+    if (hasDebtPayment && selectedCustomerId && !selectedCustomer) {
       toast({
         title: "Customer Not Found",
         description: "The selected customer could not be found. Please select a different customer.",
@@ -201,17 +212,18 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
     try {
       // For debt sales, update customer debt using direct approach
       let updatedCustomer = selectedCustomer;
-      if (paymentMethod === 'debt' && selectedCustomer) {
+      const currentDebtAmount = paymentData.methods.debt?.amount || 0;
+      if (currentDebtAmount > 0 && selectedCustomer) {
         console.log('[NewSalesCheckout] Processing debt sale - updating customer:', {
           customerId: selectedCustomer.id,
           customerName: selectedCustomer.name,
           currentDebt: selectedCustomer.outstandingDebt,
-          additionalDebt: total,
-          newTotalDebt: (selectedCustomer.outstandingDebt || 0) + total
+          additionalDebt: currentDebtAmount,
+          newTotalDebt: (selectedCustomer.outstandingDebt || 0) + currentDebtAmount
         });
 
         const customerUpdates = {
-          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + total,
+          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + currentDebtAmount,
           totalPurchases: (selectedCustomer.totalPurchases || 0) + total,
           lastPurchaseDate: new Date().toISOString(),
         };
@@ -252,11 +264,12 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
           total: itemTotal,
           customerId: updatedCustomer?.id || undefined,
           customerName: updatedCustomer?.name || undefined,
-          paymentMethod: paymentMethod,
+          paymentMethod: Object.keys(paymentData.methods).length > 1 ? 'partial' : Object.keys(paymentData.methods)[0] as any,
           paymentDetails: {
-            cashAmount: paymentMethod === 'cash' ? itemTotal : 0,
-            mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,
-            debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
+            cashAmount: paymentData.methods.cash?.amount || 0,
+            mpesaAmount: paymentData.methods.mpesa?.amount || 0,
+            debtAmount: paymentData.methods.debt?.amount || 0,
+            mpesaReference: paymentData.methods.mpesa?.reference,
           },
           timestamp: new Date().toISOString(),
         };
@@ -357,8 +370,9 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       }
 
       // Show success message
-      const successMessage = paymentMethod === 'debt' 
-        ? `Sale completed! Customer debt increased by ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`
+      const finalDebtAmount = paymentData.methods.debt?.amount || 0;
+      const successMessage = finalDebtAmount > 0
+        ? `Sale completed! Customer debt increased by ${formatCurrency(finalDebtAmount)}.${!isOnline ? ' (will sync when online)' : ''}`
         : `Successfully processed ${salesProcessed} item(s) for ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`;
 
       toast({
@@ -370,7 +384,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       
       // Reset states
       setSelectedCustomerId(null);
-      setPaymentMethod('cash');
+      setPaymentData(null);
       
       onCheckoutComplete();
 
@@ -391,7 +405,8 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
   const isDisabled = isProcessing || 
     cart.length === 0 || 
-    (paymentMethod === 'debt' && !selectedCustomer);
+    !paymentData || 
+    !paymentData.isValid;
 
   return (
     <div className="space-y-6 p-6 bg-background">
@@ -487,55 +502,16 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
           </div>
         </div>
 
-        {/* Payment Method Selection */}
-        <div>
-          <label className="text-sm font-medium mb-2 block">Payment Method</label>
-          <div className="flex gap-2">
-            <Button
-              variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPaymentMethod('cash')}
-              className="flex-1"
-            >
-              <Banknote size={14} className="mr-1" />
-              Cash
-            </Button>
-            <Button
-              variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPaymentMethod('mpesa')}
-              className="flex-1"
-            >
-              <DollarSign size={14} className="mr-1" />
-              M-Pesa
-            </Button>
-            <Button
-              variant={paymentMethod === 'debt' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPaymentMethod('debt')}
-              className="flex-1"
-            >
-              <Receipt size={14} className="mr-1" />
-              Debt
-            </Button>
-          </div>
-        </div>
       </div>
 
-      {/* Customer Required Warning */}
-      {paymentMethod === 'debt' && !selectedCustomer && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <AlertTriangle size={14} />
-              <span className="text-sm font-medium">Customer required for debt transactions</span>
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-              Please select a customer or add a new one to proceed with debt payment.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Split Payment Selector */}
+      <SplitPaymentSelector
+        total={total}
+        customers={allCustomers}
+        onPaymentChange={setPaymentData}
+        selectedCustomerId={selectedCustomerId || undefined}
+        onCustomerChange={setSelectedCustomerId}
+      />
 
       {/* Cart Summary */}
       <Card>
