@@ -93,8 +93,10 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
     
     if (variant === 'template' && onSelect) {
       onSelect(product);
-    } else if ((variant === 'sales' || variant === 'inventory') && onCardTap) {
-      // For both sales and inventory, trigger tap handler to show/hide icons
+    } else if (variant === 'sales' && onCardTap) {
+      // For sales, only trigger tap handler (don't add to cart directly)
+      onCardTap();
+    } else if (variant === 'inventory' && onCardTap) {
       onCardTap();
     }
   }, [variant, onSelect, onCardTap, product]);
