@@ -704,6 +704,23 @@ const RebuiltModernSalesPage = () => {
               </Button>
               
 
+              {/* Cart Header for Mobile */}
+              <div className="flex-shrink-0 p-4 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Cart ({cart.length})</h3>
+                  {cart.length > 0 && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearCart}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               {/* Cart Items */}
               <div className="flex-1 overflow-y-auto">
                 {cart.length > 0 ? (
@@ -910,9 +927,9 @@ const RebuiltModernSalesPage = () => {
                 emptyStateDescription="Try adjusting your search or filters"
               />
               
-              {/* Special Debt Card - Fixed position */}
+              {/* Special Debt Card - Fixed position - moved to bottom left */}
               {filteredProducts.some(product => 'isDebtCard' in product && product.isDebtCard) && (
-                <div className="fixed bottom-24 right-6 z-30">
+                <div className="fixed bottom-24 left-6 z-30">
                   <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-lg shadow-xl">
                     <CardContent className="p-3">
                       <div className="flex flex-col items-center gap-2">
