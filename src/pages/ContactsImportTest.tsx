@@ -1,23 +1,28 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import ImportContactsModal from '../components/customers/ImportContactsModal';
+import { useContactsImport, ImportedCustomerData } from '../hooks/useContactsImport';
 import { Customer } from '../types';
 
 const ContactsImportTest = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [importedCustomers, setImportedCustomers] = useState<Omit<Customer, 'id' | 'createdDate'>[]>([]);
+  const [importedCustomers, setImportedCustomers] = useState<ImportedCustomerData[]>([]);
+  const { importContactsDirectly } = useContactsImport();
 
-  const handleImport = (customers: Omit<Customer, 'id' | 'createdDate'>[]) => {
-    setImportedCustomers(customers);
-    console.log('Imported customers:', customers);
+  const handleImport = async () => {
+    try {
+      const contacts = await importContactsDirectly();
+      setImportedCustomers(contacts);
+      console.log('Imported customers:', contacts);
+    } catch (error) {
+      console.error('Import failed:', error);
+    }
   };
 
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Contact Import Test</h1>
       
-      <Button onClick={() => setShowModal(true)} className="mb-4">
-        Test Import from Contacts
+      <Button onClick={handleImport} className="mb-4">
+        Test Import from Contacts (Direct)
       </Button>
 
       {importedCustomers.length > 0 && (
@@ -37,12 +42,6 @@ const ContactsImportTest = () => {
           </div>
         </div>
       )}
-
-      <ImportContactsModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={handleImport}
-      />
     </div>
   );
 };

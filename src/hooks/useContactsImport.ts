@@ -18,157 +18,124 @@ export interface ImportedCustomerData {
   outstandingDebt: number;
   creditLimit: number;
   riskRating: 'low' | 'medium' | 'high';
+  lastPurchaseDate?: string | null;
 }
 
 export const useContactsImport = () => {
-  const [contacts, setContacts] = useState<ContactData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const requestContactsPermission = useCallback(async (): Promise<boolean> => {
+  // Direct contact selection using native Contact Picker API
+  const selectContacts = useCallback(async (): Promise<ContactData[]> => {
     try {
-      // Check if we're in a supported environment
-      if (!('contacts' in navigator) && !('ContactsManager' in window)) {
-        console.log('Contacts API not supported, using mock data for demo');
-        return true; // Allow mock data for demo
+      // Check if Contact Picker API is supported
+      if (!('contacts' in navigator)) {
+        console.log('Contact Picker API not supported, using mock data for demo');
+        
+        // Fallback mock data for demo purposes
+        const mockContacts: ContactData[] = [
+          {
+            id: '1',
+            name: 'John Doe',
+            phone: '+254701234567',
+            email: 'john.doe@example.com',
+            selected: true,
+          },
+          {
+            id: '2',
+            name: 'Jane Smith',
+            phone: '+254708765432',
+            email: 'jane.smith@example.com',
+            selected: true,
+          },
+          {
+            id: '3',
+            name: 'Mike Johnson',
+            phone: '+254703456789',
+            selected: true,
+          },
+        ];
+        
+        toast({
+          title: "Demo Mode",
+          description: "Using demo contacts (Contact Picker API not available)",
+        });
+        
+        return mockContacts;
       }
 
-      // For now, we'll use mock data since Contacts API is limited
-      return true;
+      // Check supported properties
+      const supportedProperties = await (navigator as any).contacts.getProperties();
+      console.log('Supported contact properties:', supportedProperties);
+
+      // Request contact properties we need
+      const propsToRequest = ['name', 'tel'];
+      if (supportedProperties.includes('email')) {
+        propsToRequest.push('email');
+      }
+
+      // Select contacts with multiple selection enabled
+      const contacts = await (navigator as any).contacts.select(propsToRequest, { multiple: true });
+      
+      // Transform contacts to our format
+      const transformedContacts: ContactData[] = contacts.map((contact: any, index: number) => ({
+        id: `native_${index}`,
+        name: contact.name?.[0] || 'Unknown',
+        phone: contact.tel?.[0] || '',
+        email: contact.email?.[0] || undefined,
+        selected: true,
+      }));
+
+      console.log('Selected contacts from native picker:', transformedContacts);
+      
+      return transformedContacts;
     } catch (error) {
-      console.error('Error requesting contacts permission:', error);
-      setError('Failed to access contacts');
-      return false;
-    }
-  }, []);
-
-  const loadContacts = useCallback(async (): Promise<ContactData[]> => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Check permission first
-      const hasPermission = await requestContactsPermission();
-      if (!hasPermission) {
+      if (error.name === 'AbortError') {
+        console.log('Contact selection was cancelled by user');
+        toast({
+          title: "Cancelled",
+          description: "Contact selection was cancelled",
+        });
         return [];
       }
-
-      // Since the Contacts API is not widely supported, we'll use mock data
-      // In a real implementation, you would use the Contacts API or Capacitor Contacts plugin
-      const mockContacts: ContactData[] = [
-        {
-          id: '1',
-          name: 'John Doe',
-          phone: '+254701234567',
-          email: 'john.doe@example.com',
-          selected: false,
-        },
-        {
-          id: '2',
-          name: 'Jane Smith',
-          phone: '+254708765432',
-          email: 'jane.smith@example.com',
-          selected: false,
-        },
-        {
-          id: '3',
-          name: 'Mike Johnson',
-          phone: '+254703456789',
-          selected: false,
-        },
-        {
-          id: '4',
-          name: 'Sarah Wilson',
-          phone: '+254709876543',
-          email: 'sarah.wilson@example.com',
-          selected: false,
-        },
-        {
-          id: '5',
-          name: 'David Brown',
-          phone: '+254702345678',
-          selected: false,
-        },
-        {
-          id: '6',
-          name: 'Emily Davis',
-          phone: '+254707890123',
-          email: 'emily.davis@example.com',
-          selected: false,
-        },
-        {
-          id: '7',
-          name: 'Robert Miller',
-          phone: '+254704567890',
-          selected: false,
-        },
-        {
-          id: '8',
-          name: 'Lisa Anderson',
-          phone: '+254709012345',
-          email: 'lisa.anderson@example.com',
-          selected: false,
-        },
-      ];
-
-      setContacts(mockContacts);
-      return mockContacts;
-    } catch (error) {
-      console.error('Error loading contacts:', error);
-      setError('Failed to load contacts');
+      
+      console.error('Error selecting contacts:', error);
       toast({
         title: "Error",
-        description: "Failed to load contacts. Please try again.",
+        description: "Failed to access contacts. Please try again.",
         variant: "destructive",
       });
       return [];
-    } finally {
-      setLoading(false);
     }
-  }, [requestContactsPermission, toast]);
+  }, [toast]);
 
-  const toggleContactSelection = useCallback((contactId: string) => {
-    setContacts(prev => 
-      prev.map(contact => 
-        contact.id === contactId 
-          ? { ...contact, selected: !contact.selected }
-          : contact
-      )
-    );
-  }, []);
-
-  const selectAllContacts = useCallback((selected: boolean) => {
-    setContacts(prev => 
-      prev.map(contact => ({ ...contact, selected }))
-    );
-  }, []);
-
-  const getSelectedContacts = useCallback((): ContactData[] => {
-    return contacts.filter(contact => contact.selected);
-  }, [contacts]);
-
+  // Convert selected contacts directly to customer format
   const convertContactsToCustomers = useCallback((selectedContacts: ContactData[]): ImportedCustomerData[] => {
     return selectedContacts.map(contact => ({
       name: contact.name,
       phone: contact.phone,
-      email: contact.email || null,
-      address: null,
+      email: contact.email || undefined,
+      address: undefined,
       totalPurchases: 0,
       outstandingDebt: 0,
       creditLimit: 1000, // Default credit limit
       riskRating: 'low' as const,
+      lastPurchaseDate: null,
     }));
   }, []);
 
+  // Main function to select and import contacts directly
+  const importContactsDirectly = useCallback(async (): Promise<ImportedCustomerData[]> => {
+    const selectedContacts = await selectContacts();
+    if (selectedContacts.length === 0) {
+      return [];
+    }
+    
+    return convertContactsToCustomers(selectedContacts);
+  }, [selectContacts, convertContactsToCustomers]);
+
   return {
-    contacts,
-    loading,
-    error,
-    loadContacts,
-    toggleContactSelection,
-    selectAllContacts,
-    getSelectedContacts,
+    selectContacts,
     convertContactsToCustomers,
+    importContactsDirectly,
   };
 };

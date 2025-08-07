@@ -15,7 +15,7 @@ import CustomerCard from './CustomerCard';
 import CustomerFormModal from './CustomerFormModal';
 import PaymentModal from './PaymentModal';
 import DeleteCustomerModal from './DeleteCustomerModal';
-import ImportContactsModal from './ImportContactsModal';
+import { useContactsImport } from '../../hooks/useContactsImport';
 import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -38,7 +38,7 @@ const CustomersPage = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
+  
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [operationsInProgress, setOperationsInProgress] = useState<{
@@ -66,8 +66,29 @@ const CustomersPage = () => {
     setShowFormModal(true);
   };
 
-  const handleImportFromContacts = () => {
-    setShowImportModal(true);
+  const { importContactsDirectly } = useContactsImport();
+
+  const handleImportFromContacts = async () => {
+    try {
+      const contactsData = await importContactsDirectly();
+      
+      if (contactsData.length > 0) {
+        // Convert to Customer format by adding missing fields
+        const customersToImport = contactsData.map(contact => ({
+          ...contact,
+          lastPurchaseDate: null,
+        }));
+        
+        await handleImportCustomers(customersToImport);
+      }
+    } catch (error) {
+      console.error('Error importing contacts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to import contacts. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditCustomer = (customer: Customer) => {
@@ -196,7 +217,7 @@ const CustomersPage = () => {
           : `${customersData.length} customers imported (will sync when online)`,
       });
       
-      setShowImportModal(false);
+      // Import completed successfully
     } catch (error) {
       console.error('Failed to import customers:', error);
       toast({
@@ -316,11 +337,6 @@ const CustomersPage = () => {
               isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
             />
 
-            <ImportContactsModal
-              isOpen={showImportModal}
-              onClose={() => setShowImportModal(false)}
-              onSave={handleImportCustomers}
-            />
           </div>
         </div>
       </TooltipWrapper>
@@ -431,11 +447,6 @@ const CustomersPage = () => {
               isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
             />
 
-            <ImportContactsModal
-              isOpen={showImportModal}
-              onClose={() => setShowImportModal(false)}
-              onSave={handleImportCustomers}
-            />
         </div>
       </div>
     </TooltipWrapper>
