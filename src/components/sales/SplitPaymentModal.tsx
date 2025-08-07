@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
+import { ColoredPaymentSlider } from '@/components/ui/colored-payment-slider';
 import { Input } from '@/components/ui/input';
 import MobileOptimizedModal from '@/components/ui/mobile-optimized-modal';
 import { formatCurrency, parseCurrency } from '@/utils/currency';
@@ -295,9 +295,9 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
           <div className="space-y-4">
             <Label className="text-sm font-medium">Payment Ratio</Label>
             
-            {/* Horizontal Slider */}
+            {/* Color-Coded Payment Slider */}
             <div className="px-2">
-              <Slider
+              <ColoredPaymentSlider
                 value={sliderValues}
                 onValueChange={handleSliderChange}
                 min={1}
@@ -305,6 +305,9 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                 step={1}
                 className="w-full"
                 thumbs={enabledMethodsCount === 3 ? 2 : 1}
+                paymentMethods={Object.entries(selectedMethods)
+                  .filter(([, enabled]) => enabled)
+                  .map(([method]) => method)}
               />
             </div>
 

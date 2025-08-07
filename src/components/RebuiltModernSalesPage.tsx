@@ -890,8 +890,8 @@ const RebuiltModernSalesPage = () => {
                 gridConfig={{
                   cols: { 
                     mobile: 2, 
-                    tablet: 2,  // 2x2 for tablet as requested
-                    desktop: sidebarOpen ? 4 : 5  // 4x4 when sidebar open, 5x5 when closed
+                    tablet: sidebarOpen ? 1 : 2,  // 1 column when sidebar open, 2 when closed (tablet)
+                    desktop: sidebarOpen ? 4 : 5  // 4x4 when sidebar open, 5x5 when closed (desktop)
                   },
                   gap: 'gap-3'
                 }}
