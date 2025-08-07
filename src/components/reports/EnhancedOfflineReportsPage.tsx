@@ -30,34 +30,34 @@ const EnhancedOfflineReportsPage = () => {
     switch (timeframe) {
       case 'today':
         return {
-          from: today.toISOString().split('T')[0],
-          to: now.toISOString().split('T')[0]
+          from: today,
+          to: now
         };
       case 'week':
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - 7);
         return {
-          from: weekStart.toISOString().split('T')[0],
-          to: now.toISOString().split('T')[0]
+          from: weekStart,
+          to: now
         };
       case 'month':
         const monthStart = new Date(today);
         monthStart.setDate(today.getDate() - 30);
         return {
-          from: monthStart.toISOString().split('T')[0],
-          to: now.toISOString().split('T')[0]
+          from: monthStart,
+          to: now
         };
       case 'quarter':
         const quarterStart = new Date(today);
         quarterStart.setDate(today.getDate() - 90);
         return {
-          from: quarterStart.toISOString().split('T')[0],
-          to: now.toISOString().split('T')[0]
+          from: quarterStart,
+          to: now
         };
       default:
         return {
-          from: today.toISOString().split('T')[0],
-          to: now.toISOString().split('T')[0]
+          from: today,
+          to: now
         };
     }
   }, [timeframe]);

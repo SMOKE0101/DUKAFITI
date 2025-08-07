@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Download, TrendingDown, TrendingUp } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
 import { useSupabaseDebtPayments, DebtPayment } from '@/hooks/useSupabaseDebtPayments';
@@ -16,7 +17,7 @@ interface DebtTransactionsTableProps {
   isOffline?: boolean;
 }
 
-type TimeFrameType = 'today' | 'week' | 'month';
+type TimeFrameType = 'today' | 'week' | 'month' | 'custom';
 
 interface DebtTransaction {
   id: string;
@@ -34,6 +35,7 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   isOffline = false
 }) => {
   const [timeFrame, setTimeFrame] = useState<TimeFrameType>('today');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -110,28 +112,35 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     let startDate: Date;
+    let endDate: Date = now;
     
-    switch (timeFrame) {
-      case 'today':
-        startDate = today;
-        break;
-      case 'week':
-        startDate = new Date(today);
-        startDate.setDate(today.getDate() - 7);
-        break;
-      case 'month':
-        startDate = new Date(today);
-        startDate.setDate(today.getDate() - 30);
-        break;
-      default:
-        startDate = today;
+    if (timeFrame === 'custom' && customDateRange) {
+      startDate = new Date(customDateRange.from);
+      endDate = new Date(customDateRange.to);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      switch (timeFrame) {
+        case 'today':
+          startDate = today;
+          break;
+        case 'week':
+          startDate = new Date(today);
+          startDate.setDate(today.getDate() - 7);
+          break;
+        case 'month':
+          startDate = new Date(today);
+          startDate.setDate(today.getDate() - 30);
+          break;
+        default:
+          startDate = today;
+      }
     }
     
     return allDebtTransactions.filter(transaction => {
       const transactionDate = new Date(transaction.timestamp);
-      return transactionDate >= startDate;
+      return transactionDate >= startDate && transactionDate <= endDate;
     });
-  }, [allDebtTransactions, timeFrame]);
+  }, [allDebtTransactions, timeFrame, customDateRange]);
 
   // Filter by search term
   const filteredTransactions = useMemo(() => {
@@ -243,7 +252,12 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
             ].map((option) => (
               <button
                 key={option.value}
-                onClick={() => setTimeFrame(option.value as TimeFrameType)}
+                onClick={() => {
+                  setTimeFrame(option.value as TimeFrameType);
+                  if (option.value !== 'custom') {
+                    setCustomDateRange(undefined);
+                  }
+                }}
                 disabled={isOffline}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
@@ -257,6 +271,58 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
                 {option.label}
               </button>
             ))}
+          </div>
+
+          {/* Custom Date Range Button */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTimeFrame('custom')}
+              disabled={isOffline}
+              className={`
+                text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5 border
+                ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
+                ${timeFrame === 'custom'
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent border-border"
+                }
+              `}
+            >
+              {timeFrame === 'custom' && customDateRange
+                ? `${customDateRange.from.toLocaleDateString()} - ${customDateRange.to.toLocaleDateString()}`
+                : 'Custom Range'
+              }
+            </button>
+            
+            {timeFrame === 'custom' && (
+              <div className="flex gap-2">
+                <DatePicker
+                  date={customDateRange?.from}
+                  onSelect={(date) => {
+                    if (date) {
+                      setCustomDateRange(prev => ({
+                        from: date,
+                        to: prev?.to || new Date()
+                      }));
+                    }
+                  }}
+                  placeholder="From date"
+                  className="w-36"
+                />
+                <DatePicker
+                  date={customDateRange?.to}
+                  onSelect={(date) => {
+                    if (date) {
+                      setCustomDateRange(prev => ({
+                        from: prev?.from || new Date(),
+                        to: date
+                      }));
+                    }
+                  }}
+                  placeholder="To date"
+                  className="w-36"
+                />
+              </div>
+            )}
           </div>
 
           {/* Search */}

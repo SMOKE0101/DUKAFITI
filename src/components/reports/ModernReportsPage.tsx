@@ -24,6 +24,11 @@ import IndependentSalesTrendChart from './IndependentSalesTrendChart';
 import IndependentOrdersChart from './IndependentOrdersChart';
 
 type DateRange = 'today' | 'week' | 'month' | 'custom';
+
+interface CustomDateRange {
+  from: Date;
+  to: Date;
+}
 type Filter = {
   type: 'salesType' | 'category' | 'customer';
   label: string;
@@ -32,6 +37,7 @@ type Filter = {
 
 const ModernReportsPage = () => {
   const [dateRange, setDateRange] = useState<DateRange>('today');
+  const [customDateRange, setCustomDateRange] = useState<CustomDateRange | undefined>();
   const [activeFilters, setActiveFilters] = useState<Filter[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
@@ -50,6 +56,10 @@ const ModernReportsPage = () => {
   const getDateRange = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    if (dateRange === 'custom' && customDateRange) {
+      return { from: customDateRange.from, to: customDateRange.to };
+    }
     
     switch (dateRange) {
       case 'today':
@@ -271,7 +281,12 @@ const ModernReportsPage = () => {
                   {(['today', 'week', 'month'] as DateRange[]).map((range) => (
                     <button
                       key={range}
-                      onClick={() => setDateRange(range)}
+                      onClick={() => {
+                        setDateRange(range);
+                        if (range !== 'custom') {
+                          setCustomDateRange(undefined);
+                        }
+                      }}
                       className={`px-4 py-2 text-sm font-mono font-medium rounded-lg transition-all duration-200 ${
                         dateRange === range
                           ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
@@ -281,6 +296,52 @@ const ModernReportsPage = () => {
                       {range.toUpperCase()}
                     </button>
                   ))}
+                </div>
+                
+                {/* Custom Date Range Button */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDateRange('custom')}
+                    className={`px-4 py-2 text-sm font-mono font-medium rounded-lg border transition-all duration-200 ${
+                      dateRange === 'custom'
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    {dateRange === 'custom' && customDateRange
+                      ? `${customDateRange.from.toLocaleDateString()} - ${customDateRange.to.toLocaleDateString()}`
+                      : 'CUSTOM RANGE'
+                    }
+                  </button>
+                  
+                  {dateRange === 'custom' && (
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={customDateRange?.from ? customDateRange.from.toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          setCustomDateRange(prev => ({
+                            from: date,
+                            to: prev?.to || new Date()
+                          }));
+                        }}
+                        className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                      <input
+                        type="date"
+                        value={customDateRange?.to ? customDateRange.to.toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          setCustomDateRange(prev => ({
+                            from: prev?.from || new Date(),
+                            to: date
+                          }));
+                        }}
+                        className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

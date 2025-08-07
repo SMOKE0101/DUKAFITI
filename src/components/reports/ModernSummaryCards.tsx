@@ -17,7 +17,7 @@ interface ModernSummaryCardsProps {
   sales: Sale[];
   products: Product[];
   customers: Customer[];
-  dateRange: { from: string; to: string };
+  dateRange: { from: Date; to: Date };
 }
 
 const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
@@ -28,7 +28,7 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
 }) => {
   // Filter sales based on date range
   const filteredSales = sales.filter(sale => {
-    const saleDate = new Date(sale.timestamp).toISOString().split('T')[0];
+    const saleDate = new Date(sale.timestamp);
     return saleDate >= dateRange.from && saleDate <= dateRange.to;
   });
 
