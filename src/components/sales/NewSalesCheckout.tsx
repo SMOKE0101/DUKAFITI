@@ -12,8 +12,10 @@ import { SalesService } from '../../services/salesService';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
-import { User, UserPlus, Receipt, Banknote, DollarSign, AlertTriangle } from 'lucide-react';
+import { User, UserPlus, Receipt, Banknote, DollarSign, AlertTriangle, Split } from 'lucide-react';
 import AddCustomerModal from './AddCustomerModal';
+import SplitPaymentModal from './SplitPaymentModal';
+import { SplitPaymentData } from '../../types/cart';
 
 interface NewSalesCheckoutProps {
   cart: CartItem[];
@@ -31,10 +33,12 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   onCustomersRefresh
 }) => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt' | 'split'>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isSplitPaymentModalOpen, setIsSplitPaymentModalOpen] = useState(false);
+  const [splitPaymentData, setSplitPaymentData] = useState<SplitPaymentData | null>(null);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -187,6 +191,24 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       return;
     }
 
+    if (paymentMethod === 'split' && !splitPaymentData) {
+      toast({
+        title: "Split Payment Required",
+        description: "Please configure split payment methods first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (paymentMethod === 'split' && splitPaymentData?.methods.debt && !selectedCustomerId) {
+      toast({
+        title: "Customer Required",
+        description: "Please select a customer for debt portion of split payment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (paymentMethod === 'debt' && selectedCustomerId && !selectedCustomer) {
       toast({
         title: "Customer Not Found",
@@ -199,19 +221,22 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
     setIsProcessing(true);
 
     try {
-      // For debt sales, update customer debt using direct approach
+      // For debt sales or split payments with debt, update customer debt
       let updatedCustomer = selectedCustomer;
-      if (paymentMethod === 'debt' && selectedCustomer) {
-        console.log('[NewSalesCheckout] Processing debt sale - updating customer:', {
+      const debtAmount = paymentMethod === 'debt' ? total : 
+                        (paymentMethod === 'split' && splitPaymentData?.methods.debt ? splitPaymentData.methods.debt.amount : 0);
+      
+      if (debtAmount > 0 && selectedCustomer) {
+        console.log('[NewSalesCheckout] Processing debt payment - updating customer:', {
           customerId: selectedCustomer.id,
           customerName: selectedCustomer.name,
           currentDebt: selectedCustomer.outstandingDebt,
-          additionalDebt: total,
-          newTotalDebt: (selectedCustomer.outstandingDebt || 0) + total
+          additionalDebt: debtAmount,
+          newTotalDebt: (selectedCustomer.outstandingDebt || 0) + debtAmount
         });
 
         const customerUpdates = {
-          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + total,
+          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + debtAmount,
           totalPurchases: (selectedCustomer.totalPurchases || 0) + total,
           lastPurchaseDate: new Date().toISOString(),
         };
@@ -253,7 +278,12 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
           customerId: updatedCustomer?.id || undefined,
           customerName: updatedCustomer?.name || undefined,
           paymentMethod: paymentMethod,
-          paymentDetails: {
+          paymentDetails: paymentMethod === 'split' && splitPaymentData ? {
+            cashAmount: (splitPaymentData.methods.cash?.amount || 0) * (itemTotal / total),
+            mpesaAmount: (splitPaymentData.methods.mpesa?.amount || 0) * (itemTotal / total),
+            debtAmount: (splitPaymentData.methods.debt?.amount || 0) * (itemTotal / total),
+            mpesaReference: splitPaymentData.methods.mpesa?.reference,
+          } : {
             cashAmount: paymentMethod === 'cash' ? itemTotal : 0,
             mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,
             debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
@@ -357,9 +387,14 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       }
 
       // Show success message
-      const successMessage = paymentMethod === 'debt' 
-        ? `Sale completed! Customer debt increased by ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`
-        : `Successfully processed ${salesProcessed} item(s) for ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`;
+      let successMessage = '';
+      if (paymentMethod === 'split') {
+        successMessage = `Split payment completed! ${formatCurrency(total)} processed across multiple methods.${!isOnline ? ' (will sync when online)' : ''}`;
+      } else if (paymentMethod === 'debt') {
+        successMessage = `Sale completed! Customer debt increased by ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`;
+      } else {
+        successMessage = `Successfully processed ${salesProcessed} item(s) for ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`;
+      }
 
       toast({
         title: "Sale Completed!",
@@ -371,6 +406,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
       // Reset states
       setSelectedCustomerId(null);
       setPaymentMethod('cash');
+      setSplitPaymentData(null);
       
       onCheckoutComplete();
 
@@ -391,7 +427,8 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
   const isDisabled = isProcessing || 
     cart.length === 0 || 
-    (paymentMethod === 'debt' && !selectedCustomer);
+    (paymentMethod === 'debt' && !selectedCustomer) ||
+    (paymentMethod === 'split' && (!splitPaymentData || (splitPaymentData.methods.debt && !selectedCustomer)));
 
   return (
     <div className="space-y-6 p-6 bg-background">
@@ -490,7 +527,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         {/* Payment Method Selection */}
         <div>
           <label className="text-sm font-medium mb-2 block">Payment Method</label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Button
               variant={paymentMethod === 'cash' ? 'default' : 'outline'}
               size="sm"
@@ -518,12 +555,21 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
               <Receipt size={14} className="mr-1" />
               Debt
             </Button>
+            <Button
+              variant={paymentMethod === 'split' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setIsSplitPaymentModalOpen(true)}
+              className="flex-1"
+            >
+              <Split size={14} className="mr-1" />
+              Split
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Customer Required Warning */}
-      {paymentMethod === 'debt' && !selectedCustomer && (
+      {(paymentMethod === 'debt' && !selectedCustomer) && (
         <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
@@ -533,6 +579,44 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
             <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
               Please select a customer or add a new one to proceed with debt payment.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Split Payment Summary */}
+      {paymentMethod === 'split' && splitPaymentData && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Split size={16} className="text-primary" />
+              <span className="font-medium text-primary">Split Payment Configured</span>
+            </div>
+            <div className="space-y-2 text-sm">
+              {splitPaymentData.methods.cash && (
+                <div className="flex justify-between">
+                  <span className="flex items-center gap-1">
+                    <Banknote size={12} />Cash
+                  </span>
+                  <span className="font-medium">{formatCurrency(splitPaymentData.methods.cash.amount)}</span>
+                </div>
+              )}
+              {splitPaymentData.methods.mpesa && (
+                <div className="flex justify-between">
+                  <span className="flex items-center gap-1">
+                    <DollarSign size={12} />M-Pesa
+                  </span>
+                  <span className="font-medium">{formatCurrency(splitPaymentData.methods.mpesa.amount)}</span>
+                </div>
+              )}
+              {splitPaymentData.methods.debt && (
+                <div className="flex justify-between">
+                  <span className="flex items-center gap-1">
+                    <Receipt size={12} />Debt
+                  </span>
+                  <span className="font-medium">{formatCurrency(splitPaymentData.methods.debt.amount)}</span>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -568,6 +652,23 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         open={isAddCustomerModalOpen}
         onOpenChange={setIsAddCustomerModalOpen}
         onCustomerAdded={handleCustomerAdded}
+      />
+
+      {/* Split Payment Modal */}
+      <SplitPaymentModal
+        open={isSplitPaymentModalOpen}
+        onOpenChange={setIsSplitPaymentModalOpen}
+        total={total}
+        customers={allCustomers}
+        onConfirm={(data) => {
+          setSplitPaymentData(data);
+          setPaymentMethod('split');
+          setIsSplitPaymentModalOpen(false);
+          // Auto-select customer if debt is part of split
+          if (data.methods.debt?.customerId) {
+            setSelectedCustomerId(data.methods.debt.customerId);
+          }
+        }}
       />
     </div>
   );

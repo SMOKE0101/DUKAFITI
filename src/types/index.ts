@@ -38,7 +38,7 @@ export interface Sale {
   synced: boolean;
   customerId?: string;
   customerName?: string;
-  paymentMethod: 'cash' | 'mpesa' | 'debt' | 'partial';
+  paymentMethod: 'cash' | 'mpesa' | 'debt' | 'partial' | 'split';
   paymentDetails: {
     cashAmount: number;
     mpesaAmount: number;
