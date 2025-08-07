@@ -910,9 +910,9 @@ const RebuiltModernSalesPage = () => {
                 emptyStateDescription="Try adjusting your search or filters"
               />
               
-              {/* Special Debt Card - Fixed position */}
+              {/* Debt Recording Button - Bottom Left of Product Cards */}
               {filteredProducts.some(product => 'isDebtCard' in product && product.isDebtCard) && (
-                <div className="fixed bottom-24 right-6 z-30">
+                <div className="fixed bottom-20 left-6 z-30">
                   <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-lg shadow-xl">
                     <CardContent className="p-3">
                       <div className="flex flex-col items-center gap-2">
