@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -10,8 +9,20 @@ const Index = () => {
   const { isOnline } = useNetworkStatus();
   const [hasCheckedCache, setHasCheckedCache] = useState(false);
 
+  // Add console logs for debugging
   useEffect(() => {
-    console.log('[Index] Auth state check:', { 
+    console.log('[Index] Component mounted');
+    console.log('[Index] Auth state:', { 
+      user: !!user, 
+      loading, 
+      isOnline, 
+      hasCheckedCache,
+      userEmail: user?.email || 'none'
+    });
+  }, []);
+
+  useEffect(() => {
+    console.log('[Index] Auth state change:', { 
       user: !!user, 
       loading, 
       isOnline, 
@@ -27,32 +38,49 @@ const Index = () => {
         navigate('/app/dashboard', { replace: true });
       } else {
         console.log('[Index] No authenticated user, redirecting to landing');
-        // Don't check cached user here - let ProtectedRoute handle offline access
-        navigate('/landing', { replace: true });
+        // Use modern-landing instead of landing for better compatibility
+        navigate('/modern-landing', { replace: true });
       }
     }
   }, [user, loading, navigate, isOnline, hasCheckedCache]);
 
-  if (loading) {
+  // Improved loading state with better visibility
+  if (loading || !hasCheckedCache) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <span className="text-2xl font-bold text-white">D</span>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto">
+            <span className="text-2xl font-bold text-primary-foreground">D</span>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">DukaFiti</h2>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm font-medium">Loading DUKAFITI...</p>
+          <h2 className="text-2xl font-bold text-foreground">DukaFiti</h2>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground text-sm font-medium">
+            {loading ? 'Loading DUKAFITI...' : 'Redirecting...'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Debug: Loading={loading.toString()}, HasChecked={hasCheckedCache.toString()}
+          </p>
         </div>
       </div>
     );
   }
 
+  // Fallback state - should rarely be seen
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-        <p className="text-gray-600 text-sm">Redirecting...</p>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto">
+          <span className="text-2xl font-bold text-primary-foreground">D</span>
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">DukaFiti</h2>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="text-muted-foreground text-sm">Redirecting to dashboard...</p>
+        <button 
+          onClick={() => navigate('/modern-landing', { replace: true })}
+          className="text-primary hover:underline text-sm"
+        >
+          Click here if not redirected automatically
+        </button>
       </div>
     </div>
   );
