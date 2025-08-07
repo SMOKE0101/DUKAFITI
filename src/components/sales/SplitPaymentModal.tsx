@@ -133,7 +133,8 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
       }
     });
 
-    const isValid = selectedMethods.debt ? !!selectedCustomerId : true;
+    // Remove customer validation from modal - this will be enforced in checkout
+    const isValid = true;
 
     return { methods, total, isValid };
   }, [selectedMethods, directAmounts, total, mpesaReference, selectedCustomerId]);
@@ -178,37 +179,67 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   }, [selectedMethods, total]);
   
   const handleAmountChange = useCallback((method: keyof typeof directAmounts, value: string) => {
-    const newAmounts = { ...directAmounts, [method]: value };
-    setDirectAmounts(newAmounts);
-    
-    // Update slider based on amounts
+    const newAmount = parseCurrency(value) || 0;
     const enabledMethods = Object.entries(selectedMethods)
       .filter(([, enabled]) => enabled)
       .map(([method]) => method);
     
-    if (enabledMethods.length >= 2) {
-      const amounts = enabledMethods.map(method => parseCurrency(newAmounts[method as keyof typeof newAmounts]) || 0);
-      const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
-      
-      if (totalAmount > 0) {
-        if (enabledMethods.length === 2) {
-          const percentage1 = Math.round((amounts[0] / totalAmount) * 100);
-          setSliderValues([Math.max(1, Math.min(99, percentage1))]);
-        } else if (enabledMethods.length === 3) {
-          const percentage1 = Math.round((amounts[0] / totalAmount) * 100);
-          const percentage2 = Math.round(((amounts[0] + amounts[1]) / totalAmount) * 100);
-          setSliderValues([
-            Math.max(1, Math.min(98, percentage1)),
-            Math.max(percentage1 + 1, Math.min(99, percentage2))
-          ]);
-        }
+    if (enabledMethods.length < 2) return;
+    
+    // Calculate remaining amount to distribute among other methods
+    const remainingAmount = total - newAmount;
+    const otherMethods = enabledMethods.filter(m => m !== method);
+    
+    const newAmounts = { ...directAmounts, [method]: value };
+    
+    // Auto-distribute remaining amount among other methods
+    if (remainingAmount >= 0 && otherMethods.length > 0) {
+      const amountPerOtherMethod = remainingAmount / otherMethods.length;
+      otherMethods.forEach(otherMethod => {
+        newAmounts[otherMethod as keyof typeof newAmounts] = amountPerOtherMethod.toFixed(2);
+      });
+    } else if (remainingAmount < 0) {
+      // If entered amount exceeds total, set other methods to 0
+      otherMethods.forEach(otherMethod => {
+        newAmounts[otherMethod as keyof typeof newAmounts] = '0.00';
+      });
+    }
+    
+    setDirectAmounts(newAmounts);
+    
+    // Update slider based on new amounts
+    const amounts = enabledMethods.map(method => parseCurrency(newAmounts[method as keyof typeof newAmounts]) || 0);
+    const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
+    
+    if (totalAmount > 0) {
+      if (enabledMethods.length === 2) {
+        const percentage1 = Math.round((amounts[0] / totalAmount) * 100);
+        setSliderValues([Math.max(1, Math.min(99, percentage1))]);
+      } else if (enabledMethods.length === 3) {
+        const percentage1 = Math.round((amounts[0] / totalAmount) * 100);
+        const percentage2 = Math.round(((amounts[0] + amounts[1]) / totalAmount) * 100);
+        setSliderValues([
+          Math.max(1, Math.min(98, percentage1)),
+          Math.max(percentage1 + 1, Math.min(99, percentage2))
+        ]);
       }
     }
-  }, [directAmounts, selectedMethods]);
+  }, [directAmounts, selectedMethods, total]);
 
   const handleConfirm = () => {
     if (paymentData.isValid) {
-      onConfirm(paymentData);
+      // Don't pass customerId from modal - let checkout handle customer selection
+      const dataWithoutCustomerId = {
+        ...paymentData,
+        methods: {
+          ...paymentData.methods,
+          debt: paymentData.methods.debt ? {
+            ...paymentData.methods.debt,
+            customerId: undefined
+          } : undefined
+        }
+      };
+      onConfirm(dataWithoutCustomerId);
       onOpenChange(false);
     }
   };
@@ -252,32 +283,12 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
               </Button>
             ))}
           </div>
-          {selectedMethods.debt && !selectedCustomerId && (
-            <p className="text-xs text-destructive">Customer required for debt payment</p>
+          {selectedMethods.debt && (
+            <p className="text-xs text-muted-foreground">Customer selection will be required at checkout for debt payment</p>
           )}
         </div>
 
-        {/* Customer Selection for Debt */}
-        {selectedMethods.debt && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Select Customer *</Label>
-            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Choose customer for debt payment" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    <div className="flex flex-col">
-                      <span>{customer.name}</span>
-                      <span className="text-xs text-muted-foreground">{customer.phone}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        {/* Customer Selection for Debt - Removed from modal, will be enforced in checkout */}
 
         {/* Split Ratio Controls */}
         {enabledMethodsCount >= 2 && (

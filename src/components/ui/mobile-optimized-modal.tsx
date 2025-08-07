@@ -60,14 +60,6 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
                 </DialogDescription>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="flex-shrink-0 ml-2 h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-700"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
 
