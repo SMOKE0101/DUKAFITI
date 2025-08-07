@@ -13,7 +13,8 @@ import {
   ShoppingBag,
   AlertTriangle,
   TrendingUp,
-  Activity
+  Activity,
+  RefreshCw
 } from 'lucide-react';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
@@ -36,17 +37,26 @@ const ColoredCardDashboard = () => {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
 
-  console.log('[ColoredCardDashboard] Data loaded:', {
+  console.log('[ColoredCardDashboard] Rendering dashboard with data:', {
     salesCount: sales.length,
     productsCount: products.length,
     customersCount: customers.length,
-    sampleSales: sales.slice(0, 3).map(s => ({
-      id: s.id,
-      timestamp: s.timestamp,
-      total: s.total,
-      productName: s.productName
-    }))
+    hasAccurateStats: true,
+    renderingDashboard: true
   });
+
+  // Add explicit check for data loading states
+  if (!sales || !products || !customers) {
+    console.error('[ColoredCardDashboard] Missing required data:', { sales: !!sales, products: !!products, customers: !!customers });
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate low stock products (excluding unspecified stock)
   const lowStockProducts = products.filter(p => 
@@ -94,14 +104,14 @@ const ColoredCardDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Modern Top Bar */}
-      <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 md:px-6">
+      <div className="h-14 bg-card border-b border-border flex items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
-          <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
-            <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          <div className="w-8 h-8 border border-border rounded-full flex items-center justify-center">
+            <Activity className="w-4 h-4 text-primary" />
           </div>
-          <h1 className="font-mono text-lg md:text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
+          <h1 className="font-mono text-lg md:text-xl font-black uppercase tracking-widest text-foreground">
             DASHBOARD
           </h1>
         </div>

@@ -40,7 +40,8 @@ import {
   Banknote,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 
 // Define types for the mixed product array
@@ -699,6 +700,24 @@ const RebuiltModernSalesPage = () => {
                 </div>
               </Button>
               
+
+              {/* Mobile Cart Header */}
+              <div className="flex-shrink-0 p-4 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Cart ({cart.length})</h2>
+                  {cart.length > 0 && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearCart}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 size={16} className="mr-1" />
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+              </div>
 
               {/* Cart Items */}
               <div className="flex-1 overflow-y-auto">

@@ -29,10 +29,23 @@ export const useDashboardMetrics = (
 ): DashboardMetrics => {
   const metrics = useMemo(() => {
     console.log('[DashboardMetrics] Calculating metrics with data:', {
-      salesCount: sales.length,
-      productsCount: products.length,
-      customersCount: customers.length
+      salesCount: sales?.length || 0,
+      productsCount: products?.length || 0,
+      customersCount: customers?.length || 0,
+      salesData: sales ? 'present' : 'null',
+      productsData: products ? 'present' : 'null',
+      customersData: customers ? 'present' : 'null'
     });
+
+    // Guard against null/undefined data
+    if (!sales || !products || !customers) {
+      console.warn('[DashboardMetrics] Missing data, returning empty metrics');
+      return {
+        todaySales: { totalRevenue: 0, totalProfit: 0, orderCount: 0, averageOrderValue: 0 },
+        customers: { total: 0, active: 0, withDebt: 0, totalDebt: 0 },
+        products: { total: 0, lowStock: 0, outOfStock: 0 }
+      };
+    }
 
     // Get today's date in the same timezone as the data
     const today = new Date();
