@@ -209,9 +209,9 @@ const RebuiltModernSalesPage = () => {
 
   const selectedCustomer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
 
-  // Use consistent categories with inventory page
+  // Use consistent categories with inventory page - only show product categories, 'all' handled in UI
   const categories = useMemo(() => {
-    return ['all', ...PRODUCT_CATEGORIES];
+    return PRODUCT_CATEGORIES;
   }, []);
 
   // Get variants for a parent product - need to query separately since variants are filtered out

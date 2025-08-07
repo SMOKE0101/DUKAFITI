@@ -617,6 +617,19 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
                 </div>
               )}
             </div>
+            
+            {/* Customer Selection Required for Debt in Split Payment */}
+            {splitPaymentData.methods.debt && !selectedCustomer && (
+              <div className="mt-3 pt-3 border-t border-primary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle size={14} className="text-amber-600" />
+                  <span className="text-sm font-medium text-amber-700">Customer Required for Debt</span>
+                </div>
+                <p className="text-xs text-amber-600 mb-2">
+                  Select a customer above for the debt portion ({formatCurrency(splitPaymentData.methods.debt.amount)})
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
