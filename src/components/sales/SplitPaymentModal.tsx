@@ -308,36 +308,77 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
               />
             </div>
 
-            {/* Editable Amount Inputs */}
-            <div className="space-y-2">
+            {/* Enhanced Amount Inputs with Better UI */}
+            <div className="space-y-3">
               {Object.entries(selectedMethods)
                 .filter(([, enabled]) => enabled)
-                .map(([method]) => (
-                <div key={method} className="flex items-center gap-2 p-2 rounded bg-muted/30">
-                  <div className="flex items-center gap-2 flex-1">
-                    {paymentMethodIcons[method as keyof typeof paymentMethodIcons]}
-                    <span className="text-sm font-medium min-w-[60px]">
-                      {paymentMethodLabels[method as keyof typeof paymentMethodLabels]}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 flex-1">
-                    <Input
-                      type="number"
-                      value={directAmounts[method as keyof typeof directAmounts]}
-                      onChange={(e) => handleAmountChange(method as keyof typeof directAmounts, e.target.value)}
-                      className="h-8 text-sm text-right flex-1 min-w-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      step="0.01"
-                      min="0"
-                      max={total}
-                      placeholder="0.00"
-                      onFocus={(e) => e.target.select()}
-                    />
-                    <div className="text-xs text-muted-foreground w-10 text-right">
-                      {paymentData.methods[method as keyof typeof paymentData.methods]?.percentage.toFixed(0) || '0'}%
+                .map(([method]) => {
+                  const isDebt = method === 'debt';
+                  const isCash = method === 'cash';
+                  const isMpesa = method === 'mpesa';
+                  
+                  return (
+                    <div 
+                      key={method} 
+                      className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 ${
+                        isDebt 
+                          ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' 
+                          : isCash 
+                            ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
+                            : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className={`p-2 rounded-full ${
+                          isDebt 
+                            ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' 
+                            : isCash 
+                              ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}>
+                          {paymentMethodIcons[method as keyof typeof paymentMethodIcons]}
+                        </div>
+                        <span className={`text-sm font-semibold min-w-[60px] ${
+                          isDebt 
+                            ? 'text-red-700 dark:text-red-300' 
+                            : isCash 
+                              ? 'text-green-700 dark:text-green-300'
+                              : 'text-blue-700 dark:text-blue-300'
+                        }`}>
+                          {paymentMethodLabels[method as keyof typeof paymentMethodLabels]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          type="number"
+                          value={directAmounts[method as keyof typeof directAmounts]}
+                          onChange={(e) => handleAmountChange(method as keyof typeof directAmounts, e.target.value)}
+                          className={`h-10 text-sm text-right flex-1 min-w-0 border-2 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                            isDebt 
+                              ? 'border-red-300 focus:border-red-500 bg-white dark:bg-red-950/10' 
+                              : isCash 
+                                ? 'border-green-300 focus:border-green-500 bg-white dark:bg-green-950/10'
+                                : 'border-blue-300 focus:border-blue-500 bg-white dark:bg-blue-950/10'
+                          }`}
+                          step="0.01"
+                          min="0"
+                          max={total}
+                          placeholder="0.00"
+                          onFocus={(e) => e.target.select()}
+                        />
+                        <div className={`text-xs font-semibold w-12 text-right px-2 py-1 rounded ${
+                          isDebt 
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
+                            : isCash 
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        }`}>
+                          {paymentData.methods[method as keyof typeof paymentData.methods]?.percentage.toFixed(0) || '0'}%
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
           </div>
         )}

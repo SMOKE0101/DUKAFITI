@@ -19,11 +19,12 @@ import { usePersistedCart } from '../hooks/usePersistedCart';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { PRODUCT_CATEGORIES } from '../constants/categories';
 import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
 import ResponsiveProductGrid from './ui/responsive-product-grid';
 import VariantSelectionModal from './sales/VariantSelectionModal';
-import VariantSalesDebug from './debug/VariantSalesDebug';
+
 import { 
   Search, 
   ShoppingCart, 
@@ -208,15 +209,10 @@ const RebuiltModernSalesPage = () => {
 
   const selectedCustomer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
 
+  // Use consistent categories with inventory page
   const categories = useMemo(() => {
-    const categorySet = new Set<string>();
-    products.forEach(product => {
-      if (product.category) {
-        categorySet.add(product.category);
-      }
-    });
-    return Array.from(categorySet).sort();
-  }, [products]);
+    return ['all', ...PRODUCT_CATEGORIES];
+  }, []);
 
   // Get variants for a parent product - need to query separately since variants are filtered out
   const getProductVariants = useCallback(async (parentProductId: string): Promise<Product[]> => {
@@ -871,12 +867,6 @@ const RebuiltModernSalesPage = () => {
           </div>
         </div>
 
-        {/* Debug Component - Temporary for testing */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="p-6 pb-2">
-            <VariantSalesDebug />
-          </div>
-        )}
 
         {/* Products Grid - Desktop/Tablet */}
         <div className="flex-1 overflow-y-auto p-6">
