@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Sale } from '@/types';
@@ -24,6 +24,11 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
     const now = new Date();
     const ordersMap = new Map<string, number>();
 
+    // Determine earliest sale date for full history in daily/monthly views
+    const earliestSaleDate = sales.length
+      ? new Date(Math.min(...sales.map((s) => new Date(s.timestamp).getTime())))
+      : null;
+
     if (timeframe === 'hourly') {
       // Last 24 hours - initialize all hours
       for (let i = 23; i >= 0; i--) {
@@ -32,8 +37,8 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
         ordersMap.set(key, 0);
       }
 
-      // Count orders by hour
-      sales.forEach(sale => {
+      // Count orders by hour (last 24h only)
+      sales.forEach((sale) => {
         const saleDate = new Date(sale.timestamp);
         if (saleDate >= new Date(now.getTime() - 24 * 60 * 60 * 1000)) {
           const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}-${String(saleDate.getHours()).padStart(2, '0')}`;
@@ -54,17 +59,20 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
         });
 
     } else if (timeframe === 'daily') {
-      // Last 14 days
-      for (let i = 13; i >= 0; i--) {
-        const dayDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const key = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+      // From earliest sale date (inclusive) to today
+      const startDate = earliestSaleDate
+        ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), earliestSaleDate.getDate())
+        : new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13);
+
+      for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         ordersMap.set(key, 0);
       }
 
-      // Count orders by day
-      sales.forEach(sale => {
+      // Count orders by day across full range
+      sales.forEach((sale) => {
         const saleDate = new Date(sale.timestamp);
-        if (saleDate >= new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)) {
+        if (saleDate >= startDate && saleDate <= now) {
           const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}`;
           ordersMap.set(key, (ordersMap.get(key) || 0) + 1);
         }
@@ -84,17 +92,25 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
         });
 
     } else {
-      // Last 12 months
-      for (let i = 11; i >= 0; i--) {
-        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+      // From earliest sale month to current month inclusive
+      const startMonth = earliestSaleDate
+        ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), 1)
+        : new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+      const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      for (
+        let m = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
+        m <= endMonth;
+        m.setMonth(m.getMonth() + 1)
+      ) {
+        const key = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
         ordersMap.set(key, 0);
       }
 
-      // Count orders by month
-      sales.forEach(sale => {
+      // Count orders by month across full range
+      sales.forEach((sale) => {
         const saleDate = new Date(sale.timestamp);
-        if (saleDate >= new Date(now.getFullYear(), now.getMonth() - 11, 1)) {
+        if (saleDate >= startMonth && saleDate <= now) {
           const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
           ordersMap.set(key, (ordersMap.get(key) || 0) + 1);
         }
@@ -117,7 +133,16 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
 
   const totalOrders = chartData.reduce((sum, item) => sum + item.orders, 0);
   const maxOrders = Math.max(...chartData.map(item => item.orders));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pxPerPoint = useMemo(() => (timeframe === 'hourly' ? 40 : timeframe === 'daily' ? 28 : 56), [timeframe]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollLeft = el.scrollWidth;
+    });
+  }, [timeframe, chartData.length]);
   const getTimeframeDisplay = () => {
     switch (timeframe) {
       case 'hourly': return 'Today';
@@ -193,63 +218,65 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
         </div>
 
         {/* Chart */}
-        <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
-              <XAxis 
-                dataKey="displayLabel" 
-                stroke="#64748b"
-                fontSize={11}
-                fontWeight={600}
-                tickLine={false}
-                axisLine={false}
-                interval={timeframe === 'hourly' ? 2 : 0}
-                angle={timeframe === 'hourly' ? 0 : -45}
-                textAnchor={timeframe === 'hourly' ? 'middle' : 'end'}
-                height={timeframe === 'hourly' ? 30 : 60}
-                tick={{ fontSize: 10 }}
-              />
-              <YAxis 
-                stroke="#64748b"
-                fontSize={10}
-                fontWeight={600}
-                tickLine={false}
-                axisLine={false}
-                width={25}
-                tickFormatter={(value) => value.toString()}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                  fontWeight: 600,
-                  color: 'hsl(var(--foreground))'
-                }}
-                formatter={(value: number) => [value, 'Orders']}
-                labelFormatter={(label) => {
-                  if (timeframe === 'hourly') {
-                    return `Hour: ${label}`;
-                  } else if (timeframe === 'daily') {
-                    return `Date: ${label}`;
-                  } else {
-                    return `Month: ${label}`;
-                  }
-                }}
-              />
-              <Bar
-                dataKey="orders"
-                fill="#10b981"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={60}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+        <div ref={scrollRef} className="h-80 w-full overflow-x-auto">
+          <div className="h-full min-w-full" style={{ width: chartData.length * pxPerPoint }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
+                <XAxis 
+                  dataKey="displayLabel" 
+                  stroke="#64748b"
+                  fontSize={11}
+                  fontWeight={600}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={timeframe === 'hourly' ? 2 : 0}
+                  angle={timeframe === 'hourly' ? 0 : -45}
+                  textAnchor={timeframe === 'hourly' ? 'middle' : 'end'}
+                  height={timeframe === 'hourly' ? 30 : 60}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis 
+                  stroke="#64748b"
+                  fontSize={10}
+                  fontWeight={600}
+                  tickLine={false}
+                  axisLine={false}
+                  width={25}
+                  tickFormatter={(value) => value.toString()}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                    fontWeight: 600,
+                    color: 'hsl(var(--foreground))'
+                  }}
+                  formatter={(value: number) => [value, 'Orders']}
+                  labelFormatter={(label) => {
+                    if (timeframe === 'hourly') {
+                      return `Hour: ${label}`;
+                    } else if (timeframe === 'daily') {
+                      return `Date: ${label}`;
+                    } else {
+                      return `Month: ${label}`;
+                    }
+                  }}
+                />
+                <Bar
+                  dataKey="orders"
+                  fill="#10b981"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={60}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </CardContent>
     </Card>
