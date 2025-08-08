@@ -9,6 +9,7 @@ import { Sale } from '@/types';
 import { useSupabaseDebtPayments, DebtPayment } from '@/hooks/useSupabaseDebtPayments';
 import { useSupabaseTransactions } from '@/hooks/useSupabaseTransactions';
 import { useSupabaseCustomers } from '@/hooks/useSupabaseCustomers';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface DebtTransactionsTableProps {
   sales: Sale[];
@@ -16,7 +17,7 @@ interface DebtTransactionsTableProps {
   isOffline?: boolean;
 }
 
-type TimeFrameType = 'today' | 'week' | 'month';
+type TimeFrameType = 'today' | 'week' | 'month' | 'custom';
 
 interface DebtTransaction {
   id: string;
@@ -37,6 +38,8 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
   
   const { debtPayments, loading: paymentsLoading } = useSupabaseDebtPayments();
   const { transactions, loading: transactionsLoading } = useSupabaseTransactions();
@@ -108,9 +111,19 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   const filteredTransactionsByTime = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (timeFrame === 'custom' && customFrom && customTo) {
+      const start = new Date(customFrom);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(customTo);
+      end.setHours(23, 59, 59, 999);
+      return allDebtTransactions.filter((transaction) => {
+        const d = new Date(transaction.timestamp);
+        return d >= start && d <= end;
+      });
+    }
     
-    let startDate: Date;
-    
+    let startDate: Date = today;
     switch (timeFrame) {
       case 'today':
         startDate = today;
@@ -129,9 +142,9 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
     
     return allDebtTransactions.filter(transaction => {
       const transactionDate = new Date(transaction.timestamp);
-      return transactionDate >= startDate;
+      return transactionDate >= startDate && transactionDate <= now;
     });
-  }, [allDebtTransactions, timeFrame]);
+  }, [allDebtTransactions, timeFrame, customFrom, customTo]);
 
   // Filter by search term
   const filteredTransactions = useMemo(() => {
@@ -234,29 +247,54 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
         
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
-          {/* Timeframe Selector */}
-          <div className="flex bg-muted rounded-lg p-1">
-            {[
-              { value: 'today', label: 'Today' },
-              { value: 'week', label: 'This Week' },
-              { value: 'month', label: 'This Month' }
-            ].map((option) => (
+          <div className="flex flex-col gap-2 mt-4 sm:mt-0">
+            {/* Timeframe Selector */}
+            <div className="flex bg-muted rounded-lg p-1 flex-wrap">
+              {[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' }
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setTimeFrame(option.value as TimeFrameType)}
+                  disabled={isOffline}
+                  className={`
+                    text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                    ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
+                    ${timeFrame === option.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background"
+                    }
+                  `}
+                >
+                  {option.label}
+                </button>
+              ))}
               <button
-                key={option.value}
-                onClick={() => setTimeFrame(option.value as TimeFrameType)}
+                onClick={() => setTimeFrame('custom')}
                 disabled={isOffline}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
                   ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${timeFrame === option.value
+                  ${timeFrame === 'custom'
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-background"
                   }
                 `}
               >
-                {option.label}
+                Custom
               </button>
-            ))}
+            </div>
+            {timeFrame === 'custom' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <DatePicker date={customFrom} onSelect={setCustomFrom} placeholder="From date" className="w-[160px]" />
+                <DatePicker date={customTo} onSelect={setCustomTo} placeholder="To date" className="w-[160px]" />
+                <Button variant="outline" size="sm" onClick={() => { setCustomFrom(undefined); setCustomTo(undefined); }}>
+                  Clear
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Search */}

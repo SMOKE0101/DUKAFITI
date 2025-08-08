@@ -14,18 +14,32 @@ import OrdersBarChart from './OrdersBarChart';
 import SalesReportTable from './SalesReportTable';
 import ProductProfitsTable from './ProductProfitsTable';
 import DebtTransactionsTable from './DebtTransactionsTable';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const EnhancedOfflineReportsPage = () => {
-  const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
+  const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'quarter' | 'custom'>('today');
   const { sales, loading: salesLoading } = useUnifiedSales();
   const { products, loading: productsLoading } = useUnifiedProducts();
   const { customers, loading: customersLoading } = useUnifiedCustomers();
   const { isOnline, cachedSnapshot, lastSyncedAt, cacheSnapshot, readOnly } = useOfflineReports();
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
 
   // Calculate date range based on timeframe
   const dateRange = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (timeframe === 'custom' && customFrom && customTo) {
+      const start = new Date(customFrom);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(customTo);
+      end.setHours(23, 59, 59, 999);
+      return {
+        from: start.toISOString().split('T')[0],
+        to: end.toISOString().split('T')[0]
+      };
+    }
     
     switch (timeframe) {
       case 'today':
@@ -60,7 +74,7 @@ const EnhancedOfflineReportsPage = () => {
           to: now.toISOString().split('T')[0]
         };
     }
-  }, [timeframe]);
+  }, [timeframe, customFrom, customTo]);
 
   // Use cached data when offline, live data when online
   const currentSales = readOnly && cachedSnapshot ? cachedSnapshot.sales : sales;
@@ -142,34 +156,59 @@ const EnhancedOfflineReportsPage = () => {
 
       {/* Timeframe Selector */}
       <div className="max-w-7xl mx-auto px-6 pb-4">
-        <div className="flex justify-center">
-          <div className="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 shadow-sm">
-            {[
-              { value: 'today', label: 'Today' },
-              { value: 'week', label: 'This Week' },
-              { value: 'month', label: 'This Month' },
-              { value: 'quarter', label: 'This Quarter' }
-            ].map((option) => (
+          <div className="flex justify-center">
+            <div className="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 shadow-sm flex-wrap gap-1">
+              {[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'quarter', label: 'This Quarter' }
+              ].map((option) => (
+                <Button
+                  key={option.value}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTimeframe(option.value as any)}
+                  disabled={readOnly}
+                  className={`
+                    text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                    ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}
+                    ${timeframe === option.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background"
+                    }
+                  `}
+                >
+                  {option.label}
+                </Button>
+              ))}
               <Button
-                key={option.value}
                 variant="ghost"
                 size="sm"
-                onClick={() => setTimeframe(option.value as any)}
+                onClick={() => setTimeframe('custom')}
                 disabled={readOnly}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
                   ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${timeframe === option.value
-                    ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  ${timeframe === 'custom'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background"
                   }
                 `}
               >
-                {option.label}
+                Custom
               </Button>
-            ))}
+            </div>
           </div>
-        </div>
+          {timeframe === 'custom' && (
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+              <DatePicker date={customFrom} onSelect={setCustomFrom} placeholder="From date" className="w-[160px]" />
+              <DatePicker date={customTo} onSelect={setCustomTo} placeholder="To date" className="w-[160px]" />
+              <Button variant="outline" size="sm" onClick={() => { setCustomFrom(undefined); setCustomTo(undefined); }}>
+                Clear
+              </Button>
+            </div>
+          )}
       </div>
 
       {/* Main Content */}

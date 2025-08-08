@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Download, Search } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface ProductProfitsTableProps {
   sales: Sale[];
@@ -24,14 +25,24 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
   loading = false,
   isOffline = false
 }) => {
-  const [timeFrame, setTimeFrame] = useState<'today' | 'week' | 'month'>('today');
+  const [timeFrame, setTimeFrame] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
 
-  const getTimeFrameRange = (frame: 'today' | 'week' | 'month') => {
+  const getTimeFrameRange = (frame: 'today' | 'week' | 'month' | 'custom') => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (frame === 'custom' && customFrom && customTo) {
+      const start = new Date(customFrom);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(customTo);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
     
     switch (frame) {
       case 'today':
@@ -41,15 +52,13 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
         };
       case 'week':
         const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
+        weekStart.setDate(today.getDate() - 7);
+        const weekEnd = new Date();
         return { start: weekStart, end: weekEnd };
       case 'month':
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        monthEnd.setHours(23, 59, 59, 999);
+        const monthStart = new Date(today);
+        monthStart.setDate(today.getDate() - 30);
+        const monthEnd = new Date();
         return { start: monthStart, end: monthEnd };
       default:
         return { start: today, end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1) };
@@ -136,6 +145,11 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
       case 'today': return 'Today';
       case 'week': return 'This Week';
       case 'month': return 'This Month';
+      case 'custom':
+        if (customFrom && customTo) {
+          return `${customFrom.toLocaleDateString()} - ${customTo.toLocaleDateString()}`;
+        }
+        return 'Custom Range';
       default: return 'Today';
     }
   };
@@ -173,10 +187,9 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
           </Button>
         </div>
         
-        {/* Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+        <div className="flex flex-col gap-2 mt-4 sm:mt-0">
           {/* Timeframe Selector */}
-          <div className="flex bg-muted rounded-lg p-1">
+          <div className="flex bg-muted rounded-lg p-1 flex-wrap">
             {[
               { value: 'today', label: 'Today' },
               { value: 'week', label: 'This Week' },
@@ -185,7 +198,7 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
               <button
                 key={option.value}
                 onClick={() => {
-                  setTimeFrame(option.value as 'today' | 'week' | 'month');
+                  setTimeFrame(option.value as 'today' | 'week' | 'month' | 'custom');
                   setCurrentPage(1);
                 }}
                 disabled={isOffline}
@@ -201,9 +214,31 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
                 {option.label}
               </button>
             ))}
+            <button
+              onClick={() => setTimeFrame('custom')}
+              disabled={isOffline}
+              className={`
+                text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
+                ${timeFrame === 'custom'
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background"
+                }
+              `}
+            >
+              Custom
+            </button>
           </div>
-
-          {/* Search */}
+          {timeFrame === 'custom' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <DatePicker date={customFrom} onSelect={setCustomFrom} placeholder="From date" className="w-[160px]" />
+              <DatePicker date={customTo} onSelect={setCustomTo} placeholder="To date" className="w-[160px]" />
+              <Button variant="outline" size="sm" onClick={() => { setCustomFrom(undefined); setCustomTo(undefined); }}>
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
