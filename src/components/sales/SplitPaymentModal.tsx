@@ -9,15 +9,7 @@ import { Customer } from '@/types';
 import { Banknote, CreditCard, UserX, Split, Percent } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-interface SplitPaymentData {
-  methods: {
-    cash?: { amount: number; percentage: number };
-    mpesa?: { amount: number; percentage: number; reference?: string };
-    debt?: { amount: number; percentage: number; customerId?: string };
-  };
-  total: number;
-  isValid: boolean;
-}
+import type { SplitPaymentData } from '@/types/cart';
 
 interface SplitPaymentModalProps {
   open: boolean;
@@ -156,6 +148,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
 
   const paymentData = calculateAmounts();
   const enabledMethodsCount = Object.values(selectedMethods).filter(Boolean).length;
+  const sliderMethodCount = Object.entries(selectedMethods).filter(([k, v]) => v && k !== 'discount').length;
 
   const handleSliderChange = useCallback((values: number[]) => {
     setSliderValues(values);
@@ -297,7 +290,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                 variant={enabled ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleMethodToggle(method as keyof typeof selectedMethods, !enabled)}
-                disabled={(enabled && ['cash','mpesa','debt'].includes(method) && enabledMethodsCount === 2)}
+                disabled={(enabled && ['cash','mpesa','debt'].includes(method) && sliderMethodCount === 2)}
                 className={`flex-1 h-8 text-xs ${method === 'discount' && enabled ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
               >
                 {paymentMethodIcons[method as keyof typeof paymentMethodIcons]}
@@ -313,7 +306,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         {/* Customer Selection for Debt - Removed from modal, will be enforced in checkout */}
 
         {/* Split Ratio Controls */}
-        {enabledMethodsCount >= 2 && (
+        {sliderMethodCount >= 2 && (
           <div className="space-y-4">
             <Label className="text-sm font-medium">Payment Ratio</Label>
             
@@ -334,6 +327,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
             </div>
 
             {/* Enhanced Amount Inputs with Better UI */}
+            <div className="space-y-3">
               {Object.entries(selectedMethods)
                 .filter(([, enabled]) => enabled)
                 .map(([method]) => {
