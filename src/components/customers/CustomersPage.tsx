@@ -18,6 +18,7 @@ import DeleteCustomerModal from './DeleteCustomerModal';
 import { useContactsImport } from '../../hooks/useContactsImport';
 import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { useAuth } from '../../hooks/useAuth';
+import CustomerHistoryModal from './CustomerHistoryModal';
 
 const CustomersPage = () => {
   const { 
@@ -38,6 +39,7 @@ const CustomersPage = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -100,6 +102,11 @@ const CustomersPage = () => {
   const handleRecordPayment = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowPaymentModal(true);
+  };
+
+  const handleViewHistory = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowHistoryModal(true);
   };
 
   const handleDeleteCustomer = (customer: Customer) => {
@@ -296,6 +303,7 @@ const CustomersPage = () => {
                     onEdit={handleEditCustomer}
                     onDelete={handleDeleteCustomer}
                     onRecordPayment={handleRecordPayment}
+                    onViewHistory={handleViewHistory}
                     isDeleting={operationsInProgress.deleting === customer.id}
                     isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
                   />
@@ -335,6 +343,12 @@ const CustomersPage = () => {
               customer={selectedCustomer}
               onDelete={handleConfirmDelete}
               isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
+            />
+
+            <CustomerHistoryModal
+              isOpen={showHistoryModal}
+              onClose={() => setShowHistoryModal(false)}
+              customer={selectedCustomer}
             />
 
           </div>
@@ -406,6 +420,7 @@ const CustomersPage = () => {
                   onEdit={handleEditCustomer}
                   onDelete={handleDeleteCustomer}
                   onRecordPayment={handleRecordPayment}
+                  onViewHistory={handleViewHistory}
                   isDeleting={operationsInProgress.deleting === customer.id}
                   isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
                 />
@@ -445,6 +460,12 @@ const CustomersPage = () => {
               customer={selectedCustomer}
               onDelete={handleConfirmDelete}
               isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
+            />
+
+            <CustomerHistoryModal
+              isOpen={showHistoryModal}
+              onClose={() => setShowHistoryModal(false)}
+              customer={selectedCustomer}
             />
 
         </div>

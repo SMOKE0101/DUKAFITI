@@ -26,7 +26,7 @@ interface Order {
 interface Payment {
   id: string;
   date: string;
-  method: 'cash' | 'mpesa' | 'bank';
+  method: 'cash' | 'mpesa' | 'bank' | 'debt';
   amount: number;
   reference?: string;
 }
@@ -71,28 +71,24 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         setOrders(ordersData);
       }
 
-      // Fetch payment data (negative sales entries which represent payments)
+      // Fetch debt payments from debt_payments table (latest 20)
       const { data: paymentsData, error: paymentsError } = await supabase
-        .from('sales')
+        .from('debt_payments')
         .select('*')
         .eq('customer_id', customer.id)
-        .lt('total_amount', 0) // Negative amounts are payments
         .order('timestamp', { ascending: false })
         .limit(20);
 
       if (paymentsError) {
         console.error('Error fetching payments:', paymentsError);
       } else {
-        const paymentsFormatted = paymentsData?.map(payment => {
-          const paymentDetails = payment.payment_details as any;
-          return {
-            id: payment.id,
-            date: payment.timestamp || payment.created_at || '',
-            method: payment.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
-            amount: Math.abs(payment.total_amount), // Convert negative to positive for display
-            reference: paymentDetails?.reference || undefined
-          };
-        }) || [];
+        const paymentsFormatted = paymentsData?.map(payment => ({
+          id: payment.id,
+          date: payment.timestamp || payment.created_at || '',
+          method: (payment.payment_method as 'cash' | 'mpesa' | 'bank') || 'cash',
+          amount: Number(payment.amount),
+          reference: payment.reference || undefined
+        })) || [];
         setPayments(paymentsFormatted);
       }
 
@@ -110,7 +106,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     // Fetch initial data
     fetchInitialData();
 
-    // Set up real-time subscription for sales (orders and payments)
+    // Real-time subscription for sales (orders)
     const salesChannel = supabase
       .channel(`sales-changes-${customer.id}`)
       .on(
@@ -123,12 +119,9 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         },
         (payload) => {
           console.log('Sales change detected:', payload);
-          
           if (payload.eventType === 'INSERT' && payload.new) {
             const newSale = payload.new;
-            
             if (newSale.total_amount >= 0) {
-              // Positive amount = order
               const newOrder: Order = {
                 id: newSale.id,
                 date: newSale.timestamp || newSale.created_at || '',
@@ -136,36 +129,15 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                 items: newSale.product_name,
                 total: newSale.total_amount
               };
-              
               setOrders(prev => {
-                // Avoid duplicates
                 if (prev.some(order => order.id === newOrder.id)) return prev;
-                return [newOrder, ...prev].slice(0, 20); // Keep only latest 20
-              });
-            } else {
-              // Negative amount = payment
-              const paymentDetails = newSale.payment_details as any;
-              const newPayment: Payment = {
-                id: newSale.id,
-                date: newSale.timestamp || newSale.created_at || '',
-                method: newSale.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
-                amount: Math.abs(newSale.total_amount),
-                reference: paymentDetails?.reference || undefined
-              };
-              
-              setPayments(prev => {
-                // Avoid duplicates
-                if (prev.some(payment => payment.id === newPayment.id)) return prev;
-                return [newPayment, ...prev].slice(0, 20); // Keep only latest 20
+                return [newOrder, ...prev].slice(0, 20);
               });
             }
           }
-          
           if (payload.eventType === 'UPDATE' && payload.new) {
             const updatedSale = payload.new;
-            
             if (updatedSale.total_amount >= 0) {
-              // Update order
               setOrders(prev => prev.map(order => 
                 order.id === updatedSale.id 
                   ? {
@@ -176,27 +148,62 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                     }
                   : order
               ));
-            } else {
-              // Update payment
-              const paymentDetails = updatedSale.payment_details as any;
-              setPayments(prev => prev.map(payment => 
-                payment.id === updatedSale.id 
-                  ? {
-                      ...payment,
-                      method: updatedSale.payment_method as 'cash' | 'mpesa' | 'bank' || 'cash',
-                      amount: Math.abs(updatedSale.total_amount),
-                      date: updatedSale.timestamp || updatedSale.created_at || payment.date,
-                      reference: paymentDetails?.reference || undefined
-                    }
-                  : payment
-              ));
             }
           }
-          
           if (payload.eventType === 'DELETE' && payload.old) {
             const deletedId = payload.old.id;
             setOrders(prev => prev.filter(order => order.id !== deletedId));
-            setPayments(prev => prev.filter(payment => payment.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    // Real-time subscription for debt payments
+    const paymentsChannel = supabase
+      .channel(`debt-payments-changes-${customer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'debt_payments',
+          filter: `customer_id=eq.${customer.id}`,
+        },
+        (payload) => {
+          console.log('Debt payment change detected:', payload);
+          if (payload.eventType === 'INSERT' && payload.new) {
+            const p = payload.new;
+            const newPayment: Payment = {
+              id: p.id,
+              date: p.timestamp || p.created_at || '',
+              method: (p.payment_method as 'cash' | 'mpesa' | 'bank') || 'cash',
+              amount: Number(p.amount),
+              reference: p.reference || undefined,
+            };
+            setPayments(prev => {
+              if (prev.some(pay => pay.id === newPayment.id)) return prev;
+              return [newPayment, ...prev].slice(0, 20);
+            });
+          }
+
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const up = payload.new;
+            setPayments(prev => prev.map(pay =>
+              pay.id === up.id
+                ? {
+                    ...pay,
+                    date: up.timestamp || up.created_at || pay.date,
+                    method: (up.payment_method as 'cash' | 'mpesa' | 'bank') || 'cash',
+                    amount: Number(up.amount),
+                    reference: up.reference || undefined,
+                  }
+                : pay
+            ));
+          }
+
+          if (payload.eventType === 'DELETE' && payload.old) {
+            const deletedId = payload.old.id;
+            setPayments(prev => prev.filter(pay => pay.id !== deletedId));
           }
         }
       )
@@ -205,6 +212,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     // Cleanup subscription when modal closes
     return () => {
       supabase.removeChannel(salesChannel);
+      supabase.removeChannel(paymentsChannel);
     };
   }, [customer, isOpen, fetchInitialData, orders.length]);
 

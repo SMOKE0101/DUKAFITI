@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Edit, Trash2, CreditCard, Phone, Mail, MapPin } from 'lucide-react';
+import { Edit, Trash2, CreditCard, Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { Customer } from '../../types';
 
@@ -13,6 +13,7 @@ interface CustomerCardProps {
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
   onRecordPayment: (customer: Customer) => void;
+  onViewHistory: (customer: Customer) => void;
   isDeleting?: boolean;
   isRecordingPayment?: boolean;
 }
@@ -22,6 +23,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onEdit,
   onDelete,
   onRecordPayment,
+  onViewHistory,
   isDeleting = false,
   isRecordingPayment = false
 }) => {
@@ -131,6 +133,16 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
           >
             <CreditCard className="w-4 h-4 mr-1" />
             Payment
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onViewHistory(customer)}
+            className="flex-1"
+          >
+            <Clock className="w-4 h-4 mr-1" />
+            History
           </Button>
           
           <Button
