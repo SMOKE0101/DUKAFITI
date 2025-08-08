@@ -10,6 +10,7 @@ const API_CACHE = 'dukafiti-api-v2';
 // Essential files for offline operation
 const APP_SHELL_FILES = [
   '/',
+  '/app',
   '/index.html',
   '/manifest.json',
   '/lovable-uploads/bf4819d1-0c68-4a73-9c6e-6597615e7931.png'
