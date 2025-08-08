@@ -114,7 +114,8 @@ const ModernReportsPage = () => {
       activeCustomers,
       lowStockProducts,
       cashRevenue,
-      mpesaRevenue
+      mpesaRevenue,
+      discountGiven: filteredSales.reduce((sum, s) => sum + (s.paymentDetails?.discountAmount || 0), 0),
     };
   }, [filteredSales, products]);
 
@@ -232,14 +233,15 @@ const ModernReportsPage = () => {
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Summary Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          {[
-            { title: 'TOTAL REVENUE', value: formatCurrency(metrics.totalRevenue), icon: DollarSign, color: 'border-green-300 hover:border-green-500' },
-            { title: 'TOTAL ORDERS', value: metrics.totalOrders.toString(), icon: ShoppingCart, color: 'border-blue-300 hover:border-blue-500' },
-            { title: 'ACTIVE CUSTOMERS', value: metrics.activeCustomers.toString(), icon: Users, color: 'border-purple-300 hover:border-purple-500' },
-            { title: 'LOW STOCK', value: metrics.lowStockProducts.toString(), icon: Package, color: 'border-orange-300 hover:border-orange-500' },
-            { title: 'CASH REVENUE', value: formatCurrency(metrics.cashRevenue), icon: DollarSign, color: 'border-emerald-300 hover:border-emerald-500' },
-            { title: 'M-PESA REVENUE', value: formatCurrency(metrics.mpesaRevenue), icon: DollarSign, color: 'border-teal-300 hover:border-teal-500' }
-          ].map((card, index) => {
+            {[
+              { title: 'TOTAL REVENUE', value: formatCurrency(metrics.totalRevenue), icon: DollarSign, color: 'border-green-300 hover:border-green-500' },
+              { title: 'TOTAL ORDERS', value: metrics.totalOrders.toString(), icon: ShoppingCart, color: 'border-blue-300 hover:border-blue-500' },
+              { title: 'ACTIVE CUSTOMERS', value: metrics.activeCustomers.toString(), icon: Users, color: 'border-purple-300 hover:border-purple-500' },
+              { title: 'LOW STOCK', value: metrics.lowStockProducts.toString(), icon: Package, color: 'border-orange-300 hover:border-orange-500' },
+              { title: 'CASH REVENUE', value: formatCurrency(metrics.cashRevenue), icon: DollarSign, color: 'border-emerald-300 hover:border-emerald-500' },
+              { title: 'M-PESA REVENUE', value: formatCurrency(metrics.mpesaRevenue), icon: DollarSign, color: 'border-teal-300 hover:border-teal-500' },
+              { title: 'DISCOUNTS GIVEN', value: formatCurrency(metrics.discountGiven), icon: DollarSign, color: 'border-amber-300 hover:border-amber-500' }
+            ].map((card, index) => {
             const Icon = card.icon;
             return (
               <Card key={index} className={`border-2 ${card.color} rounded-xl p-6 bg-transparent hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-all duration-200 cursor-pointer`}>

@@ -68,17 +68,18 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
       }
     });
 
-    // Add debt sales from sales (when payment method includes debt)
+    // Add debt sales from sales (when payment method includes debt) and discounts
     sales.forEach(sale => {
       const hasDebt = sale.paymentMethod === 'debt' || 
-                     (sale.paymentMethod === 'partial' && sale.paymentDetails?.debtAmount > 0);
+                     (sale.paymentMethod === 'partial' && sale.paymentDetails?.debtAmount > 0) ||
+                     (sale.paymentMethod === 'split' && (sale.paymentDetails?.debtAmount || 0) > 0);
       
       if (hasDebt) {
         const debtAmount = sale.paymentMethod === 'debt' 
           ? sale.total || (sale.sellingPrice * sale.quantity)
           : (sale.paymentDetails?.debtAmount || 0);
         
-        if (debtAmount > 0) {
+      if (debtAmount > 0) {
           debtTransactionsList.push({
             id: `sale-${sale.id}`,
             customer: sale.customerName || 'Unknown Customer',
@@ -88,6 +89,20 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
             timestamp: sale.timestamp
           });
         }
+      }
+
+      // Add discounts as separate entries
+      const discount = sale.paymentDetails?.discountAmount || 0;
+      if (discount > 0) {
+        debtTransactionsList.push({
+          id: `discount-${sale.id}`,
+          customer: sale.customerName || 'Unknown Customer',
+          amount: discount,
+          paymentMethod: 'discount',
+          transactionType: 'payment',
+          timestamp: sale.timestamp,
+          reference: 'Discount applied'
+        });
       }
     });
 
@@ -198,11 +213,19 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
   };
 
   const getTransactionTypeIcon = (type: string) => {
-    if (type === 'payment') return <TrendingDown className="h-4 w-4" />;
+    if (type === 'payment' || type === 'discount') return <TrendingDown className="h-4 w-4" />;
     return <TrendingUp className="h-4 w-4" />;
   };
 
   const getTransactionTypeBadge = (type: string) => {
+    if (type === 'discount') {
+      return (
+        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-300 flex items-center gap-1">
+          <TrendingDown className="h-4 w-4" /> Discount
+        </Badge>
+      );
+    }
+
     const variant = type === 'payment' ? "secondary" : "destructive";
     const label = type === 'cash_lending' ? 'Cash Lending' : 
                   type === 'debt_sale' ? 'Debt Sale' : 'Payment';
@@ -332,15 +355,15 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
                 <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
                   AMOUNT
                 </TableHead>
-                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
-                  PAYMENT METHOD
-                </TableHead>
-                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
-                  TYPE
-                </TableHead>
-                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
-                  REFERENCE
-                </TableHead>
+                    <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                      ENTRY METHOD
+                    </TableHead>
+                    <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                      TYPE
+                    </TableHead>
+                    <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                      REFERENCE
+                    </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

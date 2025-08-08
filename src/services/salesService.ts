@@ -16,6 +16,7 @@ export interface CreateSaleRequest {
     debtAmount: number;
     mpesaReference?: string;
     tillNumber?: string;
+    discountAmount?: number;
   };
 }
 
@@ -30,6 +31,7 @@ const parsePaymentDetails = (details: any) => {
         debtAmount: Number(details.debtAmount || 0),
         mpesaReference: details.mpesaReference || undefined,
         tillNumber: details.tillNumber || undefined,
+        discountAmount: Number(details.discountAmount || 0),
       };
     }
     
@@ -42,6 +44,7 @@ const parsePaymentDetails = (details: any) => {
         debtAmount: Number(parsed.debtAmount || 0),
         mpesaReference: parsed.mpesaReference || undefined,
         tillNumber: parsed.tillNumber || undefined,
+        discountAmount: Number(parsed.discountAmount || 0),
       };
     }
     

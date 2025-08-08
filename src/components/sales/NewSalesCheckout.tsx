@@ -283,6 +283,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
             mpesaAmount: (splitPaymentData.methods.mpesa?.amount || 0) * (itemTotal / total),
             debtAmount: (splitPaymentData.methods.debt?.amount || 0) * (itemTotal / total),
             mpesaReference: splitPaymentData.methods.mpesa?.reference,
+            discountAmount: (splitPaymentData.methods.discount?.amount || 0) * (itemTotal / total),
           } : {
             cashAmount: paymentMethod === 'cash' ? itemTotal : 0,
             mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,

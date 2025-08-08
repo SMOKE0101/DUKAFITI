@@ -26,7 +26,8 @@ const ReportsSummaryCards: React.FC<ReportsSummaryCardsProps> = ({
   }, [sales, dateRange]);
 
   const metrics = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalDiscounts = filteredSales.reduce((sum, sale) => sum + (sale.paymentDetails?.discountAmount || 0), 0);
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)), 0);
     const totalOrders = filteredSales.length;
     const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
     const lowStockProducts = products.filter(product => 
@@ -37,7 +38,8 @@ const ReportsSummaryCards: React.FC<ReportsSummaryCardsProps> = ({
       totalRevenue,
       totalOrders,
       activeCustomers,
-      lowStockProducts
+      lowStockProducts,
+      totalDiscounts,
     };
   }, [filteredSales, products]);
 
@@ -71,6 +73,15 @@ const ReportsSummaryCards: React.FC<ReportsSummaryCardsProps> = ({
       iconColor: 'text-orange-600 dark:text-orange-400'
     }
   ];
+
+  // Add Discounts Given card
+  cards.push({
+    title: 'Discounts Given',
+    value: formatCurrency(metrics.totalDiscounts),
+    icon: DollarSign,
+    bgColor: 'bg-amber-100 dark:bg-amber-900/20',
+    iconColor: 'text-amber-600 dark:text-amber-400'
+  });
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

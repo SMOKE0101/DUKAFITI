@@ -276,7 +276,7 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
               />
             </BarChart>
           </ResponsiveContainer>
-          <div className="absolute inset-0 cursor-grab active:cursor-grabbing" {...overlayHandlers} />
+          <div className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none" {...overlayHandlers} />
         </div>
       </CardContent>
     </Card>

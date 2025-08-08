@@ -10,6 +10,7 @@ export interface SplitPaymentData {
     cash?: { amount: number; percentage: number };
     mpesa?: { amount: number; percentage: number; reference?: string };
     debt?: { amount: number; percentage: number; customerId?: string };
+    discount?: { amount: number; percentage: number };
   };
   total: number;
   isValid: boolean;

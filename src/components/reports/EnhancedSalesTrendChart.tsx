@@ -44,7 +44,7 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         const saleDate = new Date(sale.timestamp);
         if (saleDate >= new Date(now.getTime() - 48 * 60 * 60 * 1000)) {
           const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}-${String(saleDate.getHours()).padStart(2, '0')}`;
-          dataMap.set(key, (dataMap.get(key) || 0) + sale.total);
+          dataMap.set(key, (dataMap.get(key) || 0) + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)));
         }
       });
 
@@ -79,7 +79,7 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         const saleDate = new Date(sale.timestamp);
         if (saleDate >= startDate && saleDate <= now) {
           const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}`;
-          dataMap.set(key, (dataMap.get(key) || 0) + sale.total);
+          dataMap.set(key, (dataMap.get(key) || 0) + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)));
         }
       });
 
@@ -119,7 +119,7 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         const saleDate = new Date(sale.timestamp);
         if (saleDate >= startMonth && saleDate <= now) {
           const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
-          dataMap.set(key, (dataMap.get(key) || 0) + sale.total);
+          dataMap.set(key, (dataMap.get(key) || 0) + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)));
         }
       });
 
@@ -205,7 +205,7 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         </div>
 
         {/* Chart */}
-        <div ref={containerRef} className="relative h-80 w-full select-none">
+         <div ref={containerRef} className="relative h-80 w-full select-none">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 
               data={visibleData}
@@ -277,7 +277,7 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
               />
             </AreaChart>
           </ResponsiveContainer>
-          <div className="absolute inset-0 cursor-grab active:cursor-grabbing" {...overlayHandlers} />
+          <div className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none" {...overlayHandlers} />
         </div>
       </CardContent>
     </Card>

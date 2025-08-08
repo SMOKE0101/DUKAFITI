@@ -15,6 +15,7 @@ interface DragPanResult {
     onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
     onPointerUp: () => void;
     onPointerLeave: () => void;
+    onPointerCancel: () => void;
   };
   isDragging: boolean;
 }
@@ -44,16 +45,18 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Ensure we capture drag on mobile
     setIsDragging(true);
     startXRef.current = e.clientX;
     startIndexRef.current = start;
     try {
-      (e.target as Element).setPointerCapture?.(e.pointerId);
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     } catch {}
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDragging) return;
+    e.preventDefault(); // Prevent scroll from cancelling drag on touch
     const dx = e.clientX - startXRef.current;
     const deltaIndex = Math.round(dx / pixelsPerItem());
     // Dragging right (dx > 0) should reveal older data (move window left)
@@ -75,6 +78,7 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
       onPointerMove,
       onPointerUp: endDrag,
       onPointerLeave: endDrag,
+      onPointerCancel: endDrag,
     },
     isDragging,
   };

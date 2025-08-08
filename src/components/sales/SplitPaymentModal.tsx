@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import MobileOptimizedModal from '@/components/ui/mobile-optimized-modal';
 import { formatCurrency, parseCurrency } from '@/utils/currency';
 import { Customer } from '@/types';
-import { Banknote, CreditCard, UserX, Split } from 'lucide-react';
+import { Banknote, CreditCard, UserX, Split, Percent } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SplitPaymentData {
@@ -37,7 +37,8 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   const [selectedMethods, setSelectedMethods] = useState({
     cash: false,
     mpesa: false,
-    debt: false
+    debt: false,
+    discount: false,
   });
 
   const [sliderValues, setSliderValues] = useState([50]);
@@ -49,66 +50,73 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
     cash: string;
     mpesa: string;
     debt: string;
+    discount: string;
   }>({
     cash: '',
     mpesa: '',
-    debt: ''
+    debt: '',
+    discount: '0.00'
   });
 
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setSelectedMethods({ cash: true, mpesa: true, debt: false });
+      setSelectedMethods({ cash: true, mpesa: true, debt: false, discount: false });
       setSliderValues([50]);
       setMpesaReference('');
       setSelectedCustomerId('');
       setDirectAmounts({
         cash: (total / 2).toFixed(2),
         mpesa: (total / 2).toFixed(2),
-        debt: '0.00'
+        debt: '0.00',
+        discount: '0.00'
       });
     }
   }, [open, total]);
 
   const handleMethodToggle = useCallback((method: keyof typeof selectedMethods, enabled: boolean) => {
     setSelectedMethods(prev => {
+      // Discount doesn't affect slider requirements
+      if (method === 'discount') {
+        return { ...prev, discount: enabled };
+      }
+
       const newMethods = { ...prev, [method]: enabled };
-      const enabledCount = Object.values(newMethods).filter(Boolean).length;
+      const enabledCount = Object.entries(newMethods)
+        .filter(([k, v]) => k !== 'discount' && v)
+        .length;
       
-      // Ensure at least 2 methods are selected for split payment
+      // Ensure at least 2 non-discount methods are selected for split payment
       if (enabledCount < 2) {
         return prev;
       }
       
-      // Adjust slider values and amounts based on number of methods
+      // Adjust slider values and amounts based on number of methods (excluding discount)
+      const activeMethods = Object.keys(newMethods).filter(key => key !== 'discount' && newMethods[key as keyof typeof newMethods]);
       if (enabledCount === 2) {
         setSliderValues([50]);
-        // Redistribute amounts evenly for 2 methods
-        const enabledMethodKeys = Object.keys(newMethods).filter(key => newMethods[key as keyof typeof newMethods]);
         const amountPerMethod = (total / 2).toFixed(2);
-        const newAmounts = { cash: '0.00', mpesa: '0.00', debt: '0.00' };
-        enabledMethodKeys.forEach(key => {
-          newAmounts[key as keyof typeof newAmounts] = amountPerMethod;
-        });
+        const newAmounts = { ...directAmounts, cash: '0.00', mpesa: '0.00', debt: '0.00' };
+        activeMethods.forEach(key => { newAmounts[key as keyof typeof newAmounts] = amountPerMethod; });
         setDirectAmounts(newAmounts);
       } else if (enabledCount === 3) {
         setSliderValues([33, 67]);
-        // Redistribute amounts evenly for 3 methods
         const amountPerMethod = (total / 3).toFixed(2);
         setDirectAmounts({
+          ...directAmounts,
           cash: amountPerMethod,
           mpesa: amountPerMethod,
-          debt: amountPerMethod
+          debt: amountPerMethod,
         });
       }
       
       return newMethods;
     });
-  }, [total]);
+  }, [total, directAmounts]);
 
   const calculateAmounts = useCallback(() => {
     const enabledMethods = Object.entries(selectedMethods)
-      .filter(([, enabled]) => enabled)
+      .filter(([k, enabled]) => enabled && k !== 'discount')
       .map(([method]) => method);
 
     if (enabledMethods.length < 2) {
@@ -117,7 +125,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
 
     const methods: SplitPaymentData['methods'] = {};
     
-    // Use direct amounts from inputs
+    // Use direct amounts from inputs for payment methods
     enabledMethods.forEach(method => {
       const amount = parseCurrency(directAmounts[method as keyof typeof directAmounts]) || 0;
       const actualTotal = enabledMethods.reduce((sum, m) => 
@@ -133,6 +141,13 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
       }
     });
 
+    // Discount (optional, separate)
+    const discountAmount = parseCurrency(directAmounts.discount) || 0;
+    if (selectedMethods.discount && discountAmount > 0) {
+      const pct = total > 0 ? (discountAmount / total) * 100 : 0;
+      methods.discount = { amount: discountAmount, percentage: pct };
+    }
+
     // Remove customer validation from modal - this will be enforced in checkout
     const isValid = true;
 
@@ -145,9 +160,8 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   const handleSliderChange = useCallback((values: number[]) => {
     setSliderValues(values);
     
-    // Update amounts based on slider values
     const enabledMethods = Object.entries(selectedMethods)
-      .filter(([, enabled]) => enabled)
+      .filter(([k, enabled]) => enabled && k !== 'discount')
       .map(([method]) => method);
 
     if (enabledMethods.length === 2) {
@@ -156,7 +170,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
       const amount1 = ((total * percentage1) / 100).toFixed(2);
       const amount2 = ((total * percentage2) / 100).toFixed(2);
       
-      const newAmounts = { cash: '0.00', mpesa: '0.00', debt: '0.00' };
+      const newAmounts = { ...directAmounts, cash: '0.00', mpesa: '0.00', debt: '0.00' } as typeof directAmounts;
       newAmounts[enabledMethods[0] as keyof typeof newAmounts] = amount1;
       newAmounts[enabledMethods[1] as keyof typeof newAmounts] = amount2;
       setDirectAmounts(newAmounts);
@@ -170,18 +184,24 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         ((total * percentage3) / 100).toFixed(2)
       ];
       
-      const newAmounts = { cash: '0.00', mpesa: '0.00', debt: '0.00' };
+      const newAmounts = { ...directAmounts, cash: '0.00', mpesa: '0.00', debt: '0.00' } as typeof directAmounts;
       enabledMethods.forEach((method, index) => {
         newAmounts[method as keyof typeof newAmounts] = amounts[index];
       });
       setDirectAmounts(newAmounts);
     }
-  }, [selectedMethods, total]);
+  }, [selectedMethods, total, directAmounts]);
   
   const handleAmountChange = useCallback((method: keyof typeof directAmounts, value: string) => {
+    // Discount is independent from split distribution
+    if (method === 'discount') {
+      setDirectAmounts(prev => ({ ...prev, discount: value }));
+      return;
+    }
+
     const newAmount = parseCurrency(value) || 0;
     const enabledMethods = Object.entries(selectedMethods)
-      .filter(([, enabled]) => enabled)
+      .filter(([k, enabled]) => enabled && k !== 'discount')
       .map(([method]) => method);
     
     if (enabledMethods.length < 2) return;
@@ -190,7 +210,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
     const remainingAmount = total - newAmount;
     const otherMethods = enabledMethods.filter(m => m !== method);
     
-    const newAmounts = { ...directAmounts, [method]: value };
+    const newAmounts = { ...directAmounts, [method]: value } as typeof directAmounts;
     
     // Auto-distribute remaining amount among other methods
     if (remainingAmount >= 0 && otherMethods.length > 0) {
@@ -207,7 +227,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
     
     setDirectAmounts(newAmounts);
     
-    // Update slider based on new amounts
+    // Update slider based on new amounts (excluding discount)
     const amounts = enabledMethods.map(method => parseCurrency(newAmounts[method as keyof typeof newAmounts]) || 0);
     const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
     
@@ -247,13 +267,15 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   const paymentMethodIcons = {
     cash: <Banknote className="h-4 w-4" />,
     mpesa: <CreditCard className="h-4 w-4" />,
-    debt: <UserX className="h-4 w-4" />
+    debt: <UserX className="h-4 w-4" />,
+    discount: <Percent className="h-4 w-4" />,
   };
 
   const paymentMethodLabels = {
     cash: 'Cash',
     mpesa: 'M-Pesa',
-    debt: 'Debt'
+    debt: 'Debt',
+    discount: 'Discount',
   };
 
   return (
@@ -275,8 +297,8 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                 variant={enabled ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleMethodToggle(method as keyof typeof selectedMethods, !enabled)}
-                disabled={enabled && enabledMethodsCount === 2}
-                className="flex-1 h-8 text-xs"
+                disabled={(enabled && ['cash','mpesa','debt'].includes(method) && enabledMethodsCount === 2)}
+                className={`flex-1 h-8 text-xs ${method === 'discount' && enabled ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
               >
                 {paymentMethodIcons[method as keyof typeof paymentMethodIcons]}
                 <span className="ml-1">{paymentMethodLabels[method as keyof typeof paymentMethodLabels]}</span>
@@ -312,41 +334,47 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
             </div>
 
             {/* Enhanced Amount Inputs with Better UI */}
-            <div className="space-y-3">
               {Object.entries(selectedMethods)
                 .filter(([, enabled]) => enabled)
                 .map(([method]) => {
                   const isDebt = method === 'debt';
                   const isCash = method === 'cash';
                   const isMpesa = method === 'mpesa';
+                  const isDiscount = method === 'discount';
                   
                   return (
                     <div 
                       key={method} 
                       className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 ${
-                        isDebt 
-                          ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' 
-                          : isCash 
-                            ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
-                            : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800'
+                        isDiscount
+                          ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800'
+                          : isDebt 
+                            ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' 
+                            : isCash 
+                              ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
+                              : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800'
                       }`}
                     >
                       <div className="flex items-center gap-2 flex-1">
                         <div className={`p-2 rounded-full ${
-                          isDebt 
-                            ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' 
-                            : isCash 
-                              ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                          isDiscount
+                            ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                            : isDebt 
+                              ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' 
+                              : isCash 
+                                ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                         }`}>
                           {paymentMethodIcons[method as keyof typeof paymentMethodIcons]}
                         </div>
                         <span className={`text-sm font-semibold min-w-[60px] ${
-                          isDebt 
-                            ? 'text-red-700 dark:text-red-300' 
-                            : isCash 
-                              ? 'text-green-700 dark:text-green-300'
-                              : 'text-blue-700 dark:text-blue-300'
+                          isDiscount
+                            ? 'text-amber-700 dark:text-amber-300'
+                            : isDebt 
+                              ? 'text-red-700 dark:text-red-300' 
+                              : isCash 
+                                ? 'text-green-700 dark:text-green-300'
+                                : 'text-blue-700 dark:text-blue-300'
                         }`}>
                           {paymentMethodLabels[method as keyof typeof paymentMethodLabels]}
                         </span>
@@ -357,11 +385,13 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                           value={directAmounts[method as keyof typeof directAmounts]}
                           onChange={(e) => handleAmountChange(method as keyof typeof directAmounts, e.target.value)}
                           className={`h-10 text-sm text-right flex-1 min-w-0 border-2 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDebt 
-                              ? 'border-red-300 focus:border-red-500 bg-white dark:bg-red-950/10' 
-                              : isCash 
-                                ? 'border-green-300 focus:border-green-500 bg-white dark:bg-green-950/10'
-                                : 'border-blue-300 focus:border-blue-500 bg-white dark:bg-blue-950/10'
+                            isDiscount
+                              ? 'border-amber-300 focus:border-amber-500 bg-white dark:bg-amber-950/10'
+                              : isDebt 
+                                ? 'border-red-300 focus:border-red-500 bg-white dark:bg-red-950/10' 
+                                : isCash 
+                                  ? 'border-green-300 focus:border-green-500 bg-white dark:bg-green-950/10'
+                                  : 'border-blue-300 focus:border-blue-500 bg-white dark:bg-blue-950/10'
                           }`}
                           step="0.01"
                           min="0"
@@ -370,11 +400,13 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                           onFocus={(e) => e.target.select()}
                         />
                         <div className={`text-xs font-semibold w-12 text-right px-2 py-1 rounded ${
-                          isDebt 
-                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
-                            : isCash 
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                          isDiscount
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                            : isDebt 
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
+                              : isCash 
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                         }`}>
                           {paymentData.methods[method as keyof typeof paymentData.methods]?.percentage.toFixed(0) || '0'}%
                         </div>
