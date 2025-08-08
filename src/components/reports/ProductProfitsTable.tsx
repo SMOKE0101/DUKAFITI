@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DatePicker } from '@/components/ui/date-picker';
 import { Download, Search } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
@@ -25,22 +24,14 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
   loading = false,
   isOffline = false
 }) => {
-  const [timeFrame, setTimeFrame] = useState<'today' | 'week' | 'month' | 'custom'>('today');
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | undefined>();
+  const [timeFrame, setTimeFrame] = useState<'today' | 'week' | 'month'>('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const getTimeFrameRange = (frame: 'today' | 'week' | 'month' | 'custom') => {
+  const getTimeFrameRange = (frame: 'today' | 'week' | 'month') => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    if (frame === 'custom' && customDateRange) {
-      return {
-        start: new Date(customDateRange.from),
-        end: new Date(customDateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
-      };
-    }
     
     switch (frame) {
       case 'today':
@@ -71,7 +62,7 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
       const saleDate = new Date(sale.timestamp);
       return saleDate >= start && saleDate <= end;
     });
-  }, [sales, timeFrame, customDateRange]);
+  }, [sales, timeFrame]);
 
   const productProfitsData = useMemo((): ProductProfitRow[] => {
     const productMap = new Map<string, ProductProfitRow>();
@@ -194,10 +185,7 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
               <button
                 key={option.value}
                 onClick={() => {
-                  setTimeFrame(option.value as 'today' | 'week' | 'month' | 'custom');
-                  if (option.value !== 'custom') {
-                    setCustomDateRange(undefined);
-                  }
+                  setTimeFrame(option.value as 'today' | 'week' | 'month');
                   setCurrentPage(1);
                 }}
                 disabled={isOffline}
@@ -213,58 +201,6 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
                 {option.label}
               </button>
             ))}
-          </div>
-
-          {/* Custom Date Range Button */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setTimeFrame('custom')}
-              disabled={isOffline}
-              className={`
-                text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5 border
-                ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
-                ${timeFrame === 'custom'
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent border-border"
-                }
-              `}
-            >
-              {timeFrame === 'custom' && customDateRange
-                ? `${customDateRange.from.toLocaleDateString()} - ${customDateRange.to.toLocaleDateString()}`
-                : 'Custom Range'
-              }
-            </button>
-            
-            {timeFrame === 'custom' && (
-              <div className="flex gap-2">
-                <DatePicker
-                  date={customDateRange?.from}
-                  onSelect={(date) => {
-                    if (date) {
-                      setCustomDateRange(prev => ({
-                        from: date,
-                        to: prev?.to || new Date()
-                      }));
-                    }
-                  }}
-                  placeholder="From date"
-                  className="w-36"
-                />
-                <DatePicker
-                  date={customDateRange?.to}
-                  onSelect={(date) => {
-                    if (date) {
-                      setCustomDateRange(prev => ({
-                        from: prev?.from || new Date(),
-                        to: date
-                      }));
-                    }
-                  }}
-                  placeholder="To date"
-                  className="w-36"
-                />
-              </div>
-            )}
           </div>
 
           {/* Search */}
