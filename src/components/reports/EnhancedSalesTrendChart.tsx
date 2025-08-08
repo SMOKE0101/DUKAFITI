@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
 import { TrendingUp } from 'lucide-react';
+import { useDragPanWindow } from '@/hooks/useDragPanWindow';
 
 interface EnhancedSalesTrendChartProps {
   sales: Sale[];
@@ -31,17 +32,17 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
       : null;
 
     if (timeframe === 'hourly') {
-      // Last 24 hours - initialize all hours
-      for (let i = 23; i >= 0; i--) {
+      // Last 48 hours - initialize all hours
+      for (let i = 47; i >= 0; i--) {
         const hourDate = new Date(now.getTime() - i * 60 * 60 * 1000);
         const key = `${hourDate.getFullYear()}-${String(hourDate.getMonth() + 1).padStart(2, '0')}-${String(hourDate.getDate()).padStart(2, '0')}-${String(hourDate.getHours()).padStart(2, '0')}`;
         dataMap.set(key, 0);
       }
 
-      // Aggregate sales by hour (last 24h only)
+      // Aggregate sales by hour (last 48h only)
       sales.forEach((sale) => {
         const saleDate = new Date(sale.timestamp);
-        if (saleDate >= new Date(now.getTime() - 24 * 60 * 60 * 1000)) {
+        if (saleDate >= new Date(now.getTime() - 48 * 60 * 60 * 1000)) {
           const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}-${String(saleDate.getHours()).padStart(2, '0')}`;
           dataMap.set(key, (dataMap.get(key) || 0) + sale.total);
         }
@@ -61,10 +62,12 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         });
 
     } else if (timeframe === 'daily') {
-      // From earliest sale date (inclusive) to today
-      const startDate = earliestSaleDate
+      // Cap to last 365 days for offline
+      const capStart = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      const candidate = earliestSaleDate
         ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), earliestSaleDate.getDate())
-        : new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+        : capStart;
+      const startDate = new Date(Math.max(candidate.getTime(), capStart.getTime()));
 
       for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -94,10 +97,12 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         });
 
     } else {
-      // From earliest sale month to current month inclusive
-      const startMonth = earliestSaleDate
+      // Cap to last 36 months for offline
+      const capStartMonth = new Date(now.getFullYear(), now.getMonth() - 35, 1);
+      const candidateMonth = earliestSaleDate
         ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), 1)
-        : new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        : capStartMonth;
+      const startMonth = new Date(Math.max(candidateMonth.getTime(), capStartMonth.getTime()));
 
       const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       for (
@@ -134,16 +139,12 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
   }, [sales, timeframe]);
 
   const totalRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const pxPerPoint = useMemo(() => (timeframe === 'hourly' ? 40 : timeframe === 'daily' ? 28 : 56), [timeframe]);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      el.scrollLeft = el.scrollWidth;
-    });
-  }, [timeframe, chartData.length]);
+  const windowSize = useMemo(() => (timeframe === 'hourly' ? 24 : timeframe === 'daily' ? 30 : 12), [timeframe]);
+  const { start, end, containerRef, overlayHandlers, isDragging } = useDragPanWindow({
+    dataLength: chartData.length,
+    windowSize,
+  });
+  const visibleData = useMemo(() => chartData.slice(start, end), [chartData, start, end]);
   const getTimeframeDisplay = () => {
     switch (timeframe) {
       case 'hourly': return 'Last 24 Hours';
@@ -204,80 +205,79 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         </div>
 
         {/* Chart */}
-        <div ref={scrollRef} className="h-80 w-full overflow-x-auto">
-          <div className="h-full min-w-full" style={{ width: chartData.length * pxPerPoint }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart 
-                data={chartData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
-                <XAxis 
-                  dataKey="displayLabel" 
-                  stroke="#64748b"
-                  fontSize={12}
-                  fontWeight={600}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11 }}
-                  interval="preserveStartEnd"
-                />
-                <YAxis 
-                  stroke="#64748b"
-                  fontSize={10}
-                  fontWeight={600}
-                  tickLine={false}
-                  axisLine={false}
-                  width={30}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                    if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-                    return value.toString();
-                  }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                    fontWeight: 600,
-                    color: 'hsl(var(--foreground))'
-                  }}
-                  formatter={(value: number) => [formatCurrency(value), 'Revenue']}
-                  labelFormatter={(label) => {
-                    if (timeframe === 'hourly') {
-                      return `Hour: ${label}`;
-                    } else if (timeframe === 'daily') {
-                      return `Date: ${label}`;
-                    } else {
-                      return `Month: ${label}`;
-                    }
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fill="url(#revenueGradient)"
-                  dot={false}
-                  activeDot={{ 
-                    r: 6, 
-                    stroke: '#3b82f6', 
-                    strokeWidth: 2, 
-                    fill: '#fff'
-                  }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+        <div ref={containerRef} className="relative h-80 w-full select-none">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart 
+              data={visibleData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
+              <XAxis 
+                dataKey="displayLabel" 
+                stroke="#64748b"
+                fontSize={12}
+                fontWeight={600}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11 }}
+                interval="preserveStartEnd"
+              />
+              <YAxis 
+                stroke="#64748b"
+                fontSize={10}
+                fontWeight={600}
+                tickLine={false}
+                axisLine={false}
+                width={30}
+                tickFormatter={(value) => {
+                  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                  if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+                  return value.toString();
+                }}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                  fontWeight: 600,
+                  color: 'hsl(var(--foreground))'
+                }}
+                formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                labelFormatter={(label) => {
+                  if (timeframe === 'hourly') {
+                    return `Hour: ${label}`;
+                  } else if (timeframe === 'daily') {
+                    return `Date: ${label}`;
+                  } else {
+                    return `Month: ${label}`;
+                  }
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fill="url(#revenueGradient)"
+                dot={false}
+                activeDot={{ 
+                  r: 6, 
+                  stroke: '#3b82f6', 
+                  strokeWidth: 2, 
+                  fill: '#fff'
+                }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 cursor-grab active:cursor-grabbing" {...overlayHandlers} />
         </div>
       </CardContent>
     </Card>
