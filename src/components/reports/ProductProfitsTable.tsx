@@ -187,58 +187,62 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
           </Button>
         </div>
         
-        <div className="flex flex-col gap-2 mt-4 sm:mt-0">
-          {/* Timeframe Selector */}
-          <div className="flex bg-muted rounded-lg p-1 flex-wrap">
-            {[
-              { value: 'today', label: 'Today' },
-              { value: 'week', label: 'This Week' },
-              { value: 'month', label: 'This Month' }
-            ].map((option) => (
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <div className="flex flex-col gap-2">
+            {/* Timeframe Selector */}
+            <div className="flex bg-muted rounded-lg p-1 flex-wrap">
+              {[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' }
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => {
+                    setTimeFrame(option.value as 'today' | 'week' | 'month' | 'custom');
+                    setCurrentPage(1);
+                  }}
+                  disabled={isOffline}
+                  className={`
+                    text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
+                    ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
+                    ${timeFrame === option.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background"
+                    }
+                  `}
+                >
+                  {option.label}
+                </button>
+              ))}
               <button
-                key={option.value}
-                onClick={() => {
-                  setTimeFrame(option.value as 'today' | 'week' | 'month' | 'custom');
-                  setCurrentPage(1);
-                }}
+                onClick={() => setTimeFrame('custom')}
                 disabled={isOffline}
                 className={`
                   text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
                   ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${timeFrame === option.value
+                  ${timeFrame === 'custom'
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-background"
                   }
                 `}
               >
-                {option.label}
+                Custom
               </button>
-            ))}
-            <button
-              onClick={() => setTimeFrame('custom')}
-              disabled={isOffline}
-              className={`
-                text-sm font-medium rounded-md transition-all duration-200 px-3 py-1.5
-                ${isOffline ? 'opacity-50 cursor-not-allowed' : ''}
-                ${timeFrame === 'custom'
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background"
-                }
-              `}
-            >
-              Custom
-            </button>
-          </div>
-          {timeFrame === 'custom' && (
-            <div className="flex flex-wrap items-center gap-2">
-              <DatePicker date={customFrom} onSelect={setCustomFrom} placeholder="From date" className="w-[160px]" />
-              <DatePicker date={customTo} onSelect={setCustomTo} placeholder="To date" className="w-[160px]" />
-              <Button variant="outline" size="sm" onClick={() => { setCustomFrom(undefined); setCustomTo(undefined); }}>
-                Clear
-              </Button>
             </div>
-          )}
-        </div>
+            {timeFrame === 'custom' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <DatePicker date={customFrom} onSelect={setCustomFrom} placeholder="From date" className="w-[160px]" />
+                <DatePicker date={customTo} onSelect={setCustomTo} placeholder="To date" className="w-[160px]" />
+                <Button variant="outline" size="sm" onClick={() => { setCustomFrom(undefined); setCustomTo(undefined); }}>
+                  Clear
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Search */}
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
