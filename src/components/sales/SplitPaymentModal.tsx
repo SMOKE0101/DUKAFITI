@@ -50,16 +50,19 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
     discount: '0.00'
   });
 
+  const [lockedInputs, setLockedInputs] = useState<Set<string>>(new Set());
+
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setSelectedMethods({ cash: true, mpesa: true, debt: false, discount: false });
-      setSliderValues([50]);
+      setSelectedMethods({ cash: false, mpesa: true, debt: false, discount: true });
+      // Start with full amount on M-Pesa and zero discount
+      setSliderValues([99]); // visual bias toward first segment
       setMpesaReference('');
       setSelectedCustomerId('');
       setDirectAmounts({
-        cash: (total / 2).toFixed(2),
-        mpesa: (total / 2).toFixed(2),
+        cash: '0.00',
+        mpesa: total.toFixed(2),
         debt: '0.00',
         discount: '0.00'
       });
@@ -68,176 +71,136 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
 
   const handleMethodToggle = useCallback((method: keyof typeof selectedMethods, enabled: boolean) => {
     setSelectedMethods(prev => {
-      // Discount doesn't affect slider requirements
-      if (method === 'discount') {
-        return { ...prev, discount: enabled };
+      const next = { ...prev, [method]: enabled };
+
+      // Prevent disabling the last non-discount method
+      const nonDiscountEnabled = Object.entries(next).filter(([k, v]) => k !== 'discount' && v).length;
+      if (nonDiscountEnabled === 0) {
+        return prev; // must have at least one non-discount method
       }
 
-      const newMethods = { ...prev, [method]: enabled };
-      const enabledCount = Object.entries(newMethods)
-        .filter(([k, v]) => k !== 'discount' && v)
-        .length;
-      
-      // Ensure at least 2 non-discount methods are selected for split payment
-      if (enabledCount < 2) {
-        return prev;
-      }
-      
-      // Adjust slider values and amounts based on number of methods (excluding discount)
-      const activeMethods = Object.keys(newMethods).filter(key => key !== 'discount' && newMethods[key as keyof typeof newMethods]);
-      if (enabledCount === 2) {
-        setSliderValues([50]);
-        const amountPerMethod = (total / 2).toFixed(2);
-        const newAmounts = { ...directAmounts, cash: '0.00', mpesa: '0.00', debt: '0.00' };
-        activeMethods.forEach(key => { newAmounts[key as keyof typeof newAmounts] = amountPerMethod; });
+      // Recalculate amounts evenly for enabled methods (including discount) and clear locks
+      const enabledMethodsAll = Object.entries(next).filter(([, v]) => v).map(([k]) => k) as Array<keyof typeof directAmounts>;
+      if (enabledMethodsAll.length >= 2) {
+        const split = (total / enabledMethodsAll.length).toFixed(2);
+        const newAmounts = { cash: '0.00', mpesa: '0.00', debt: '0.00', discount: '0.00' } as typeof directAmounts;
+        enabledMethodsAll.forEach(m => { newAmounts[m] = split; });
         setDirectAmounts(newAmounts);
-      } else if (enabledCount === 3) {
-        setSliderValues([33, 67]);
-        const amountPerMethod = (total / 3).toFixed(2);
-        setDirectAmounts({
-          ...directAmounts,
-          cash: amountPerMethod,
-          mpesa: amountPerMethod,
-          debt: amountPerMethod,
-        });
+        setSliderValues(Array.from({ length: Math.max(1, enabledMethodsAll.length - 1) }, (_, i) => Math.round(((i + 1) / enabledMethodsAll.length) * 100) - 1));
+        setLockedInputs(new Set());
       }
-      
-      return newMethods;
+
+      return next;
     });
   }, [total, directAmounts]);
 
   const calculateAmounts = useCallback(() => {
-    const enabledMethods = Object.entries(selectedMethods)
-      .filter(([k, enabled]) => enabled && k !== 'discount')
-      .map(([method]) => method);
+    const enabledAll = Object.entries(selectedMethods)
+      .filter(([, enabled]) => enabled)
+      .map(([m]) => m);
 
-    if (enabledMethods.length < 2) {
-      return { methods: {}, total, isValid: false };
+    const nonDiscountEnabled = Object.entries(selectedMethods)
+      .filter(([k, v]) => k !== 'discount' && v).length;
+
+    if (enabledAll.length < 2 || nonDiscountEnabled < 1) {
+      return { methods: {}, total, isValid: false } as SplitPaymentData;
     }
 
     const methods: SplitPaymentData['methods'] = {};
-    
-    // Use direct amounts from inputs for payment methods
-    enabledMethods.forEach(method => {
+
+    // Compute amounts and percentages against total for all enabled (including discount)
+    enabledAll.forEach(method => {
       const amount = parseCurrency(directAmounts[method as keyof typeof directAmounts]) || 0;
-      const actualTotal = enabledMethods.reduce((sum, m) => 
-        sum + (parseCurrency(directAmounts[m as keyof typeof directAmounts]) || 0), 0);
-      const percentage = actualTotal > 0 ? (amount / actualTotal) * 100 : 0;
-      
-      if (method === 'cash') {
-        methods.cash = { amount, percentage };
-      } else if (method === 'mpesa') {
-        methods.mpesa = { amount, percentage, reference: mpesaReference };
-      } else if (method === 'debt') {
-        methods.debt = { amount, percentage, customerId: selectedCustomerId };
-      }
+      const pct = total > 0 ? (amount / total) * 100 : 0;
+      if (method === 'cash') methods.cash = { amount, percentage: pct };
+      if (method === 'mpesa') methods.mpesa = { amount, percentage: pct, reference: mpesaReference };
+      if (method === 'debt') methods.debt = { amount, percentage: pct, customerId: selectedCustomerId };
+      if (method === 'discount') methods.discount = { amount, percentage: pct };
     });
 
-    // Discount (optional, separate)
-    const discountAmount = parseCurrency(directAmounts.discount) || 0;
-    if (selectedMethods.discount && discountAmount > 0) {
-      const pct = total > 0 ? (discountAmount / total) * 100 : 0;
-      methods.discount = { amount: discountAmount, percentage: pct };
-    }
-
-    // Remove customer validation from modal - this will be enforced in checkout
-    const isValid = true;
+    // Validate total (including discount) within epsilon
+    const sumAll = enabledAll.reduce((s, m) => s + (parseCurrency(directAmounts[m as keyof typeof directAmounts]) || 0), 0);
+    const epsilon = 0.01;
+    const isValid = Math.abs(sumAll - total) <= epsilon && nonDiscountEnabled >= 1;
 
     return { methods, total, isValid };
   }, [selectedMethods, directAmounts, total, mpesaReference, selectedCustomerId]);
 
   const paymentData = calculateAmounts();
-  const enabledMethodsCount = Object.values(selectedMethods).filter(Boolean).length;
-  const sliderMethodCount = Object.entries(selectedMethods).filter(([k, v]) => v && k !== 'discount').length;
+  const enabledAllMethods = Object.entries(selectedMethods).filter(([, v]) => v).map(([m]) => m);
+  const enabledCount = enabledAllMethods.length;
+  const nonDiscountEnabledCount = Object.entries(selectedMethods).filter(([k, v]) => k !== 'discount' && v).length;
 
   const handleSliderChange = useCallback((values: number[]) => {
-    setSliderValues(values);
-    
-    const enabledMethods = Object.entries(selectedMethods)
-      .filter(([k, enabled]) => enabled && k !== 'discount')
-      .map(([method]) => method);
+    // Ensure sorted and clamped values between 1 and 99
+    const sorted = [...values].sort((a, b) => a - b).map(v => Math.max(1, Math.min(99, v)));
+    setSliderValues(sorted);
 
-    if (enabledMethods.length === 2) {
-      const percentage1 = values[0];
-      const percentage2 = 100 - percentage1;
-      const amount1 = ((total * percentage1) / 100).toFixed(2);
-      const amount2 = ((total * percentage2) / 100).toFixed(2);
-      
-      const newAmounts = { ...directAmounts, cash: '0.00', mpesa: '0.00', debt: '0.00' } as typeof directAmounts;
-      newAmounts[enabledMethods[0] as keyof typeof newAmounts] = amount1;
-      newAmounts[enabledMethods[1] as keyof typeof newAmounts] = amount2;
-      setDirectAmounts(newAmounts);
-    } else if (enabledMethods.length === 3) {
-      const percentage1 = values[0];
-      const percentage2 = values[1] - values[0];
-      const percentage3 = 100 - values[1];
-      const amounts = [
-        ((total * percentage1) / 100).toFixed(2),
-        ((total * percentage2) / 100).toFixed(2),
-        ((total * percentage3) / 100).toFixed(2)
-      ];
-      
-      const newAmounts = { ...directAmounts, cash: '0.00', mpesa: '0.00', debt: '0.00' } as typeof directAmounts;
-      enabledMethods.forEach((method, index) => {
-        newAmounts[method as keyof typeof newAmounts] = amounts[index];
-      });
-      setDirectAmounts(newAmounts);
-    }
-  }, [selectedMethods, total, directAmounts]);
+    const methods = enabledAllMethods as Array<keyof typeof directAmounts>;
+    if (methods.length < 2) return;
+
+    const boundaries = [0, ...sorted, 100];
+    const percents = boundaries.slice(0, -1).map((b, i) => (boundaries[i + 1] - b));
+    const newAmounts = { cash: '0.00', mpesa: '0.00', debt: '0.00', discount: '0.00' } as typeof directAmounts;
+    percents.forEach((p, i) => {
+      const amt = ((total * p) / 100).toFixed(2);
+      newAmounts[methods[i]] = amt;
+    });
+    setDirectAmounts(newAmounts);
+    setLockedInputs(new Set());
+  }, [enabledAllMethods, total]);
   
   const handleAmountChange = useCallback((method: keyof typeof directAmounts, value: string) => {
-    // Discount is independent from split distribution
     if (method === 'discount') {
-      setDirectAmounts(prev => ({ ...prev, discount: value }));
-      return;
+      // Discount participates in distribution and locks behavior like others
     }
 
-    const newAmount = parseCurrency(value) || 0;
-    const enabledMethods = Object.entries(selectedMethods)
-      .filter(([k, enabled]) => enabled && k !== 'discount')
-      .map(([method]) => method);
-    
-    if (enabledMethods.length < 2) return;
-    
-    // Calculate remaining amount to distribute among other methods
-    const remainingAmount = total - newAmount;
-    const otherMethods = enabledMethods.filter(m => m !== method);
-    
-    const newAmounts = { ...directAmounts, [method]: value } as typeof directAmounts;
-    
-    // Auto-distribute remaining amount among other methods
-    if (remainingAmount >= 0 && otherMethods.length > 0) {
-      const amountPerOtherMethod = remainingAmount / otherMethods.length;
-      otherMethods.forEach(otherMethod => {
-        newAmounts[otherMethod as keyof typeof newAmounts] = amountPerOtherMethod.toFixed(2);
-      });
-    } else if (remainingAmount < 0) {
-      // If entered amount exceeds total, set other methods to 0
-      otherMethods.forEach(otherMethod => {
-        newAmounts[otherMethod as keyof typeof newAmounts] = '0.00';
-      });
+    const newVal = parseCurrency(value) || 0;
+    const methods = enabledAllMethods as Array<keyof typeof directAmounts>;
+    if (!methods.includes(method)) return;
+
+    // Update locked set
+    setLockedInputs(prev => {
+      const next = new Set(prev);
+      next.add(method);
+      return next;
+    });
+
+    // Build a working copy preserving current values
+    const working = { ...directAmounts } as typeof directAmounts;
+    working[method] = newVal.toFixed(2);
+
+    const locks = new Set(lockedInputs);
+    locks.add(method);
+
+    const enabledCountLocal = methods.length;
+    const neededLocks = enabledCountLocal - 1;
+
+    if (locks.size >= neededLocks) {
+      // Compute remainder for the single unlocked method
+      const unlocked = methods.find(m => !locks.has(m)) as keyof typeof directAmounts | undefined;
+      const sumLocked = methods
+        .filter(m => m !== unlocked)
+        .reduce((s, m) => s + (parseCurrency(working[m]) || 0), 0);
+      const remainder = Math.max(0, Math.min(total, total - sumLocked));
+      if (unlocked) working[unlocked] = remainder.toFixed(2);
     }
-    
-    setDirectAmounts(newAmounts);
-    
-    // Update slider based on new amounts (excluding discount)
-    const amounts = enabledMethods.map(method => parseCurrency(newAmounts[method as keyof typeof newAmounts]) || 0);
-    const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
-    
-    if (totalAmount > 0) {
-      if (enabledMethods.length === 2) {
-        const percentage1 = Math.round((amounts[0] / totalAmount) * 100);
-        setSliderValues([Math.max(1, Math.min(99, percentage1))]);
-      } else if (enabledMethods.length === 3) {
-        const percentage1 = Math.round((amounts[0] / totalAmount) * 100);
-        const percentage2 = Math.round(((amounts[0] + amounts[1]) / totalAmount) * 100);
-        setSliderValues([
-          Math.max(1, Math.min(98, percentage1)),
-          Math.max(percentage1 + 1, Math.min(99, percentage2))
-        ]);
+
+    setDirectAmounts(working);
+
+    // Update slider based on current distribution
+    const amounts = methods.map(m => parseCurrency(working[m]) || 0);
+    const sum = amounts.reduce((s, a) => s + a, 0);
+    if (sum > 0 && methods.length >= 2) {
+      const cumulative: number[] = [];
+      let acc = 0;
+      for (let i = 0; i < methods.length - 1; i++) {
+        acc += (amounts[i] / total) * 100;
+        cumulative.push(Math.max(1, Math.min(99, Math.round(acc))));
       }
+      setSliderValues(cumulative);
     }
-  }, [directAmounts, selectedMethods, total]);
+  }, [enabledAllMethods, directAmounts, lockedInputs, total]);
 
   const handleConfirm = () => {
     if (paymentData.isValid) {
@@ -284,19 +247,19 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         <div className="space-y-2">
           <Label className="text-sm font-medium">Select Payment Methods (choose 2-3)</Label>
           <div className="grid grid-cols-3 gap-2">
-            {Object.entries(selectedMethods).map(([method, enabled]) => (
-              <Button
-                key={method}
-                variant={enabled ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleMethodToggle(method as keyof typeof selectedMethods, !enabled)}
-                disabled={(enabled && ['cash','mpesa','debt'].includes(method) && sliderMethodCount === 2)}
-                className={`flex-1 h-8 text-xs ${method === 'discount' && enabled ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
-              >
-                {paymentMethodIcons[method as keyof typeof paymentMethodIcons]}
-                <span className="ml-1">{paymentMethodLabels[method as keyof typeof paymentMethodLabels]}</span>
-              </Button>
-            ))}
+              {Object.entries(selectedMethods).map(([method, enabled]) => (
+                <Button
+                  key={method}
+                  variant={enabled ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleMethodToggle(method as keyof typeof selectedMethods, !enabled)}
+                  disabled={enabled && method !== 'discount' && nonDiscountEnabledCount === 1}
+                  className={`flex-1 h-8 text-xs ${method === 'discount' && enabled ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
+                >
+                  {paymentMethodIcons[method as keyof typeof paymentMethodIcons]}
+                  <span className="ml-1">{paymentMethodLabels[method as keyof typeof paymentMethodLabels]}</span>
+                </Button>
+              ))}
           </div>
           {selectedMethods.debt && (
             <p className="text-xs text-muted-foreground">Customer selection will be required at checkout for debt payment</p>
@@ -306,11 +269,9 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         {/* Customer Selection for Debt - Removed from modal, will be enforced in checkout */}
 
         {/* Split Ratio Controls */}
-        {sliderMethodCount >= 2 && (
+        {enabledCount >= 2 && (
           <div className="space-y-4">
             <Label className="text-sm font-medium">Payment Ratio</Label>
-            
-            {/* Color-Coded Payment Slider */}
             <div className="px-2">
               <ColoredPaymentSlider
                 value={sliderValues}
@@ -319,10 +280,8 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                 max={99}
                 step={1}
                 className="w-full"
-                thumbs={enabledMethodsCount === 3 ? 2 : 1}
-                paymentMethods={Object.entries(selectedMethods)
-                  .filter(([, enabled]) => enabled)
-                  .map(([method]) => method)}
+                thumbs={Math.max(1, Math.min(3, enabledCount - 1))}
+                paymentMethods={enabledAllMethods}
               />
             </div>
 
@@ -437,7 +396,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
           </Button>
           <Button 
             onClick={handleConfirm}
-            disabled={!paymentData.isValid || enabledMethodsCount < 2}
+            disabled={!paymentData.isValid}
             className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
           >
             <Split className="h-4 w-4 mr-2" />

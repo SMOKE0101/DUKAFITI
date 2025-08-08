@@ -27,6 +27,8 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
 
   const startXRef = useRef(0);
   const startIndexRef = useRef(0);
+  const hasSurpassedThresholdRef = useRef(false);
+  const DRAG_THRESHOLD = 4;
 
   const clampStart = (value: number) => {
     const maxStart = Math.max(0, dataLength - windowSize);
@@ -36,6 +38,10 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
   // Snap to most recent whenever data length or window size changes
   useEffect(() => {
     setStart(clampStart(dataLength - windowSize));
+    // Ensure container doesn't attempt native scrolling during drag
+    if (containerRef.current) {
+      try { containerRef.current.style.touchAction = 'none'; } catch {}
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataLength, windowSize]);
 
@@ -46,7 +52,8 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault(); // Ensure we capture drag on mobile
-    setIsDragging(true);
+    hasSurpassedThresholdRef.current = false;
+    setIsDragging(false);
     startXRef.current = e.clientX;
     startIndexRef.current = start;
     try {
@@ -55,16 +62,25 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
     e.preventDefault(); // Prevent scroll from cancelling drag on touch
     const dx = e.clientX - startXRef.current;
+
+    if (!hasSurpassedThresholdRef.current) {
+      if (Math.abs(dx) >= DRAG_THRESHOLD) {
+        hasSurpassedThresholdRef.current = true;
+        setIsDragging(true);
+      } else {
+        return;
+      }
+    }
+
     const deltaIndex = Math.round(dx / pixelsPerItem());
     // Dragging right (dx > 0) should reveal older data (move window left)
     const nextStart = clampStart(startIndexRef.current - deltaIndex);
     setStart(nextStart);
   };
 
-  const endDrag = () => setIsDragging(false);
+  const endDrag = () => { setIsDragging(false); hasSurpassedThresholdRef.current = false; };
 
   const end = useMemo(() => Math.min(start + windowSize, dataLength), [start, windowSize, dataLength]);
 

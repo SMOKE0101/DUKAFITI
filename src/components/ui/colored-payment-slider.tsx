@@ -15,62 +15,31 @@ const ColoredPaymentSlider = React.forwardRef<
   const methodColors = {
     cash: '#10b981', // green-500
     mpesa: '#8b5cf6', // purple-500
-    debt: '#ef4444'   // red-500
+    debt: '#ef4444',   // red-500
+    discount: '#f59e0b', // amber-500
   };
 
-  // Create color segments based on slider values and payment methods
+  // Create color segments based on slider values and payment methods (supports 2-4 methods)
   const createColorSegments = () => {
-    if (paymentMethods.length < 2) return [];
-    
-    const segments = [];
-    const currentValue = Array.isArray(value) ? value : [value];
-    
-    if (paymentMethods.length === 2) {
-      // Two payment methods
-      const percentage1 = currentValue[0] || 50;
-      const percentage2 = 100 - percentage1;
-      
-      segments.push({
-        method: paymentMethods[0],
-        color: methodColors[paymentMethods[0] as keyof typeof methodColors] || '#6b7280',
-        width: `${percentage1}%`,
-        left: '0%'
-      });
-      
-      segments.push({
-        method: paymentMethods[1],
-        color: methodColors[paymentMethods[1] as keyof typeof methodColors] || '#6b7280',
-        width: `${percentage2}%`,
-        left: `${percentage1}%`
-      });
-    } else if (paymentMethods.length === 3) {
-      // Three payment methods
-      const percentage1 = currentValue[0] || 33;
-      const percentage2 = (currentValue[1] || 67) - percentage1;
-      const percentage3 = 100 - (currentValue[1] || 67);
-      
-      segments.push({
-        method: paymentMethods[0],
-        color: methodColors[paymentMethods[0] as keyof typeof methodColors] || '#6b7280',
-        width: `${percentage1}%`,
-        left: '0%'
-      });
-      
-      segments.push({
-        method: paymentMethods[1],
-        color: methodColors[paymentMethods[1] as keyof typeof methodColors] || '#6b7280',
-        width: `${percentage2}%`,
-        left: `${percentage1}%`
-      });
-      
-      segments.push({
-        method: paymentMethods[2],
-        color: methodColors[paymentMethods[2] as keyof typeof methodColors] || '#6b7280',
-        width: `${percentage3}%`,
-        left: `${percentage1 + percentage2}%`
-      });
-    }
-    
+    const methods = paymentMethods;
+    if (methods.length < 2) return [] as Array<{ method: string; color: string; width: string; left: string }>;
+
+    const currentValues = Array.isArray(value) ? (value as number[]) : [Number(value)];
+    const sorted = [...currentValues].sort((a, b) => a - b).map(v => Math.max(1, Math.min(99, v)));
+    const boundaries = [0, ...sorted, 100];
+
+    const segments = methods.map((method, idx) => {
+      const left = boundaries[idx];
+      const right = boundaries[idx + 1];
+      const width = Math.max(0, right - left);
+      return {
+        method,
+        color: methodColors[method as keyof typeof methodColors] || '#6b7280',
+        width: `${width}%`,
+        left: `${left}%`
+      };
+    });
+
     return segments;
   };
 

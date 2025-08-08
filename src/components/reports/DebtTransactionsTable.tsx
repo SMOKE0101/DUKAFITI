@@ -24,7 +24,7 @@ interface DebtTransaction {
   customer: string;
   amount: number;
   paymentMethod: string;
-  transactionType: 'cash_lending' | 'debt_sale' | 'payment';
+  transactionType: 'cash_lending' | 'debt_sale' | 'payment' | 'discount';
   timestamp: string;
   reference?: string;
 }
@@ -99,7 +99,7 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
           customer: sale.customerName || 'Unknown Customer',
           amount: discount,
           paymentMethod: 'discount',
-          transactionType: 'payment',
+          transactionType: 'discount',
           timestamp: sale.timestamp,
           reference: 'Discount applied'
         });
