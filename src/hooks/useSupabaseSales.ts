@@ -52,7 +52,7 @@ export const useSupabaseSales = () => {
         synced: sale.synced !== false,
         customerId: sale.customer_id || sale.customerId,
         customerName: sale.customer_name || sale.customerName,
-        paymentMethod: (sale.payment_method || sale.paymentMethod || 'cash') as 'cash' | 'mpesa' | 'debt' | 'partial',
+        paymentMethod: (((sale.payment_method || sale.paymentMethod || 'cash') === 'partial') ? 'split' : (sale.payment_method || sale.paymentMethod || 'cash')) as 'cash' | 'mpesa' | 'debt' | 'split',
         paymentDetails: convertPaymentDetails(sale.payment_details || sale.paymentDetails),
         total: Number(sale.total_amount || sale.total || 0),
       };

@@ -9,7 +9,7 @@ export interface CreateSaleRequest {
   costPrice: number;
   customerId?: string;
   customerName?: string;
-  paymentMethod: 'cash' | 'mpesa' | 'debt' | 'partial';
+  paymentMethod: 'cash' | 'mpesa' | 'debt' | 'partial' | 'split';
   paymentDetails: {
     cashAmount: number;
     mpesaAmount: number;
@@ -139,7 +139,7 @@ export class SalesService {
         synced: data.synced || true,
         customerId: data.customer_id,
         customerName: data.customer_name,
-        paymentMethod: data.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial',
+        paymentMethod: data.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial' | 'split',
         paymentDetails: parsePaymentDetails(data.payment_details),
         total: data.total_amount,
       };

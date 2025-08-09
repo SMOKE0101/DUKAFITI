@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../integrations/supabase/client';
 import { useIsMobile } from '../../hooks/use-mobile';
 import { useOfflineCustomerPayments } from '@/hooks/useOfflineCustomerPayments';
+import { useSupabaseSales } from '@/hooks/useSupabaseSales';
 
 interface CustomerHistoryModalProps {
   isOpen: boolean;
@@ -44,78 +45,83 @@ const [ordersLoading, setOrdersLoading] = useState(false);
 const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
 const isMobile = useIsMobile();
 const { payments: paymentsData, loading: paymentsLoading, refresh: refreshPayments } = useOfflineCustomerPayments(customer?.id);
+const { sales: allSales, loading: salesLoading, refreshSales } = useSupabaseSales();
 
-  // Fetch initial data
-const fetchInitialData = useCallback(async () => {
-  if (!customer) return;
-  setOrdersLoading(true);
+// Compute orders from cached/remote sales
+useEffect(() => {
+  if (!customer) {
+    setGroupedOrders([]);
+    return;
+  }
   try {
-    const { data: salesData, error: salesError } = await supabase
-      .from('sales')
-      .select('*')
-      .eq('customer_id', customer.id)
-      .order('timestamp', { ascending: false })
-      .limit(200);
-
-    if (salesError) {
-      console.error('Error fetching sales:', salesError);
-      setGroupedOrders([]);
-    } else {
-      // Group by client/offline/id like SalesReportTable
-      const groups = new Map<string, GroupedOrder>();
-      (salesData || []).forEach((sale: any) => {
-        const key = sale.client_sale_id || sale.offline_id || sale.id;
+    const groups = new Map<string, GroupedOrder>();
+    (allSales || [])
+      .filter((sale: any) => sale.customerId === customer.id)
+      .forEach((sale: any) => {
+        const key = sale.clientSaleId || sale.offlineId || sale.id;
         const existing = groups.get(key);
-        const pd = typeof sale.payment_details === 'object' && sale.payment_details !== null ? sale.payment_details : {};
+        const pd = typeof sale.paymentDetails === 'object' && sale.paymentDetails !== null ? sale.paymentDetails : {};
         const details = {
           cashAmount: Number(pd.cashAmount || pd.cash_amount || 0),
           mpesaAmount: Number(pd.mpesaAmount || pd.mpesa_amount || 0),
           debtAmount: Number(pd.debtAmount || pd.debt_amount || 0),
           discountAmount: Number(pd.discountAmount || pd.discount_amount || 0),
         };
+        const saleTimestamp = sale.timestamp || sale.created_at || new Date().toISOString();
+        const saleTotal = Number(sale.total || sale.total_amount || 0);
+        const saleMethod = (sale.paymentMethod === 'partial' ? 'split' : sale.paymentMethod) as GroupedOrder['paymentMethod'];
         if (!existing) {
           groups.set(key, {
             groupId: key,
-            date: sale.timestamp || sale.created_at || new Date().toISOString(),
-            total: Number(sale.total_amount || sale.total || 0),
-            paymentMethod: ((sale.payment_method === 'partial') ? 'split' : sale.payment_method) as GroupedOrder['paymentMethod'],
+            date: saleTimestamp,
+            total: saleTotal,
+            paymentMethod: saleMethod,
             paymentDetails: details,
-            items: [{ name: sale.product_name, quantity: Number(sale.quantity || 0) }],
+            items: [{ name: sale.productName, quantity: Number(sale.quantity || 0) }],
           });
         } else {
-          existing.total += Number(sale.total_amount || sale.total || 0);
-          existing.items.push({ name: sale.product_name, quantity: Number(sale.quantity || 0) });
-          if (sale.payment_method === 'partial' || sale.payment_method === 'split') existing.paymentMethod = 'split';
+          existing.total += saleTotal;
+          existing.items.push({ name: sale.productName, quantity: Number(sale.quantity || 0) });
+          if (saleMethod === 'split') existing.paymentMethod = 'split';
           existing.paymentDetails = {
             cashAmount: (existing.paymentDetails?.cashAmount || 0) + details.cashAmount,
             mpesaAmount: (existing.paymentDetails?.mpesaAmount || 0) + details.mpesaAmount,
             debtAmount: (existing.paymentDetails?.debtAmount || 0) + details.debtAmount,
             discountAmount: (existing.paymentDetails?.discountAmount || 0) + details.discountAmount,
           };
-          // Keep the latest timestamp
-          if (new Date(sale.timestamp || sale.created_at).getTime() > new Date(existing.date).getTime()) {
-            existing.date = sale.timestamp || sale.created_at;
+          if (new Date(saleTimestamp).getTime() > new Date(existing.date).getTime()) {
+            existing.date = saleTimestamp;
           }
         }
       });
-      const grouped = Array.from(groups.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
-      setGroupedOrders(grouped);
-    }
-  } catch (error) {
-    console.error('Error fetching customer history:', error);
+    const grouped = Array.from(groups.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
+    setGroupedOrders(grouped);
+  } catch (err) {
+    console.error('Error computing customer orders from sales:', err);
     setGroupedOrders([]);
-  } finally {
-    setOrdersLoading(false);
   }
-}, [customer]);
+}, [customer, allSales]);
+
+// Synchronize loading state with sales loading
+useEffect(() => {
+  setOrdersLoading(salesLoading);
+}, [salesLoading]);
+
+// Keep stable refs for refresh functions to avoid effect loops
+const refreshPaymentsRef = useRef(refreshPayments);
+const refreshSalesRef = useRef(refreshSales);
+useEffect(() => {
+  refreshPaymentsRef.current = refreshPayments;
+  refreshSalesRef.current = refreshSales;
+}, [refreshPayments, refreshSales]);
 
 // Set up real-time subscriptions
 useEffect(() => {
   if (!isOpen || !customer) return;
 
-  // Initial load
-  fetchInitialData();
-  refreshPayments();
+  // Initial refreshes
+  refreshSalesRef.current?.();
+  refreshPaymentsRef.current?.();
 
   // Real-time subscription for sales (orders)
   const salesChannel = supabase
@@ -129,8 +135,8 @@ useEffect(() => {
         filter: `customer_id=eq.${customer.id}`,
       },
       () => {
-        // Recompute groups on any change
-        fetchInitialData();
+        // Refresh cached sales
+        refreshSalesRef.current?.();
       }
     )
     .subscribe();
@@ -148,7 +154,7 @@ useEffect(() => {
       },
       () => {
         // Refresh cached payments
-        refreshPayments();
+        refreshPaymentsRef.current?.();
       }
     )
     .subscribe();
@@ -158,7 +164,7 @@ useEffect(() => {
     supabase.removeChannel(salesChannel);
     supabase.removeChannel(paymentsChannel);
   };
-}, [customer, isOpen, fetchInitialData, refreshPayments]);
+}, [customer, isOpen]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';

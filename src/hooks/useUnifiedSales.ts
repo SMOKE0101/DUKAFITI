@@ -18,7 +18,7 @@ const transformDbSale = (dbSale: any): Sale => ({
   costPrice: dbSale.cost_price,
   profit: dbSale.profit,
   total: dbSale.total_amount,
-  paymentMethod: (dbSale.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial' | 'split') || 'cash',
+  paymentMethod: ((dbSale.payment_method === 'partial') ? 'split' : dbSale.payment_method) as 'cash' | 'mpesa' | 'debt' | 'split' || 'cash',
   paymentDetails: typeof dbSale.payment_details === 'object' && dbSale.payment_details 
     ? {
         cashAmount: dbSale.payment_details.cashAmount ?? 0,

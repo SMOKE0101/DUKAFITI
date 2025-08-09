@@ -1,5 +1,5 @@
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineFirstSupabase } from '@/hooks/useOfflineFirstSupabase';
@@ -54,7 +54,7 @@ const fromLocal = (p: CustomerDebtPayment) => ({
 export const useOfflineCustomerPayments = (customerId?: string) => {
   const { user } = useAuth();
 
-  const loadFromSupabase = async () => {
+  const loadFromSupabase = useCallback(async () => {
     if (!user || !customerId) return [] as CustomerDebtPayment[];
     const { data, error } = await supabase
       .from('debt_payments')
@@ -64,7 +64,7 @@ export const useOfflineCustomerPayments = (customerId?: string) => {
       .limit(1000);
     if (error) throw error;
     return (data || []).map(toLocal);
-  };
+  }, [user?.id]);
 
   const {
     data,
