@@ -169,6 +169,15 @@ useEffect(() => {
     });
   };
 
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '--:--';
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
+
 const renderPaymentCell = (g: GroupedOrder) => {
     if (g.paymentMethod === 'split') {
       const parts: string[] = [];
