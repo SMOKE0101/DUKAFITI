@@ -2,11 +2,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { X, Package, CreditCard, Smartphone, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../integrations/supabase/client';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { useOfflineCustomerPayments } from '@/hooks/useOfflineCustomerPayments';
 
 interface CustomerHistoryModalProps {
   isOpen: boolean;
@@ -14,15 +16,13 @@ interface CustomerHistoryModalProps {
   customer: Customer | null;
 }
 
-interface Order {
-  id: string;
+interface GroupedOrder {
+  groupId: string;
   date: string;
-  orderNumber: string;
-  items: string;
   total: number;
-  quantity: number;
   paymentMethod: 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split';
-  expanded?: boolean;
+  paymentDetails?: { cashAmount?: number; mpesaAmount?: number; debtAmount?: number; discountAmount?: number };
+  items: { name: string; quantity: number }[];
 }
 
 interface Payment {
@@ -38,191 +38,127 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   onClose,
   customer
 }) => {
-  const [activeTab, setActiveTab] = useState<'orders' | 'payments'>('orders');
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
-  const isMobile = useIsMobile();
+const [activeTab, setActiveTab] = useState<'orders' | 'payments'>('orders');
+const [groupedOrders, setGroupedOrders] = useState<GroupedOrder[]>([]);
+const [ordersLoading, setOrdersLoading] = useState(false);
+const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+const isMobile = useIsMobile();
+const { payments: paymentsData, loading: paymentsLoading, refresh: refreshPayments } = useOfflineCustomerPayments(customer?.id);
 
   // Fetch initial data
-  const fetchInitialData = useCallback(async () => {
-    if (!customer) return;
-    
-    setLoading(true);
-    try {
-      // Fetch sales data for orders (latest 20)
-      const { data: salesData, error: salesError } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('customer_id', customer.id)
-        .gte('total_amount', 0) // Positive amounts = orders
-        .order('timestamp', { ascending: false })
-        .limit(20);
+const fetchInitialData = useCallback(async () => {
+  if (!customer) return;
+  setOrdersLoading(true);
+  try {
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('customer_id', customer.id)
+      .order('timestamp', { ascending: false })
+      .limit(200);
 
-      if (salesError) {
-        console.error('Error fetching sales:', salesError);
-      } else {
-        const ordersData = salesData?.map((sale, index) => ({
-          id: sale.id,
-          date: sale.timestamp || sale.created_at || '',
-          orderNumber: `ORD-${String(index + 1).padStart(3, '0')}`,
-          items: sale.product_name,
-          total: sale.total_amount,
-          quantity: Number(sale.quantity) || 0,
-          paymentMethod: (sale.payment_method as 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split') || 'cash'
-        })) || [];
-        setOrders(ordersData);
-      }
-
-      // Fetch debt payments from debt_payments table (latest 20)
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('debt_payments')
-        .select('*')
-        .eq('customer_id', customer.id)
-        .order('timestamp', { ascending: false })
-        .limit(20);
-
-      if (paymentsError) {
-        console.error('Error fetching payments:', paymentsError);
-      } else {
-        const paymentsFormatted = paymentsData?.map(payment => ({
-          id: payment.id,
-          date: payment.timestamp || payment.created_at || '',
-          method: (payment.payment_method as 'cash' | 'mpesa' | 'bank') || 'cash',
-          amount: Number(payment.amount),
-          reference: payment.reference || undefined
-        })) || [];
-        setPayments(paymentsFormatted);
-      }
-
-    } catch (error) {
-      console.error('Error fetching customer history:', error);
-    } finally {
-      setLoading(false);
+    if (salesError) {
+      console.error('Error fetching sales:', salesError);
+      setGroupedOrders([]);
+    } else {
+      // Group by client/offline/id like SalesReportTable
+      const groups = new Map<string, GroupedOrder>();
+      (salesData || []).forEach((sale: any) => {
+        const key = sale.client_sale_id || sale.offline_id || sale.id;
+        const existing = groups.get(key);
+        const pd = typeof sale.payment_details === 'object' && sale.payment_details !== null ? sale.payment_details : {};
+        const details = {
+          cashAmount: Number(pd.cashAmount || pd.cash_amount || 0),
+          mpesaAmount: Number(pd.mpesaAmount || pd.mpesa_amount || 0),
+          debtAmount: Number(pd.debtAmount || pd.debt_amount || 0),
+          discountAmount: Number(pd.discountAmount || pd.discount_amount || 0),
+        };
+        if (!existing) {
+          groups.set(key, {
+            groupId: key,
+            date: sale.timestamp || sale.created_at || new Date().toISOString(),
+            total: Number(sale.total_amount || sale.total || 0),
+            paymentMethod: ((sale.payment_method === 'partial') ? 'split' : sale.payment_method) as GroupedOrder['paymentMethod'],
+            paymentDetails: details,
+            items: [{ name: sale.product_name, quantity: Number(sale.quantity || 0) }],
+          });
+        } else {
+          existing.total += Number(sale.total_amount || sale.total || 0);
+          existing.items.push({ name: sale.product_name, quantity: Number(sale.quantity || 0) });
+          if (sale.payment_method === 'partial' || sale.payment_method === 'split') existing.paymentMethod = 'split';
+          existing.paymentDetails = {
+            cashAmount: (existing.paymentDetails?.cashAmount || 0) + details.cashAmount,
+            mpesaAmount: (existing.paymentDetails?.mpesaAmount || 0) + details.mpesaAmount,
+            debtAmount: (existing.paymentDetails?.debtAmount || 0) + details.debtAmount,
+            discountAmount: (existing.paymentDetails?.discountAmount || 0) + details.discountAmount,
+          };
+          // Keep the latest timestamp
+          if (new Date(sale.timestamp || sale.created_at).getTime() > new Date(existing.date).getTime()) {
+            existing.date = sale.timestamp || sale.created_at;
+          }
+        }
+      });
+      const grouped = Array.from(groups.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
+      setGroupedOrders(grouped);
     }
-  }, [customer]);
+  } catch (error) {
+    console.error('Error fetching customer history:', error);
+    setGroupedOrders([]);
+  } finally {
+    setOrdersLoading(false);
+  }
+}, [customer]);
 
-  // Set up real-time subscriptions
-  useEffect(() => {
-    if (!isOpen || !customer) return;
+// Set up real-time subscriptions
+useEffect(() => {
+  if (!isOpen || !customer) return;
 
-    // Fetch initial data
-    fetchInitialData();
+  // Initial load
+  fetchInitialData();
+  refreshPayments();
 
-    // Real-time subscription for sales (orders)
-    const salesChannel = supabase
-      .channel(`sales-changes-${customer.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sales',
-          filter: `customer_id=eq.${customer.id}`,
-        },
-        (payload) => {
-          console.log('Sales change detected:', payload);
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const newSale = payload.new;
-            if (newSale.total_amount >= 0) {
-              const newOrder: Order = {
-                id: newSale.id,
-                date: newSale.timestamp || newSale.created_at || '',
-                orderNumber: `ORD-${String(orders.length + 1).padStart(3, '0')}`,
-                items: newSale.product_name,
-                total: newSale.total_amount,
-                quantity: Number(newSale.quantity) || 0,
-                paymentMethod: (newSale.payment_method as 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split') || 'cash'
-              };
-              setOrders(prev => {
-                if (prev.some(order => order.id === newOrder.id)) return prev;
-                return [newOrder, ...prev].slice(0, 20);
-              });
-            }
-          }
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updatedSale = payload.new;
-            if (updatedSale.total_amount >= 0) {
-              setOrders(prev => prev.map(order => 
-                order.id === updatedSale.id 
-                  ? {
-                      ...order,
-                      items: updatedSale.product_name,
-                      total: updatedSale.total_amount,
-                      date: updatedSale.timestamp || updatedSale.created_at || order.date,
-                      quantity: Number(updatedSale.quantity) || order.quantity,
-                      paymentMethod: (updatedSale.payment_method as 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split') || order.paymentMethod
-                    }
-                  : order
-              ));
-            }
-          }
-          if (payload.eventType === 'DELETE' && payload.old) {
-            const deletedId = payload.old.id;
-            setOrders(prev => prev.filter(order => order.id !== deletedId));
-          }
-        }
-      )
-      .subscribe();
+  // Real-time subscription for sales (orders)
+  const salesChannel = supabase
+    .channel(`sales-changes-${customer.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'sales',
+        filter: `customer_id=eq.${customer.id}`,
+      },
+      () => {
+        // Recompute groups on any change
+        fetchInitialData();
+      }
+    )
+    .subscribe();
 
-    // Real-time subscription for debt payments
-    const paymentsChannel = supabase
-      .channel(`debt-payments-changes-${customer.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'debt_payments',
-          filter: `customer_id=eq.${customer.id}`,
-        },
-        (payload) => {
-          console.log('Debt payment change detected:', payload);
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const p = payload.new;
-            const newPayment: Payment = {
-              id: p.id,
-              date: p.timestamp || p.created_at || '',
-              method: (p.payment_method as 'cash' | 'mpesa' | 'bank') || 'cash',
-              amount: Number(p.amount),
-              reference: p.reference || undefined,
-            };
-            setPayments(prev => {
-              if (prev.some(pay => pay.id === newPayment.id)) return prev;
-              return [newPayment, ...prev].slice(0, 20);
-            });
-          }
+  // Real-time subscription for debt payments
+  const paymentsChannel = supabase
+    .channel(`debt-payments-changes-${customer.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'debt_payments',
+        filter: `customer_id=eq.${customer.id}`,
+      },
+      () => {
+        // Refresh cached payments
+        refreshPayments();
+      }
+    )
+    .subscribe();
 
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const up = payload.new;
-            setPayments(prev => prev.map(pay =>
-              pay.id === up.id
-                ? {
-                    ...pay,
-                    date: up.timestamp || up.created_at || pay.date,
-                    method: (up.payment_method as 'cash' | 'mpesa' | 'bank') || 'cash',
-                    amount: Number(up.amount),
-                    reference: up.reference || undefined,
-                  }
-                : pay
-            ));
-          }
-
-          if (payload.eventType === 'DELETE' && payload.old) {
-            const deletedId = payload.old.id;
-            setPayments(prev => prev.filter(pay => pay.id !== deletedId));
-          }
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription when modal closes
-    return () => {
-      supabase.removeChannel(salesChannel);
-      supabase.removeChannel(paymentsChannel);
-    };
-  }, [customer, isOpen, fetchInitialData, orders.length]);
+  // Cleanup subscription when modal closes
+  return () => {
+    supabase.removeChannel(salesChannel);
+    supabase.removeChannel(paymentsChannel);
+  };
+}, [customer, isOpen, fetchInitialData, refreshPayments]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';
@@ -233,13 +169,33 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     });
   };
 
-  const formatTime = (dateString: string) => {
-    if (!dateString) return '--:--';
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+const renderPaymentCell = (g: GroupedOrder) => {
+    if (g.paymentMethod === 'split') {
+      const parts: string[] = [];
+      if ((g.paymentDetails?.cashAmount || 0) > 0) parts.push('CASH');
+      if ((g.paymentDetails?.mpesaAmount || 0) > 0) parts.push('MPESA');
+      if ((g.paymentDetails?.debtAmount || 0) > 0) parts.push('DEBT');
+      const discount = g.paymentDetails?.discountAmount || 0;
+      return (
+        <div className="flex items-center gap-1 whitespace-nowrap">
+          {parts.map((p) => (
+            <Badge key={p} variant="outline" className="px-2 py-0.5 text-[10px] font-semibold tracking-wide">
+              {p}
+            </Badge>
+          ))}
+          {discount > 0 && (
+            <Badge variant="outline" className="px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">
+              - Disc {discount}
+            </Badge>
+          )}
+        </div>
+      );
+    }
+    return (
+      <Badge variant={g.paymentMethod === 'cash' ? 'default' : g.paymentMethod === 'mpesa' ? 'secondary' : g.paymentMethod === 'debt' ? 'destructive' : 'outline'} className="font-medium whitespace-nowrap">
+        {g.paymentMethod.toUpperCase()}
+      </Badge>
+    );
   };
 
   const toggleOrderExpansion = (orderId: string) => {
@@ -253,10 +209,9 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   };
 
   // Reset state when modal closes
-  useEffect(() => {
+useEffect(() => {
     if (!isOpen) {
-      setOrders([]);
-      setPayments([]);
+      setGroupedOrders([]);
       setExpandedOrders(new Set());
       setActiveTab('orders');
     }
@@ -276,10 +231,6 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         `}
         style={isMobile ? { left: 0, top: 0, transform: 'none' } : undefined}
       >
-        {/* Mobile drag bar */}
-        {isMobile && (
-          <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4" />
-        )}
         
         {/* Close button */}
         <Button
@@ -295,7 +246,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
           {/* Sticky Header + Tabs + Column Headers */}
           <div className="sticky top-0 z-10 bg-white dark:bg-gray-800">
             {/* Title */}
-            <div className="px-6 pt-6 pb-3">
+<div className="px-6 pt-3 pb-3">
               <h2 className="text-lg font-semibold text-foreground">History for {customer.name}</h2>
             </div>
             {/* Tabs */}
@@ -308,8 +259,8 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                     ${activeTab === 'orders' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}
                   `}
                 >
-                  <Package className="w-4 h-4 inline mr-2" />
-                  Orders ({orders.length})
+<Package className="w-4 h-4 inline mr-2" />
+                  Orders ({groupedOrders.length})
                   {activeTab === 'orders' && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                   )}
@@ -322,7 +273,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                   `}
                 >
                   <CreditCard className="w-4 h-4 inline mr-2" />
-                  Payments ({payments.length})
+                  Payments ({paymentsData.length})
                   {activeTab === 'payments' && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                   )}
@@ -331,13 +282,12 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
             </div>
             {/* Column headers */}
             {activeTab === 'orders' && (
-              <div className="px-6 py-2 border-b border-border text-[11px] sm:text-xs text-muted-foreground">
-                <div className="grid grid-cols-6 gap-2">
+<div className="px-6 py-2 border-b border-border text-[11px] sm:text-xs text-muted-foreground">
+                <div className="grid grid-cols-5 gap-2">
+                  <span></span>
                   <span>Date</span>
                   <span>Time</span>
-                  <span>Order #</span>
-                  <span>Qty</span>
-                  <span>Method</span>
+                  <span>Payment</span>
                   <span className="text-right">Total</span>
                 </div>
               </div>
@@ -357,13 +307,12 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-6 pb-[env(safe-area-inset-bottom,1rem)]">
-            {activeTab === 'orders' && (
+{activeTab === 'orders' && (
               <div>
-                {loading ? (
+                {ordersLoading ? (
                   <div className="divide-y divide-border">
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="grid grid-cols-6 gap-2 py-2 text-xs animate-pulse">
-                        <div className="h-3 bg-muted rounded" />
+                      <div key={i} className="grid grid-cols-5 gap-2 py-2 text-xs animate-pulse">
                         <div className="h-3 bg-muted rounded" />
                         <div className="h-3 bg-muted rounded" />
                         <div className="h-3 bg-muted rounded" />
@@ -372,16 +321,30 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                       </div>
                     ))}
                   </div>
-                ) : orders.length ? (
+                ) : groupedOrders.length ? (
                   <div className="divide-y divide-border">
-                    {orders.map((o) => (
-                      <div key={o.id} className="grid grid-cols-6 gap-2 py-2 text-xs sm:text-sm">
-                        <span>{formatDate(o.date)}</span>
-                        <span>{formatTime(o.date)}</span>
-                        <span className="truncate" title={o.items}>{o.orderNumber}</span>
-                        <span>{o.quantity}</span>
-                        <span className="capitalize">{o.paymentMethod === 'mpesa' ? 'M-Pesa' : o.paymentMethod}</span>
-                        <span className="text-right font-medium">{formatCurrency(o.total)}</span>
+                    {groupedOrders.map((g) => (
+                      <div key={g.groupId} className="py-2 text-xs sm:text-sm">
+                        <div className="grid grid-cols-5 gap-2 items-center">
+                          <button onClick={() => toggleOrderExpansion(g.groupId)} className="text-muted-foreground hover:text-foreground">
+                            {expandedOrders.has(g.groupId) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                          <span>{formatDate(g.date)}</span>
+                          <span>{formatTime(g.date)}</span>
+                          <span className="flex items-center gap-1 justify-start">
+                            {renderPaymentCell(g)}
+                          </span>
+                          <span className="text-right font-medium">{formatCurrency(g.total)}</span>
+                        </div>
+                        {expandedOrders.has(g.groupId) && (
+                          <div className="mt-2 pl-6 text-muted-foreground flex flex-wrap gap-2">
+                            {g.items.map((item, idx) => (
+                              <Badge key={idx} variant="outline" className="px-2 py-0.5 text-[11px]">
+                                {item.name} × {item.quantity}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -394,9 +357,9 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
               </div>
             )}
 
-            {activeTab === 'payments' && (
+{activeTab === 'payments' && (
               <div>
-                {loading ? (
+                {paymentsLoading ? (
                   <div className="divide-y divide-border">
                     {Array.from({ length: 6 }).map((_, i) => (
                       <div key={i} className="grid grid-cols-5 gap-2 py-2 text-xs animate-pulse">
@@ -408,18 +371,18 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                       </div>
                     ))}
                   </div>
-                ) : payments.length ? (
+                ) : paymentsData.length ? (
                   <div className="divide-y divide-border">
-                    {payments.map((p) => (
+                    {paymentsData.map((p) => (
                       <div key={p.id} className="grid grid-cols-5 gap-2 py-2 text-xs sm:text-sm">
-                        <span>{formatDate(p.date)}</span>
-                        <span>{formatTime(p.date)}</span>
+                        <span>{formatDate(p.timestamp)}</span>
+                        <span>{formatTime(p.timestamp)}</span>
                         <span className="capitalize flex items-center gap-1">
-                          {p.method === 'mpesa' ? <Smartphone className="w-3.5 h-3.5" /> : <Banknote className="w-3.5 h-3.5" />}
-                          {p.method === 'mpesa' ? 'M-Pesa' : p.method}
+                          {p.payment_method === 'mpesa' ? <Smartphone className="w-3.5 h-3.5" /> : <Banknote className="w-3.5 h-3.5" />}
+                          {p.payment_method === 'mpesa' ? 'M-Pesa' : p.payment_method}
                         </span>
                         <span className="text-right font-medium text-green-600 dark:text-green-400">{formatCurrency(p.amount)}</span>
-                        <span className="truncate" title={p.reference}>{p.reference || '-'}</span>
+                        <span className="truncate" title={p.reference || undefined}>{p.reference || '-'}</span>
                       </div>
                     ))}
                   </div>
