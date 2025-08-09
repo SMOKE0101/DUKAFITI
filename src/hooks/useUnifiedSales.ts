@@ -18,19 +18,21 @@ const transformDbSale = (dbSale: any): Sale => ({
   costPrice: dbSale.cost_price,
   profit: dbSale.profit,
   total: dbSale.total_amount,
-  paymentMethod: (dbSale.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial') || 'cash',
+  paymentMethod: (dbSale.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial' | 'split') || 'cash',
   paymentDetails: typeof dbSale.payment_details === 'object' && dbSale.payment_details 
-    ? dbSale.payment_details as {
-        cashAmount: number;
-        mpesaAmount: number;
-        debtAmount: number;
-        mpesaReference?: string;
-        tillNumber?: string;
+    ? {
+        cashAmount: dbSale.payment_details.cashAmount ?? 0,
+        mpesaAmount: dbSale.payment_details.mpesaAmount ?? 0,
+        debtAmount: dbSale.payment_details.debtAmount ?? 0,
+        mpesaReference: dbSale.payment_details.mpesaReference,
+        tillNumber: dbSale.payment_details.tillNumber,
+        discountAmount: dbSale.payment_details.discountAmount ?? 0,
       }
     : {
         cashAmount: 0,
         mpesaAmount: 0,
         debtAmount: 0,
+        discountAmount: 0,
       },
   timestamp: dbSale.timestamp,
   synced: dbSale.synced || true,

@@ -8,7 +8,8 @@ import {
   Package, 
   CreditCard, 
   TrendingUp, 
-  Warehouse 
+  Warehouse,
+  Percent
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { Sale, Product, Customer } from '@/types';
@@ -32,8 +33,8 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
     return saleDate >= dateRange.from && saleDate <= dateRange.to;
   });
 
-  // Calculate metrics
-  const totalRevenue = filteredSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+// Calculate metrics (discount-aware)
+  const grossRevenue = filteredSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
   const totalOrders = filteredSales.length;
   const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
   const lowStockProducts = products.filter(product => 
@@ -43,21 +44,28 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
   // Calculate additional metrics
   const totalOutstandingDebts = customers.reduce((sum, customer) => sum + (customer.outstandingDebt || 0), 0);
   
-  // Filter out sales from products without both cost price and selling price for profit calculation
+  // Profit before discounts
   const validProfitSales = filteredSales.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
   const totalProfit = validProfitSales.reduce((sum, sale) => sum + (sale.profit || 0), 0);
+  
+  // Discounts (sum across filtered sales)
+  const totalDiscounts = filteredSales.reduce((sum, sale) => sum + (sale.paymentDetails?.discountAmount || 0), 0);
+  
+  // Net values after discounts
+  const netRevenue = grossRevenue - totalDiscounts;
+  const netProfit = totalProfit - totalDiscounts;
   
   const totalInventoryValue = products.reduce((sum, product) => {
     if (product.currentStock === -1) return sum;
     return sum + (product.sellingPrice * product.currentStock);
   }, 0);
 
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const averageOrderValue = totalOrders > 0 ? netRevenue / totalOrders : 0;
 
   const cards = [
     {
       title: 'TOTAL REVENUE',
-      value: formatCurrency(totalRevenue),
+      value: formatCurrency(netRevenue),
       subtitle: `Avg: ${formatCurrency(averageOrderValue)}`,
       icon: DollarSign,
       bgColor: 'bg-green-50 dark:bg-green-900/10',
@@ -68,7 +76,7 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
     {
       title: 'TOTAL SALES',
       value: totalOrders.toString(),
-      subtitle: `Profit: ${formatCurrency(totalProfit)}`,
+      subtitle: `Profit: ${formatCurrency(netProfit)}`,
       icon: ShoppingCart,
       bgColor: 'bg-blue-50 dark:bg-blue-900/10',
       borderColor: 'border-blue-500',
@@ -106,9 +114,19 @@ const ModernSummaryCards: React.FC<ModernSummaryCardsProps> = ({
       iconColor: 'text-white'
     },
     {
+      title: 'DISCOUNTS GIVEN',
+      value: formatCurrency(totalDiscounts),
+      subtitle: totalOrders > 0 ? `${((totalDiscounts / Math.max(grossRevenue || 1, 1)) * 100).toFixed(1)}% of gross` : '—',
+      icon: Percent,
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/10',
+      borderColor: 'border-yellow-500',
+      iconBg: 'bg-yellow-500',
+      iconColor: 'text-white'
+    },
+    {
       title: 'TOTAL PROFIT',
-      value: formatCurrency(totalProfit),
-      subtitle: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}% margin` : '0% margin',
+      value: formatCurrency(netProfit),
+      subtitle: netRevenue > 0 ? `${((netProfit / netRevenue) * 100).toFixed(1)}% margin` : '0% margin',
       icon: TrendingUp,
       bgColor: 'bg-emerald-50 dark:bg-emerald-900/10',
       borderColor: 'border-emerald-500',
