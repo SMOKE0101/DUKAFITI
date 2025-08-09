@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import ProxyImage from '@/components/ui/proxy-image';
 import { Product } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { Package } from 'lucide-react';
@@ -59,10 +60,11 @@ const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                 {parentProduct.image_url ? (
-                  <img 
-                    src={parentProduct.image_url} 
+                  <ProxyImage 
+                    src={parentProduct.image_url}
                     alt={parentProduct.name}
                     className="w-full h-full object-cover rounded-lg"
+                    fallbackContent={<Package className="w-6 h-6 text-gray-400" />}
                   />
                 ) : (
                   <Package className="w-6 h-6 text-gray-400" />

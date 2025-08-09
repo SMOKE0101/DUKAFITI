@@ -7,6 +7,7 @@ import { Product } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { useToast } from '../../hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import ProxyImage from '@/components/ui/proxy-image';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -303,24 +304,18 @@ const TopPicksSection = ({ products, onAddToCart }: TopPicksSectionProps) => {
                     {/* Product image or initial */}
                     {product.image_url ? (
                       <div className="w-12 h-12 rounded-lg overflow-hidden mb-1 bg-gray-100 dark:bg-gray-800">
-                        <img 
+                        <ProxyImage
                           src={product.image_url}
                           alt={product.name}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
+                          fallbackContent={(
+                            <div className="w-full h-full bg-primary/10 rounded-lg flex items-center justify-center">
+                              <span className="text-lg font-semibold text-primary">
+                                {getProductInitial(product.name)}
+                              </span>
+                            </div>
+                          )}
                         />
-                        <div 
-                          className="w-full h-full bg-primary/10 rounded-lg flex items-center justify-center" 
-                          style={{ display: 'none' }}
-                        >
-                          <span className="text-lg font-semibold text-primary">
-                            {getProductInitial(product.name)}
-                          </span>
-                        </div>
                       </div>
                     ) : (
                       <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-1">

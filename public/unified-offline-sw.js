@@ -119,8 +119,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle different request types
-  if (isAppRoute(request)) {
+  if (request.destination === 'image') {
+    event.respondWith(handleImageRequest(request));
+  } else if (isAppRoute(request)) {
     event.respondWith(handleAppRoute(request));
   } else if (isStaticAsset(request)) {
     event.respondWith(handleStaticAsset(request));
@@ -258,6 +259,56 @@ async function handleStaticAsset(request) {
     
     console.log('[Unified SW] Static asset not found in cache:', url.pathname);
     return new Response('', { status: 404 });
+  }
+}
+
+// Specialized handler for image requests (including cross-origin/proxied)
+async function handleImageRequest(request) {
+  const url = new URL(request.url);
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
+
+    // Cache successful or opaque responses so images work offline later
+    if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+      console.log('[Unified SW] Cached image:', url.href, 'type:', networkResponse.type);
+    }
+
+    return networkResponse;
+  } catch (error) {
+    console.log('[Unified SW] Image fetch failed, trying cache:', url.href);
+
+    // Fallback to cache
+    const cache = await caches.open(STATIC_CACHE);
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // As a last resort, return a tiny inline SVG placeholder
+    const placeholderSvg = `<?xml version="1.0" encoding="UTF-8"?>
+      <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+        <defs>
+          <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+            <stop stop-color="#93c5fd" offset="0%"/>
+            <stop stop-color="#c4b5fd" offset="100%"/>
+          </linearGradient>
+        </defs>
+        <rect width="400" height="300" fill="url(#g)"/>
+        <g fill="#1f2937" fill-opacity="0.7">
+          <rect x="60" y="80" width="280" height="140" rx="12" fill="#ffffff" fill-opacity="0.6"/>
+          <circle cx="120" cy="130" r="28" fill="#93c5fd"/>
+          <rect x="160" y="120" width="140" height="16" rx="8"/>
+          <rect x="160" y="146" width="110" height="12" rx="6" fill="#4b5563"/>
+        </g>
+        <text x="200" y="260" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="14" text-anchor="middle" fill="#1f2937" fill-opacity="0.6">Image unavailable offline</text>
+      </svg>`;
+    return new Response(placeholderSvg, {
+      status: 200,
+      headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' }
+    });
   }
 }
 
