@@ -123,13 +123,13 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-3 flex gap-2">
+        <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onRecordPayment(customer)}
             disabled={(customer.outstandingDebt || 0) === 0}
-            className="flex-1"
+            className="w-full"
           >
             <CreditCard className="w-4 h-4 mr-1" />
             Payment
@@ -139,7 +139,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             variant="outline"
             size="sm"
             onClick={() => onViewHistory(customer)}
-            className="flex-1"
+            className="w-full"
           >
             <Clock className="w-4 h-4 mr-1" />
             History
@@ -149,19 +149,19 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             variant="outline"
             size="sm"
             onClick={() => onEdit(customer)}
-            className="flex-1"
+            className="w-full"
           >
             <Edit className="w-4 h-4 mr-1" />
             Edit
           </Button>
         </div>
 
-        <div className="flex gap-2">
+        <div className="pt-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onDelete(customer)}
-            className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="w-4 h-4 mr-1" />
             Delete

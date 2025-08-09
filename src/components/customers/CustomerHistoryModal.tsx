@@ -20,6 +20,8 @@ interface Order {
   orderNumber: string;
   items: string;
   total: number;
+  quantity: number;
+  paymentMethod: 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split';
   expanded?: boolean;
 }
 
@@ -66,7 +68,9 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
           date: sale.timestamp || sale.created_at || '',
           orderNumber: `ORD-${String(index + 1).padStart(3, '0')}`,
           items: sale.product_name,
-          total: sale.total_amount
+          total: sale.total_amount,
+          quantity: Number(sale.quantity) || 0,
+          paymentMethod: (sale.payment_method as 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split') || 'cash'
         })) || [];
         setOrders(ordersData);
       }
@@ -127,7 +131,9 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                 date: newSale.timestamp || newSale.created_at || '',
                 orderNumber: `ORD-${String(orders.length + 1).padStart(3, '0')}`,
                 items: newSale.product_name,
-                total: newSale.total_amount
+                total: newSale.total_amount,
+                quantity: Number(newSale.quantity) || 0,
+                paymentMethod: (newSale.payment_method as 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split') || 'cash'
               };
               setOrders(prev => {
                 if (prev.some(order => order.id === newOrder.id)) return prev;
@@ -144,7 +150,9 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                       ...order,
                       items: updatedSale.product_name,
                       total: updatedSale.total_amount,
-                      date: updatedSale.timestamp || updatedSale.created_at || order.date
+                      date: updatedSale.timestamp || updatedSale.created_at || order.date,
+                      quantity: Number(updatedSale.quantity) || order.quantity,
+                      paymentMethod: (updatedSale.payment_method as 'cash' | 'mpesa' | 'bank' | 'debt' | 'partial' | 'split') || order.paymentMethod
                     }
                   : order
               ));
@@ -225,6 +233,15 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
     });
   };
 
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '--:--';
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
+
   const toggleOrderExpansion = (orderId: string) => {
     const newExpanded = new Set(expandedOrders);
     if (newExpanded.has(orderId)) {
@@ -273,7 +290,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
           <X className="w-4 h-4" />
         </Button>
 
-        <div className="p-6 h-full flex flex-col">
+        <div className="p-6 h-full flex flex-col pb-[env(safe-area-inset-bottom,1rem)]">
           {/* Header */}
           <div className="text-center mb-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -321,7 +338,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
           <div className="flex-1 overflow-hidden">
             {/* Orders Panel */}
             {activeTab === 'orders' && (
-              <div className="h-full overflow-y-auto">
+              <div className="h-full overflow-y-auto pb-[env(safe-area-inset-bottom,1rem)]">
                 {loading ? (
                   <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -343,15 +360,20 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                         className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-sm transition-shadow"
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatDate(order.date)}
-                          </span>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            <div>{formatDate(order.date)}</div>
+                            <div className="text-xs">{formatTime(order.date)}</div>
+                          </div>
                           <span className="font-medium text-sm">
                             {order.orderNumber}
                           </span>
                           <span className="font-semibold text-gray-900 dark:text-gray-100">
                             {formatCurrency(order.total)}
                           </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          <span className="truncate">Qty: {order.quantity}</span>
+                          <span className="truncate">Method: {order.paymentMethod === 'mpesa' ? 'M-Pesa' : order.paymentMethod}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-gray-600 dark:text-gray-300 flex-1">
@@ -389,7 +411,7 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 
             {/* Payments Panel */}
             {activeTab === 'payments' && (
-              <div className="h-full overflow-y-auto">
+              <div className="h-full overflow-y-auto pb-[env(safe-area-inset-bottom,1rem)]">
                 {loading ? (
                   <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -411,9 +433,10 @@ const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                         className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-sm transition-shadow"
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatDate(payment.date)}
-                          </span>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            <div>{formatDate(payment.date)}</div>
+                            <div className="text-xs">{formatTime(payment.date)}</div>
+                          </div>
                           <div className="flex items-center gap-2">
                             {payment.method === 'mpesa' ? (
                               <Smartphone className="w-4 h-4 text-green-600" />
