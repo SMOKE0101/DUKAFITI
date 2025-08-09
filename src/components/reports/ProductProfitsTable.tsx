@@ -70,34 +70,46 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
 
   const productProfitsData = useMemo((): ProductProfitRow[] => {
     const productMap = new Map<string, ProductProfitRow>();
-    
-    // Filter out sales from products without both cost price and selling price
-    const validSales = filteredSales.filter(sale => {
-      // Only include sales where both cost price and selling price exist and are greater than 0
-      return sale.costPrice > 0 && sale.sellingPrice > 0;
-    });
-    
-    validSales.forEach(sale => {
-      const existing = productMap.get(sale.productName) || {
-        productName: sale.productName,
-        quantitySold: 0,
-        salesAmount: 0,
-        profit: 0
-      };
-      
-      const discount = sale.paymentDetails?.discountAmount || 0;
-      const netProfitForSale = (sale.profit || 0) - (sale.paymentMethod === 'split' ? discount : 0);
 
-      productMap.set(sale.productName, {
-        productName: sale.productName,
-        quantitySold: existing.quantitySold + sale.quantity,
-        salesAmount: existing.salesAmount + sale.total,
-        profit: existing.profit + netProfitForSale
+    // Group filtered sales by sale id to distribute discounts accurately across items
+    const groups = new Map<string, { sales: typeof filteredSales }>();
+    filteredSales.forEach((s) => {
+      const key = s.clientSaleId || s.offlineId || s.id;
+      const g = groups.get(key);
+      if (!g) groups.set(key, { sales: [s] }); else g.sales.push(s);
+    });
+
+    groups.forEach(({ sales: salesInGroup }) => {
+      // Only include valid items with positive prices
+      const validSales = salesInGroup.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
+      if (validSales.length === 0) return;
+
+      const groupTotal = validSales.reduce((sum, s) => sum + s.total, 0);
+      const groupDiscount = Math.max(...validSales.map(s => s.paymentDetails?.discountAmount || 0));
+
+      validSales.forEach(sale => {
+        const existing = productMap.get(sale.productName) || {
+          productName: sale.productName,
+          quantitySold: 0,
+          salesAmount: 0,
+          profit: 0
+        };
+
+        // Distribute discount proportionally across items in the sale group
+        const proportion = groupTotal > 0 ? (sale.total / groupTotal) : 0;
+        const allocatedDiscount = (groupDiscount || 0) * proportion;
+        const netProfitForSale = (sale.profit || 0) - allocatedDiscount;
+
+        productMap.set(sale.productName, {
+          productName: sale.productName,
+          quantitySold: existing.quantitySold + sale.quantity,
+          salesAmount: existing.salesAmount + sale.total,
+          profit: existing.profit + netProfitForSale
+        });
       });
     });
 
-    return Array.from(productMap.values())
-      .sort((a, b) => b.profit - a.profit);
+    return Array.from(productMap.values()).sort((a, b) => b.profit - a.profit);
   }, [filteredSales]);
 
   const searchedData = useMemo(() => {

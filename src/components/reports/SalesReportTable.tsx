@@ -29,6 +29,7 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
   const itemsPerPage = 10;
   const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   // Filter sales based on timeframe
   const filteredSalesByTime = useMemo(() => {
@@ -80,28 +81,65 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
     );
   }, [filteredSalesByTime, searchTerm]);
 
-  // Paginate data
+  // Group sales by sale id (clientSaleId/offlineId fallback to id)
+  const groupedSales = useMemo(() => {
+    const groups = new Map<string, {
+      groupId: string;
+      timestamp: string;
+      customerName: string;
+      paymentMethod: Sale['paymentMethod'];
+      paymentDetails: Sale['paymentDetails'];
+      total: number;
+      items: { productName: string; quantity: number }[];
+    }>();
+    filteredSales.forEach((sale) => {
+      const key = sale.clientSaleId || sale.offlineId || sale.id;
+      const existing = groups.get(key);
+      if (!existing) {
+        groups.set(key, {
+          groupId: key,
+          timestamp: sale.timestamp,
+          customerName: sale.customerName || 'Walk-in Customer',
+          paymentMethod: sale.paymentMethod,
+          paymentDetails: sale.paymentDetails,
+          total: sale.total,
+          items: [{ productName: sale.productName, quantity: sale.quantity }],
+        });
+      } else {
+        existing.total += sale.total;
+        existing.items.push({ productName: sale.productName, quantity: sale.quantity });
+        // Prefer split if any item in group is split
+        if (sale.paymentMethod === 'split') existing.paymentMethod = 'split';
+        // Merge discount if present
+        if ((sale.paymentDetails?.discountAmount || 0) > 0) existing.paymentDetails.discountAmount = (existing.paymentDetails.discountAmount || 0) + (sale.paymentDetails?.discountAmount || 0);
+      }
+    });
+    // Sort by timestamp desc
+    return Array.from(groups.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [filteredSales]);
+
+  // Paginate grouped data
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredSales.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredSales, currentPage]);
+    return groupedSales.slice(startIndex, startIndex + itemsPerPage);
+  }, [groupedSales, currentPage]);
 
-  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
+  const totalPages = Math.ceil(groupedSales.length / itemsPerPage);
 
   // CSV Export function
   const handleCSVExport = () => {
     const csvData = [
-      ['Date', 'Time', 'Customer', 'Product', 'Quantity', 'Amount', 'Payment Method'],
-      ...filteredSales.map(sale => {
-        const saleDate = new Date(sale.timestamp);
+      ['Date', 'Time', 'Customer', 'Items', 'Amount', 'Payment Method'],
+      ...groupedSales.map(group => {
+        const saleDate = new Date(group.timestamp);
+        const itemsStr = group.items.map(i => `${i.productName} x ${i.quantity}`).join(' | ');
         return [
           saleDate.toLocaleDateString(),
           saleDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          sale.customerName || 'Walk-in Customer',
-          sale.productName,
-          sale.quantity.toString(),
-          formatCurrency(sale.total).replace('KSh ', 'Ksh '),
-          sale.paymentMethod.toUpperCase()
+          group.customerName,
+          itemsStr,
+          formatCurrency(group.total).replace('KSh ', 'Ksh '),
+          group.paymentMethod.toUpperCase()
         ];
       })
     ];
@@ -143,6 +181,7 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
       if ((sale.paymentDetails?.cashAmount || 0) > 0) parts.push('CASH');
       if ((sale.paymentDetails?.mpesaAmount || 0) > 0) parts.push('MPESA');
       if ((sale.paymentDetails?.debtAmount || 0) > 0) parts.push('DEBT');
+      const discount = sale.paymentDetails?.discountAmount || 0;
       return (
         <div className="flex items-center justify-center gap-1 whitespace-nowrap">
           {parts.map((p) => (
@@ -150,6 +189,11 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
               {p}
             </Badge>
           ))}
+          {discount > 0 && (
+            <Badge variant="outline" className="px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">
+              - Disc {discount}
+            </Badge>
+          )}
         </div>
       );
     }
@@ -198,6 +242,7 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
             {isOffline && <span className="text-xs ml-1">(offline)</span>}
           </Button>
         </div>
+        <div className="text-sm text-muted-foreground mt-2">{groupedSales.length} orders</div>
         
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
@@ -269,6 +314,7 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border">
+              <TableHead className="w-8 py-4 px-6"></TableHead>
               <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
                 DATE
               </TableHead>
@@ -277,12 +323,6 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
               </TableHead>
               <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
                 CUSTOMER
-              </TableHead>
-              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
-                PRODUCT
-              </TableHead>
-              <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
-                QUANTITY
               </TableHead>
               <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
                 AMOUNT
@@ -295,43 +335,59 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
           <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? 'No sales found matching your search criteria' : 
                    `No sales found for ${timeFrame === 'today' ? 'today' : timeFrame === 'week' ? 'this week' : 'this month'}`}
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedData.map((sale, index) => {
-                const saleDate = new Date(sale.timestamp);
+              paginatedData.map((group) => {
+                const saleDate = new Date(group.timestamp);
+                const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({});
+                const isExpanded = !!expandedGroups[group.groupId];
+                const toggle = () => setExpandedGroups(prev => ({ ...prev, [group.groupId]: !prev[group.groupId] }));
                 return (
-                  <TableRow 
-                    key={sale.id} 
-                    className="border-b border-border hover:bg-muted/50"
-                  >
-                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
-                      {saleDate.toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="py-4 px-6 text-muted-foreground">
-                      {saleDate.toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit',
-                        hour12: true 
-                      })}
-                    </TableCell>
-                    <TableCell className="py-4 px-6 font-medium text-card-foreground">
-                      {sale.customerName || 'Walk-in Customer'}
-                    </TableCell>
-                    <TableCell className="py-4 px-6 text-card-foreground">{sale.productName}</TableCell>
-                    <TableCell className="py-4 px-6 text-center font-medium text-card-foreground">
-                      {sale.quantity}
-                    </TableCell>
-                    <TableCell className="py-4 px-6 text-center font-medium text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(sale.total)}
-                    </TableCell>
-                    <TableCell className="py-4 px-6 text-center">
-                      {renderPaymentCell(sale)}
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    <TableRow key={`row-${group.groupId}`} className="border-b border-border hover:bg-muted/50">
+                      <TableCell className="py-4 px-6">
+                        <button onClick={toggle} className="text-muted-foreground hover:text-foreground">
+                          {isExpanded ? <ChevronLeft className="w-4 h-4 rotate-90" /> : <ChevronLeft className="w-4 h-4 -rotate-90" />}
+                        </button>
+                      </TableCell>
+                      <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                        {saleDate.toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="py-4 px-6 text-muted-foreground">
+                        {saleDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </TableCell>
+                      <TableCell className="py-4 px-6 font-medium text-card-foreground">
+                        {group.customerName}
+                      </TableCell>
+                      <TableCell className="py-4 px-6 text-center font-medium text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(group.total)}
+                      </TableCell>
+                      <TableCell className="py-4 px-6 text-center">
+                        {renderPaymentCell({
+                          ...({} as Sale),
+                          paymentMethod: group.paymentMethod,
+                          paymentDetails: group.paymentDetails
+                        } as Sale)}
+                      </TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow key={`details-${group.groupId}`} className="border-b border-border bg-muted/30">
+                        <TableCell colSpan={6} className="py-3 px-6 text-sm text-muted-foreground">
+                          <div className="flex flex-wrap gap-2">
+                            {group.items.map((item, idx) => (
+                              <Badge key={idx} variant="outline" className="px-2 py-0.5 text-[11px]">
+                                {item.productName} × {item.quantity}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 );
               })
             )}
@@ -344,8 +400,8 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
         <div className="px-4 md:px-6 py-4 border-t border-border">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-sm text-muted-foreground text-center sm:text-left">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSales.length)} of {filteredSales.length} entries
-              {searchTerm && ` (filtered from ${filteredSalesByTime.length} total)`}
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, groupedSales.length)} of {groupedSales.length} orders
+              {searchTerm && ` (filtered from ${filteredSalesByTime.length} total items)`}
             </div>
             
             <div className="flex items-center justify-center gap-2 overflow-x-auto">

@@ -36,6 +36,8 @@ const transformDbSale = (dbSale: any): Sale => ({
       },
   timestamp: dbSale.timestamp,
   synced: dbSale.synced || true,
+  clientSaleId: dbSale.client_sale_id || undefined,
+  offlineId: dbSale.offline_id || undefined,
 });
 
 export const useUnifiedSales = () => {
@@ -169,7 +171,7 @@ export const useUnifiedSales = () => {
           prev.map(s => s.id === newSale.id ? transformedSale : s)
         );
 
-        // Update cache
+        // Update cache and preserve any unsynced local (temp_) sales
         const updatedSales = await supabase
           .from('sales')
           .select('*')
@@ -178,7 +180,12 @@ export const useUnifiedSales = () => {
         
         if (updatedSales.data) {
           const transformedData = updatedSales.data.map(transformDbSale);
-          setCache('sales', transformedData);
+          const currentCached = getCache<Sale[]>('sales') || [];
+          const unsyncedLocal = currentCached.filter(s => s.id?.startsWith?.('temp_'));
+          const merged = [...unsyncedLocal, ...transformedData]
+            .filter((sale, index, self) => index === self.findIndex(s => s.id === sale.id))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          setCache('sales', merged);
         }
 
         return transformedSale;
@@ -203,7 +210,7 @@ export const useUnifiedSales = () => {
       console.log('[UnifiedSales] Sale created offline and queued for sync');
       return newSale;
     }
-  }, [user, isOnline, setCache, addPendingOperation]);
+  }, [user, isOnline, setCache, addPendingOperation, getCache]);
 
   // Load sales on mount and when dependencies change
   useEffect(() => {

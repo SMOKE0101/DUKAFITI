@@ -350,20 +350,23 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
                   DATE
                 </TableHead>
                 <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
+                  TIME
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-left py-4 px-6">
                   CUSTOMER
                 </TableHead>
                 <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
                   AMOUNT
                 </TableHead>
-                    <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
-                      ENTRY METHOD
-                    </TableHead>
-                    <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
-                      TYPE
-                    </TableHead>
-                    <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
-                      REFERENCE
-                    </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  ENTRY METHOD
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  TYPE
+                </TableHead>
+                <TableHead className="font-semibold text-foreground uppercase tracking-wider text-center py-4 px-6">
+                  REFERENCE
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -378,6 +381,9 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
                   <TableRow key={transaction.id} className="border-b border-border hover:bg-muted/50">
                     <TableCell className="py-4 px-6 font-medium text-card-foreground">
                       {new Date(transaction.timestamp).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-muted-foreground">
+                      {new Date(transaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </TableCell>
                     <TableCell className="py-4 px-6 font-medium text-card-foreground">
                       {transaction.customer}

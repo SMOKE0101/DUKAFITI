@@ -48,6 +48,8 @@ export interface Sale {
     discountAmount?: number;
   };
   total: number;
+  clientSaleId?: string;
+  offlineId?: string;
 }
 
 export interface Product {
