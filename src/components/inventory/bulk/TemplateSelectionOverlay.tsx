@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ProxyImage from '@/components/ui/proxy-image';
 import SpinningNumberInput from '@/components/ui/spinning-number-input';
 import { cn } from '@/lib/utils';
 
@@ -115,10 +116,17 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
             {/* Template Image */}
             <div className="w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex-shrink-0 ring-2 ring-primary/20">
               {template.image_url ? (
-                <img 
-                  src={template.image_url} 
+                <ProxyImage 
+                  src={template.image_url}
                   alt={template.name}
                   className="w-full h-full object-cover"
+                  fallbackContent={(
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-3xl font-bold text-primary">
+                        {template.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">

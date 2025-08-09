@@ -55,7 +55,7 @@ export const useOfflineCustomerPayments = (customerId?: string) => {
   const { user } = useAuth();
 
   const loadFromSupabase = useCallback(async () => {
-    if (!user || !customerId) return [] as CustomerDebtPayment[];
+    if (!user) return [] as CustomerDebtPayment[];
     const { data, error } = await supabase
       .from('debt_payments')
       .select('*')

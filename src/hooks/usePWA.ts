@@ -110,6 +110,7 @@ export const usePWA = () => {
     
     if (!success) {
       console.log('[PWA] Native install prompt not available');
+      showManualInstallGuide();
     }
   };
 

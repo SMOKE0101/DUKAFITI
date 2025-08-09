@@ -92,23 +92,12 @@ const TemplateImage: React.FC<TemplateImageProps> = ({
   // Always try to load the image directly first for maximum compatibility
   return (
     <div className={cn("relative w-full h-full overflow-hidden", className)}>
-      <img
-        ref={imgRef}
+      <ProxyImage
         src={src}
         alt={alt}
         className="w-full h-full object-cover"
-        loading="eager"
-        onLoad={handleLoad}
-        onError={handleError}
-        crossOrigin="anonymous"
-        referrerPolicy="no-referrer"
+        fallbackContent={renderFallback()}
       />
-      {/* Show fallback only on error */}
-      {imageState === 'error' && (
-        <div className="absolute inset-0">
-          {renderFallback()}
-        </div>
-      )}
     </div>
   );
 };

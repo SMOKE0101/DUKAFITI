@@ -67,6 +67,12 @@ const BulkAddProductModalContent: React.FC<BulkAddProductModalProps> = ({
   };
 
   const handleClose = () => {
+    if (stats.totalCount > 0) {
+      const confirmLeave = window.confirm(
+        'You have unsaved products in your bulk add list. Do you want to discard them and close?'
+      );
+      if (!confirmLeave) return;
+    }
     clearAll();
     onClose();
   };
