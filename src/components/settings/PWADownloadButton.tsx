@@ -4,7 +4,7 @@ import { usePWA } from '@/hooks/usePWA';
 import { useEffect, useState } from 'react';
 
 const PWADownloadButton = () => {
-  const { installApp, isRunningInBrowser } = usePWA();
+  const { installApp, isRunningInBrowser, isInstallable } = usePWA();
   const [isChrome, setIsChrome] = useState(false);
 
   useEffect(() => {
@@ -31,7 +31,8 @@ const PWADownloadButton = () => {
         onClick={handleDownload}
         type="button"
         variant="outline"
-        className="w-full bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border-primary/20 text-foreground font-medium py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+        disabled={!isInstallable}
+        className="w-full bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border-primary/20 text-foreground font-medium py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <Download className="w-4 h-4" />
         Download App

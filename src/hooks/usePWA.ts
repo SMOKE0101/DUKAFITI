@@ -93,15 +93,7 @@ export const usePWA = () => {
   }, []);
 
   const checkInstallPrompt = () => {
-    // Force trigger install prompt check for supported browsers
-    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    const isEdge = /Edg/.test(navigator.userAgent);
-    const isFirefox = /Firefox/.test(navigator.userAgent);
-    
-    if ((isChrome || isEdge) && !pwaState.isInstalled) {
-      console.log('[PWA] Chromium browser detected, setting installable to true');
-      setPwaState(prev => ({ ...prev, isInstallable: true }));
-    }
+    // Rely solely on 'beforeinstallprompt' to set installable state
   };
 
   const installApp = async () => {
@@ -117,11 +109,7 @@ export const usePWA = () => {
     const success = await triggerInstallPrompt();
     
     if (!success) {
-      console.log('[PWA] Native install prompt not available, showing manual instructions');
-      // Only show instructions as absolute fallback
-      setTimeout(() => {
-        showManualInstallGuide();
-      }, 100);
+      console.log('[PWA] Native install prompt not available');
     }
   };
 

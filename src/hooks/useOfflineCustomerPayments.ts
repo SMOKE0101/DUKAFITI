@@ -60,9 +60,8 @@ export const useOfflineCustomerPayments = (customerId?: string) => {
       .from('debt_payments')
       .select('*')
       .eq('user_id', user.id)
-      .eq('customer_id', customerId)
       .order('timestamp', { ascending: false })
-      .limit(100);
+      .limit(1000);
     if (error) throw error;
     return (data || []).map(toLocal);
   };
@@ -76,7 +75,7 @@ export const useOfflineCustomerPayments = (customerId?: string) => {
     lastSyncTime,
     testOffline,
   } = useOfflineFirstSupabase<CustomerDebtPayment>({
-    cacheKey: `debt_payments_customer_${user?.id || 'nouser'}_${customerId || 'nocustomer'}`,
+    cacheKey: 'debt_payments',
     tableName: 'debt_payments',
     loadFromSupabase,
     transformToLocal: toLocal,
@@ -85,7 +84,7 @@ export const useOfflineCustomerPayments = (customerId?: string) => {
   });
 
   // Always present a stable array
-  const payments = useMemo(() => data || [], [data]);
+  const payments = useMemo(() => (data || []).filter(p => !customerId || p.customer_id === (customerId as string)), [data, customerId]);
 
   return { payments, loading, error, refresh, isOnline, lastSyncTime, testOffline };
 };

@@ -6,7 +6,7 @@ import { useToast } from './use-toast';
 // IndexedDB wrapper for offline-first data storage
 class OfflineFirstDB {
   private dbName = 'dukafiti_offline';
-  private version = 1;
+  private version = 2;
   private db: IDBDatabase | null = null;
 
   async init(): Promise<void> {
@@ -24,9 +24,9 @@ class OfflineFirstDB {
       request.onupgradeneeded = () => {
         const db = request.result;
         
-        // Create stores for each data type
-        const stores = ['products', 'customers', 'sales', 'settings'];
-        stores.forEach(storeName => {
+        // Create stores for each data type (bump version when adding new stores)
+        const stores = ['products', 'customers', 'sales', 'settings', 'debt_payments'];
+        stores.forEach((storeName) => {
           if (!db.objectStoreNames.contains(storeName)) {
             db.createObjectStore(storeName, { keyPath: 'id' });
           }
