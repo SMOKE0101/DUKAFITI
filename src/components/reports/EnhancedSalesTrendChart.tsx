@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceDot } from 'recharts';
 import { formatCurrency } from '@/utils/currency';
 import { Sale } from '@/types';
 import { TrendingUp } from 'lucide-react';
@@ -153,6 +153,21 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
     }
   };
 
+  // Selected point (click/touch) support
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const handleOverlaySelect = (
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+  ) => {
+    if (isDragging) return; // don't select while dragging
+    if (!containerRef.current || visibleData.length === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clientX = 'clientX' in e ? (e as any).clientX : (e as any).touches?.[0]?.clientX;
+    if (clientX == null) return;
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const idx = Math.round((x / Math.max(rect.width, 1)) * (visibleData.length - 1));
+    setSelectedIndex(idx);
+  };
+
   return (
     <Card className="bg-white dark:bg-gray-800 shadow-lg border-0">
       <CardHeader className="pb-4">
@@ -275,10 +290,32 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
                   fill: '#fff'
                 }}
               />
+              {selectedIndex !== null && visibleData[selectedIndex] && (
+                <ReferenceDot
+                  x={visibleData[selectedIndex].displayLabel}
+                  y={visibleData[selectedIndex].revenue}
+                  r={5}
+                  fill="hsl(var(--primary))"
+                  stroke="hsl(var(--background))"
+                  strokeWidth={2}
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
-          <div className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none" {...overlayHandlers} />
+          <div
+            className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none"
+            onClick={handleOverlaySelect}
+            onTouchStart={handleOverlaySelect}
+            {...overlayHandlers}
+          />
         </div>
+        {selectedIndex !== null && visibleData[selectedIndex] && (
+          <div className="mt-3 inline-flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            <span className="font-semibold text-foreground">{visibleData[selectedIndex].displayLabel}</span>
+            <span className="text-muted-foreground">•</span>
+            <span className="font-bold text-foreground">{formatCurrency(visibleData[selectedIndex].revenue)}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

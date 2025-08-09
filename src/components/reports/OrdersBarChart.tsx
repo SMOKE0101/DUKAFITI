@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
 import { Sale } from '@/types';
 import { ShoppingCart } from 'lucide-react';
 import { useDragPanWindow } from '@/hooks/useDragPanWindow';
@@ -138,7 +138,7 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
 
   const totalOrders = chartData.reduce((sum, item) => sum + item.orders, 0);
   const windowSize = useMemo(() => (timeframe === 'hourly' ? 24 : timeframe === 'daily' ? 30 : 12), [timeframe]);
-  const { start, end, containerRef, overlayHandlers } = useDragPanWindow({
+  const { start, end, containerRef, overlayHandlers, isDragging } = useDragPanWindow({
     dataLength: chartData.length,
     windowSize,
   });
@@ -158,6 +158,21 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
       case 'daily': return 'ORDERS PER DAY';
       case 'monthly': return 'ORDERS PER MONTH';
     }
+  };
+
+  // Selected point (click/touch) support
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const handleOverlaySelect = (
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+  ) => {
+    if (isDragging) return; // don't select while dragging
+    if (!containerRef.current || visibleData.length === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clientX = 'clientX' in e ? (e as any).clientX : (e as any).touches?.[0]?.clientX;
+    if (clientX == null) return;
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const idx = Math.round((x / Math.max(rect.width, 1)) * (visibleData.length - 1));
+    setSelectedIndex(idx);
   };
 
   return (
@@ -274,10 +289,32 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
                 radius={[4, 4, 0, 0]}
                 maxBarSize={60}
               />
+              {selectedIndex !== null && visibleData[selectedIndex] && (
+                <ReferenceDot
+                  x={visibleData[selectedIndex].displayLabel}
+                  y={visibleData[selectedIndex].orders}
+                  r={5}
+                  fill="hsl(var(--primary))"
+                  stroke="hsl(var(--background))"
+                  strokeWidth={2}
+                />
+              )}
             </BarChart>
           </ResponsiveContainer>
-          <div className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none" {...overlayHandlers} />
+          <div
+            className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none"
+            onClick={handleOverlaySelect}
+            onTouchStart={handleOverlaySelect}
+            {...overlayHandlers}
+          />
         </div>
+        {selectedIndex !== null && visibleData[selectedIndex] && (
+          <div className="mt-3 inline-flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            <span className="font-semibold text-foreground">{visibleData[selectedIndex].displayLabel}</span>
+            <span className="text-muted-foreground">•</span>
+            <span className="font-bold text-foreground">{visibleData[selectedIndex].orders} orders</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

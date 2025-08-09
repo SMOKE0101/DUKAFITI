@@ -29,6 +29,7 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
   const startIndexRef = useRef(0);
   const hasSurpassedThresholdRef = useRef(false);
   const DRAG_THRESHOLD = 4;
+  const pointerDownRef = useRef(false);
 
   const clampStart = (value: number) => {
     const maxStart = Math.max(0, dataLength - windowSize);
@@ -56,6 +57,7 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
     setIsDragging(false);
     startXRef.current = e.clientX;
     startIndexRef.current = start;
+    pointerDownRef.current = true;
     try {
       (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     } catch {}
@@ -63,6 +65,7 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault(); // Prevent scroll from cancelling drag on touch
+    if (!pointerDownRef.current) return; // Only drag when actively pressed
     const dx = e.clientX - startXRef.current;
 
     if (!hasSurpassedThresholdRef.current) {
@@ -80,7 +83,7 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
     setStart(nextStart);
   };
 
-  const endDrag = () => { setIsDragging(false); hasSurpassedThresholdRef.current = false; };
+  const endDrag = () => { setIsDragging(false); hasSurpassedThresholdRef.current = false; pointerDownRef.current = false; };
 
   const end = useMemo(() => Math.min(start + windowSize, dataLength), [start, windowSize, dataLength]);
 

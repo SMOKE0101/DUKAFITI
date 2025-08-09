@@ -126,14 +126,34 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
       cash: 'default',
       mpesa: 'secondary',
       debt: 'destructive',
-      partial: 'outline'
+      partial: 'outline',
+      split: 'outline'
     };
     
     return (
-      <Badge variant={variants[method] || 'outline'} className="font-medium">
+      <Badge variant={variants[method] || 'outline'} className="font-medium whitespace-nowrap">
         {method.toUpperCase()}
       </Badge>
     );
+  };
+
+  const renderPaymentCell = (sale: Sale) => {
+    if (sale.paymentMethod === 'split') {
+      const parts: string[] = [];
+      if ((sale.paymentDetails?.cashAmount || 0) > 0) parts.push('CASH');
+      if ((sale.paymentDetails?.mpesaAmount || 0) > 0) parts.push('MPESA');
+      if ((sale.paymentDetails?.debtAmount || 0) > 0) parts.push('DEBT');
+      return (
+        <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+          {parts.map((p) => (
+            <Badge key={p} variant="outline" className="px-2 py-0.5 text-[10px] font-semibold tracking-wide">
+              {p}
+            </Badge>
+          ))}
+        </div>
+      );
+    }
+    return getPaymentMethodBadge(sale.paymentMethod);
   };
 
   // Reset to first page when search or timeframe changes
@@ -309,7 +329,7 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
                       {formatCurrency(sale.total)}
                     </TableCell>
                     <TableCell className="py-4 px-6 text-center">
-                      {getPaymentMethodBadge(sale.paymentMethod)}
+                      {renderPaymentCell(sale)}
                     </TableCell>
                   </TableRow>
                 );
