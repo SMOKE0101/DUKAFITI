@@ -354,10 +354,6 @@ const RebuiltModernSalesPage = () => {
           }
           addToPersistedCart({ ...product, quantity });
           refreshCartExpiry();
-          toast({
-            title: "Added to Cart",
-            description: `${quantity}x ${product.name}`,
-          });
         }
       });
       return;
@@ -378,10 +374,6 @@ const RebuiltModernSalesPage = () => {
     // Refresh cart expiry on each addition
     refreshCartExpiry();
     
-    toast({
-      title: "Added to Cart",
-      description: `${quantity}x ${product.name}${product.variant_name ? ` (${product.variant_name})` : ''}`,
-    });
   }, [products, addToPersistedCart, refreshCartExpiry, toast, getProductVariants]);
 
   const handleQuantityChange = useCallback((productId: string, newQuantity: number) => {
@@ -521,10 +513,6 @@ const RebuiltModernSalesPage = () => {
       addToPersistedCart({ ...variantForCart, quantity: 1 });
       refreshCartExpiry();
       
-      toast({
-        title: "Added to Cart",
-        description: `1x ${variant.variant_name}`,
-      });
     }
   }, [selectedParentProduct, addToPersistedCart, refreshCartExpiry, toast]);
 
