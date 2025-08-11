@@ -123,7 +123,7 @@ const TemplatesView: React.FC = () => {
               </div>
             </div>
           ) : (
-            <PaginatedTemplateGrid templates={templates} selectedTemplates={selectedTemplates} onToggleTemplate={toggleTemplate} />
+            <PaginatedTemplateGrid templates={templates} selectedTemplates={selectedTemplates} onToggleTemplate={toggleTemplate} searchTerm={searchTerm} />
           )}
         </div>
       </div>
@@ -136,7 +136,8 @@ const PaginatedTemplateGrid: React.FC<{
   templates: any[];
   selectedTemplates: any[];
   onToggleTemplate: (template: any) => void;
-}> = ({ templates, selectedTemplates, onToggleTemplate }) => {
+  searchTerm: string;
+}> = ({ templates, selectedTemplates, onToggleTemplate, searchTerm }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [isOverlayVisible, setIsOverlayVisible] = useState(false);
@@ -148,6 +149,19 @@ const PaginatedTemplateGrid: React.FC<{
   const startIndex = (currentPage - 1) * templatesPerPage;
   const endIndex = startIndex + templatesPerPage;
   const currentTemplates = templates.slice(startIndex, endIndex);
+
+  // Reset to first page when a new search is performed
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Clamp current page if filtered result reduces total pages
+  useEffect(() => {
+    const pages = Math.max(1, Math.ceil(templates.length / templatesPerPage));
+    if (currentPage > pages) {
+      setCurrentPage(pages);
+    }
+  }, [templates.length, currentPage]);
 
   const handleTemplateClick = (template: any) => {
     setSelectedTemplate(template);
@@ -232,7 +246,7 @@ const PaginatedTemplateGrid: React.FC<{
     <div className="flex flex-col h-full">
       {/* Compact Page Info */}
       <div className="px-4 py-1 bg-muted/10 text-xs text-muted-foreground text-center">
-        Showing {startIndex + 1}-{Math.min(endIndex, templates.length)} of {templates.length.toLocaleString()} templates
+        Showing {templates.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, templates.length)} of {templates.length.toLocaleString()} templates
       </div>
 
       {/* Templates Grid Container - Maximized Space */}

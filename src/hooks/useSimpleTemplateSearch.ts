@@ -195,6 +195,10 @@ export const useSimpleTemplateSearch = () => {
   // Search function
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);
+    // Ensure searches always span all categories
+    if (term.trim()) {
+      setSelectedCategory('all');
+    }
   }, []);
 
   // Category filter function
