@@ -125,9 +125,11 @@ export const useUnifiedSales = () => {
   const createSale = useCallback(async (saleData: Omit<Sale, 'id' | 'synced'>) => {
     if (!user) throw new Error('User not authenticated');
 
+    const tempId = `temp_${Date.now()}`;
     const newSale: Sale = {
       ...saleData,
-      id: `temp_${Date.now()}`,
+      id: tempId,
+      offlineId: tempId,
       synced: false,
       timestamp: saleData.timestamp || new Date().toISOString(),
     };
@@ -141,6 +143,22 @@ export const useUnifiedSales = () => {
 
     if (isOnline) {
       try {
+        // Idempotency: if a sale with this clientSaleId and product already exists, reuse it
+        if (saleData.clientSaleId) {
+          const { data: existing } = await supabase
+            .from('sales')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('client_sale_id', saleData.clientSaleId)
+            .eq('product_id', saleData.productId)
+            .maybeSingle();
+          if (existing) {
+            const existingTransformed = transformDbSale(existing);
+            setSales(prev => prev.map(s => s.id === newSale.id ? existingTransformed : s));
+            return existingTransformed;
+          }
+        }
+
         const { data, error } = await supabase
           .from('sales')
           .insert([{
@@ -158,6 +176,8 @@ export const useUnifiedSales = () => {
             payment_details: saleData.paymentDetails,
             timestamp: newSale.timestamp,
             synced: true,
+            client_sale_id: saleData.clientSaleId || null,
+            offline_id: newSale.offlineId || null,
           }])
           .select()
           .single();
@@ -195,7 +215,7 @@ export const useUnifiedSales = () => {
         addPendingOperation({
           type: 'sale',
           operation: 'create',
-          data: saleData,
+          data: { ...saleData, clientSaleId: saleData.clientSaleId, offlineId: newSale.offlineId },
         });
         console.error('[UnifiedSales] Create failed, queued for sync:', error);
         return newSale;
@@ -205,7 +225,7 @@ export const useUnifiedSales = () => {
       addPendingOperation({
         type: 'sale',
         operation: 'create',
-        data: saleData,
+        data: { ...saleData, clientSaleId: saleData.clientSaleId, offlineId: newSale.offlineId },
       });
       console.log('[UnifiedSales] Sale created offline and queued for sync');
       return newSale;

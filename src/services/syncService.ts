@@ -224,6 +224,21 @@ export class SyncService {
     try {
       switch (operation.operation) {
         case 'create':
+          // Idempotency: if a sale with this clientSaleId and product already exists, skip
+          if (data.clientSaleId) {
+            const { data: existing } = await supabase
+              .from('sales')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('client_sale_id', data.clientSaleId)
+              .eq('product_id', data.productId)
+              .maybeSingle();
+            if (existing) {
+              console.log('[SyncService] Duplicate sale detected, skipping insert:', data.clientSaleId, data.productId);
+              return true;
+            }
+          }
+
           const { error: saleError } = await supabase
             .from('sales')
             .insert([{
@@ -241,6 +256,8 @@ export class SyncService {
               payment_details: data.paymentDetails,
               timestamp: data.timestamp || new Date().toISOString(),
               synced: true,
+              client_sale_id: data.clientSaleId || null,
+              offline_id: data.offlineId || null,
             }]);
           return !saleError;
         default:

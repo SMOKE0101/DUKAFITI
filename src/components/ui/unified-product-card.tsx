@@ -259,14 +259,15 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
         (variant === 'sales' && showIcons) || 
         (variant === 'template' && isSelected) || 
         (variant === 'inventory' && showIcons) 
-          ? "opacity-100" : "opacity-0"
+          ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}>
         {/* Sales Actions */}
         {variant === 'sales' && onAddToCart && !isOutOfStock && (
           <button
             onClick={(e) => handleActionClick(e, () => onAddToCart(product))}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-full font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
             disabled={!showIcons}
+            aria-label={`Add ${product.name} to cart`}
           >
             <Plus className="w-4 h-4 inline mr-2" />
             Add to Cart
@@ -280,7 +281,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
               {onEdit && (
                 <button
                   onClick={(e) => handleActionClick(e, () => onEdit(product))}
-                  className="bg-white/90 hover:bg-white text-gray-700 p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                  className="bg-white/90 hover:bg-white text-foreground p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
                   title="Edit Product"
                   disabled={!showIcons}
                 >
@@ -290,7 +291,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
               {onRestock && (
                 <button
                   onClick={(e) => handleActionClick(e, () => onRestock(product))}
-                  className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                  className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
                   title="Restock Product"
                   disabled={!showIcons}
                 >
@@ -300,7 +301,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
               {onDelete && (
                 <button
                   onClick={(e) => handleActionClick(e, () => onDelete(product))}
-                  className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+                  className="bg-destructive text-destructive-foreground p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
                   title="Delete Product"
                   disabled={!showIcons}
                 >
@@ -322,8 +323,8 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
           <div className={cn(
             "px-4 py-2 rounded-full font-medium shadow-lg transition-all duration-200 transform hover:scale-105",
             isSelected 
-              ? "bg-white text-purple-600" 
-              : "bg-purple-600 hover:bg-purple-700 text-white"
+              ? "bg-white text-primary" 
+              : "bg-primary text-primary-foreground"
           )}>
             {isSelected ? (
               <>
@@ -339,6 +340,15 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Tap hint for sales cards */}
+      {variant === 'sales' && !showIcons && !isOutOfStock && (
+        <div className="absolute bottom-2 inset-x-0 flex justify-center pointer-events-none">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-background/80 text-muted-foreground border border-border">
+            Tap card to reveal Add to Cart
+          </span>
+        </div>
+      )}
     </Card>
   );
 };
