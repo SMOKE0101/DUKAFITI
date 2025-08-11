@@ -30,10 +30,19 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
 }) => {
   const [isScrolling, setIsScrolling] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isDraggingUI, setIsDraggingUI] = useState(false);
   const [displayValues, setDisplayValues] = useState<number[]>([]);
   const [inputValue, setInputValue] = useState(value.toString());
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
+  // Drag-to-adjust refs
+  const isDraggingRef = useRef(false);
+  const dragAccumRef = useRef(0);
+  const dragLastYRef = useRef<number | null>(null);
+  const dragClaimedRef = useRef(false);
+  // Press-and-hold refs
+  const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Generate surrounding values for spinning effect
   useEffect(() => {
@@ -100,9 +109,89 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
     setIsFocused(true);
   };
 
+  // Press-and-hold helpers
+  const startHold = (type: 'inc' | 'dec') => {
+    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+    if (holdIntervalRef.current) clearInterval(holdIntervalRef.current as NodeJS.Timeout);
+    holdTimeoutRef.current = setTimeout(() => {
+      holdIntervalRef.current = setInterval(() => {
+        if (type === 'inc') handleIncrement();
+        else handleDecrement();
+      }, 140);
+    }, 300);
+  };
+
+  const clearHold = () => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current as NodeJS.Timeout);
+      holdIntervalRef.current = null;
+    }
+  };
+
+  // Pointer drag handlers for mobile
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingRef.current = true;
+    dragClaimedRef.current = false;
+    dragAccumRef.current = 0;
+    dragLastYRef.current = e.clientY;
+    setIsDraggingUI(true);
+    containerRef.current?.setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const lastY = dragLastYRef.current ?? e.clientY;
+    const dy = e.clientY - lastY;
+    dragLastYRef.current = e.clientY;
+    dragAccumRef.current += dy;
+
+    if (!dragClaimedRef.current && Math.abs(dragAccumRef.current) > 8) {
+      dragClaimedRef.current = true;
+    }
+
+    const STEP_PX = 24; // pixels per step change
+    let steps = Math.floor(Math.abs(dragAccumRef.current) / STEP_PX);
+    if (steps > 0) {
+      const direction = dragAccumRef.current > 0 ? 'down' : 'up';
+      for (let i = 0; i < steps; i++) {
+        if (direction === 'down') {
+          handleDecrement();
+        } else {
+          handleIncrement();
+        }
+      }
+      const remainder = Math.abs(dragAccumRef.current) % STEP_PX;
+      dragAccumRef.current = dragAccumRef.current < 0 ? -remainder : remainder;
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    isDraggingRef.current = false;
+    dragClaimedRef.current = false;
+    dragAccumRef.current = 0;
+    dragLastYRef.current = null;
+    setIsDraggingUI(false);
+    containerRef.current?.releasePointerCapture?.(e.pointerId);
+  };
+
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current as NodeJS.Timeout);
     };
   }, []);
 
@@ -121,7 +210,28 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
             e.stopPropagation();
             handleIncrement();
           }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startHold('inc');
+          }}
+          onPointerUp={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearHold();
+          }}
+          onPointerCancel={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearHold();
+          }}
+          onPointerLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearHold();
+          }}
           disabled={value >= max}
+          aria-label="Increase"
           className="w-full h-6 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed bg-muted/30 hover:bg-muted/50 rounded-t-md border border-b-0 border-border/40"
         >
           <ChevronUp className="w-3 h-3" />
@@ -130,9 +240,18 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
         {/* Main Display Container - Compact */}
         <div 
           ref={containerRef}
-          className="relative w-16 h-12 bg-background border-l border-r border-border/40 flex items-center justify-center cursor-text"
+          className={cn(
+            "relative w-16 h-12 bg-background border-l border-r border-border/40 flex items-center justify-center cursor-text overflow-hidden",
+            isDraggingUI && "ring-1 ring-primary/40 bg-muted/20"
+          )}
           onWheel={handleWheel}
           onClick={handleContainerClick}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          style={{ touchAction: isDraggingUI ? 'none' : undefined }}
         >
           {/* Direct Input Field - Hidden until focused */}
           {isFocused ? (
@@ -141,7 +260,9 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
               onChange={handleInputChange}
               onBlur={handleInputBlur}
               onFocus={() => setIsFocused(true)}
-              className="absolute inset-0 text-center bg-background border-0 font-mono text-sm font-semibold p-0 h-full focus:ring-1 focus:ring-primary"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              className="absolute inset-0 text-center bg-background border-0 font-mono text-base sm:text-sm font-semibold p-0 h-full focus:ring-1 focus:ring-primary"
               autoFocus
             />
           ) : (
@@ -186,7 +307,28 @@ const SpinningNumberInput: React.FC<SpinningNumberInputProps> = ({
             e.stopPropagation();
             handleDecrement();
           }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startHold('dec');
+          }}
+          onPointerUp={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearHold();
+          }}
+          onPointerCancel={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearHold();
+          }}
+          onPointerLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearHold();
+          }}
           disabled={value <= min}
+          aria-label="Decrease"
           className="w-full h-6 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed bg-muted/30 hover:bg-muted/50 rounded-b-md border border-t-0 border-border/40"
         >
           <ChevronDown className="w-3 h-3" />
