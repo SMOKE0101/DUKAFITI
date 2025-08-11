@@ -343,7 +343,6 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
             ) : (
               paginatedData.map((group) => {
                 const saleDate = new Date(group.timestamp);
-                const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({});
                 const isExpanded = !!expandedGroups[group.groupId];
                 const toggle = () => setExpandedGroups(prev => ({ ...prev, [group.groupId]: !prev[group.groupId] }));
                 return (

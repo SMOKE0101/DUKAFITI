@@ -1,6 +1,7 @@
 
 import { useMemo } from 'react';
 import { Sale, Product, Customer } from '../types';
+import { dedupeSalesForReporting } from '../utils/salesDedupe';
 
 interface DashboardMetrics {
   todaySales: {
@@ -57,8 +58,11 @@ export const useDashboardMetrics = (
       end: todayEnd.toISOString()
     });
 
-    // Filter today's sales with comprehensive date checking
-    const todaySalesData = sales.filter(sale => {
+    // Apply deduplication before any filtering to avoid double counting temp/server duplicates
+    const deduped = dedupeSalesForReporting(sales);
+
+    // Filter today's sales with comprehensive date checking (from deduped set)
+    const todaySalesData = deduped.filter(sale => {
       if (!sale.timestamp) {
         console.log('[DashboardMetrics] Sale missing timestamp:', sale.id);
         return false;
@@ -72,6 +76,7 @@ export const useDashboardMetrics = (
           id: sale.id,
           timestamp: sale.timestamp,
           total: sale.total,
+          discount: sale.paymentDetails?.discountAmount || 0,
           productName: sale.productName
         });
       }
@@ -84,8 +89,10 @@ export const useDashboardMetrics = (
     // Calculate today's metrics
     const todayTotalRevenue = todaySalesData.reduce((sum, sale) => {
       const total = Number(sale.total) || 0;
-      console.log('[DashboardMetrics] Adding sale total:', total);
-      return sum + total;
+      const discount = Number(sale.paymentDetails?.discountAmount) || 0;
+      const net = Math.max(0, total - discount);
+      console.log('[DashboardMetrics] Adding sale net total:', { total, discount, net });
+      return sum + net;
     }, 0);
 
     // Filter out sales from products without both cost price and selling price for profit calculation
