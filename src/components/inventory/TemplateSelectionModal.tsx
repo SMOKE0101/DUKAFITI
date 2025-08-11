@@ -124,7 +124,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] p-0 flex flex-col bg-background">
+      <DialogContent className="max-w-6xl w-[95vw] h-[90dvh] p-0 flex flex-col bg-background">
         <DialogTitle className="sr-only">
           {modalStep === 'selection' ? 'Select Template' : 'Configure Template'}
         </DialogTitle>
@@ -417,7 +417,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
             </div>
 
             {/* Configuration Content */}
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-auto p-4 pb-[env(safe-area-inset-bottom,1rem)]">
               <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-6">
                   <h3 className="text-lg font-semibold mb-2">
@@ -566,7 +566,7 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                 )}
                 
                 {/* Action Buttons */}
-                <div className="flex flex-col gap-2">
+                <div className="sticky bottom-0 -mx-4 px-4 pt-3 pb-[env(safe-area-inset-bottom,1rem)] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-t flex flex-col gap-2">
                   <Button
                     onClick={handleBackToSelection}
                     variant="outline"

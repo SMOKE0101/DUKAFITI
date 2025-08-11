@@ -341,14 +341,6 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
 
-      {/* Tap hint for sales cards */}
-      {variant === 'sales' && !showIcons && !isOutOfStock && (
-        <div className="absolute bottom-2 inset-x-0 flex justify-center pointer-events-none">
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-background/80 text-muted-foreground border border-border">
-            Tap card to reveal Add to Cart
-          </span>
-        </div>
-      )}
     </Card>
   );
 };

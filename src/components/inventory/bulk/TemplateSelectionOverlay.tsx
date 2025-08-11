@@ -75,7 +75,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
 
   return (
     <div className={cn(
-      "fixed inset-0 flex items-start justify-center pt-[15vh]",
+      "fixed inset-0 flex items-center justify-center p-2",
       "bg-black/70 backdrop-blur-sm",
       className
     )}
@@ -99,7 +99,7 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
       
       {/* Content Container - Positioned slightly above middle */}
       <div 
-        className="relative bg-card/98 backdrop-blur-xl rounded-2xl md:rounded-3xl border border-border/50 shadow-2xl max-w-2xl md:max-w-3xl w-full mx-2 md:mx-4 transform transition-all duration-300 ease-out"
+        className="relative bg-card/98 backdrop-blur-xl rounded-2xl md:rounded-3xl border border-border/50 shadow-2xl max-w-2xl md:max-w-3xl w-full mx-2 md:mx-4 transform transition-all duration-300 ease-out max-h-[90dvh] h-[90dvh] flex flex-col"
         style={{ 
           zIndex: 10000,
           background: 'linear-gradient(135deg, hsl(var(--card) / 0.98), hsl(var(--muted) / 0.95))',
@@ -157,8 +157,8 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
           </Button>
         </div>
         
-        {/* Content */}
-        <div className="p-4 md:p-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-auto p-4 md:p-6 pb-[env(safe-area-inset-bottom,1rem)]">
           <div className="text-center mb-4">
             <h4 className="text-base font-semibold mb-1 text-foreground">
               Configure Product Details
@@ -242,8 +242,10 @@ const TemplateSelectionOverlay: React.FC<TemplateSelectionOverlayProps> = ({
               </div>
             </div>
           </div>
-          
-          {/* Action Buttons */}
+        </div>
+        
+        {/* Sticky Footer Actions */}
+        <div className="flex-shrink-0 p-4 md:p-6 pt-2 border-t border-border/30 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
             <Button
               onClick={onClose}
