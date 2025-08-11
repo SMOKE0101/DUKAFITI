@@ -121,11 +121,6 @@ const TopPicksSection = ({ products, onAddToCart }: TopPicksSectionProps) => {
     setAddingAnimation(product.id);
     setTimeout(() => setAddingAnimation(null), 400);
     
-    toast({
-      title: "Added to cart",
-      description: `${product.name} (×1)`,
-      duration: 2000,
-    });
   };
 
   const handleLongPress = (product: Product) => {
@@ -151,11 +146,6 @@ const TopPicksSection = ({ products, onAddToCart }: TopPicksSectionProps) => {
     const product = topProducts.find(p => p.id === quantityOverlay.productId);
     if (product) {
       onAddToCart(product, quantityOverlay.quantity);
-      toast({
-        title: "Added to cart",
-        description: `${product.name} (×${quantityOverlay.quantity})`,
-        duration: 2000,
-      });
     }
     
     setQuantityOverlay(null);

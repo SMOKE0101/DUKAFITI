@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Package, CreditCard, Smartphone, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
@@ -196,7 +196,7 @@ const renderPaymentCell = (g: GroupedOrder) => {
       if ((g.paymentDetails?.debtAmount || 0) > 0) parts.push('DEBT');
       const discount = g.paymentDetails?.discountAmount || 0;
       return (
-        <div className="flex items-center gap-1 whitespace-nowrap">
+        <div className="flex flex-wrap items-start gap-1">
           {parts.map((p) => (
             <Badge key={p} variant="outline" className="px-2 py-0.5 text-[10px] font-semibold tracking-wide">
               {p}
@@ -211,7 +211,7 @@ const renderPaymentCell = (g: GroupedOrder) => {
       );
     }
     return (
-      <Badge variant={g.paymentMethod === 'cash' ? 'default' : g.paymentMethod === 'mpesa' ? 'secondary' : g.paymentMethod === 'debt' ? 'destructive' : 'outline'} className="font-medium whitespace-nowrap">
+      <Badge variant={g.paymentMethod === 'cash' ? 'default' : g.paymentMethod === 'mpesa' ? 'secondary' : g.paymentMethod === 'debt' ? 'destructive' : 'outline'} className="font-medium">
         {g.paymentMethod.toUpperCase()}
       </Badge>
     );
@@ -266,7 +266,8 @@ useEffect(() => {
           <div className="sticky top-0 z-10 bg-white dark:bg-gray-800">
             {/* Title */}
 <div className="px-6 pt-3 pb-3">
-              <h2 className="text-lg font-semibold text-foreground">History for {customer.name}</h2>
+              <DialogTitle className="text-lg font-semibold text-foreground">History for {customer.name}</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">Orders and payments</DialogDescription>
             </div>
             {/* Tabs */}
             <div className="px-6 border-b border-border">
@@ -344,13 +345,13 @@ useEffect(() => {
                   <div className="divide-y divide-border">
                     {groupedOrders.map((g) => (
                       <div key={g.groupId} className="py-2 text-xs sm:text-sm">
-                        <div className="grid grid-cols-5 gap-2 items-center">
+                        <div className="grid grid-cols-5 gap-2 items-start">
                           <button onClick={() => toggleOrderExpansion(g.groupId)} className="text-muted-foreground hover:text-foreground">
                             {expandedOrders.has(g.groupId) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </button>
                           <span>{formatDate(g.date)}</span>
                           <span>{formatTime(g.date)}</span>
-                          <span className="flex items-center gap-1 justify-start">
+                          <span className="flex flex-wrap items-start gap-1 justify-start min-w-0">
                             {renderPaymentCell(g)}
                           </span>
                           <span className="text-right font-medium">{formatCurrency(g.total)}</span>
