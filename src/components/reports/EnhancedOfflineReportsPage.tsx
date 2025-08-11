@@ -15,6 +15,7 @@ import SalesReportTable from './SalesReportTable';
 import ProductProfitsTable from './ProductProfitsTable';
 import DebtTransactionsTable from './DebtTransactionsTable';
 import { DatePicker } from '@/components/ui/date-picker';
+import { dedupeSalesForReporting } from '@/utils/salesDedupe';
 
 const EnhancedOfflineReportsPage = () => {
   const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'quarter' | 'custom'>('today');
@@ -80,29 +81,30 @@ const EnhancedOfflineReportsPage = () => {
   const currentSales = readOnly && cachedSnapshot ? cachedSnapshot.sales : sales;
   const currentProducts = readOnly && cachedSnapshot ? cachedSnapshot.products : products;
   const currentCustomers = readOnly && cachedSnapshot ? cachedSnapshot.customers : customers;
+  const dedupedSales = useMemo(() => dedupeSalesForReporting(currentSales), [currentSales]);
 
   const isLoading = !readOnly && (salesLoading || productsLoading || customersLoading);
 
   // Cache data when online and data is available
   useEffect(() => {
-    if (isOnline && sales.length > 0 && products.length > 0 && customers.length > 0) {
-      // Calculate metrics for caching
+    if (isOnline && dedupedSales.length > 0 && products.length > 0 && customers.length > 0) {
+      // Calculate metrics for caching from deduped sales
       const metrics = {
-        totalRevenue: sales.reduce((sum, sale) => sum + sale.total, 0),
-        totalOrders: sales.length,
+        totalRevenue: dedupedSales.reduce((sum, sale) => sum + sale.total, 0),
+        totalOrders: dedupedSales.length,
         activeCustomers: customers.filter(c => c.createdDate && new Date(c.createdDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
         lowStockProducts: products.filter(p => p.currentStock < 10).length
       };
 
       // Simple chart data for caching
-      const chartData = sales.slice(0, 10).map(sale => ({
+      const chartData = dedupedSales.slice(0, 10).map(sale => ({
         date: sale.timestamp,
         amount: sale.total
       }));
 
-      cacheSnapshot(sales, products, customers, metrics, chartData);
+      cacheSnapshot(dedupedSales, products, customers, metrics, chartData);
     }
-  }, [sales, products, customers, isOnline, cacheSnapshot]);
+  }, [dedupedSales, products, customers, isOnline, cacheSnapshot]);
 
 
   if (isLoading) {
@@ -226,7 +228,7 @@ const EnhancedOfflineReportsPage = () => {
             </Badge>
           </div>
           <ModernSummaryCards
-            sales={currentSales}
+            sales={dedupedSales}
             products={currentProducts}
             customers={currentCustomers}
             dateRange={dateRange}
@@ -238,7 +240,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Sales Analytics
           </h2>
-          <EnhancedSalesTrendChart sales={currentSales} />
+          <EnhancedSalesTrendChart sales={dedupedSales} />
         </div>
 
         {/* Orders Bar Chart */}
@@ -246,7 +248,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Orders Analytics
           </h2>
-          <OrdersBarChart sales={currentSales} />
+          <OrdersBarChart sales={dedupedSales} />
         </div>
 
         {/* Sales Report Table */}
@@ -254,7 +256,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Detailed Sales Report
           </h2>
-          <SalesReportTable sales={currentSales} loading={isLoading} isOffline={readOnly} />
+          <SalesReportTable sales={dedupedSales} loading={isLoading} isOffline={readOnly} />
         </div>
 
         {/* Product Profits Table */}
@@ -262,7 +264,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Product Profits Report
           </h2>
-          <ProductProfitsTable sales={currentSales} loading={isLoading} isOffline={readOnly} />
+          <ProductProfitsTable sales={dedupedSales} loading={isLoading} isOffline={readOnly} />
         </div>
 
         {/* Debt Transactions Table */}
@@ -270,7 +272,7 @@ const EnhancedOfflineReportsPage = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Debt Transactions Report
           </h2>
-          <DebtTransactionsTable sales={currentSales} loading={isLoading} isOffline={readOnly} />
+          <DebtTransactionsTable sales={dedupedSales} loading={isLoading} isOffline={readOnly} />
         </div>
 
         {/* Always Current Data Panels */}

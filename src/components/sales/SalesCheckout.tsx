@@ -86,6 +86,8 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
 
     try {
       console.log('[SalesCheckout] Starting checkout process...');
+      // Generate a clientSaleId for this checkout session to ensure idempotency across items
+      const clientSaleId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
       // For debt sales, update customer debt FIRST to ensure it's processed
       if (paymentMethod === 'debt' && selectedCustomerId && customer) {
@@ -149,6 +151,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
             debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
           },
           timestamp: new Date().toISOString(),
+          clientSaleId: clientSaleId,
         };
 
         console.log('[SalesCheckout] Processing sale for item:', item.name);

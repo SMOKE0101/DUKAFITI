@@ -35,7 +35,7 @@ const transformDbSale = (dbSale: any): Sale => ({
         discountAmount: 0,
       },
   timestamp: dbSale.timestamp,
-  synced: dbSale.synced || true,
+  synced: dbSale.synced !== false,
   clientSaleId: dbSale.client_sale_id || undefined,
   offlineId: dbSale.offline_id || undefined,
 });
@@ -78,17 +78,34 @@ export const useUnifiedSales = () => {
           if (!fetchError && data) {
             const serverData = data.map(transformDbSale);
             
-            // Merge local unsynced data with server data
-            const unsyncedLocal = cached.filter(sale => sale.id.startsWith('temp_'));
-            const mergedData = [...unsyncedLocal, ...serverData];
+            // Build lookup sets for deduplication
+            const serverOfflineKeys = new Set(
+              serverData
+                .filter(s => !!s.offlineId && !!s.productId)
+                .map(s => `${s.offlineId}::${s.productId}`)
+            );
+            const serverClientKeys = new Set(
+              serverData
+                .filter(s => !!s.clientSaleId && !!s.productId)
+                .map(s => `${s.clientSaleId}::${s.productId}`)
+            );
             
-            // Remove duplicates and sort
-            const uniqueData = mergedData.filter((sale, index, self) => 
-              index === self.findIndex(s => s.id === sale.id)
-            ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            // Keep only local temp sales that don't exist on server (match by offlineId/clientSaleId + productId)
+            const unsyncedLocal = cached
+              .filter(sale => sale.id?.startsWith?.('temp_'))
+              .filter(sale => {
+                const offlineKey = sale.offlineId && sale.productId ? `${sale.offlineId}::${sale.productId}` : '';
+                const clientKey = sale.clientSaleId && sale.productId ? `${sale.clientSaleId}::${sale.productId}` : '';
+                return !(offlineKey && serverOfflineKeys.has(offlineKey)) && !(clientKey && serverClientKeys.has(clientKey));
+              });
             
-            setCache('sales', uniqueData);
-            setSales(uniqueData);
+            // Merge filtered local with server and sort
+            const mergedData = [...unsyncedLocal, ...serverData]
+              .filter((sale, index, self) => index === self.findIndex(s => s.id === sale.id))
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            
+            setCache('sales', mergedData);
+            setSales(mergedData);
           }
         }
         return;
