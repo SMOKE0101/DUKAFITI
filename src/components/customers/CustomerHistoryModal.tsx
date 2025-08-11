@@ -9,7 +9,7 @@ import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../integrations/supabase/client';
 import { useIsMobile } from '../../hooks/use-mobile';
 import { useOfflineCustomerPayments } from '@/hooks/useOfflineCustomerPayments';
-import { useSupabaseSales } from '@/hooks/useSupabaseSales';
+import { useUnifiedSales } from '@/hooks/useUnifiedSales';
 
 interface CustomerHistoryModalProps {
   isOpen: boolean;
@@ -45,7 +45,7 @@ const [ordersLoading, setOrdersLoading] = useState(false);
 const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
 const isMobile = useIsMobile();
 const { payments: paymentsData, loading: paymentsLoading, refresh: refreshPayments } = useOfflineCustomerPayments(customer?.id);
-const { sales: allSales, loading: salesLoading, refreshSales } = useSupabaseSales();
+const { sales: allSales, loading: salesLoading, refetch: refetchSales } = useUnifiedSales();
 
 // Compute orders from cached/remote sales
 useEffect(() => {
@@ -56,7 +56,11 @@ useEffect(() => {
   try {
     const groups = new Map<string, GroupedOrder>();
     (allSales || [])
-      .filter((sale: any) => sale.customerId === customer.id)
+      .filter((sale: any) => {
+        const matchesId = sale.customerId === customer.id;
+        const matchesName = sale.customerName && customer.name && String(sale.customerName).trim().toLowerCase() === String(customer.name).trim().toLowerCase();
+        return matchesId || matchesName;
+      })
       .forEach((sale: any) => {
         const key = sale.clientSaleId || sale.offlineId || sale.id;
         const existing = groups.get(key);
@@ -94,7 +98,7 @@ useEffect(() => {
           }
         }
       });
-    const grouped = Array.from(groups.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
+    const grouped = Array.from(groups.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setGroupedOrders(grouped);
   } catch (err) {
     console.error('Error computing customer orders from sales:', err);
@@ -109,11 +113,11 @@ useEffect(() => {
 
 // Keep stable refs for refresh functions to avoid effect loops
 const refreshPaymentsRef = useRef(refreshPayments);
-const refreshSalesRef = useRef(refreshSales);
+const refreshSalesRef = useRef(refetchSales);
 useEffect(() => {
   refreshPaymentsRef.current = refreshPayments;
-  refreshSalesRef.current = refreshSales;
-}, [refreshPayments, refreshSales]);
+  refreshSalesRef.current = refetchSales;
+}, [refreshPayments, refetchSales]);
 
 // Set up real-time subscriptions
 useEffect(() => {
