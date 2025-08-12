@@ -667,6 +667,22 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         </CardContent>
       </Card>
 
+      {/* Toggle for Sales Reference */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setShowRefInput(v => !v)} aria-expanded={showRefInput} aria-controls="sales-ref-input">
+          <ChevronDown className={`h-4 w-4 transition-transform ${showRefInput ? 'rotate-180' : ''}`} />
+        </Button>
+      </div>
+      {showRefInput && (
+        <Input
+          id="sales-ref-input"
+          placeholder="Sales reference (optional)"
+          value={salesReference}
+          onChange={(e) => setSalesReference(e.target.value)}
+          className="w-full"
+        />
+      )}
+
       {/* Checkout Button */}
       <Button
         onClick={handleCheckout}

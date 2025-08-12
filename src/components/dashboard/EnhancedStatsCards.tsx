@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { Sale, Product, Customer } from '../../types';
+import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
 
 interface EnhancedStatsCardsProps {
   sales: Sale[];
@@ -21,14 +22,12 @@ interface EnhancedStatsCardsProps {
 const EnhancedStatsCards: React.FC<EnhancedStatsCardsProps> = ({ sales, products, customers }) => {
   const navigate = useNavigate();
 
-  // Calculate stats from the data
-  const today = new Date().toDateString();
-  const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today);
-  
-  const totalSalesToday = todaySales.reduce((sum, s) => sum + s.total, 0);
-  const totalOrdersToday = todaySales.length;
-  const activeCustomers = customers.length;
-  const lowStockProducts = products.filter(p => p.currentStock <= (p.lowStockThreshold || 10)).length;
+  // Use centralized, deduped, and accurate metrics
+  const metrics = useDashboardMetrics(sales, products, customers);
+  const totalSalesToday = metrics.todaySales.totalRevenue;
+  const totalOrdersToday = metrics.todaySales.orderCount;
+  const activeCustomers = metrics.customers.active;
+  const lowStockProducts = metrics.products.lowStock;
 
   const cards = [
     {

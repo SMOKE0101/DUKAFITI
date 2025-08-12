@@ -97,10 +97,9 @@ export const useDashboardMetrics = (
 
     // Filter out sales from products without both cost price and selling price for profit calculation
     const validProfitSales = todaySalesData.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
-    const todayTotalProfit = validProfitSales.reduce((sum, sale) => {
-      const profit = Number(sale.profit) || 0;
-      return sum + profit;
-    }, 0);
+    const totalDiscounts = todaySalesData.reduce((sum, sale) => sum + (Number(sale.paymentDetails?.discountAmount) || 0), 0);
+    const rawProfit = validProfitSales.reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
+    const todayTotalProfit = Math.max(0, rawProfit - totalDiscounts);
 
     const todayOrderCount = todaySalesData.length;
     const averageOrderValue = todayOrderCount > 0 ? todayTotalRevenue / todayOrderCount : 0;
@@ -113,7 +112,11 @@ export const useDashboardMetrics = (
     });
 
     // Calculate customer metrics
-    const activeCustomers = customers.filter(c => c.totalPurchases > 0).length;
+    const activeCustomers = new Set(
+      todaySalesData
+        .map(s => s.customerId)
+        .filter((id): id is string => !!id)
+    ).size;
     const customersWithDebt = customers.filter(c => c.outstandingDebt > 0);
     const totalOutstandingDebt = customersWithDebt.reduce((sum, c) => sum + c.outstandingDebt, 0);
 
