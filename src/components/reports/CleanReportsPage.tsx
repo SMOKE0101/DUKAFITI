@@ -149,13 +149,13 @@ const CleanReportsPage = () => {
     
     switch (salesChartResolution) {
       case 'hourly':
-        // Last 24 hours with precise hour boundaries
+        // Last 72 hours with precise hour boundaries
         chartFromDate = new Date(now);
-        chartFromDate.setHours(chartFromDate.getHours() - 23, 0, 0, 0); // 24 hours ago, start of hour
+        chartFromDate.setHours(chartFromDate.getHours() - 71, 0, 0, 0); // 72 hours ago, start of hour
         bucketFormat = 'hour';
         
-        // Generate 24 precise hour buckets
-        for (let i = 0; i < 24; i++) {
+        // Generate 72 precise hour buckets
+        for (let i = 0; i < 72; i++) {
           const hourTime = new Date(chartFromDate);
           hourTime.setHours(chartFromDate.getHours() + i, 0, 0, 0);
           timePoints.push(hourTime.toISOString().substring(0, 13) + ':00:00.000Z');
@@ -163,14 +163,14 @@ const CleanReportsPage = () => {
         break;
         
       case 'daily':
-        // Last 30 days with precise day boundaries
+        // Last 90 days with precise day boundaries
         chartFromDate = new Date(now);
-        chartFromDate.setDate(chartFromDate.getDate() - 29);
+        chartFromDate.setDate(chartFromDate.getDate() - 89);
         chartFromDate.setHours(0, 0, 0, 0);
         bucketFormat = 'day';
         
-        // Generate 30 precise day buckets
-        for (let i = 0; i < 30; i++) {
+        // Generate 90 precise day buckets
+        for (let i = 0; i < 90; i++) {
           const dayTime = new Date(chartFromDate);
           dayTime.setDate(chartFromDate.getDate() + i);
           timePoints.push(dayTime.toISOString().substring(0, 10));
@@ -305,14 +305,14 @@ const CleanReportsPage = () => {
         break;
         
       case '2weeks':
-        // Last 14 days with precise day boundaries
+        // Last 56 days with precise day boundaries (2 weeks visible, extra history available)
         chartFromDate = new Date(now);
-        chartFromDate.setDate(chartFromDate.getDate() - 13); // 14 days including today
+        chartFromDate.setDate(chartFromDate.getDate() - 55); // 56 days including today
         chartFromDate.setHours(0, 0, 0, 0);
         bucketFormat = 'day';
         
-        // Generate 14 precise day buckets
-        for (let i = 0; i < 14; i++) {
+        // Generate 56 precise day buckets
+        for (let i = 0; i < 56; i++) {
           const dayTime = new Date(chartFromDate);
           dayTime.setDate(chartFromDate.getDate() + i);
           timePoints.push(dayTime.toISOString().substring(0, 10));

@@ -26,9 +26,10 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
   const [isDragging, setIsDragging] = useState(false);
 
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
   const startIndexRef = useRef(0);
   const hasSurpassedThresholdRef = useRef(false);
-  const DRAG_THRESHOLD = 4;
+  const BASE_DRAG_THRESHOLD = 4;
   const pointerDownRef = useRef(false);
 
   const clampStart = (value: number) => {
@@ -55,6 +56,7 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
     hasSurpassedThresholdRef.current = false;
     setIsDragging(false);
     startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
     startIndexRef.current = start;
     pointerDownRef.current = true;
   };
@@ -62,16 +64,21 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!pointerDownRef.current) return; // Only drag when actively pressed
     const dx = e.clientX - startXRef.current;
+    const dy = e.clientY - startYRef.current;
+
+    // Dynamic threshold: be stricter on touch to avoid hijacking vertical page scroll
+    const threshold = (e as any).pointerType === 'touch' ? 12 : BASE_DRAG_THRESHOLD;
 
     if (!hasSurpassedThresholdRef.current) {
-      if (Math.abs(dx) >= DRAG_THRESHOLD) {
+      // Angle gating: only treat as horizontal drag if horizontal intent dominates
+      if (Math.abs(dx) >= threshold && Math.abs(dx) > Math.abs(dy) * 1.1) {
         hasSurpassedThresholdRef.current = true;
         setIsDragging(true);
-        try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch {}
+        try { (e.currentTarget as Element).setPointerCapture?.((e as any).pointerId); } catch {}
         // From now on, we prevent default to avoid vertical scrolling affecting the drag
         e.preventDefault();
       } else {
-        // Below threshold: allow native vertical scroll
+        // Below threshold or vertical intent: allow native vertical scroll
         return;
       }
     } else {

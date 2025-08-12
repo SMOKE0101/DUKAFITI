@@ -132,18 +132,18 @@ const HybridReportsPage = () => {
     
     switch (salesChartResolution) {
       case 'hourly':
-        chartFromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        chartFromDate = new Date(now.getTime() - 72 * 60 * 60 * 1000);
         bucketFormat = 'hour';
-        for (let i = 0; i < 24; i++) {
+        for (let i = 0; i < 72; i++) {
           const hour = new Date(chartFromDate);
-          hour.setHours(i, 0, 0, 0);
+          hour.setHours(chartFromDate.getHours() + i, 0, 0, 0);
           timePoints.push(hour.toISOString().substring(0, 13) + ':00');
         }
         break;
       case 'daily':
-        chartFromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        chartFromDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
         bucketFormat = 'day';
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 90; i++) {
           const day = new Date(chartFromDate);
           day.setDate(day.getDate() + i);
           timePoints.push(day.toISOString().substring(0, 10));
@@ -217,7 +217,7 @@ const HybridReportsPage = () => {
         chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
       case '2weeks':
-        chartFromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        chartFromDate = new Date(now.getTime() - 56 * 24 * 60 * 60 * 1000);
         break;
       default:
         chartFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -248,8 +248,8 @@ const HybridReportsPage = () => {
       // Daily data for 2-week view
       const dailyData: Record<string, number> = {};
       
-      // Initialize 14 days of data
-      for (let i = 0; i < 14; i++) {
+      // Initialize 56 days of data
+      for (let i = 0; i < 56; i++) {
         const date = new Date(chartFromDate);
         date.setDate(date.getDate() + i);
         const dateKey = date.toISOString().substring(0, 10);
