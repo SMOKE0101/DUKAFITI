@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
-import { useUnifiedCustomers } from '../../hooks/useUnifiedCustomers';
+
 import { SalesService } from '../../services/salesService';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
@@ -24,6 +24,7 @@ interface NewSalesCheckoutProps {
   isOnline: boolean;
   customers: Customer[];
   onCustomersRefresh: () => void;
+  updateCustomer: (id: string, updates: Partial<Customer>) => Promise<any>;
 }
 
 const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
@@ -31,7 +32,8 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   onCheckoutComplete,
   isOnline,
   customers: initialCustomers,
-  onCustomersRefresh
+  onCustomersRefresh,
+  updateCustomer
 }) => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'debt' | 'split'>('cash');
@@ -45,30 +47,11 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const { createSale } = useUnifiedSales();
-  const { updateProduct, forceRefetch: forceReloadProducts, products } = useUnifiedProducts();
-  const { updateCustomer, customers: hookCustomers, createCustomer, refetch: refetchCustomers } = useUnifiedCustomers();
+const { createSale } = useUnifiedSales();
+const { updateProduct, forceRefetch: forceReloadProducts, products } = useUnifiedProducts();
 
-  // Get all available customers (unified from hook) - ensure we always have the most up-to-date list
-  const allCustomers = useMemo(() => {
-    // Combine both sources and deduplicate by id, preferring hookCustomers when available
-    const combinedCustomers = [...hookCustomers];
-    
-    // Add any customers from initialCustomers that aren't in hookCustomers
-    initialCustomers.forEach(customer => {
-      if (!hookCustomers.find(hc => hc.id === customer.id)) {
-        combinedCustomers.push(customer);
-      }
-    });
-    
-    console.log('[NewSalesCheckout] Available customers updated:', {
-      hookCustomers: hookCustomers.length,
-      initialCustomers: initialCustomers.length,
-      combinedCustomers: combinedCustomers.length,
-      selectedCustomerId
-    });
-    return combinedCustomers;
-  }, [hookCustomers, initialCustomers, selectedCustomerId]);
+// Use customers from parent to ensure single source of truth
+const allCustomers = initialCustomers;
 
   // Update selected customer when customer list changes or selection changes
   useEffect(() => {
@@ -102,56 +85,53 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
 
-  const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
-    console.log('[NewSalesCheckout] Customer added successfully:', {
-      id: newCustomer.id,
-      name: newCustomer.name,
-      phone: newCustomer.phone,
-      debt: newCustomer.outstandingDebt
+const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
+  console.log('[NewSalesCheckout] Customer added successfully:', {
+    id: newCustomer.id,
+    name: newCustomer.name,
+    phone: newCustomer.phone,
+    debt: newCustomer.outstandingDebt
+  });
+  
+  try {
+    // Refresh customers from parent to ensure consistency across components
+    await onCustomersRefresh();
+    
+    // Set the new customer as selected immediately for instant UI feedback
+    setSelectedCustomer(newCustomer);
+    setSelectedCustomerId(newCustomer.id);
+    
+    // Close the modal
+    setIsAddCustomerModalOpen(false);
+    
+    // Show success feedback
+    toast({
+      title: "Customer Added & Selected",
+      description: `${newCustomer.name} has been added and is now selected for this sale.`,
     });
     
-    try {
-      // Force refresh customers from the unified hook to ensure latest data
-      await refetchCustomers();
-      
-      // Set the new customer as selected immediately for instant UI feedback
-      setSelectedCustomer(newCustomer);
-      setSelectedCustomerId(newCustomer.id);
-      
-      // Close the modal
-      setIsAddCustomerModalOpen(false);
-      
-      // Refresh customers from parent to ensure consistency across components
-      onCustomersRefresh();
-      
-      // Show success feedback
-      toast({
-        title: "Customer Added & Selected",
-        description: `${newCustomer.name} has been added and is now selected for this sale.`,
-      });
-      
-      // Log the current state for debugging
-      console.log('[NewSalesCheckout] Customer selection updated:', {
-        selectedCustomerId: newCustomer.id,
-        selectedCustomerName: newCustomer.name,
-        selectedCustomerDebt: newCustomer.outstandingDebt
-      });
-      
-    } catch (error) {
-      console.error('[NewSalesCheckout] Error handling customer addition:', error);
-      
-      // Still try to select the customer even if refresh failed
-      setSelectedCustomer(newCustomer);
-      setSelectedCustomerId(newCustomer.id);
-      setIsAddCustomerModalOpen(false);
-      
-      toast({
-        title: "Customer Added",
-        description: `${newCustomer.name} has been added. If you don't see them in the dropdown, try refreshing the page.`,
-        variant: "destructive",
-      });
-    }
-  }, [refetchCustomers, onCustomersRefresh, toast]);
+    // Log the current state for debugging
+    console.log('[NewSalesCheckout] Customer selection updated:', {
+      selectedCustomerId: newCustomer.id,
+      selectedCustomerName: newCustomer.name,
+      selectedCustomerDebt: newCustomer.outstandingDebt
+    });
+    
+  } catch (error) {
+    console.error('[NewSalesCheckout] Error handling customer addition:', error);
+    
+    // Still try to select the customer even if refresh failed
+    setSelectedCustomer(newCustomer);
+    setSelectedCustomerId(newCustomer.id);
+    setIsAddCustomerModalOpen(false);
+    
+    toast({
+      title: "Customer Added",
+      description: `${newCustomer.name} has been added. If you don't see them in the dropdown, try refreshing the page.`,
+      variant: "destructive",
+    });
+  }
+}, [onCustomersRefresh, toast]);
 
   const handleCheckout = async () => {
     console.log('[NewSalesCheckout] Starting checkout:', {
@@ -384,19 +364,26 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
        }
  
        // Ensure customer's total purchases are updated for all payment types
-       try {
-         const targetCustomer = updatedCustomer || selectedCustomer;
-         if (targetCustomer) {
-           const newTotalPurchases = (targetCustomer.totalPurchases || 0) + total;
-           // If we already updated during debt handling, this keeps lastPurchaseDate fresh without double counting on server
-           await updateCustomer(targetCustomer.id, {
-             totalPurchases: newTotalPurchases,
-             lastPurchaseDate: new Date().toISOString(),
-           });
-         }
-       } catch (e) {
-         console.warn('[NewSalesCheckout] Failed to update customer total purchases (non-blocking):', e);
-       }
+try {
+  const targetCustomer = updatedCustomer || selectedCustomer;
+  if (targetCustomer) {
+    const lastPurchaseDate = new Date().toISOString();
+    if (debtAmount > 0) {
+      // Already updated totals in debt path; just refresh last purchase date
+      await updateCustomer(targetCustomer.id, {
+        lastPurchaseDate,
+      });
+    } else {
+      const newTotalPurchases = (targetCustomer.totalPurchases || 0) + total;
+      await updateCustomer(targetCustomer.id, {
+        totalPurchases: newTotalPurchases,
+        lastPurchaseDate,
+      });
+    }
+  }
+} catch (e) {
+  console.warn('[NewSalesCheckout] Failed to update customer totals (non-blocking):', e);
+}
  
        // Force reload products to refresh stock display
       console.log('[NewSalesCheckout] Forcing product reload to refresh stock displays');
@@ -424,14 +411,19 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         description: successMessage,
       });
 
-      console.log('[NewSalesCheckout] Checkout completed successfully');
-      
-      // Reset states
-      setSelectedCustomerId(null);
-      setPaymentMethod('cash');
-      setSplitPaymentData(null);
-      
-      onCheckoutComplete();
+console.log('[NewSalesCheckout] Checkout completed successfully');
+
+// Notify other parts of the app and refresh customers
+window.dispatchEvent(new CustomEvent('sale-completed'));
+window.dispatchEvent(new CustomEvent('checkout-completed'));
+onCustomersRefresh();
+
+// Reset states
+setSelectedCustomerId(null);
+setPaymentMethod('cash');
+setSplitPaymentData(null);
+
+onCheckoutComplete();
 
     } catch (error) {
       console.error('[NewSalesCheckout] Checkout failed:', error);

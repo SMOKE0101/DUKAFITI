@@ -207,23 +207,29 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         salesProcessed++;
        }
 
-       // Ensure customer's total purchases are updated for all payment types
-       try {
-         if (selectedCustomerId && customer) {
-           const newTotalPurchases = (customer.totalPurchases || 0) + total;
-           // If we already updated in the debt path, this will just ensure lastPurchaseDate stays fresh
-           await updateCustomer(selectedCustomerId, {
-             totalPurchases: newTotalPurchases,
-             lastPurchaseDate: new Date().toISOString(),
-           });
-           // Notify UI listeners
-           window.dispatchEvent(new CustomEvent('customer-purchases-updated', {
-             detail: { customerId: selectedCustomerId, newTotalPurchases }
-           }));
-         }
-       } catch (e) {
-         console.warn('[SalesCheckout] Failed to update customer total purchases (non-blocking):', e);
-       }
+// Ensure customer's total purchases are updated for appropriate payment types
+try {
+  if (selectedCustomerId && customer) {
+    if (paymentMethod !== 'debt') {
+      const newTotalPurchases = (customer.totalPurchases || 0) + total;
+      await updateCustomer(selectedCustomerId, {
+        totalPurchases: newTotalPurchases,
+        lastPurchaseDate: new Date().toISOString(),
+      });
+      // Notify UI listeners
+      window.dispatchEvent(new CustomEvent('customer-purchases-updated', {
+        detail: { customerId: selectedCustomerId, newTotalPurchases }
+      }));
+    } else {
+      // For debt, we've already updated totals in the debt path; just refresh lastPurchaseDate
+      await updateCustomer(selectedCustomerId, {
+        lastPurchaseDate: new Date().toISOString(),
+      });
+    }
+  }
+} catch (e) {
+  console.warn('[SalesCheckout] Failed to update customer totals (non-blocking):', e);
+}
  
        // Show success message
       const successMessage = paymentMethod === 'debt' 

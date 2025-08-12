@@ -202,9 +202,9 @@ const RebuiltModernSalesPage = () => {
   const productListRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
 
-  const { products, loading: productsLoading, refetch: refetchProducts } = useUnifiedProducts();
-  const { customers, loading: customersLoading, refetch: refetchCustomers } = useUnifiedCustomers();
-  const { sales } = useUnifiedSales();
+const { products, loading: productsLoading, refetch: refetchProducts } = useUnifiedProducts();
+const { customers, loading: customersLoading, refetch: refetchCustomers, updateCustomer } = useUnifiedCustomers();
+const { sales } = useUnifiedSales();
   const { isOnline, pendingOperations, syncPendingOperations } = useUnifiedSyncManager();
   const { toast } = useToast();
 
@@ -775,13 +775,14 @@ const RebuiltModernSalesPage = () => {
               {/* Mobile Checkout */}
               {cart.length > 0 && (
                 <div className="flex-shrink-0 border-t border-border">
-                  <NewSalesCheckout
-                    cart={cart}
-                    onCheckoutComplete={handleCheckoutSuccess}
-                    isOnline={isOnline}
-                    customers={customers}
-                    onCustomersRefresh={handleCustomersRefresh}
-                  />
+<NewSalesCheckout
+  cart={cart}
+  onCheckoutComplete={handleCheckoutSuccess}
+  isOnline={isOnline}
+  customers={customers}
+  onCustomersRefresh={handleCustomersRefresh}
+  updateCustomer={updateCustomer}
+/>
                 </div>
               )}
             </div>
@@ -1012,13 +1013,14 @@ const RebuiltModernSalesPage = () => {
         {/* New Checkout Section */}
         {cart.length > 0 && (
           <div className="flex-shrink-0 border-t border-border">
-            <NewSalesCheckout
-              cart={cart}
-              onCheckoutComplete={handleCheckoutSuccess}
-              isOnline={isOnline}
-              customers={customers}
-              onCustomersRefresh={handleCustomersRefresh}
-            />
+<NewSalesCheckout
+  cart={cart}
+  onCheckoutComplete={handleCheckoutSuccess}
+  isOnline={isOnline}
+  customers={customers}
+  onCustomersRefresh={handleCustomersRefresh}
+  updateCustomer={updateCustomer}
+/>
           </div>
         )}
       </div>
