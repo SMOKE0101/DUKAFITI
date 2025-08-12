@@ -27,18 +27,18 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
     const dataMap = new Map<string, number>();
 
     if (timeframe === 'hourly') {
-      // Fixed window: last 24 hours
+      // Extended history: last 72 hours (24h visible via pan)
       const start = new Date(now);
-      start.setHours(now.getHours() - 23, 0, 0, 0);
+      start.setHours(now.getHours() - 71, 0, 0, 0);
 
-      for (let i = 0; i < 24; i++) {
+      for (let i = 0; i < 72; i++) {
         const hour = new Date(start);
         hour.setHours(start.getHours() + i, 0, 0, 0);
         const key = `${hour.getFullYear()}-${String(hour.getMonth() + 1).padStart(2, '0')}-${String(hour.getDate()).padStart(2, '0')}-${String(hour.getHours()).padStart(2, '0')}`;
         dataMap.set(key, 0);
       }
 
-      // Aggregate sales by hour within fixed window
+      // Aggregate sales by hour within extended window
       sales.forEach((sale) => {
         const d = new Date(sale.timestamp);
         if (d >= start && d <= now) {
@@ -60,19 +60,19 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         });
 
     } else if (timeframe === 'daily') {
-      // Fixed window: last 30 days (including today)
+      // Extended history: last 90 days (30 days visible via pan)
       const start = new Date(now);
-      start.setDate(start.getDate() - 29);
+      start.setDate(start.getDate() - 89);
       start.setHours(0, 0, 0, 0);
 
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 90; i++) {
         const day = new Date(start);
         day.setDate(start.getDate() + i);
         const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
         dataMap.set(key, 0);
       }
 
-      // Aggregate sales by day within fixed window
+      // Aggregate sales by day within extended window
       sales.forEach((sale) => {
         const d = new Date(sale.timestamp);
         if (d >= start && d <= now) {
@@ -293,7 +293,8 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
             </AreaChart>
           </ResponsiveContainer>
           <div
-            className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none"
+            className="absolute inset-0 cursor-grab active:cursor-grabbing select-none"
+            style={{ touchAction: 'pan-y' }}
             onClick={handleOverlaySelect}
             onTouchStart={handleOverlaySelect}
             {...overlayHandlers}

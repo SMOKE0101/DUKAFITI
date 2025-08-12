@@ -60,19 +60,19 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
         });
 
     } else if (timeframe === 'daily') {
-      // Fixed window: last 14 days (including today)
+      // Extended history: last 56 days (2 weeks visible via pan)
       const startDate = new Date(now);
-      startDate.setDate(startDate.getDate() - 13);
+      startDate.setDate(startDate.getDate() - 55);
       startDate.setHours(0, 0, 0, 0);
 
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < 56; i++) {
         const d = new Date(startDate);
         d.setDate(startDate.getDate() + i);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         ordersMap.set(key, 0);
       }
 
-      // Count orders by day within fixed window
+      // Count orders by day within extended window
       sales.forEach((sale) => {
         const sd = new Date(sale.timestamp);
         if (sd >= startDate && sd <= now) {
@@ -294,7 +294,8 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
             </BarChart>
           </ResponsiveContainer>
           <div
-            className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none"
+            className="absolute inset-0 cursor-grab active:cursor-grabbing select-none"
+            style={{ touchAction: 'pan-y' }}
             onClick={handleOverlaySelect}
             onTouchStart={handleOverlaySelect}
             {...overlayHandlers}
