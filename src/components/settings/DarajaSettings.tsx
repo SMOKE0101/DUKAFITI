@@ -38,22 +38,20 @@ const DarajaSettings = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('daraja_credentials')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      const { data, error } = await supabase.functions.invoke('secure-daraja', {
+        body: { action: 'get' }
+      });
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         throw error;
       }
 
       if (data) {
         setCredentials({
-          consumer_key: data.consumer_key || '',
-          consumer_secret: data.consumer_secret || '',
+          consumer_key: '', // not revealed; re-enter to change
+          consumer_secret: '', // not revealed; re-enter to change
           business_short_code: data.business_short_code || '',
-          passkey: data.passkey || '',
+          passkey: '', // not revealed; re-enter to change
           is_sandbox: data.is_sandbox ?? true,
         });
       }
@@ -68,17 +66,19 @@ const DarajaSettings = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('daraja_credentials')
-        .upsert({
-          user_id: user.id,
-          consumer_key: credentials.consumer_key,
-          consumer_secret: credentials.consumer_secret,
-          business_short_code: credentials.business_short_code,
-          passkey: credentials.passkey,
-          is_sandbox: credentials.is_sandbox,
-          updated_at: new Date().toISOString(),
-        });
+      const payload = {
+        user_id: user.id,
+        consumer_key: credentials.consumer_key || null,
+        consumer_secret: credentials.consumer_secret || null,
+        business_short_code: credentials.business_short_code || null,
+        passkey: credentials.passkey || null,
+        is_sandbox: credentials.is_sandbox,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase.functions.invoke('secure-daraja', {
+        body: { action: 'upsert', data: payload }
+      });
 
       if (error) throw error;
 
