@@ -36,12 +36,11 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
     return Math.max(0, Math.min(value, maxStart));
   };
 
-  // Snap to most recent whenever data length or window size changes
   useEffect(() => {
     setStart(clampStart(dataLength - windowSize));
-    // Ensure container doesn't attempt native scrolling during drag
+    // Ensure container allows native vertical scrolling; only capture horizontal drags beyond threshold
     if (containerRef.current) {
-      try { containerRef.current.style.touchAction = 'none'; } catch {}
+      try { containerRef.current.style.touchAction = 'pan-y'; } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataLength, windowSize]);
@@ -52,19 +51,15 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Ensure we capture drag on mobile
+    // Do not prevent default here so vertical page scroll remains smooth
     hasSurpassedThresholdRef.current = false;
     setIsDragging(false);
     startXRef.current = e.clientX;
     startIndexRef.current = start;
     pointerDownRef.current = true;
-    try {
-      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-    } catch {}
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Prevent scroll from cancelling drag on touch
     if (!pointerDownRef.current) return; // Only drag when actively pressed
     const dx = e.clientX - startXRef.current;
 
@@ -72,9 +67,16 @@ export function useDragPanWindow({ dataLength, windowSize }: DragPanOptions): Dr
       if (Math.abs(dx) >= DRAG_THRESHOLD) {
         hasSurpassedThresholdRef.current = true;
         setIsDragging(true);
+        try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch {}
+        // From now on, we prevent default to avoid vertical scrolling affecting the drag
+        e.preventDefault();
       } else {
+        // Below threshold: allow native vertical scroll
         return;
       }
+    } else {
+      // While dragging horizontally, prevent vertical scroll
+      e.preventDefault();
     }
 
     const deltaIndex = Math.round(dx / pixelsPerItem());

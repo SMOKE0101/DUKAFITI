@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '@/utils/currency';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
+import { useDragPanWindow } from '../../hooks/useDragPanWindow';
 
 interface SalesTrendChartProps {
   data: Array<{ date: string; revenue: number }>;
@@ -63,6 +64,20 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
     }
   };
 
+  // Pan window for mobile-friendly horizontal history navigation
+  const defaultWindow = useMemo(() => {
+    if (resolution === 'hourly') return Math.min(24, data.length);
+    if (resolution === 'daily') return Math.min(30, data.length);
+    return data.length;
+  }, [resolution, data.length]);
+
+  const { start, end, containerRef, overlayHandlers } = useDragPanWindow({
+    dataLength: data.length,
+    windowSize: defaultWindow,
+  });
+
+  const visibleData = useMemo(() => data.slice(start, end), [data, start, end]);
+
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md ${
       isMobile ? 'p-0.5' : isTablet ? 'p-3' : 'p-6 lg:p-8'
@@ -111,10 +126,10 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
         </div>
       </div>
 
-      <div className={`w-full ${isMobile ? 'h-80' : isTablet ? 'h-84' : 'h-80'}`}>
+      <div ref={containerRef} className={`relative w-full ${isMobile ? 'h-80' : isTablet ? 'h-84' : 'h-80'}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={data}
+            data={visibleData}
             margin={getMargins()}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -162,6 +177,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
             />
           </LineChart>
         </ResponsiveContainer>
+        <div className="absolute inset-0 z-10" style={{ touchAction: 'pan-y' }} {...overlayHandlers} />
       </div>
     </div>
   );

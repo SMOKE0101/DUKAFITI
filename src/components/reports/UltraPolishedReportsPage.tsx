@@ -122,18 +122,18 @@ const UltraPolishedReportsPage = () => {
     
     switch (salesChartResolution) {
       case 'hourly':
-        chartFromDate = addHours(now, -23);
+        chartFromDate = addHours(now, -71);
         chartFromDate = startOfHour(chartFromDate);
         bucketFormat = 'hour';
-        for (let i = 0; i < 24; i++) {
+        for (let i = 0; i < 72; i++) {
           timePoints.push(addHours(chartFromDate, i));
         }
         break;
       case 'daily':
-        chartFromDate = addDays(now, -29);
+        chartFromDate = addDays(now, -89);
         chartFromDate = startOfDay(chartFromDate);
         bucketFormat = 'day';
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 90; i++) {
           timePoints.push(addDays(chartFromDate, i));
         }
         break;
@@ -210,7 +210,7 @@ const UltraPolishedReportsPage = () => {
         chartFromDate = startOfDay(now);
         break;
       case '2weeks':
-        chartFromDate = addDays(startOfDay(now), -13);
+        chartFromDate = addDays(startOfDay(now), -59);
         break;
       default:
         chartFromDate = startOfDay(now);
@@ -239,7 +239,7 @@ const UltraPolishedReportsPage = () => {
     } else {
       const dailyData: Record<string, number> = {};
       
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < 60; i++) {
         const date = addDays(chartFromDate, i);
         const dateKey = formatDateForBucket(date, 'day');
         dailyData[dateKey] = 0;

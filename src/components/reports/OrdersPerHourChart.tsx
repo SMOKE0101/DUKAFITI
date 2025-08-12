@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
+import { useDragPanWindow } from '../../hooks/useDragPanWindow';
 
 interface OrdersPerHourChartProps {
   data: Array<{ hour: string; orders: number }>;
@@ -34,6 +35,17 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
     if (isTablet) return 11;
     return 12;
   };
+  const defaultWindow = useMemo(() => {
+    if (view === 'daily') return Math.min(24, data.length);
+    return Math.min(14, data.length);
+  }, [view, data.length]);
+
+  const { start, end, containerRef, overlayHandlers } = useDragPanWindow({
+    dataLength: data.length,
+    windowSize: defaultWindow,
+  });
+
+  const visibleData = useMemo(() => data.slice(start, end), [data, start, end]);
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md ${
@@ -83,9 +95,9 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
         </div>
       </div>
 
-      <div className={`${isMobile ? 'h-80' : isTablet ? 'h-84' : 'h-80'}`}>
+      <div ref={containerRef} className={`${isMobile ? 'h-80' : isTablet ? 'h-84' : 'h-80'} relative`}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={getMargins()}>
+          <BarChart data={visibleData} margin={getMargins()}>
             <defs>
               <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.9} />
@@ -137,7 +149,7 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
               dataKey="orders" 
               radius={[2, 2, 0, 0]}
             >
-              {data.map((entry, index) => (
+              {visibleData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={entry.orders === maxOrders && maxOrders > 0 ? "url(#peakBarGradient)" : "url(#barGradient)"} 
@@ -146,6 +158,7 @@ const OrdersPerHourChart: React.FC<OrdersPerHourChartProps> = ({
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        <div className="absolute inset-0 z-10" style={{ touchAction: 'pan-y' }} {...overlayHandlers} />
       </div>
     </div>
   );
