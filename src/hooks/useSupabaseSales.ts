@@ -20,6 +20,8 @@ export const useSupabaseSales = () => {
           debtAmount: Number(details.debtAmount || details.debt_amount || 0),
           mpesaReference: details.mpesaReference || details.mpesa_reference || undefined,
           tillNumber: details.tillNumber || details.till_number || undefined,
+          discountAmount: Number(details.discountAmount || details.discount_amount || 0),
+          saleReference: details.saleReference || details.sale_reference || undefined,
         };
       }
       return {
