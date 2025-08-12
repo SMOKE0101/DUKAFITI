@@ -10,11 +10,9 @@ export const hideBottomNavigation = () => {
 
 export const showBottomNavigation = () => {
   const bottomNav = document.querySelector('[data-bottom-nav]') as HTMLElement;
-  if (bottomNav) {
+  if (bottomNav && bottomNav.getAttribute('data-hidden-by-modal') === 'true') {
     bottomNav.style.display = '';
-    if (bottomNav.getAttribute('data-hidden-by-modal') === 'true') {
-      bottomNav.removeAttribute('data-hidden-by-modal');
-    }
+    bottomNav.removeAttribute('data-hidden-by-modal');
   }
 };
 
