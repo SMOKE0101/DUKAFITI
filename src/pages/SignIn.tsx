@@ -86,7 +86,7 @@ const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-accent/10 flex">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-accent/10 flex overflow-x-hidden">
       {/* Left Panel - Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative">
         {/* Back Button */}
@@ -123,7 +123,7 @@ const SignIn = () => {
           {/* Email Confirmation Message */}
           {confirmationMessage && (
             <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-2xl p-6 shadow-lg">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/10 dark:to-teal-900/10 rounded-full -translate-y-16 translate-x-16 opacity-50" />
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/10 dark:to-teal-900/10 rounded-full -translate-y-12 translate-x-8 opacity-50" />
               <div className="relative flex items-start gap-4">
                 <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Mail className="w-6 h-6 text-white" />

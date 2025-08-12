@@ -113,9 +113,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
       // For variant products, only update stock derivation quantity
       if (product.is_parent) {
         updatedProduct.stock_derivation_quantity = parseInt(formData.stockDerivationQuantity);
+        // Allow updating parent stock and threshold as well
+        updatedProduct.currentStock = isUnspecifiedStock ? -1 : parseInt(formData.currentStock);
+        updatedProduct.lowStockThreshold = isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold);
       } else {
         // For regular products, update pricing and stock info
-        updatedProduct.costPrice = isUnspecifiedStock ? 0 : parseFloat(formData.costPrice);
+        const parsedCost = formData.costPrice ? parseFloat(formData.costPrice) : 0;
+        updatedProduct.costPrice = parsedCost;
         updatedProduct.sellingPrice = parseFloat(formData.sellingPrice);
         updatedProduct.currentStock = isUnspecifiedStock ? -1 : parseInt(formData.currentStock);
         updatedProduct.lowStockThreshold = isUnspecifiedStock ? 0 : parseInt(formData.lowStockThreshold);
@@ -237,26 +241,21 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
                   <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
                     Buying Price (KES) *
                   </Label>
-                  {isUnspecifiedStock && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">Disabled for unspecified-quantity items</p>
-                  )}
                   <div className="relative">
-                    <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
-                      isUnspecifiedStock ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'
-                    } text-sm font-mono`}>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
                       KES
                     </span>
                     <Input
                       id="costPrice"
                       type="number"
                       step="0.01"
-                      value={isUnspecifiedStock ? '' : formData.costPrice}
+                      value={formData.costPrice}
                       onChange={(e) => setFormData(prev => ({ ...prev, costPrice: e.target.value }))}
                       className={`h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 ${
                         errors.costPrice ? 'border-red-500' : ''
-                      } ${isUnspecifiedStock ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      placeholder={isUnspecifiedStock ? "Disabled" : "0.00"}
-                      disabled={isUnspecifiedStock || loading}
+                      }`}
+                      placeholder="0.00"
+                      disabled={loading}
                     />
                   </div>
                   {errors.costPrice && <p className="text-red-500 text-sm mt-2 font-mono">{errors.costPrice}</p>}
@@ -315,7 +314,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
             )}
 
             {/* Stock Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-6 ${isUnspecifiedStock ? 'hidden' : ''}`}>
               {/* Current Stock */}
               <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
                 <Label htmlFor="currentStock" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
@@ -362,7 +361,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
             </div>
 
             {/* Category */}
-            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+            <div className={`border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent ${isUnspecifiedStock ? 'hidden' : ''}`}>
               <Label htmlFor="category" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
                 Category *
               </Label>

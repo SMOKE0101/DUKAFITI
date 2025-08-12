@@ -132,7 +132,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       let salesProcessed = 0;
       for (const item of cart) {
         const itemTotal = item.sellingPrice * item.quantity;
-        const profit = (item.sellingPrice - item.costPrice) * item.quantity;
+        const profit = item.costPrice > 0 ? (item.sellingPrice - item.costPrice) * item.quantity : 0;
         
         const saleData: Omit<Sale, 'id' | 'synced'> = {
           productId: item.id,
