@@ -60,23 +60,23 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
         });
 
     } else if (timeframe === 'daily') {
-      // Cap to last 365 days for offline
-      const capStart = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-      const candidate = earliestSaleDate
-        ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), earliestSaleDate.getDate())
-        : capStart;
-      const startDate = new Date(Math.max(candidate.getTime(), capStart.getTime()));
+      // Fixed window: last 14 days (including today)
+      const startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 13);
+      startDate.setHours(0, 0, 0, 0);
 
-      for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + i);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         ordersMap.set(key, 0);
       }
 
-      // Count orders by day across full range
+      // Count orders by day within fixed window
       sales.forEach((sale) => {
-        const saleDate = new Date(sale.timestamp);
-        if (saleDate >= startDate && saleDate <= now) {
-          const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}`;
+        const sd = new Date(sale.timestamp);
+        if (sd >= startDate && sd <= now) {
+          const key = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}-${String(sd.getDate()).padStart(2, '0')}`;
           ordersMap.set(key, (ordersMap.get(key) || 0) + 1);
         }
       });
@@ -95,28 +95,20 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
         });
 
     } else {
-      // Cap to last 36 months for offline
-      const capStartMonth = new Date(now.getFullYear(), now.getMonth() - 35, 1);
-      const candidateMonth = earliestSaleDate
-        ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), 1)
-        : capStartMonth;
-      const startMonth = new Date(Math.max(candidateMonth.getTime(), capStartMonth.getTime()));
+      // Fixed window: last 12 months (including current month)
+      const startMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-      const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      for (
-        let m = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
-        m <= endMonth;
-        m.setMonth(m.getMonth() + 1)
-      ) {
+      for (let i = 0; i < 12; i++) {
+        const m = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1);
         const key = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
         ordersMap.set(key, 0);
       }
 
-      // Count orders by month across full range
+      // Count orders by month within fixed window
       sales.forEach((sale) => {
-        const saleDate = new Date(sale.timestamp);
-        if (saleDate >= startMonth && saleDate <= now) {
-          const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+        const sd = new Date(sale.timestamp);
+        if (sd >= startMonth && sd <= now) {
+          const key = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}`;
           ordersMap.set(key, (ordersMap.get(key) || 0) + 1);
         }
       });
@@ -137,7 +129,7 @@ const OrdersBarChart: React.FC<OrdersBarChartProps> = ({ sales }) => {
   }, [sales, timeframe]);
 
   const totalOrders = chartData.reduce((sum, item) => sum + item.orders, 0);
-  const windowSize = useMemo(() => (timeframe === 'hourly' ? 24 : timeframe === 'daily' ? 30 : 12), [timeframe]);
+  const windowSize = useMemo(() => (timeframe === 'hourly' ? 24 : timeframe === 'daily' ? 14 : 12), [timeframe]);
   const { start, end, containerRef, overlayHandlers, isDragging } = useDragPanWindow({
     dataLength: chartData.length,
     windowSize,

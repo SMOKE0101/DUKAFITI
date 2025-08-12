@@ -26,24 +26,23 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
     const now = new Date();
     const dataMap = new Map<string, number>();
 
-    // Determine earliest sale date for full history in daily/monthly views
-    const earliestSaleDate = sales.length
-      ? new Date(Math.min(...sales.map((s) => new Date(s.timestamp).getTime())))
-      : null;
-
     if (timeframe === 'hourly') {
-      // Last 48 hours - initialize all hours
-      for (let i = 47; i >= 0; i--) {
-        const hourDate = new Date(now.getTime() - i * 60 * 60 * 1000);
-        const key = `${hourDate.getFullYear()}-${String(hourDate.getMonth() + 1).padStart(2, '0')}-${String(hourDate.getDate()).padStart(2, '0')}-${String(hourDate.getHours()).padStart(2, '0')}`;
+      // Fixed window: last 24 hours
+      const start = new Date(now);
+      start.setHours(now.getHours() - 23, 0, 0, 0);
+
+      for (let i = 0; i < 24; i++) {
+        const hour = new Date(start);
+        hour.setHours(start.getHours() + i, 0, 0, 0);
+        const key = `${hour.getFullYear()}-${String(hour.getMonth() + 1).padStart(2, '0')}-${String(hour.getDate()).padStart(2, '0')}-${String(hour.getHours()).padStart(2, '0')}`;
         dataMap.set(key, 0);
       }
 
-      // Aggregate sales by hour (last 48h only)
+      // Aggregate sales by hour within fixed window
       sales.forEach((sale) => {
-        const saleDate = new Date(sale.timestamp);
-        if (saleDate >= new Date(now.getTime() - 48 * 60 * 60 * 1000)) {
-          const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}-${String(saleDate.getHours()).padStart(2, '0')}`;
+        const d = new Date(sale.timestamp);
+        if (d >= start && d <= now) {
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}`;
           dataMap.set(key, (dataMap.get(key) || 0) + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)));
         }
       });
@@ -51,8 +50,7 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
       return Array.from(dataMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([key, revenue]) => {
-          const [year, month, day, hour] = key.split('-');
-          const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour));
+          const [, , , hour] = key.split('-');
           return {
             label: key,
             revenue,
@@ -62,23 +60,23 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         });
 
     } else if (timeframe === 'daily') {
-      // Cap to last 365 days for offline
-      const capStart = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-      const candidate = earliestSaleDate
-        ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), earliestSaleDate.getDate())
-        : capStart;
-      const startDate = new Date(Math.max(candidate.getTime(), capStart.getTime()));
+      // Fixed window: last 30 days (including today)
+      const start = new Date(now);
+      start.setDate(start.getDate() - 29);
+      start.setHours(0, 0, 0, 0);
 
-      for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      for (let i = 0; i < 30; i++) {
+        const day = new Date(start);
+        day.setDate(start.getDate() + i);
+        const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
         dataMap.set(key, 0);
       }
 
-      // Aggregate sales by day across full range
+      // Aggregate sales by day within fixed window
       sales.forEach((sale) => {
-        const saleDate = new Date(sale.timestamp);
-        if (saleDate >= startDate && saleDate <= now) {
-          const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}`;
+        const d = new Date(sale.timestamp);
+        if (d >= start && d <= now) {
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
           dataMap.set(key, (dataMap.get(key) || 0) + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)));
         }
       });
@@ -97,28 +95,20 @@ const EnhancedSalesTrendChart: React.FC<EnhancedSalesTrendChartProps> = ({ sales
         });
 
     } else {
-      // Cap to last 36 months for offline
-      const capStartMonth = new Date(now.getFullYear(), now.getMonth() - 35, 1);
-      const candidateMonth = earliestSaleDate
-        ? new Date(earliestSaleDate.getFullYear(), earliestSaleDate.getMonth(), 1)
-        : capStartMonth;
-      const startMonth = new Date(Math.max(candidateMonth.getTime(), capStartMonth.getTime()));
+      // Fixed window: last 12 months (including current month)
+      const startMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-      const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      for (
-        let m = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
-        m <= endMonth;
-        m.setMonth(m.getMonth() + 1)
-      ) {
+      for (let i = 0; i < 12; i++) {
+        const m = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1);
         const key = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
         dataMap.set(key, 0);
       }
 
-      // Aggregate sales by month across full range
+      // Aggregate sales by month within fixed window
       sales.forEach((sale) => {
-        const saleDate = new Date(sale.timestamp);
-        if (saleDate >= startMonth && saleDate <= now) {
-          const key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+        const d = new Date(sale.timestamp);
+        if (d >= startMonth && d <= now) {
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
           dataMap.set(key, (dataMap.get(key) || 0) + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)));
         }
       });
