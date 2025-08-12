@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Package, CreditCard, Smartphone, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
@@ -252,14 +252,16 @@ useEffect(() => {
       >
         
         {/* Close button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 p-0 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 z-10"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+        <DialogClose asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Close"
+            className="absolute top-4 right-4 w-8 h-8 p-0 rounded-full bg-muted hover:bg-accent z-50"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </DialogClose>
 
         <div className="h-full flex flex-col">
           {/* Sticky Header + Tabs + Column Headers */}

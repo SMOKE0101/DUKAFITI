@@ -199,9 +199,27 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         }
 
         salesProcessed++;
-      }
+       }
 
-      // Show success message
+       // Ensure customer's total purchases are updated for all payment types
+       try {
+         if (selectedCustomerId && customer) {
+           const newTotalPurchases = (customer.totalPurchases || 0) + total;
+           // If we already updated in the debt path, this will just ensure lastPurchaseDate stays fresh
+           await updateCustomer(selectedCustomerId, {
+             totalPurchases: newTotalPurchases,
+             lastPurchaseDate: new Date().toISOString(),
+           });
+           // Notify UI listeners
+           window.dispatchEvent(new CustomEvent('customer-purchases-updated', {
+             detail: { customerId: selectedCustomerId, newTotalPurchases }
+           }));
+         }
+       } catch (e) {
+         console.warn('[SalesCheckout] Failed to update customer total purchases (non-blocking):', e);
+       }
+ 
+       // Show success message
       const successMessage = paymentMethod === 'debt' 
         ? `Sale completed! Customer debt increased by ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`
         : `Successfully processed ${salesProcessed} item(s) for ${formatCurrency(total)}.${!isOnline ? ' (will sync when online)' : ''}`;

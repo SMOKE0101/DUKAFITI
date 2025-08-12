@@ -377,9 +377,24 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
         }
 
         salesProcessed++;
-      }
-
-      // Force reload products to refresh stock display
+       }
+ 
+       // Ensure customer's total purchases are updated for all payment types
+       try {
+         const targetCustomer = updatedCustomer || selectedCustomer;
+         if (targetCustomer) {
+           const newTotalPurchases = (targetCustomer.totalPurchases || 0) + total;
+           // If we already updated during debt handling, this keeps lastPurchaseDate fresh without double counting on server
+           await updateCustomer(targetCustomer.id, {
+             totalPurchases: newTotalPurchases,
+             lastPurchaseDate: new Date().toISOString(),
+           });
+         }
+       } catch (e) {
+         console.warn('[NewSalesCheckout] Failed to update customer total purchases (non-blocking):', e);
+       }
+ 
+       // Force reload products to refresh stock display
       console.log('[NewSalesCheckout] Forcing product reload to refresh stock displays');
       try {
         if (forceReloadProducts) {

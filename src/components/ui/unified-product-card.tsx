@@ -190,7 +190,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
           {/* Sales variant */}
           {variant === 'sales' && (
             <div className="space-y-1">
-              {price !== undefined && (
+              {(price !== undefined && price > 0 && !(product as any).is_parent) && (
                 <div className="text-sm font-bold text-green-600 dark:text-green-400">
                   {formatCurrency(price)}
                 </div>
