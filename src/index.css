@@ -202,3 +202,33 @@
     border-radius: 0;
   }
 }
+
+/* Global modal scroll lock (applied to <html>) */
+html.modal-open,
+html.modal-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* Keyboard-aware modal: fills visual viewport on mobile */
+@media (max-width: 768px) {
+  .kb-aware-modal {
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: var(--vvh);
+    max-height: var(--vvh);
+    border-radius: 0 !important;
+    overscroll-behavior: contain;
+  }
+
+  .kb-aware-modal .kb-scroll-area {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    height: auto; /* flex-1 handles height; var(--vvh) on parent ensures area is keyboard-aware */
+  }
+}
