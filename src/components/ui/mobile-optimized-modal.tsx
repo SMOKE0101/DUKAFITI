@@ -69,7 +69,7 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
             className="p-4 pt-2"
             style={{
               minHeight: 'fit-content',
-              paddingBottom: 'env(safe-area-inset-bottom, 1rem)'
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 1rem) + 4rem)'
             }}
           >
             {children}
