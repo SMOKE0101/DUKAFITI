@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
@@ -12,7 +13,7 @@ import { SalesService } from '../../services/salesService';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
-import { User, UserPlus, Receipt, Banknote, DollarSign, AlertTriangle, Split } from 'lucide-react';
+import { User, UserPlus, Receipt, Banknote, DollarSign, AlertTriangle, Split, ChevronDown } from 'lucide-react';
 import AddCustomerModal from './AddCustomerModal';
 import SplitPaymentModal from './SplitPaymentModal';
 import { SplitPaymentData } from '../../types/cart';
@@ -39,6 +40,8 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isSplitPaymentModalOpen, setIsSplitPaymentModalOpen] = useState(false);
   const [splitPaymentData, setSplitPaymentData] = useState<SplitPaymentData | null>(null);
+  const [showRefInput, setShowRefInput] = useState(false);
+  const [salesReference, setSalesReference] = useState('');
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -284,12 +287,13 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
             cashAmount: (splitPaymentData.methods.cash?.amount || 0) * (itemTotal / total),
             mpesaAmount: (splitPaymentData.methods.mpesa?.amount || 0) * (itemTotal / total),
             debtAmount: (splitPaymentData.methods.debt?.amount || 0) * (itemTotal / total),
-            mpesaReference: splitPaymentData.methods.mpesa?.reference,
             discountAmount: (splitPaymentData.methods.discount?.amount || 0) * (itemTotal / total),
+            saleReference: salesReference || undefined,
           } : {
             cashAmount: paymentMethod === 'cash' ? itemTotal : 0,
             mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,
             debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
+            saleReference: salesReference || undefined,
           },
           timestamp: new Date().toISOString(),
           clientSaleId: clientSaleId,

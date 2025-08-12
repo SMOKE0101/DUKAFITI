@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
@@ -10,6 +11,7 @@ import { useUnifiedSyncManager } from '../../hooks/useUnifiedSyncManager';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
+import { ChevronDown } from 'lucide-react';
 
 interface SalesCheckoutProps {
   cart: CartItem[];
@@ -35,6 +37,9 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
   const { updateProduct, products } = useUnifiedProducts();
   const { updateCustomer } = useUnifiedCustomers();
   const { pendingOperations } = useUnifiedSyncManager();
+
+  const [showRefInput, setShowRefInput] = useState(false);
+  const [salesReference, setSalesReference] = useState('');
 
   const total = cart.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
   const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
@@ -149,6 +154,7 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
             cashAmount: paymentMethod === 'cash' ? itemTotal : 0,
             mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,
             debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
+            saleReference: salesReference || undefined,
           },
           timestamp: new Date().toISOString(),
           clientSaleId: clientSaleId,
@@ -263,6 +269,22 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
           Please select a customer for debt transactions
         </div>
+      )}
+
+      {/* Toggle for Sales Reference */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setShowRefInput(v => !v)} aria-expanded={showRefInput} aria-controls="sales-ref-input">
+          <ChevronDown className={`h-4 w-4 transition-transform ${showRefInput ? 'rotate-180' : ''}`} />
+        </Button>
+      </div>
+      {showRefInput && (
+        <Input
+          id="sales-ref-input"
+          placeholder="Sales reference (optional)"
+          value={salesReference}
+          onChange={(e) => setSalesReference(e.target.value)}
+          className="w-full"
+        />
       )}
       
       <Button

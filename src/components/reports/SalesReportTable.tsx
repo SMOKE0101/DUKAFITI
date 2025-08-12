@@ -376,23 +376,31 @@ const SalesReportTable: React.FC<SalesReportTableProps> = ({
                     {isExpanded && (
                       <TableRow key={`details-${group.groupId}`} className="border-b border-border bg-muted/30">
                         <TableCell colSpan={6} className="py-3 px-6 text-sm text-muted-foreground">
-                          <div className="flex flex-wrap gap-2">
-                            {Array.from(
-                              (() => {
-                                const map = new Map<string, { productName: string; quantity: number }>();
-                                for (const it of group.items) {
-                                  const key = it.productName;
-                                  const existing = map.get(key);
-                                  if (existing) existing.quantity += it.quantity;
-                                  else map.set(key, { ...it });
-                                }
-                                return map.values();
-                              })()
-                            ).map((item, idx) => (
-                              <Badge key={idx} variant="outline" className="px-2 py-0.5 text-[11px]">
-                                {item.productName} × {item.quantity}
-                              </Badge>
-                            ))}
+                          <div className="flex flex-col gap-2">
+                            {group.paymentDetails && (group.paymentDetails as any).saleReference && (
+                              <div className="text-foreground text-sm break-words max-w-full">
+                                <span className="font-semibold mr-2">Reference:</span>
+                                <span className="font-mono whitespace-pre-wrap break-words">{(group.paymentDetails as any).saleReference}</span>
+                              </div>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              {Array.from(
+                                (() => {
+                                  const map = new Map<string, { productName: string; quantity: number }>();
+                                  for (const it of group.items) {
+                                    const key = it.productName;
+                                    const existing = map.get(key);
+                                    if (existing) existing.quantity += it.quantity;
+                                    else map.set(key, { ...it });
+                                  }
+                                  return map.values();
+                                })()
+                              ).map((item, idx) => (
+                                <Badge key={idx} variant="outline" className="px-2 py-0.5 text-[11px]">
+                                  {item.productName} × {item.quantity}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </TableCell>
                       </TableRow>

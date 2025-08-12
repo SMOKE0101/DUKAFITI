@@ -79,14 +79,15 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
           ? sale.total || (sale.sellingPrice * sale.quantity)
           : (sale.paymentDetails?.debtAmount || 0);
         
-      if (debtAmount > 0) {
+        if (debtAmount > 0) {
           debtTransactionsList.push({
             id: `sale-${sale.id}`,
             customer: sale.customerName || 'Unknown Customer',
             amount: debtAmount,
             paymentMethod: sale.paymentMethod,
             transactionType: 'debt_sale',
-            timestamp: sale.timestamp
+            timestamp: sale.timestamp,
+            reference: sale.paymentDetails?.saleReference
           });
         }
       }

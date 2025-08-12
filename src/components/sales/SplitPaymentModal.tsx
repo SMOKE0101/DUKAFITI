@@ -34,7 +34,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   });
 
   const [sliderValues, setSliderValues] = useState([50]);
-  const [mpesaReference, setMpesaReference] = useState('');
+  
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   
   // Direct amount inputs
@@ -44,10 +44,10 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
     debt: string;
     discount: string;
   }>({
-    cash: '',
-    mpesa: '',
-    debt: '',
-    discount: '0.00'
+    cash: '0',
+    mpesa: '0',
+    debt: '0',
+    discount: '0'
   });
 
   const [lockedInputs, setLockedInputs] = useState<Set<string>>(new Set());
@@ -58,13 +58,12 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
       setSelectedMethods({ cash: false, mpesa: true, debt: false, discount: true });
       // Start with full amount on M-Pesa and zero discount
       setSliderValues([99]); // visual bias toward first segment
-      setMpesaReference('');
       setSelectedCustomerId('');
       setDirectAmounts({
-        cash: '0.00',
-        mpesa: total.toFixed(2),
-        debt: '0.00',
-        discount: '0.00'
+        cash: '0',
+        mpesa: Math.round(total).toString(),
+        debt: '0',
+        discount: '0'
       });
     }
   }, [open, total]);
@@ -110,21 +109,21 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
 
     // Compute amounts and percentages against total for all enabled (including discount)
     enabledAll.forEach(method => {
-      const amount = parseCurrency(directAmounts[method as keyof typeof directAmounts]) || 0;
+      const raw = parseCurrency(directAmounts[method as keyof typeof directAmounts]) || 0;
+      const amount = Math.max(0, Math.round(raw));
       const pct = total > 0 ? (amount / total) * 100 : 0;
       if (method === 'cash') methods.cash = { amount, percentage: pct };
-      if (method === 'mpesa') methods.mpesa = { amount, percentage: pct, reference: mpesaReference };
+      if (method === 'mpesa') methods.mpesa = { amount, percentage: pct };
       if (method === 'debt') methods.debt = { amount, percentage: pct, customerId: selectedCustomerId };
       if (method === 'discount') methods.discount = { amount, percentage: pct };
     });
 
-    // Validate total (including discount) within epsilon
-    const sumAll = enabledAll.reduce((s, m) => s + (parseCurrency(directAmounts[m as keyof typeof directAmounts]) || 0), 0);
-    const epsilon = 0.01;
-    const isValid = Math.abs(sumAll - total) <= epsilon && nonDiscountEnabled >= 1;
+    // Validate total (including discount) for exact integer match
+    const sumAll = enabledAll.reduce((s, m) => s + Math.round(parseCurrency(directAmounts[m as keyof typeof directAmounts]) || 0), 0);
+    const isValid = sumAll === Math.round(total) && nonDiscountEnabled >= 1;
 
     return { methods, total, isValid };
-  }, [selectedMethods, directAmounts, total, mpesaReference, selectedCustomerId]);
+  }, [selectedMethods, directAmounts, total, selectedCustomerId]);
 
   const paymentData = calculateAmounts();
   const enabledAllMethods = Object.entries(selectedMethods).filter(([, v]) => v).map(([m]) => m);
@@ -141,21 +140,23 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
 
     const boundaries = [0, ...sorted, 100];
     const percents = boundaries.slice(0, -1).map((b, i) => (boundaries[i + 1] - b));
-    const newAmounts = { cash: '0.00', mpesa: '0.00', debt: '0.00', discount: '0.00' } as typeof directAmounts;
+    const newAmounts = { cash: '0', mpesa: '0', debt: '0', discount: '0' } as typeof directAmounts;
+
+    let allocated = 0;
     percents.forEach((p, i) => {
-      const amt = ((total * p) / 100).toFixed(2);
-      newAmounts[methods[i]] = amt;
+      const isLast = i === percents.length - 1;
+      const amt = isLast ? Math.max(0, Math.round(total) - allocated) : Math.round((Math.round(total) * p) / 100);
+      newAmounts[methods[i]] = String(amt);
+      allocated += amt;
     });
+
     setDirectAmounts(newAmounts);
     setLockedInputs(new Set());
   }, [enabledAllMethods, total]);
   
   const handleAmountChange = useCallback((method: keyof typeof directAmounts, value: string) => {
-    if (method === 'discount') {
-      // Discount participates in distribution and locks behavior like others
-    }
-
-    const newVal = parseCurrency(value) || 0;
+    const raw = parseCurrency(value) || 0;
+    const newInt = Math.max(0, Math.round(raw));
     const methods = enabledAllMethods as Array<keyof typeof directAmounts>;
     if (!methods.includes(method)) return;
 
@@ -168,7 +169,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
 
     // Build a working copy preserving current values
     const working = { ...directAmounts } as typeof directAmounts;
-    working[method] = newVal.toFixed(2);
+    working[method] = String(newInt);
 
     const locks = new Set(lockedInputs);
     locks.add(method);
@@ -181,21 +182,21 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
       const unlocked = methods.find(m => !locks.has(m)) as keyof typeof directAmounts | undefined;
       const sumLocked = methods
         .filter(m => m !== unlocked)
-        .reduce((s, m) => s + (parseCurrency(working[m]) || 0), 0);
-      const remainder = Math.max(0, Math.min(total, total - sumLocked));
-      if (unlocked) working[unlocked] = remainder.toFixed(2);
+        .reduce((s, m) => s + Math.round(parseCurrency(working[m]) || 0), 0);
+      const remainder = Math.max(0, Math.min(Math.round(total), Math.round(total) - sumLocked));
+      if (unlocked) working[unlocked] = String(remainder);
     }
 
     setDirectAmounts(working);
 
     // Update slider based on current distribution
-    const amounts = methods.map(m => parseCurrency(working[m]) || 0);
+    const amounts = methods.map(m => Math.round(parseCurrency(working[m]) || 0));
     const sum = amounts.reduce((s, a) => s + a, 0);
     if (sum > 0 && methods.length >= 2) {
       const cumulative: number[] = [];
       let acc = 0;
       for (let i = 0; i < methods.length - 1; i++) {
-        acc += (amounts[i] / total) * 100;
+        acc += (amounts[i] / Math.max(1, Math.round(total))) * 100;
         cumulative.push(Math.max(1, Math.min(99, Math.round(acc))));
       }
       setSliderValues(cumulative);
@@ -334,7 +335,9 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                       </div>
                       <div className="flex items-center gap-2 flex-1">
                         <Input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           value={directAmounts[method as keyof typeof directAmounts]}
                           onChange={(e) => handleAmountChange(method as keyof typeof directAmounts, e.target.value)}
                           className={`h-10 text-sm text-right flex-1 min-w-0 border-2 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
@@ -346,11 +349,9 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                                   ? 'border-green-300 focus:border-green-500 bg-white dark:bg-green-950/10'
                                   : 'border-blue-300 focus:border-blue-500 bg-white dark:bg-blue-950/10'
                           }`}
-                          step="0.01"
-                          min="0"
-                          max={total}
-                          placeholder="0.00"
+                          placeholder="0"
                           onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => { if (e.key === '.' || e.key === ',') e.preventDefault(); }}
                         />
                         <div className={`text-xs font-semibold w-12 text-right px-2 py-1 rounded ${
                           isDiscount
@@ -371,19 +372,6 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
           </div>
         )}
 
-        {/* M-Pesa Reference */}
-        {selectedMethods.mpesa && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">M-Pesa Reference (Optional)</Label>
-            <Input
-              type="text"
-              value={mpesaReference}
-              onChange={(e) => setMpesaReference(e.target.value)}
-              placeholder="Enter M-Pesa reference number"
-              className="h-10"
-            />
-          </div>
-        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4">
