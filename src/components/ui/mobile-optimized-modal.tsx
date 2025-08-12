@@ -64,7 +64,7 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
         </DialogHeader>
 
         {/* Scrollable Content */}
-        <ScrollArea className="flex-1 overflow-auto" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+        <ScrollArea className="flex-1 overflow-hidden">
           <div 
             className="p-4 pt-2"
             style={{
