@@ -35,12 +35,12 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
       <DialogContent 
         className={`
           w-[95vw] max-w-md mx-auto my-4 p-0 
-          max-h-[calc(100vh-2rem)] flex flex-col
+          max-h-[calc(var(--vvh,100dvh)-2rem)] flex flex-col overflow-hidden touch-pan-y
           dark:bg-slate-800 dark:border-slate-700
           ${className}
         `}
         style={{ 
-          maxHeight,
+          maxHeight: `min(${maxHeight}, var(--vvh, 100dvh))`,
           position: 'fixed',
           top: '50%',
           left: '50%',
