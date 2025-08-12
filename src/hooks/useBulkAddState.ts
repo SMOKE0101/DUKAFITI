@@ -170,16 +170,24 @@ export const useBulkAddState = () => {
   const getValidProducts = useCallback((): Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[] => {
     const validRows = spreadsheetData.filter(row => row.isValid && row.name.trim());
     
-    return validRows.map((row, index) => ({
-      name: row.name.trim(),
-      category: row.category || 'General',
-      costPrice: row.costPrice === '' ? 0 : Number(row.costPrice),
-      sellingPrice: Number(row.sellingPrice),
-      currentStock: row.currentStock === '' ? -1 : Number(row.currentStock),
-      lowStockThreshold: row.lowStockThreshold === '' ? 10 : Number(row.lowStockThreshold),
-      sku: generateSKU(row.category || 'General', row.name, index + 1), // Auto-generated SKU
-      image_url: row.image_url || null, // Ensure image_url is properly transferred
-    }));
+    return validRows.map((row, index) => {
+      const isUncountable = (
+        row.currentStock === '' || Number(row.currentStock) === 0
+      ) && (
+        row.lowStockThreshold === '' || Number(row.lowStockThreshold) === 0
+      );
+
+      return {
+        name: row.name.trim(),
+        category: row.category || 'General',
+        costPrice: row.costPrice === '' ? 0 : Number(row.costPrice),
+        sellingPrice: Number(row.sellingPrice),
+        currentStock: isUncountable ? -1 : Number(row.currentStock),
+        lowStockThreshold: isUncountable ? 0 : (row.lowStockThreshold === '' ? 10 : Number(row.lowStockThreshold)),
+        sku: generateSKU(row.category || 'General', row.name, index + 1), // Auto-generated SKU
+        image_url: row.image_url || null, // Ensure image_url is properly transferred
+      };
+    });
   }, [spreadsheetData, generateSKU]);
 
   // Calculate stats

@@ -87,6 +87,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
   const stockStatus = getStockStatus();
   const isOutOfStock = variant === 'sales' && stock === 0;
   const isLowStock = variant === 'inventory' && currentStock !== undefined && lowStockThreshold && currentStock <= lowStockThreshold && currentStock > 0;
+  const isUncountable = currentStock === -1;
 
   const handleCardClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -290,10 +291,16 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
               )}
               {onRestock && (
                 <button
-                  onClick={(e) => handleActionClick(e, () => onRestock(product))}
-                  className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
-                  title="Restock Product"
-                  disabled={!showIcons}
+                  onClick={(e) => handleActionClick(e, () => { if (!isUncountable) onRestock(product); })}
+                  className={cn(
+                    "p-2 rounded-full shadow-lg transition-all duration-200 transform",
+                    isUncountable
+                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                      : "bg-primary text-primary-foreground hover:scale-105"
+                  )}
+                  title={isUncountable ? "Restock unavailable for uncountable products" : "Restock Product"}
+                  disabled={!showIcons || isUncountable}
+                  aria-disabled={isUncountable}
                 >
                   <Plus className="w-4 h-4" />
                 </button>
