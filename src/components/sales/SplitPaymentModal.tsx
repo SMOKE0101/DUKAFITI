@@ -373,23 +373,25 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         )}
 
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 pt-4">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleConfirm}
-            disabled={!paymentData.isValid}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-          >
-            <Split className="h-4 w-4 mr-2" />
-            Apply Split
-          </Button>
+        {/* Sticky Action Bar */}
+        <div className="sticky bottom-0 -mx-4 px-4 pt-3 pb-safe bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirm}
+              disabled={!paymentData.isValid}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              <Split className="h-4 w-4 mr-2" />
+              Apply Split
+            </Button>
+          </div>
         </div>
       </div>
     </MobileOptimizedModal>
