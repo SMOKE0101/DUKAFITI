@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { Sparkles } from 'lucide-react';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
 import TemplateSelectionModal from './TemplateSelectionModal';
+import useScrollIntoViewOnFocus from '@/hooks/useScrollIntoViewOnFocus';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -41,6 +42,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templatesInitialized, setTemplatesInitialized] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  useScrollIntoViewOnFocus(containerRef);
 
   useEffect(() => {
     if (editingProduct) {
@@ -209,7 +213,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[90vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[calc(var(--vvh))] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">
           {/* Modern Header */}
           <div className="border-b-4 border-green-600 bg-white dark:bg-gray-900 p-4 sm:p-6 text-center flex-shrink-0">
             <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
@@ -220,7 +224,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             </DialogDescription>
           </div>
           
-          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 sm:p-6">
+          <div ref={containerRef} className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 sm:p-6" style={{ paddingBottom: 'calc(var(--kb, 0px) + env(safe-area-inset-bottom) + 96px)' }}>
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               {/* Use Templates Button */}
               <div className="mb-6">

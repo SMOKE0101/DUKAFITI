@@ -10,13 +10,21 @@ const VisualViewportProvider = () => {
       try {
         const vv = (window as any).visualViewport as VisualViewport | undefined;
         if (vv) {
-          root.style.setProperty("--vvh", `${Math.round(vv.height)}px`);
+          const vvh = Math.round(vv.height);
+          const kbHeight = Math.max(0, window.innerHeight - vvh);
+          root.style.setProperty("--vvh", `${vvh}px`);
+          root.style.setProperty("--kb", `${Math.round(kbHeight)}px`);
+          root.setAttribute('data-kb-open', kbHeight > 80 ? 'true' : 'false');
         } else {
           // Fallback
           root.style.setProperty("--vvh", `${window.innerHeight}px`);
+          root.style.setProperty("--kb", `0px`);
+          root.setAttribute('data-kb-open', 'false');
         }
       } catch {
         root.style.setProperty("--vvh", `${window.innerHeight}px`);
+        root.style.setProperty("--kb", `0px`);
+        root.setAttribute('data-kb-open', 'false');
       }
     };
 

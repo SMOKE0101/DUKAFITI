@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import useScrollIntoViewOnFocus from '@/hooks/useScrollIntoViewOnFocus';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,9 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
   const { createCustomer } = useUnifiedCustomers();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  useScrollIntoViewOnFocus(containerRef);
 
   const validateField = (name: string, value: string | number) => {
     const newErrors = { ...errors };
@@ -186,7 +190,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md w-[95vw] max-h-[95vh] overflow-y-auto bg-white dark:bg-slate-800 fixed z-[10002] mx-auto my-auto">
+      <DialogContent className="sm:max-w-md w-[95vw] max-h-[calc(var(--vvh))] overflow-hidden bg-white dark:bg-slate-800 fixed z-[10002] mx-auto my-auto flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-purple-600" />
@@ -199,8 +203,8 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
             )}
           </DialogTitle>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
+          <div ref={containerRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(var(--kb, 0px) + env(safe-area-inset-bottom) + 96px)' }}>
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
             <div>
               <Label htmlFor="name" className="text-sm font-bold text-gray-700">
@@ -332,7 +336,8 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
               )}
             </Button>
           </div>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
