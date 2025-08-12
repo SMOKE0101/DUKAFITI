@@ -95,37 +95,9 @@ const ModernSalesPage = () => {
         return;
       }
 
-      // For debt sales, update customer debt FIRST
-      if (formData.paymentMethod === 'debt' && formData.customerId && selectedCustomer) {
-        console.log('[ModernSalesPage] Processing debt sale - updating customer debt first');
-        
-        const debtUpdates = {
-          outstandingDebt: (selectedCustomer.outstandingDebt || 0) + totalAmount,
-          totalPurchases: (selectedCustomer.totalPurchases || 0) + totalAmount,
-          lastPurchaseDate: new Date().toISOString(),
-        };
-        
-        console.log('[ModernSalesPage] Customer debt update:', {
-          customerId: formData.customerId,
-          currentDebt: selectedCustomer.outstandingDebt,
-          additionalDebt: totalAmount,
-          newDebt: debtUpdates.outstandingDebt,
-          updates: debtUpdates
-        });
+      // For debt sales, rely on database trigger to update customer aggregates
+      // Proceed directly to sale creation
 
-        try {
-          await updateCustomer(formData.customerId, debtUpdates);
-          console.log('[ModernSalesPage] Customer debt updated successfully');
-        } catch (error) {
-          console.error('[ModernSalesPage] Customer debt update failed:', error);
-          toast({
-            title: "Customer Update Failed",
-            description: "Unable to update customer debt. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
 
       // Create the sale
       const saleData = {

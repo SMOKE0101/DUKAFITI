@@ -13,11 +13,11 @@ const transformDbCustomer = (dbCustomer: any): Customer => ({
   email: dbCustomer.email,
   address: dbCustomer.address,
   createdDate: dbCustomer.created_date || dbCustomer.created_at,
-  totalPurchases: dbCustomer.total_purchases || 0,
-  outstandingDebt: dbCustomer.outstanding_debt || 0,
-  creditLimit: dbCustomer.credit_limit || 1000,
+  totalPurchases: Number(dbCustomer.total_purchases ?? 0) || 0,
+  outstandingDebt: Number(dbCustomer.outstanding_debt ?? 0) || 0,
+  creditLimit: Number(dbCustomer.credit_limit ?? 1000) || 1000,
   lastPurchaseDate: dbCustomer.last_purchase_date,
-  riskRating: (dbCustomer.risk_rating as 'low' | 'medium' | 'high') || 'low',
+  riskRating: (String(dbCustomer.risk_rating || 'low').toLowerCase() as 'low' | 'medium' | 'high'),
 });
 
 export const useUnifiedCustomers = () => {
@@ -208,22 +208,25 @@ export const useUnifiedCustomers = () => {
                 !serverData.some(s => s.name === customer.name && s.phone === customer.phone)
               );
               
-              // For each server customer, check if we should preserve local changes
+              // For each server customer, prefer server aggregates unless there's a real pending local update
               const mergedData: Customer[] = [...unsyncedLocal];
+              
+              // Build a set of customer IDs with pending local updates
+              const pendingUpdateIds = new Set(
+                pendingOps
+                  .filter(op => op.type === 'customer' && op.operation === 'update' && op.data?.id)
+                  .map(op => op.data.id)
+              );
               
               for (const serverCustomer of serverData) {
                 const localCustomer = cached.find(c => c.id === serverCustomer.id);
                 
                 if (localCustomer) {
-                  // Always prefer local data if it's been recently updated
-                  const localUpdateTime = new Date(localCustomer.lastPurchaseDate || 0).getTime();
-                  const serverUpdateTime = new Date(serverCustomer.lastPurchaseDate || 0).getTime();
-                  
-                  // If local data is newer or equal, keep it; otherwise use server data
-                  if (localUpdateTime >= serverUpdateTime) {
-                    console.log('[UnifiedCustomers] Preserving local changes for customer:', localCustomer.name);
+                  if (localCustomer.id.startsWith('temp_') || pendingUpdateIds.has(serverCustomer.id)) {
+                    // Keep local temp or actively edited customers
                     mergedData.push(localCustomer);
                   } else {
+                    // Prefer authoritative server values (prevents stale debt/total overwrites)
                     mergedData.push(serverCustomer);
                   }
                 } else {
@@ -279,7 +282,7 @@ export const useUnifiedCustomers = () => {
       setLoading(false);
       isLoadingRef.current = false;
     }
-  }, [user?.id, isOnline, getCache, setCache]);
+  }, [user?.id, isOnline, getCache, setCache, pendingOps]);
 
   // Create customer
   const createCustomer = useCallback(async (customerData: Omit<Customer, 'id' | 'createdDate'>) => {

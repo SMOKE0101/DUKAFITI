@@ -226,24 +226,8 @@ const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
           lastPurchaseDate: new Date().toISOString(),
         };
         
-        // Update customer immediately in local state
-        updatedCustomer = { ...selectedCustomer, ...customerUpdates };
-        setSelectedCustomer(updatedCustomer);
-        
-        try {
-          // Handle temp customers differently
-          if (selectedCustomer.id.startsWith('temp_')) {
-            console.log('[NewSalesCheckout] Temp customer - skipping database update until sync');
-          } else {
-            await updateCustomer(selectedCustomer.id, customerUpdates);
-            console.log('[NewSalesCheckout] Customer debt updated successfully');
-          }
-        } catch (error) {
-          console.error('[NewSalesCheckout] Customer debt update failed:', error);
-          // For temp customers or sync failures, we'll proceed with the sale
-          // The debt will be applied when the customer syncs
-          console.log('[NewSalesCheckout] Continuing with sale despite customer update failure');
-        }
+        // Rely on DB trigger for customer aggregates; avoid client-side debt updates
+
       }
 
       // Process each item in the cart as a separate sale
@@ -363,27 +347,8 @@ const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
         salesProcessed++;
        }
  
-       // Ensure customer's total purchases are updated for all payment types
-try {
-  const targetCustomer = updatedCustomer || selectedCustomer;
-  if (targetCustomer) {
-    const lastPurchaseDate = new Date().toISOString();
-    if (debtAmount > 0) {
-      // Already updated totals in debt path; just refresh last purchase date
-      await updateCustomer(targetCustomer.id, {
-        lastPurchaseDate,
-      });
-    } else {
-      const newTotalPurchases = (targetCustomer.totalPurchases || 0) + total;
-      await updateCustomer(targetCustomer.id, {
-        totalPurchases: newTotalPurchases,
-        lastPurchaseDate,
-      });
-    }
-  }
-} catch (e) {
-  console.warn('[NewSalesCheckout] Failed to update customer totals (non-blocking):', e);
-}
+      // Customer totals are handled by DB trigger; no client-side adjustments needed
+
  
        // Force reload products to refresh stock display
       console.log('[NewSalesCheckout] Forcing product reload to refresh stock displays');

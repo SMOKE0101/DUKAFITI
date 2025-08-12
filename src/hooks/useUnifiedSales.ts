@@ -209,22 +209,11 @@ export const useUnifiedSales = () => {
           prev.map(s => s.id === newSale.id ? transformedSale : s)
         );
 
-        // Update cache and preserve any unsynced local (temp_) sales
-        const updatedSales = await supabase
-          .from('sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('timestamp', { ascending: false });
-        
-        if (updatedSales.data) {
-          const transformedData = updatedSales.data.map(transformDbSale);
-          const currentCached = getCache<Sale[]>('sales') || [];
-          const unsyncedLocal = currentCached.filter(s => s.id?.startsWith?.('temp_'));
-          const merged = [...unsyncedLocal, ...transformedData]
-            .filter((sale, index, self) => index === self.findIndex(s => s.id === sale.id))
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          setCache('sales', merged);
-        }
+        // Update cache without full refetch to speed up checkout
+        const currentCached = getCache<Sale[]>('sales') || [];
+        const merged = currentCached.map(s => s.id === newSale.id ? transformedSale : s);
+        setCache('sales', merged);
+
 
         return transformedSale;
       } catch (error) {

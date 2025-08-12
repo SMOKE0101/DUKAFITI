@@ -94,44 +94,9 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
       // Generate a clientSaleId for this checkout session to ensure idempotency across items
       const clientSaleId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-      // For debt sales, update customer debt FIRST to ensure it's processed
-      if (paymentMethod === 'debt' && selectedCustomerId && customer) {
-        console.log('[SalesCheckout] Processing debt sale - updating customer first:', {
-          customerId: selectedCustomerId,
-          customerName: customer.name,
-          currentDebt: customer.outstandingDebt,
-          currentTotalPurchases: customer.totalPurchases,
-          additionalDebt: total,
-          newTotalDebt: (customer.outstandingDebt || 0) + total,
-          newTotalPurchases: (customer.totalPurchases || 0) + total
-        });
+      // For debt sales, rely on database trigger to update customer aggregates
+      // This avoids double-counting and ensures consistency
 
-        const customerUpdates = {
-          outstandingDebt: (customer.outstandingDebt || 0) + total,
-          totalPurchases: (customer.totalPurchases || 0) + total,
-          lastPurchaseDate: new Date().toISOString(),
-        };
-        
-        try {
-          // Update customer debt first and wait for it to complete
-          await updateCustomer(selectedCustomerId, customerUpdates);
-          console.log('[SalesCheckout] Customer debt updated successfully before sale creation');
-          
-          // Dispatch immediate event to update UI
-          window.dispatchEvent(new CustomEvent('customer-debt-updated', {
-            detail: { 
-              customerId: selectedCustomerId, 
-              newDebt: customerUpdates.outstandingDebt,
-              newTotalPurchases: customerUpdates.totalPurchases
-            }
-          }));
-          
-        } catch (error) {
-          console.error('[SalesCheckout] Customer debt update failed:', error);
-          // For debt sales, if customer update fails, we should not proceed
-          throw new Error(`Failed to update customer debt: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      }
 
       // Process each item in the cart as a separate sale
       let salesProcessed = 0;
@@ -207,29 +172,8 @@ const SalesCheckout: React.FC<SalesCheckoutProps> = ({
         salesProcessed++;
        }
 
-// Ensure customer's total purchases are updated for appropriate payment types
-try {
-  if (selectedCustomerId && customer) {
-    if (paymentMethod !== 'debt') {
-      const newTotalPurchases = (customer.totalPurchases || 0) + total;
-      await updateCustomer(selectedCustomerId, {
-        totalPurchases: newTotalPurchases,
-        lastPurchaseDate: new Date().toISOString(),
-      });
-      // Notify UI listeners
-      window.dispatchEvent(new CustomEvent('customer-purchases-updated', {
-        detail: { customerId: selectedCustomerId, newTotalPurchases }
-      }));
-    } else {
-      // For debt, we've already updated totals in the debt path; just refresh lastPurchaseDate
-      await updateCustomer(selectedCustomerId, {
-        lastPurchaseDate: new Date().toISOString(),
-      });
-    }
-  }
-} catch (e) {
-  console.warn('[SalesCheckout] Failed to update customer totals (non-blocking):', e);
-}
+      // Customer aggregates are updated by DB trigger; no extra client-side updates
+
  
        // Show success message
       const successMessage = paymentMethod === 'debt' 
