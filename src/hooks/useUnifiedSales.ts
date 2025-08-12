@@ -27,6 +27,7 @@ const transformDbSale = (dbSale: any): Sale => ({
         mpesaReference: dbSale.payment_details.mpesaReference,
         tillNumber: dbSale.payment_details.tillNumber,
         discountAmount: dbSale.payment_details.discountAmount ?? 0,
+        saleReference: dbSale.payment_details.saleReference,
       }
     : {
         cashAmount: 0,

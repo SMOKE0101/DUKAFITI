@@ -46,6 +46,7 @@ export interface Sale {
     mpesaReference?: string;
     tillNumber?: string;
     discountAmount?: number;
+    saleReference?: string;
   };
   total: number;
   clientSaleId?: string;

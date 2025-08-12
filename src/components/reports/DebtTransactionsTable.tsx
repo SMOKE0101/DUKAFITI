@@ -400,7 +400,7 @@ const DebtTransactionsTable: React.FC<DebtTransactionsTableProps> = ({
                     <TableCell className="py-4 px-6 text-center">
                       {getTransactionTypeBadge(transaction.transactionType)}
                     </TableCell>
-                    <TableCell className="py-4 px-6 text-center text-muted-foreground">
+                    <TableCell className="py-4 px-6 text-center text-muted-foreground break-words whitespace-pre-wrap max-w-[480px] mx-auto">
                       {transaction.reference || '-'}
                     </TableCell>
                   </TableRow>
