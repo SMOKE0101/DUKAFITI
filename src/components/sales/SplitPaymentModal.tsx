@@ -373,8 +373,8 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         )}
 
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 pt-4">
+        {/* Action Buttons - Sticky Footer on mobile */}
+        <div className="sticky bottom-0 -mx-4 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] pt-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-t flex gap-2">
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
