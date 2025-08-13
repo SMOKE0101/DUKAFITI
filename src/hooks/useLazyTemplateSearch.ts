@@ -112,6 +112,7 @@ export const useLazyTemplateSearch = () => {
   const searchAllTemplates = useCallback(async (searchTerm: string) => {
     if (!isOnline || !searchTerm.trim()) return [];
     
+    // Use a shorter loading state for search to prevent UI blocking
     setLoading(true);
     try {
       console.log('[LazyTemplateSearch] Searching entire database for:', searchTerm);
@@ -253,11 +254,11 @@ export const useLazyTemplateSearch = () => {
   // Debounced search to prevent excessive database calls
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
-  // Debounce search term updates
+  // Debounce search term updates with improved timing
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 300); // 300ms debounce delay
+    }, 500); // Increased to 500ms for smoother typing experience
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -289,21 +290,29 @@ export const useLazyTemplateSearch = () => {
       const term = debouncedSearchTerm.trim();
       
       if (term) {
-        // If online, search entire database
-        if (isOnline) {
-          const searchResults = await searchAllTemplates(term);
-          if (searchResults.length > 0) {
-            setAllTemplates(searchResults);
+        // Show loading only briefly for search operations
+        setLoading(true);
+        
+        try {
+          // If online, search entire database
+          if (isOnline) {
+            const searchResults = await searchAllTemplates(term);
+            if (searchResults.length > 0) {
+              setAllTemplates(searchResults);
+            }
           }
-        }
-        // For offline, load cached templates and perform fuse.js search
-        else {
-          console.log('[LazyTemplateSearch] Offline search using cached data');
-          const cached = getCache<ProductTemplate[]>('first_100_templates');
-          if (cached && Array.isArray(cached)) {
-            setAllTemplates(cached);
-            // Fuse.js search will be applied in filteredTemplates memoization
+          // For offline, load cached templates and perform fuse.js search
+          else {
+            console.log('[LazyTemplateSearch] Offline search using cached data');
+            const cached = getCache<ProductTemplate[]>('first_100_templates');
+            if (cached && Array.isArray(cached)) {
+              setAllTemplates(cached);
+              // Fuse.js search will be applied in filteredTemplates memoization
+            }
           }
+        } finally {
+          // Ensure loading is cleared quickly to prevent UI blocking
+          setTimeout(() => setLoading(false), 100);
         }
       }
     };

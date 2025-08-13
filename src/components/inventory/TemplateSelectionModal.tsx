@@ -152,14 +152,22 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
             <div className="bg-muted/20 border-b border-border flex-shrink-0">
               <div className="p-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Search className={cn(
+                    "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors",
+                    loading ? "text-primary animate-pulse" : "text-muted-foreground"
+                  )} />
                   <Input
                     placeholder={`Search ${totalTemplates > 0 ? totalTemplates.toLocaleString() : '7,344+'} templates...`}
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
                     className="pl-10 h-10"
-                    disabled={loading}
+                    autoFocus
                   />
+                  {loading && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -176,10 +184,10 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                       variant={selectedCategory === category ? "default" : "outline"}
                       size="sm"
                       className={cn(
-                        "capitalize whitespace-nowrap flex-shrink-0 h-7 px-3 text-xs",
-                        selectedCategory === category && "bg-primary text-primary-foreground"
+                        "capitalize whitespace-nowrap flex-shrink-0 h-7 px-3 text-xs transition-opacity",
+                        selectedCategory === category && "bg-primary text-primary-foreground",
+                        loading && "opacity-75"
                       )}
-                      disabled={loading}
                     >
                       <Filter className="w-3 h-3 mr-1" />
                       {category === 'all' ? 'All Categories' : category}
