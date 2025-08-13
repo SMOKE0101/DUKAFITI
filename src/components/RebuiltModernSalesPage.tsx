@@ -124,16 +124,19 @@ const FixedMobileSearch = ({
 
 return (
   <div 
-    className="fixed top-0 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-b border-border shadow-lg"
+    className="fixed top-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border shadow-lg"
     style={{
       paddingTop: 'max(env(safe-area-inset-top), 8px)',
-      transform: 'translateZ(0)',
-      willChange: 'transform'
+      transform: 'translate3d(0, 0, 0)',
+      willChange: 'transform',
+      position: 'fixed',
+      width: '100%',
+      height: 'auto'
     }}
   >
-    <div className="p-2">
+    <div className="p-3">
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none z-10" />
         <input
           ref={inputRef}
           type="search"
@@ -147,14 +150,23 @@ return (
           onChange={handleInputChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="w-full h-8 pl-9 pr-9 bg-muted/90 rounded-lg text-foreground placeholder-muted-foreground border-2 border-transparent focus:outline-none focus:border-primary/50 focus:bg-background transition-all duration-200 ease-in-out text-[16px] leading-tight"
+          className="w-full h-10 pl-10 pr-4 bg-background border-2 border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 ease-in-out text-[16px] shadow-sm"
           style={{
             fontSize: '16px', // Prevents zoom on iOS
             WebkitAppearance: 'none',
             WebkitTapHighlightColor: 'transparent',
-            transform: 'translateZ(0)'
+            transform: 'translate3d(0, 0, 0)'
           }}
         />
+        {localValue && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground w-4 h-4 flex items-center justify-center"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
       </div>
     </div>
   </div>
@@ -618,12 +630,12 @@ const { sales } = useUnifiedSales();
                   </div>
                 </Button>
                 
-                <div 
+                 <div 
 ref={productListRef}
   className="h-full overflow-y-auto"
   style={{ 
     paddingBottom: '20px', 
-    paddingTop: '72px' // Account for fixed search bar height
+    paddingTop: isMobile ? '80px' : '8px' // Dynamic padding based on mobile search bar
   }}
 >
                   {filteredProducts.length === 0 ? (
@@ -801,12 +813,14 @@ ref={productListRef}
           )}
         </div>
 
-        {/* Fixed Mobile Search Bar - Always visible on mobile */}
-        <FixedMobileSearch
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchTermChange}
-          placeholder="Search products..."
-        />
+        {/* Fixed Mobile Search Bar - Only visible on mobile */}
+        {isMobile && (
+          <FixedMobileSearch
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchTermChange}
+            placeholder="Search products..."
+          />
+        )}
 
         {/* Modals */}
         <AddDebtModal

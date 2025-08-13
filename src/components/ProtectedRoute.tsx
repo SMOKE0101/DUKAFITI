@@ -40,6 +40,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [user, isOnline]);
 
+  // Handle navigation based on auth state
+  useEffect(() => {
+    // Only navigate if not loading and online with no user
+    if (!loading && isOnline && !user && !lastKnownUser) {
+      console.log('[ProtectedRoute] No user found and online, redirecting to signin');
+      navigate('/signin');
+    }
+  }, [user, loading, navigate, isOnline, lastKnownUser]);
+
   // Load last known user when offline or when user is null
   useEffect(() => {
     if (!user && !loading) {
@@ -68,12 +77,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         console.error('[ProtectedRoute] Error loading cached user:', error);
         localStorage.removeItem('lastKnownUser');
       }
-      
-      // Redirect to signin if online and no valid user
-      if (isOnline && !user) {
-        console.log('[ProtectedRoute] No user and online, redirecting to signin');
-        navigate('/signin');
-      }
     }
   }, [user, loading, navigate, isOnline]);
 
@@ -101,11 +104,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <>{children}</>;
   }
 
-  // If we reach here, no authenticated user found
-  // Redirect to signin if online, show offline message if offline
+  // If we reach here and online, show loading while navigation happens
   if (isOnline) {
-    console.log('[ProtectedRoute] No user found and online, redirecting to signin');
-    navigate('/signin');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

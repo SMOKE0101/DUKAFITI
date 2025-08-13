@@ -29,9 +29,23 @@ import AddCustomerModal from './sales/AddCustomerModal';
 
 const ColoredCardDashboard = () => {
   const isMobile = useIsMobile();
-  const { sales } = useUnifiedSales();
-  const { products, createProduct } = useUnifiedProducts();
-  const { customers, createCustomer } = useUnifiedCustomers();
+  const { 
+    sales, 
+    loading: salesLoading, 
+    error: salesError 
+  } = useUnifiedSales();
+  const { 
+    products, 
+    createProduct, 
+    loading: productsLoading, 
+    error: productsError 
+  } = useUnifiedProducts();
+  const { 
+    customers, 
+    createCustomer, 
+    loading: customersLoading, 
+    error: customersError 
+  } = useUnifiedCustomers();
   const { pendingOperations } = useUnifiedSyncManager();
   const navigate = useNavigate();
 
@@ -47,12 +61,17 @@ const ColoredCardDashboard = () => {
     renderingDashboard: true
   });
 
-  // Add explicit check for data loading states - ensure arrays exist and are valid
-  if (!Array.isArray(sales) || !Array.isArray(products) || !Array.isArray(customers)) {
+  // Enhanced loading check - wait for all data to be properly loaded or show errors
+  if (!Array.isArray(sales) || !Array.isArray(products) || !Array.isArray(customers) || 
+      (salesLoading && sales.length === 0) || 
+      (productsLoading && products.length === 0) || 
+      (customersLoading && customers.length === 0)) {
     console.log('[ColoredCardDashboard] Data not ready:', { 
       sales: Array.isArray(sales) ? sales.length : 'not array', 
       products: Array.isArray(products) ? products.length : 'not array', 
-      customers: Array.isArray(customers) ? customers.length : 'not array' 
+      customers: Array.isArray(customers) ? customers.length : 'not array',
+      loadingStates: { salesLoading, productsLoading, customersLoading },
+      errors: { salesError, productsError, customersError }
     });
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -60,10 +79,15 @@ const ColoredCardDashboard = () => {
           <RefreshCw className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading dashboard data...</p>
           <p className="text-xs text-muted-foreground mt-2">
-            {!Array.isArray(sales) && 'Sales loading... '}
-            {!Array.isArray(products) && 'Products loading... '}
-            {!Array.isArray(customers) && 'Customers loading... '}
+            Sales: {Array.isArray(sales) ? `${sales.length} loaded` : salesLoading ? 'loading...' : 'pending'}
+            {' • '}
+            Products: {Array.isArray(products) ? `${products.length} loaded` : productsLoading ? 'loading...' : 'pending'}
+            {' • '}
+            Customers: {Array.isArray(customers) ? `${customers.length} loaded` : customersLoading ? 'loading...' : 'pending'}
           </p>
+          {salesError && <p className="text-xs text-destructive mt-1">Sales: {salesError}</p>}
+          {productsError && <p className="text-xs text-destructive mt-1">Products: {productsError}</p>}
+          {customersError && <p className="text-xs text-destructive mt-1">Customers: {customersError}</p>}
         </div>
       </div>
     );
