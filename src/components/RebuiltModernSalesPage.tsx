@@ -124,7 +124,7 @@ const FixedMobileSearch = ({
 
 return (
   <div 
-    className="fixed top-14 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-b border-border shadow-lg"
+    className="fixed top-0 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-b border-border shadow-lg"
     style={{
       paddingTop: 'max(env(safe-area-inset-top), 8px)',
       transform: 'translateZ(0)',
@@ -621,7 +621,7 @@ const { sales } = useUnifiedSales();
                 <div 
 ref={productListRef}
   className="h-full overflow-y-auto"
-  style={{ paddingBottom: '20px', paddingTop: '64px' }}
+  style={{ paddingBottom: '20px', paddingTop: isMobile ? '72px' : '64px' }}
 >
                   {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -633,11 +633,13 @@ ref={productListRef}
                     </div>
                   ) : (
 <div className="px-4 pt-4 space-y-4">
-  {/* Top Picks - keep visible near top on mobile */}
-  <TopPicksSection
-    products={products}
-    onAddToCart={(product, qty = 1) => addToCart(product.id, qty)}
-  />
+  {/* Top Picks - hide on mobile */}
+  {!isMobile && (
+    <TopPicksSection
+      products={products}
+      onAddToCart={(product, qty = 1) => addToCart(product.id, qty)}
+    />
+  )}
 
   {/* Special debt card */}
   <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">

@@ -405,8 +405,21 @@ const VariationProductModal: React.FC<VariationProductModalProps> = ({
                 <Input
                   type="number"
                   min="1"
-                  value={parentProduct.stockDerivationQuantity}
-                  onChange={(e) => setParentProduct(prev => ({ ...prev, stockDerivationQuantity: parseInt(e.target.value) || 1 }))}
+                  value={parentProduct.stockDerivationQuantity === 0 ? '' : parentProduct.stockDerivationQuantity}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setParentProduct(prev => ({ ...prev, stockDerivationQuantity: 0 }));
+                    } else {
+                      setParentProduct(prev => ({ ...prev, stockDerivationQuantity: parseInt(value) || 0 }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (!value || value < 1) {
+                      setParentProduct(prev => ({ ...prev, stockDerivationQuantity: 1 }));
+                    }
+                  }}
                   placeholder="1"
                   className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
                 />
