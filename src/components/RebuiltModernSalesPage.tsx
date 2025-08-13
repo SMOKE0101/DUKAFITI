@@ -544,13 +544,13 @@ const { sales } = useUnifiedSales();
   
   if (isMobile) {
     return (
-      <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px' }}>
-        {/* Mobile Content - Header removed */}
+      <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px', paddingTop: 'max(env(safe-area-inset-top), 56px)' }}>
+        {/* Mobile Content with header space */}
         <div className="flex-1 overflow-hidden relative">
           {activePanel === 'search' ? (
             <>
-              {/* Filters */}
-              <div className="flex-shrink-0 p-2 bg-background border-b border-border">
+              {/* Filters - no top padding */}
+              <div className="flex-shrink-0 p-2 pt-0 bg-background border-b border-border">
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger className="w-full h-8">
                     <SelectValue placeholder="All Categories" />
@@ -601,8 +601,8 @@ const { sales } = useUnifiedSales();
                   </div>
                 </Button>
 
-                {/* Product List with minimal padding */}
-                <div className="flex-1 overflow-y-auto" style={{ paddingTop: '8px', paddingBottom: '120px' }}>
+                {/* Product List with no top padding */}
+                <div className="flex-1 overflow-y-auto" style={{ paddingTop: '0px', paddingBottom: '120px' }}>
                   {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 text-center">
                       <Search size={48} className="text-muted-foreground mb-4" />
@@ -778,13 +778,43 @@ const { sales } = useUnifiedSales();
           )}
         </div>
 
-        {/* Fixed Mobile Search Bar - Only visible on mobile */}
+        {/* Mobile Sales Header - Only visible on mobile */}
         {isMobile && (
-          <FixedMobileSearch
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchTermChange}
-            placeholder="Search products..."
-          />
+          <div 
+            className="fixed top-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border shadow-lg"
+            style={{
+              paddingTop: 'max(env(safe-area-inset-top), 8px)',
+              transform: 'translate3d(0, 0, 0)',
+              willChange: 'transform',
+              position: 'fixed',
+              width: '100%',
+              height: 'auto'
+            }}
+          >
+            <div className="p-3">
+              <div className="flex items-center justify-between">
+                <h1 className="text-lg font-bold text-foreground">SALES</h1>
+                <div className="flex items-center gap-2">
+                  {isOnline ? (
+                    <div className="flex items-center gap-1 text-green-600">
+                      <Wifi size={14} />
+                      <span className="text-xs font-medium">Online</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-orange-600">
+                      <WifiOff size={14} />
+                      <span className="text-xs font-medium">Offline</span>
+                    </div>
+                  )}
+                  {pendingOperations > 0 && (
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                      {pendingOperations}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Modals */}
