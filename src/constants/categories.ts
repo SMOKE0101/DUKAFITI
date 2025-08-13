@@ -5,7 +5,6 @@ export const PRODUCT_CATEGORIES = [
   'fresh products',
   'homecare',
   'households',
-  'liquor',
   'personal care',
   'textile'
 ] as const;

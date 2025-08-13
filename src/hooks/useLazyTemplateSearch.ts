@@ -217,7 +217,7 @@ export const useLazyTemplateSearch = () => {
   const categories = useMemo(() => {
     // When searching, show standard categories to allow easy switching
     if (searchTerm.trim()) {
-      return ['all', 'Electronics', 'Foods', 'Fresh Products', 'Homecare', 'Households', 'Liquor', 'Personal Care'];
+      return ['all', 'Electronics', 'Foods', 'Fresh Products', 'Homecare', 'Households', 'Personal Care'];
     }
     // When browsing, show categories from current templates
     const uniqueCategories = [...new Set(allTemplates.map(t => t.category).filter(Boolean))];
