@@ -27,6 +27,22 @@ export const useUnifiedCustomers = () => {
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
+  
+  // Listen for auth state changes to refresh data
+  useEffect(() => {
+    const handleAuthStateChange = () => {
+      console.log('[useUnifiedCustomers] Auth state changed, refreshing data');
+      if (user) {
+        loadCustomers();
+      } else {
+        setCustomers([]);
+        setLoading(false);
+      }
+    };
+
+    window.addEventListener('auth-state-change', handleAuthStateChange);
+    return () => window.removeEventListener('auth-state-change', handleAuthStateChange);
+  }, [user]);
   const { getCache, setCache, addPendingOperation, pendingOps, clearPendingOperation, debugPendingOperations } = useCacheManager();
   
   const isLoadingRef = useRef(false);

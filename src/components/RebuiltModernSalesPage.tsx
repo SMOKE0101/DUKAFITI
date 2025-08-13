@@ -623,7 +623,7 @@ ref={productListRef}
   className="h-full overflow-y-auto"
   style={{ 
     paddingBottom: '20px', 
-    paddingTop: '8px' // Remove excessive top padding that was causing spacing issues
+    paddingTop: '72px' // Account for fixed search bar height
   }}
 >
                   {filteredProducts.length === 0 ? (
@@ -801,14 +801,12 @@ ref={productListRef}
           )}
         </div>
 
-        {/* Fixed Mobile Search Bar */}
-        {activePanel === 'search' && (
-          <FixedMobileSearch
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchTermChange}
-            placeholder="Search products..."
-          />
-        )}
+        {/* Fixed Mobile Search Bar - Always visible on mobile */}
+        <FixedMobileSearch
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchTermChange}
+          placeholder="Search products..."
+        />
 
         {/* Modals */}
         <AddDebtModal

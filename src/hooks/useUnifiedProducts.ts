@@ -36,6 +36,22 @@ export const useUnifiedProducts = () => {
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
+  
+  // Listen for auth state changes to refresh data
+  useEffect(() => {
+    const handleAuthStateChange = () => {
+      console.log('[useUnifiedProducts] Auth state changed, refreshing data');
+      if (user) {
+        loadProducts();
+      } else {
+        setProducts([]);
+        setLoading(false);
+      }
+    };
+
+    window.addEventListener('auth-state-change', handleAuthStateChange);
+    return () => window.removeEventListener('auth-state-change', handleAuthStateChange);
+  }, [user]);
   const { getCache, setCache, clearUserCache, addPendingOperation, pendingOps, clearPendingOperation } = useCacheManager();
 
   // Merge products intelligently - prioritize local changes over server data

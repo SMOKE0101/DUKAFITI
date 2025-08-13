@@ -59,6 +59,11 @@ const ColoredCardDashboard = () => {
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading dashboard data...</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {!Array.isArray(sales) && 'Sales loading... '}
+            {!Array.isArray(products) && 'Products loading... '}
+            {!Array.isArray(customers) && 'Customers loading... '}
+          </p>
         </div>
       </div>
     );

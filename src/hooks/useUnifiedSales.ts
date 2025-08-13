@@ -48,6 +48,22 @@ export const useUnifiedSales = () => {
   
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
+  
+  // Listen for auth state changes to refresh data
+  useEffect(() => {
+    const handleAuthStateChange = () => {
+      console.log('[useUnifiedSales] Auth state changed, refreshing data');
+      if (user) {
+        loadSales();
+      } else {
+        setSales([]);
+        setLoading(false);
+      }
+    };
+
+    window.addEventListener('auth-state-change', handleAuthStateChange);
+    return () => window.removeEventListener('auth-state-change', handleAuthStateChange);
+  }, [user]);
   const { getCache, setCache, addPendingOperation, pendingOps } = useCacheManager();
 
   // Load sales from cache or server
