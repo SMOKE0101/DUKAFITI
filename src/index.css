@@ -204,12 +204,7 @@
 }
 
 /* Global modal scroll lock (applied to <html>) */
-html.modal-open,
-html.modal-open body {
-  overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: none;
-}
+/* Scroll locking is handled inline by DialogContent with a robust lock. */
 
 /* Keyboard-aware modal: fills visual viewport on mobile */
 @media (max-width: 768px) {

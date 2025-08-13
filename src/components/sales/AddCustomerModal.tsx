@@ -190,7 +190,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md w-[95vw] max-h-[calc(var(--vvh))] overflow-hidden bg-white dark:bg-slate-800 fixed z-[10002] mx-auto my-auto flex flex-col">
+      <DialogContent className="kb-aware-modal sm:max-w-md w-[95vw] max-h-[calc(var(--vvh))] overflow-hidden bg-white dark:bg-slate-800 z-[10002] mx-auto my-auto flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-purple-600" />
@@ -203,7 +203,7 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
             )}
           </DialogTitle>
         </DialogHeader>
-          <div ref={containerRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(var(--kb, 0px) + env(safe-area-inset-bottom) + 96px)' }}>
+          <div ref={containerRef} className="kb-scroll-area flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'calc(var(--kb, 0px) + env(safe-area-inset-bottom) + 96px)' }}>
           <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
             <div>

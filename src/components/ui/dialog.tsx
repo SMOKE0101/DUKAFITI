@@ -31,14 +31,37 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  // Lock background scroll on mobile while dialog is open
+  // Robust body scroll lock on mobile while dialog content is mounted
   React.useEffect(() => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     if (!isMobile) return;
-    const root = document.documentElement;
-    root.classList.add('modal-open');
+
+    const w = window as any;
+    const body = document.body;
+
+    const prevOverflow = body.style.overflow;
+    const prevTouch = (body.style as any).touchAction as string;
+    const prevOverscroll = (body.style as any).overscrollBehavior as string;
+
+    w.__dialogScrollLocks = (w.__dialogScrollLocks || 0) + 1;
+    if (w.__dialogScrollLocks === 1) {
+      body.style.overflow = 'hidden';
+      (body.style as any).touchAction = 'none';
+      (body.style as any).overscrollBehavior = 'none';
+    }
+
+    // Ensure legacy class is not lingering
+    document.documentElement.classList.remove('modal-open');
+
     return () => {
-      root.classList.remove('modal-open');
+      const ww = window as any;
+      ww.__dialogScrollLocks = Math.max(0, (ww.__dialogScrollLocks || 1) - 1);
+      if (ww.__dialogScrollLocks === 0) {
+        body.style.overflow = prevOverflow;
+        (body.style as any).touchAction = prevTouch || '';
+        (body.style as any).overscrollBehavior = prevOverscroll || '';
+        document.documentElement.classList.remove('modal-open');
+      }
     };
   }, []);
 
