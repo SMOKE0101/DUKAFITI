@@ -1,6 +1,5 @@
 
-import React, { useState, useRef } from 'react';
-import useScrollIntoViewOnFocus from '@/hooks/useScrollIntoViewOnFocus';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,8 +25,6 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  useScrollIntoViewOnFocus(containerRef);
 
   const validateField = (name: string, value: string) => {
     const newErrors = { ...errors };
@@ -154,11 +151,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="kb-aware-modal w-[95vw] sm:max-w-md max-h-[calc(var(--vvh))] overflow-hidden flex flex-col">
+      <DialogContent className="w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Customer</DialogTitle>
         </DialogHeader>
-        <div ref={containerRef} className="kb-scroll-area flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'calc(var(--kb, 0px) + env(safe-area-inset-bottom) + 96px)' }}>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Customer Name *</Label>
@@ -274,7 +271,6 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
             </Button>
           </div>
         </form>
-        </div>
       </DialogContent>
     </Dialog>
   );

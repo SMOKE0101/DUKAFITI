@@ -53,8 +53,6 @@ const QuickSelectSection = ({ products, onAddToCart, onAddDebtClick }: QuickSele
   useEffect(() => {
     if (isSearchVisible && searchInputRef.current) {
       searchInputRef.current.focus();
-      // Ensure section is visible above the keyboard
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [isSearchVisible]);
 
@@ -209,7 +207,6 @@ const QuickSelectSection = ({ products, onAddToCart, onAddDebtClick }: QuickSele
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                onFocus={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className="bg-gray-100 dark:bg-gray-700 rounded-full px-4 focus:ring-2 focus:ring-primary"
                 aria-label="Search products"
               />

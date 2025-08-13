@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -27,14 +28,14 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
   description,
   children,
   className = '',
-  maxHeight = 'calc(var(--vvh) - 2rem)'
+  maxHeight = 'calc(100vh - 2rem)'
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className={`
           w-[95vw] max-w-md mx-auto my-4 p-0 
-          max-h-[calc(var(--vvh)-2rem)] flex flex-col
+          max-h-[calc(100vh-2rem)] flex flex-col
           dark:bg-slate-800 dark:border-slate-700
           ${className}
         `}
@@ -68,7 +69,7 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
             className="p-4 pt-2"
             style={{
               minHeight: 'fit-content',
-              paddingBottom: 'calc(var(--kb, 0px) + env(safe-area-inset-bottom, 1rem))'
+              paddingBottom: 'env(safe-area-inset-bottom, 1rem)'
             }}
           >
             {children}

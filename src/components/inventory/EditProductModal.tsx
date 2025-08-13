@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { useIsMobile, useIsTablet } from '../../hooks/use-mobile';
 import { PRODUCT_CATEGORIES, isCustomCategory, validateCustomCategory } from '../../constants/categories';
 import ImageUpload from '../ui/image-upload';
 import VariantManagementSection from './VariantManagementSection';
-import useScrollIntoViewOnFocus from '@/hooks/useScrollIntoViewOnFocus';
+
 interface EditProductModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -168,13 +168,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
 
   if (!product) return null;
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  useScrollIntoViewOnFocus(containerRef, { topOffset: 72, minMargin: 12 });
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className={`
-        kb-aware-modal max-w-[95vw] sm:max-w-[600px] max-h-[calc(var(--vvh))] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col
+        max-w-[95vw] sm:max-w-[600px] max-h-[95vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col
       `}>
         
         {/* Modern Header */}
@@ -187,7 +184,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, on
           </p>
         </div>
         
-        <div ref={containerRef} className="kb-scroll-area flex-1 overflow-y-auto overscroll-contain bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6" style={{ paddingBottom: 'calc(var(--kb, 0px) + env(safe-area-inset-bottom) + 96px)' }}>
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
           <div className="space-y-6">
             
             {/* Product Image */}

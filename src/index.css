@@ -33,8 +33,6 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    /* Visual viewport height fallback */
-    --vvh: 100vh;
   }
 
   .dark {
@@ -200,30 +198,5 @@
     -webkit-appearance: none;
     -webkit-border-radius: 0;
     border-radius: 0;
-  }
-}
-
-/* Global modal scroll lock (applied to <html>) */
-/* Scroll locking is handled inline by DialogContent with a robust lock. */
-
-/* Keyboard-aware modal: fills visual viewport on mobile */
-@media (max-width: 768px) {
-  .kb-aware-modal {
-    left: 0 !important;
-    top: 0 !important;
-    right: 0 !important;
-    transform: none !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    height: var(--vvh);
-    max-height: var(--vvh);
-    border-radius: 0 !important;
-    overscroll-behavior: contain;
-  }
-
-  .kb-aware-modal .kb-scroll-area {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    height: auto; /* flex-1 handles height; var(--vvh) on parent ensures area is keyboard-aware */
   }
 }
