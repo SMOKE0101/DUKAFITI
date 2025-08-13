@@ -544,13 +544,13 @@ const { sales } = useUnifiedSales();
   
   if (isMobile) {
     return (
-      <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px', paddingTop: 'max(env(safe-area-inset-top), 56px)' }}>
-        {/* Mobile Content with header space */}
+      <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        {/* Mobile Content - no header, minimal top padding */}
         <div className="flex-1 overflow-hidden relative">
           {activePanel === 'search' ? (
             <>
-              {/* Filters - no top padding */}
-              <div className="flex-shrink-0 p-2 pt-0 bg-background border-b border-border">
+              {/* Filters - compact layout */}
+              <div className="flex-shrink-0 px-2 py-1 bg-background border-b border-border">
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger className="w-full h-8">
                     <SelectValue placeholder="All Categories" />
@@ -660,46 +660,34 @@ const { sales } = useUnifiedSales();
                 </div>
               </div>
             </>
-          ) : (
-            // Cart Panel
-            <div className="flex-1 flex flex-col relative">
-              {/* Side Toggle Button to Products */}
-              <Button
-                onClick={() => handlePanelSwitch('search')}
-                className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 h-20 w-16 rounded-2xl shadow-2xl bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 border-2 border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95"
-                size="sm"
-              >
-                <div className="flex flex-col items-center gap-1.5">
-                  <div className="bg-white/20 rounded-full p-1.5">
-                    <ChevronLeft size={18} className="text-white" />
-                  </div>
-                  <span className="text-xs font-semibold text-white">Products</span>
-                </div>
-              </Button>
-              
-
-              {/* Mobile Cart Header */}
-              <div className="flex-shrink-0 p-4 border-b border-border">
+          ) : activePanel === 'cart' ? (
+            <div className="flex flex-col bg-background h-full">
+              <div className="flex-shrink-0 px-4 py-2 border-b border-border bg-background">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Cart ({cart.length})</h2>
-                  {cart.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={clearCart}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 size={16} className="mr-1" />
-                      Clear All
-                    </Button>
-                  )}
+                  <h2 className="text-lg font-semibold">Cart</h2>
+                  <Badge variant="secondary" className="text-xs px-2 py-1">
+                    {cart.length} items
+                  </Badge>
                 </div>
               </div>
+              <div className="flex-1 overflow-y-auto px-4 pt-0 pb-4" style={{ paddingBottom: '120px' }}>
+                {/* Side Toggle Button to Products */}
+                <Button
+                  onClick={() => handlePanelSwitch('search')}
+                  className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 h-20 w-16 rounded-2xl shadow-2xl bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 border-2 border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95"
+                  size="sm"
+                >
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="bg-white/20 rounded-full p-1.5">
+                      <ChevronLeft size={18} className="text-white" />
+                    </div>
+                    <span className="text-xs font-semibold text-white">Products</span>
+                  </div>
+                </Button>
 
-              {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto">
+                {/* Cart Items */}
                 {cart.length > 0 ? (
-                  <div className="p-4 space-y-3">
+                  <div className="space-y-3">
                     {cart.map(item => (
                       <Card key={item.id}>
                         <CardContent className="p-3">
@@ -759,63 +747,24 @@ const { sales } = useUnifiedSales();
                     </p>
                   </div>
                 )}
-              </div>
 
-              {/* Mobile Checkout */}
-              {cart.length > 0 && (
-                <div className="flex-shrink-0 border-t border-border">
-<NewSalesCheckout
-  cart={cart}
-  onCheckoutComplete={handleCheckoutSuccess}
-  isOnline={isOnline}
-  customers={customers}
-  onCustomersRefresh={handleCustomersRefresh}
-  updateCustomer={updateCustomer}
-/>
-                </div>
-              )}
+                {/* Mobile Checkout */}
+                {cart.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <NewSalesCheckout
+                      cart={cart}
+                      onCheckoutComplete={handleCheckoutSuccess}
+                      isOnline={isOnline}
+                      customers={customers}
+                      onCustomersRefresh={handleCustomersRefresh}
+                      updateCustomer={updateCustomer}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          ) : null}
         </div>
-
-        {/* Mobile Sales Header - Only visible on mobile */}
-        {isMobile && (
-          <div 
-            className="fixed top-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border shadow-lg"
-            style={{
-              paddingTop: 'max(env(safe-area-inset-top), 8px)',
-              transform: 'translate3d(0, 0, 0)',
-              willChange: 'transform',
-              position: 'fixed',
-              width: '100%',
-              height: 'auto'
-            }}
-          >
-            <div className="p-3">
-              <div className="flex items-center justify-between">
-                <h1 className="text-lg font-bold text-foreground">SALES</h1>
-                <div className="flex items-center gap-2">
-                  {isOnline ? (
-                    <div className="flex items-center gap-1 text-green-600">
-                      <Wifi size={14} />
-                      <span className="text-xs font-medium">Online</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 text-orange-600">
-                      <WifiOff size={14} />
-                      <span className="text-xs font-medium">Offline</span>
-                    </div>
-                  )}
-                  {pendingOperations > 0 && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                      {pendingOperations}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modals */}
         <AddDebtModal
