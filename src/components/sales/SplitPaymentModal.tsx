@@ -236,13 +236,13 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   };
 
   return (
-    <MobileOptimizedModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Split Payment"
-      description={`Total: ${formatCurrency(total)}`}
-      maxHeight="calc(100vh - 4rem)"
-      footer={
+<MobileOptimizedModal
+  open={open}
+  onOpenChange={onOpenChange}
+  title="Split Payment"
+  description={`Total: ${formatCurrency(total)}`}
+  maxHeight="calc(100dvh - 2rem)"
+  footer={
         <div className="flex gap-2">
           <Button 
             variant="outline" 

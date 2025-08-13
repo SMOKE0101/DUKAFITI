@@ -24,6 +24,7 @@ import NewSalesCheckout from './sales/NewSalesCheckout';
 import AddDebtModal from './sales/AddDebtModal';
 import ResponsiveProductGrid from './ui/responsive-product-grid';
 import VariantSelectionModal from './sales/VariantSelectionModal';
+import TopPicksSection from './sales/TopPicksSection';
 
 import { 
   Search, 
@@ -121,43 +122,43 @@ const FixedMobileSearch = ({
     };
   }, []);
 
-  return (
-    <div 
-      className="fixed bottom-16 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-t border-border shadow-lg"
-      style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
-        transform: 'translateZ(0)',
-        willChange: 'transform'
-      }}
-    >
-      <div className="p-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
-          <input
-            ref={inputRef}
-            type="search"
-            inputMode="search"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck="false"
-            placeholder={placeholder}
-            value={localValue}
-            onChange={handleInputChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            className="w-full h-8 pl-9 pr-9 bg-muted/90 rounded-lg text-foreground placeholder-muted-foreground border-2 border-transparent focus:outline-none focus:border-primary/50 focus:bg-background transition-all duration-200 ease-in-out text-[16px] leading-tight"
-            style={{
-              fontSize: '16px', // Prevents zoom on iOS
-              WebkitAppearance: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              transform: 'translateZ(0)'
-            }}
-          />
-        </div>
+return (
+  <div 
+    className="fixed top-14 left-0 right-0 z-40 bg-background/98 backdrop-blur-md border-b border-border shadow-lg"
+    style={{
+      paddingTop: 'max(env(safe-area-inset-top), 8px)',
+      transform: 'translateZ(0)',
+      willChange: 'transform'
+    }}
+  >
+    <div className="p-2">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="search"
+          inputMode="search"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          placeholder={placeholder}
+          value={localValue}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          className="w-full h-8 pl-9 pr-9 bg-muted/90 rounded-lg text-foreground placeholder-muted-foreground border-2 border-transparent focus:outline-none focus:border-primary/50 focus:bg-background transition-all duration-200 ease-in-out text-[16px] leading-tight"
+          style={{
+            fontSize: '16px', // Prevents zoom on iOS
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            transform: 'translateZ(0)'
+          }}
+        />
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 const RebuiltModernSalesPage = () => {
@@ -618,10 +619,10 @@ const { sales } = useUnifiedSales();
                 </Button>
                 
                 <div 
-                  ref={productListRef}
-                  className="h-full overflow-y-auto"
-                  style={{ paddingBottom: '100px' }}
-                >
+ref={productListRef}
+  className="h-full overflow-y-auto"
+  style={{ paddingBottom: '20px', paddingTop: '64px' }}
+>
                   {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 text-center">
                       <Search size={48} className="text-muted-foreground mb-4" />
@@ -631,42 +632,48 @@ const { sales } = useUnifiedSales();
                       </p>
                     </div>
                   ) : (
-                    <div className="px-4 pt-4 space-y-4">
-                      {/* Special debt card */}
-                      <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
-                        <CardContent className="p-2.5">
-                          <div className="flex flex-col h-full">
-                            <h3 className="font-medium text-xs mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
-                            <p className="text-[10px] text-red-600 dark:text-red-500 mb-2 truncate">Add customer debt</p>
-                            
-                            <Button
-                              onClick={() => setIsAddDebtModalOpen(true)}
-                              size="sm"
-                              className="w-full bg-red-600 hover:bg-red-700 text-white h-6 text-xs mt-auto"
-                            >
-                              <Receipt size={14} className="mr-1" />
-                              Add
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
+<div className="px-4 pt-4 space-y-4">
+  {/* Top Picks - keep visible near top on mobile */}
+  <TopPicksSection
+    products={products}
+    onAddToCart={(product, qty = 1) => addToCart(product.id, qty)}
+  />
 
-                      {/* Mobile Product Grid */}
-                      <ResponsiveProductGrid
-                        products={filteredProducts.filter(product => !('isDebtCard' in product))}
-                        variant="sales"
-                        onAddToCart={(product) => addToCart(product.id)}
-                        getPriceForProduct={(product) => product.sellingPrice}
-                        getStockForProduct={(product) => product.currentStock}
-                        getInStockStatus={(product) => product.currentStock > 0 || product.currentStock === -1}
-                        gridConfig={{
-                          cols: { mobile: 2, tablet: 2, desktop: 2 },
-                          gap: 'gap-3'
-                        }}
-                        emptyStateMessage="No products found"
-                        emptyStateDescription="Try adjusting your search or filters"
-                      />
-                    </div>
+  {/* Special debt card */}
+  <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
+    <CardContent className="p-2.5">
+      <div className="flex flex-col h-full">
+        <h3 className="font-medium text-xs mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
+        <p className="text-[10px] text-red-600 dark:text-red-500 mb-2 truncate">Add customer debt</p>
+        
+        <Button
+          onClick={() => setIsAddDebtModalOpen(true)}
+          size="sm"
+          className="w-full bg-red-600 hover:bg-red-700 text-white h-6 text-xs mt-auto"
+        >
+          <Receipt size={14} className="mr-1" />
+          Add
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Mobile Product Grid */}
+  <ResponsiveProductGrid
+    products={filteredProducts.filter(product => !('isDebtCard' in product))}
+    variant="sales"
+    onAddToCart={(product) => addToCart(product.id)}
+    getPriceForProduct={(product) => product.sellingPrice}
+    getStockForProduct={(product) => product.currentStock}
+    getInStockStatus={(product) => product.currentStock > 0 || product.currentStock === -1}
+    gridConfig={{
+      cols: { mobile: 2, tablet: 2, desktop: 2 },
+      gap: 'gap-3'
+    }}
+    emptyStateMessage="No products found"
+    emptyStateDescription="Try adjusting your search or filters"
+  />
+</div>
                   )}
                 </div>
               </div>

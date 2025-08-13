@@ -10,6 +10,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MobileOptimizedModalProps {
   open: boolean;
@@ -30,30 +31,48 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
   children,
   footer,
   className = '',
-  maxHeight = 'calc(100vh - 2rem)'
+  maxHeight = 'calc(100dvh - 2rem)'
 }) => {
   // Measure footer height and add bottom padding to scrollable content so nothing is hidden
   const contentRef = React.useRef<HTMLDivElement>(null);
   const footerRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    const updatePadding = () => {
-      const footerH = footerRef.current?.offsetHeight ?? 0;
-      if (contentRef.current) {
-        contentRef.current.style.paddingBottom = `calc(env(safe-area-inset-bottom, 0px) + ${footerH}px)`;
-      }
-    };
-    updatePadding();
+React.useEffect(() => {
+  const updatePadding = () => {
+    const footerH = footerRef.current?.offsetHeight ?? 0;
+    if (contentRef.current) {
+      contentRef.current.style.paddingBottom = `calc(env(safe-area-inset-bottom, 0px) + ${footerH}px)`;
+    }
+  };
+  updatePadding();
 
-    const ro = new ResizeObserver(updatePadding);
-    if (footerRef.current) ro.observe(footerRef.current);
-    window.addEventListener('resize', updatePadding);
+  const ro = new ResizeObserver(updatePadding);
+  if (footerRef.current) ro.observe(footerRef.current);
+  window.addEventListener('resize', updatePadding);
 
-    return () => {
-      window.removeEventListener('resize', updatePadding);
-      ro.disconnect();
-    };
-  }, [open, footer]);
+  return () => {
+    window.removeEventListener('resize', updatePadding);
+    ro.disconnect();
+  };
+}, [open, footer]);
+
+// Ensure focused inputs are brought into view (especially on mobile keyboards)
+const isMobile = useIsMobile();
+React.useEffect(() => {
+  const handler = (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    // Delay to allow keyboard/layout changes
+    setTimeout(() => {
+      try {
+        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch {}
+    }, 50);
+  };
+  const el = contentRef.current;
+  el?.addEventListener('focusin', handler);
+  return () => el?.removeEventListener('focusin', handler);
+}, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -88,18 +107,32 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
           </div>
         </DialogHeader>
 
-        {/* Scrollable Content */}
-        <ScrollArea className="flex-1 overflow-hidden">
-          <div 
-            ref={contentRef}
-            className="p-4 pt-2"
-            style={{
-              minHeight: 'fit-content'
-            }}
-          >
-            {children}
-          </div>
-        </ScrollArea>
+{/* Scrollable Content */}
+{isMobile ? (
+  <div className="flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div 
+      ref={contentRef}
+      className="p-4 pt-2"
+      style={{
+        minHeight: 'fit-content'
+      }}
+    >
+      {children}
+    </div>
+  </div>
+) : (
+  <ScrollArea className="flex-1 overflow-hidden">
+    <div 
+      ref={contentRef}
+      className="p-4 pt-2"
+      style={{
+        minHeight: 'fit-content'
+      }}
+    >
+      {children}
+    </div>
+  </ScrollArea>
+)}
         {footer && (
           <div ref={footerRef} className="flex-shrink-0 p-3 border-t dark:border-slate-700 bg-background/95 dark:bg-slate-800/95">
             {footer}
