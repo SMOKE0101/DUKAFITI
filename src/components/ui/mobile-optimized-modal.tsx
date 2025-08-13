@@ -19,6 +19,7 @@ interface MobileOptimizedModalProps {
   children: React.ReactNode;
   className?: string;
   maxHeight?: string;
+  footer?: React.ReactNode;
 }
 
 const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
@@ -27,6 +28,7 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
   title,
   description,
   children,
+  footer,
   className = '',
   maxHeight = 'calc(100vh - 2rem)'
 }) => {
@@ -75,6 +77,11 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
             {children}
           </div>
         </ScrollArea>
+        {footer && (
+          <div className="flex-shrink-0 p-3 border-t dark:border-slate-700 bg-background/95 dark:bg-slate-800/95">
+            {footer}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
