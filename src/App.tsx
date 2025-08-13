@@ -24,6 +24,8 @@ import CustomersPage from "./components/CustomersPage";
 import ReportsPage from "./components/ReportsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
+import TestPage from "./pages/TestPage";
+import ImageDownloadTestPage from "./pages/ImageDownloadTest";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,6 +80,11 @@ function App() {
                       <Route path="reports" element={<ReportsPage />} />
                       <Route path="settings" element={<Settings />} />
                     </Route>
+                    
+                    {/* Test routes */}
+                    <Route path="/test" element={<TestPage />} />
+                    <Route path="/image-download-test" element={<ImageDownloadTestPage />} />
+                    
                     
                     {/* 404 - Always show with layout if user is authenticated */}
                     <Route path="*" element={<NotFound />} />

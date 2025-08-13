@@ -3,6 +3,7 @@ export const PRODUCT_CATEGORIES = [
   'electronics',
   'foods', 
   'fresh products',
+  'hardware',
   'homecare',
   'households',
   'personal care',
