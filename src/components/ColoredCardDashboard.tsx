@@ -47,9 +47,13 @@ const ColoredCardDashboard = () => {
     renderingDashboard: true
   });
 
-  // Add explicit check for data loading states
-  if (!sales || !products || !customers) {
-    console.error('[ColoredCardDashboard] Missing required data:', { sales: !!sales, products: !!products, customers: !!customers });
+  // Add explicit check for data loading states - ensure arrays exist and are valid
+  if (!Array.isArray(sales) || !Array.isArray(products) || !Array.isArray(customers)) {
+    console.log('[ColoredCardDashboard] Data not ready:', { 
+      sales: Array.isArray(sales) ? sales.length : 'not array', 
+      products: Array.isArray(products) ? products.length : 'not array', 
+      customers: Array.isArray(customers) ? customers.length : 'not array' 
+    });
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

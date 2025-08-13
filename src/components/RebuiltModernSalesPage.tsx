@@ -621,7 +621,10 @@ const { sales } = useUnifiedSales();
                 <div 
 ref={productListRef}
   className="h-full overflow-y-auto"
-  style={{ paddingBottom: '20px', paddingTop: isMobile ? '72px' : '64px' }}
+  style={{ 
+    paddingBottom: '20px', 
+    paddingTop: '8px' // Remove excessive top padding that was causing spacing issues
+  }}
 >
                   {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 text-center">
