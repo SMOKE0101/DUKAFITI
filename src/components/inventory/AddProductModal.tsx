@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import MobileOptimizedModal from '@/components/ui/mobile-optimized-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -207,21 +207,41 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   const showProfitCalculation = formData.costPrice > 0 && formData.sellingPrice > 0;
 
+  const modalTitle = editingProduct ? 'EDIT PRODUCT' : 'ADD PRODUCT';
+  const modalDescription = editingProduct ? 'Update product details' : 'Create new inventory item';
+
+  const modalFooter = (
+    <div className="flex gap-3">
+      <Button
+        type="button"
+        onClick={onClose}
+        variant="outline"
+        className="flex-1 font-mono font-bold uppercase tracking-wide border-2 border-gray-300 hover:border-gray-400 rounded-lg h-12"
+      >
+        Cancel
+      </Button>
+      <Button
+        type="submit"
+        form="product-form"
+        className="flex-1 font-mono font-bold uppercase tracking-wide bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white border-0 rounded-lg h-12 shadow-lg hover:shadow-xl transition-all duration-200"
+      >
+        {editingProduct ? 'UPDATE' : 'CREATE'} PRODUCT
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[600px] max-h-[90vh] border-0 p-0 bg-white dark:bg-gray-900 shadow-2xl rounded-xl overflow-hidden flex flex-col">          
-          {/* Modern Header */}
-          <div className="border-b-4 border-green-600 bg-white dark:bg-gray-900 p-4 sm:p-6 text-center flex-shrink-0">
-            <DialogTitle className="font-mono text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
-              {editingProduct ? 'EDIT PRODUCT' : 'ADD PRODUCT'}
-            </DialogTitle>
-            <DialogDescription className="font-mono text-sm text-gray-600 dark:text-gray-400 mt-2 uppercase tracking-wider">
-              {editingProduct ? 'Update product details' : 'Create new inventory item'}
-            </DialogDescription>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 sm:p-6">
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+    <>
+      <MobileOptimizedModal
+        open={isOpen}
+        onOpenChange={onClose}
+        title={modalTitle}
+        description={modalDescription}
+        footer={modalFooter}
+        maxHeight="calc(100dvh - 1rem)"
+        className="border-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
+      >
+        <form id="product-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               {/* Use Templates Button */}
               <div className="mb-6">
                 <Button
@@ -415,36 +435,21 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   </div>
                 </div>
               )}
-              
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-3 pt-6">
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200"
-                >
-                  {editingProduct ? 'UPDATE PRODUCT' : 'ADD PRODUCT'}
-                </Button>
-                <Button 
-                  type="button" 
-                  onClick={onClose} 
-                  className="w-full h-12 text-base font-mono font-bold uppercase tracking-wide bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200"
-                >
-                  CANCEL
-                </Button>
-              </div>
-            </form>
-          </div>
-        </DialogContent>
+        </form>
+      </MobileOptimizedModal>
         
-        {/* Template Selection Modal */}
-        {templatesInitialized && (
-          <TemplateSelectionModal
-            isOpen={showTemplateModal}
-            onClose={() => setShowTemplateModal(false)}
-            onTemplateSelect={handleTemplateSelect}
-          />
-        )}
-      </Dialog>
+      {/* Template Selection Modal */}
+      {showTemplateModal && templatesInitialized && (
+        <TemplateSelectionModal
+          isOpen={showTemplateModal}
+          onClose={() => {
+            setShowTemplateModal(false);
+            setTemplatesInitialized(false);
+          }}
+          onTemplateSelect={handleTemplateSelect}
+        />
+      )}
+    </>
   );
 };
 

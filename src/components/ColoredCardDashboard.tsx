@@ -16,6 +16,7 @@ import {
   Activity,
   RefreshCw
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useUnifiedSales } from '../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedCustomers } from '../hooks/useUnifiedCustomers';
@@ -24,9 +25,10 @@ import { formatCurrency } from '../utils/currency';
 import { useNavigate } from 'react-router-dom';
 import AccurateDashboardStats from './dashboard/AccurateDashboardStats';
 import AddProductModal from './inventory/AddProductModal';
-import AddCustomerModal from './customers/AddCustomerModal';
+import AddCustomerModal from './sales/AddCustomerModal';
 
 const ColoredCardDashboard = () => {
+  const isMobile = useIsMobile();
   const { sales } = useUnifiedSales();
   const { products, createProduct } = useUnifiedProducts();
   const { customers, createCustomer } = useUnifiedCustomers();
@@ -104,7 +106,7 @@ const ColoredCardDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-20' : ''}`}>
       {/* Modern Top Bar */}
       <div className="h-14 bg-card border-b border-border flex items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
@@ -117,7 +119,7 @@ const ColoredCardDashboard = () => {
         </div>
       </div>
 
-      <div className="p-6 space-y-8 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
         {/* Accurate Summary Cards */}
         <AccurateDashboardStats 
           sales={sales}
@@ -262,9 +264,9 @@ const ColoredCardDashboard = () => {
       />
       
       <AddCustomerModal
-        isOpen={showAddCustomerModal}
-        onClose={() => setShowAddCustomerModal(false)}
-        onSave={handleCustomerSave}
+        open={showAddCustomerModal}
+        onOpenChange={setShowAddCustomerModal}
+        onCustomerAdded={handleCustomerSave}
       />
     </div>
   );

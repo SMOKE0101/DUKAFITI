@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import MobileOptimizedModal from '@/components/ui/mobile-optimized-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -184,157 +184,158 @@ const AddCustomerModal = ({ open, onOpenChange, onCustomerAdded }: AddCustomerMo
     onOpenChange(false);
   };
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md w-[95vw] max-h-[95vh] overflow-y-auto bg-white dark:bg-slate-800 fixed z-[10002] mx-auto my-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-purple-600" />
-            Add New Customer
-            {!isOnline && (
-              <span className="flex items-center gap-1 text-xs font-normal text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded-full">
-                <WifiOff className="w-3 h-3" />
-                Offline Mode
-              </span>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <Label htmlFor="name" className="text-sm font-bold text-gray-700">
-                Name *
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Customer name"
-                required
-                className={`mt-1 border-2 ${errors.name ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
-                style={{ fontSize: '16px' }}
-                disabled={isSubmitting}
-              />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-            </div>
-            
-            <div>
-              <Label htmlFor="phone" className="text-sm font-bold text-gray-700">
-                Phone *
-              </Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="Phone number"
-                required
-                className={`mt-1 border-2 ${errors.phone ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
-                style={{ fontSize: '16px' }}
-                disabled={isSubmitting}
-              />
-              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-            </div>
-            
-            <div>
-              <Label htmlFor="email" className="text-sm font-bold text-gray-700">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                placeholder="Email address (optional)"
-                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
-                disabled={isSubmitting}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="address" className="text-sm font-bold text-gray-700">
-                Address
-              </Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-                placeholder="Address (optional)"
-                className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl"
-                disabled={isSubmitting}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="creditLimit" className="text-sm font-bold text-gray-700">
-                  Credit Limit (KES)
-                </Label>
-                <Input
-                  id="creditLimit"
-                  type="number"
-                  value={formData.creditLimit}
-                  onChange={(e) => handleChange('creditLimit', Number(e.target.value))}
-                  placeholder="1000"
-                  min="0"
-                  className={`mt-1 border-2 ${errors.creditLimit ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl`}
-                  disabled={isSubmitting}
-                />
-                {errors.creditLimit && <p className="text-red-500 text-xs mt-1">{errors.creditLimit}</p>}
-              </div>
+  const modalTitle = 'Add New Customer';
 
-              <div>
-                <Label htmlFor="initialDebt" className="text-sm font-bold text-gray-700">
-                  Initial Debt (KES)
-                </Label>
-                <Input
-                  id="initialDebt"
-                  type="number"
-                  value={formData.initialDebt}
-                  onChange={(e) => handleChange('initialDebt', Number(e.target.value))}
-                  placeholder="0"
-                  min="0"
-                  step="0.01"
-                  className={`mt-1 border-2 ${errors.initialDebt ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl`}
-                  disabled={isSubmitting}
-                />
-                {errors.initialDebt && <p className="text-red-500 text-xs mt-1">{errors.initialDebt}</p>}
-              </div>
-            </div>
-            
-            <p className="text-xs text-gray-500">
-              * Enter any existing debt amount if the customer already owes money
-            </p>
+  const modalFooter = (
+    <div className="flex gap-3">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+        className="flex-1 border-2 border-gray-300 hover:border-gray-400 rounded-xl h-12"
+        disabled={isSubmitting}
+      >
+        Cancel
+      </Button>
+      <Button
+        type="submit"
+        form="customer-form"
+        className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl h-12"
+        disabled={!isFormValid() || isSubmitting}
+      >
+        {isSubmitting ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Adding...
+          </div>
+        ) : (
+          'Add Customer'
+        )}
+      </Button>
+    </div>
+  );
+
+  return (
+    <MobileOptimizedModal
+      open={open}
+      onOpenChange={handleClose}
+      title={modalTitle}
+      description={!isOnline ? "Adding in offline mode" : undefined}
+      footer={modalFooter}
+      maxHeight="calc(100dvh - 1rem)"
+    >
+      <form id="customer-form" onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <Label htmlFor="name" className="text-sm font-bold text-gray-700 dark:text-gray-300">
+              Name *
+            </Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              placeholder="Customer name"
+              required
+              className={`mt-1 border-2 ${errors.name ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
+              style={{ fontSize: '16px' }}
+              disabled={isSubmitting}
+            />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
           
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              className="flex-1 border-2 border-gray-300 hover:border-gray-400 rounded-xl h-12"
+          <div>
+            <Label htmlFor="phone" className="text-sm font-bold text-gray-700 dark:text-gray-300">
+              Phone *
+            </Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              placeholder="Phone number"
+              required
+              className={`mt-1 border-2 ${errors.phone ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
+              style={{ fontSize: '16px' }}
               disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl h-12"
-              disabled={!isFormValid() || isSubmitting}
-            >
-              {isSubmitting ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Adding...
-                </div>
-              ) : (
-                'Add Customer'
-              )}
-            </Button>
+            />
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          
+          <div>
+            <Label htmlFor="email" className="text-sm font-bold text-gray-700 dark:text-gray-300">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange('email', e.target.value)}
+              placeholder="Email address (optional)"
+              className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl h-12"
+              style={{ fontSize: '16px' }}
+              disabled={isSubmitting}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="address" className="text-sm font-bold text-gray-700 dark:text-gray-300">
+              Address
+            </Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => handleChange('address', e.target.value)}
+              placeholder="Address (optional)"
+              className="mt-1 border-2 border-purple-200 focus:border-purple-400 rounded-xl h-12"
+              style={{ fontSize: '16px' }}
+              disabled={isSubmitting}
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="creditLimit" className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                Credit Limit (KES)
+              </Label>
+              <Input
+                id="creditLimit"
+                type="number"
+                value={formData.creditLimit}
+                onChange={(e) => handleChange('creditLimit', Number(e.target.value))}
+                placeholder="1000"
+                min="0"
+                className={`mt-1 border-2 ${errors.creditLimit ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
+                style={{ fontSize: '16px' }}
+                disabled={isSubmitting}
+              />
+              {errors.creditLimit && <p className="text-red-500 text-xs mt-1">{errors.creditLimit}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="initialDebt" className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                Initial Debt (KES)
+              </Label>
+              <Input
+                id="initialDebt"
+                type="number"
+                value={formData.initialDebt}
+                onChange={(e) => handleChange('initialDebt', Number(e.target.value))}
+                placeholder="0"
+                min="0"
+                step="0.01"
+                className={`mt-1 border-2 ${errors.initialDebt ? 'border-red-500' : 'border-purple-200'} focus:border-purple-400 rounded-xl h-12`}
+                style={{ fontSize: '16px' }}
+                disabled={isSubmitting}
+              />
+              {errors.initialDebt && <p className="text-red-500 text-xs mt-1">{errors.initialDebt}</p>}
+            </div>
+          </div>
+          
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            * Enter any existing debt amount if the customer already owes money
+          </p>
+        </div>
+      </form>
+    </MobileOptimizedModal>
   );
 };
 
