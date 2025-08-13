@@ -32,6 +32,29 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
   className = '',
   maxHeight = 'calc(100vh - 2rem)'
 }) => {
+  // Measure footer height and add bottom padding to scrollable content so nothing is hidden
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const footerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const updatePadding = () => {
+      const footerH = footerRef.current?.offsetHeight ?? 0;
+      if (contentRef.current) {
+        contentRef.current.style.paddingBottom = `calc(env(safe-area-inset-bottom, 0px) + ${footerH}px)`;
+      }
+    };
+    updatePadding();
+
+    const ro = new ResizeObserver(updatePadding);
+    if (footerRef.current) ro.observe(footerRef.current);
+    window.addEventListener('resize', updatePadding);
+
+    return () => {
+      window.removeEventListener('resize', updatePadding);
+      ro.disconnect();
+    };
+  }, [open, footer]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -68,17 +91,17 @@ const MobileOptimizedModal: React.FC<MobileOptimizedModalProps> = ({
         {/* Scrollable Content */}
         <ScrollArea className="flex-1 overflow-hidden">
           <div 
+            ref={contentRef}
             className="p-4 pt-2"
             style={{
-              minHeight: 'fit-content',
-              paddingBottom: 'env(safe-area-inset-bottom, 1rem)'
+              minHeight: 'fit-content'
             }}
           >
             {children}
           </div>
         </ScrollArea>
         {footer && (
-          <div className="flex-shrink-0 p-3 border-t dark:border-slate-700 bg-background/95 dark:bg-slate-800/95">
+          <div ref={footerRef} className="flex-shrink-0 p-3 border-t dark:border-slate-700 bg-background/95 dark:bg-slate-800/95">
             {footer}
           </div>
         )}
