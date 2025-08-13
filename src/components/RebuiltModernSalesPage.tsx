@@ -545,57 +545,14 @@ const { sales } = useUnifiedSales();
   if (isMobile) {
     return (
       <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px' }}>
-        {/* Sales Header - Similar to Dashboard */}
-        <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
-              <Receipt className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h1 className="font-mono text-lg font-black uppercase tracking-widest text-gray-900 dark:text-white">
-              SALES
-            </h1>
-          </div>
-          
-          {/* Network Status */}
-          <div className="flex items-center gap-2">
-            {isOnline ? (
-              <div className="flex items-center gap-2 text-green-600">
-                <Wifi size={14} />
-                <span className="text-xs font-medium">Online</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-orange-600">
-                <WifiOff size={14} />
-                <span className="text-xs font-medium">Offline</span>
-              </div>
-            )}
-            {pendingOperations > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {pendingOperations}
-              </Badge>
-            )}
-            {!isOnline && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={syncPendingOperations}
-                className="text-xs"
-              >
-                <RefreshCw size={12} className="mr-1" />
-                Sync
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile Content */}
+        {/* Mobile Content - Header removed */}
         <div className="flex-1 overflow-hidden relative">
           {activePanel === 'search' ? (
             <>
               {/* Filters */}
-              <div className="flex-shrink-0 p-4 bg-background border-b border-border">
+              <div className="flex-shrink-0 p-2 bg-background border-b border-border">
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full h-8">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -607,6 +564,20 @@ const { sales } = useUnifiedSales();
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Search Bar - Compact version */}
+              <div className="sticky top-0 z-[10000] bg-background/95 backdrop-blur-sm border-b border-border p-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3" />
+                  <Input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 h-8 text-sm bg-background border-border focus:border-primary transition-colors"
+                  />
+                </div>
               </div>
 
               {/* Products Grid with Side Toggle */}
@@ -629,15 +600,9 @@ const { sales } = useUnifiedSales();
                     )}
                   </div>
                 </Button>
-                
-                 <div 
-ref={productListRef}
-  className="h-full overflow-y-auto"
-  style={{ 
-    paddingBottom: '20px', 
-    paddingTop: isMobile ? '80px' : '8px' // Dynamic padding based on mobile search bar
-  }}
->
+
+                {/* Product List with minimal padding */}
+                <div className="flex-1 overflow-y-auto" style={{ paddingTop: '8px', paddingBottom: '120px' }}>
                   {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 text-center">
                       <Search size={48} className="text-muted-foreground mb-4" />

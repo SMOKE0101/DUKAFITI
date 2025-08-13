@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import AccurateDashboardStats from './dashboard/AccurateDashboardStats';
 import AddProductModal from './inventory/AddProductModal';
 import AddCustomerModal from './sales/AddCustomerModal';
+import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
 
 const ColoredCardDashboard = () => {
   const isMobile = useIsMobile();
@@ -60,6 +61,9 @@ const ColoredCardDashboard = () => {
     hasAccurateStats: true,
     renderingDashboard: true
   });
+
+  // Use standardized dashboard metrics to match reports
+  const dashboardMetrics = useDashboardMetrics(sales, products, customers);
 
   // Enhanced loading check - wait for all data to be properly loaded or show errors
   if (!Array.isArray(sales) || !Array.isArray(products) || !Array.isArray(customers) || 
