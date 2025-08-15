@@ -33,7 +33,7 @@ const AddProductDropdown: React.FC<AddProductDropdownProps> = ({ onModeSelect, c
       <DropdownMenuTrigger asChild>
         <Button 
           className={cn(
-            "bg-purple-600 hover:bg-purple-700 text-white rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2",
+            "bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0",
             className
           )}
           size="sm"
@@ -45,16 +45,16 @@ const AddProductDropdown: React.FC<AddProductDropdownProps> = ({ onModeSelect, c
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg z-50"
+        className="w-56 bg-background border border-border rounded-xl shadow-lg z-50"
       >
         {modes.map((mode) => (
           <DropdownMenuItem
             key={mode.id}
             onClick={() => handleModeSelect(mode.id)}
-            className="flex flex-col items-start p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+            className="flex flex-col items-start p-3 hover:bg-muted cursor-pointer rounded-lg"
           >
-            <span className="font-medium text-gray-900 dark:text-white">{mode.label}</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{mode.description}</span>
+            <span className="font-medium text-foreground">{mode.label}</span>
+            <span className="text-xs text-muted-foreground mt-1">{mode.description}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
