@@ -180,7 +180,7 @@ const CustomersPage = () => {
       // Handle split payment - create multiple debt payment records
       if (paymentData.splitPaymentData && paymentData.method === 'split') {
         const splitData = paymentData.splitPaymentData;
-        const splitReference = `split_${Date.now()}`;
+        const splitReference = `debt_split_${Date.now()}`;
         
         // Create individual payment records for each method in the split
         const paymentPromises = [];
@@ -204,7 +204,20 @@ const CustomersPage = () => {
             customer_name: selectedCustomer.name,
             amount: splitData.methods.mpesa.amount,
             payment_method: 'mpesa',
-            reference: splitData.methods.mpesa.reference || `${splitReference}_mpesa`,
+            reference: `${splitReference}_mpesa`,
+            timestamp: new Date().toISOString(),
+          }));
+        }
+        
+        // Handle discount if present (record as negative adjustment)
+        if (splitData.methods.discount && splitData.methods.discount.amount > 0) {
+          paymentPromises.push(createDebtPayment({
+            user_id: user?.id || '',
+            customer_id: selectedCustomer.id,
+            customer_name: selectedCustomer.name,
+            amount: splitData.methods.discount.amount,
+            payment_method: 'cash', // Discount recorded as cash for simplicity
+            reference: `${splitReference}_discount`,
             timestamp: new Date().toISOString(),
           }));
         }

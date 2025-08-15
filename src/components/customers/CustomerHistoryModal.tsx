@@ -394,20 +394,95 @@ useEffect(() => {
                     ))}
                   </div>
                 ) : paymentsData.length ? (
-                  <div className="divide-y divide-border">
-                    {paymentsData.map((p) => (
-                      <div key={p.id} className="grid grid-cols-5 gap-2 py-2 text-xs sm:text-sm">
-                        <span>{formatDate(p.timestamp)}</span>
-                        <span>{formatTime(p.timestamp)}</span>
-                        <span className="capitalize flex items-center gap-1">
-                          {p.payment_method === 'mpesa' ? <Smartphone className="w-3.5 h-3.5" /> : <Banknote className="w-3.5 h-3.5" />}
-                          {p.payment_method === 'mpesa' ? 'M-Pesa' : p.payment_method}
-                        </span>
-                        <span className="text-right font-medium text-green-600 dark:text-green-400">{formatCurrency(p.amount)}</span>
-                        <span className="truncate" title={p.reference || undefined}>{p.reference || '-'}</span>
+                  (() => {
+                    // Group split payments by reference
+                    const groupedPayments: { [key: string]: typeof paymentsData } = {};
+                    const singlePayments: typeof paymentsData = [];
+                    
+                    paymentsData.forEach(payment => {
+                      const reference = payment.reference || '';
+                      if (reference.includes('split_')) {
+                        const baseRef = reference.replace(/_[^_]+$/, ''); // Remove "_cash" or "_mpesa" suffix
+                        if (!groupedPayments[baseRef]) {
+                          groupedPayments[baseRef] = [];
+                        }
+                        groupedPayments[baseRef].push(payment);
+                      } else {
+                        singlePayments.push(payment);
+                      }
+                    });
+
+                    // Combine and sort all entries by timestamp
+                    const allEntries: Array<{ type: 'single' | 'split'; data: typeof paymentsData[0] | typeof paymentsData; key: string }> = [
+                      ...singlePayments.map(p => ({ type: 'single' as const, data: p, key: p.id })),
+                      ...Object.entries(groupedPayments).map(([ref, payments]) => ({ 
+                        type: 'split' as const, 
+                        data: payments, 
+                        key: ref 
+                      }))
+                    ];
+
+                    allEntries.sort((a, b) => {
+                      const aTimestamp = a.type === 'single' 
+                        ? (a.data as typeof paymentsData[0]).timestamp 
+                        : Math.max(...(a.data as typeof paymentsData).map(p => new Date(p.timestamp).getTime()));
+                      const bTimestamp = b.type === 'single' 
+                        ? (b.data as typeof paymentsData[0]).timestamp 
+                        : Math.max(...(b.data as typeof paymentsData).map(p => new Date(p.timestamp).getTime()));
+                      return new Date(bTimestamp).getTime() - new Date(aTimestamp).getTime();
+                    });
+
+                    return (
+                      <div className="divide-y divide-border">
+                        {allEntries.map((entry) => {
+                          if (entry.type === 'single') {
+                            const p = entry.data as typeof paymentsData[0];
+                            return (
+                              <div key={p.id} className="grid grid-cols-5 gap-2 py-2 text-xs sm:text-sm">
+                                <span>{formatDate(p.timestamp)}</span>
+                                <span>{formatTime(p.timestamp)}</span>
+                                <span className="capitalize flex items-center gap-1">
+                                  {p.payment_method === 'mpesa' ? <Smartphone className="w-3.5 h-3.5" /> : <Banknote className="w-3.5 h-3.5" />}
+                                  {p.payment_method === 'mpesa' ? 'M-Pesa' : p.payment_method}
+                                </span>
+                                <span className="text-right font-medium text-green-600 dark:text-green-400">{formatCurrency(p.amount)}</span>
+                                <span className="truncate" title={p.reference || undefined}>{p.reference || '-'}</span>
+                              </div>
+                            );
+                          } else {
+                            const payments = entry.data as typeof paymentsData;
+                            const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+                            const latestPayment = payments.reduce((latest, p) => 
+                              new Date(p.timestamp) > new Date(latest.timestamp) ? p : latest
+                            );
+                            
+                            return (
+                              <div key={entry.key} className="py-2 text-xs sm:text-sm">
+                                <div className="grid grid-cols-5 gap-2">
+                                  <span>{formatDate(latestPayment.timestamp)}</span>
+                                  <span>{formatTime(latestPayment.timestamp)}</span>
+                                  <span className="flex flex-wrap items-start gap-1">
+                                    <Badge variant="outline" className="px-2 py-0.5 text-[10px] font-semibold bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-950/20 dark:border-purple-800 dark:text-purple-300">
+                                      Split Payment
+                                    </Badge>
+                                  </span>
+                                  <span className="text-right font-medium text-green-600 dark:text-green-400">{formatCurrency(totalAmount)}</span>
+                                  <span className="text-xs text-muted-foreground">Split</span>
+                                </div>
+                                <div className="mt-1 ml-0 pl-0 flex flex-wrap gap-1">
+                                  {payments.map((p) => (
+                                    <Badge key={p.id} variant="outline" className="px-1.5 py-0.5 text-[9px] bg-muted/50">
+                                      {p.payment_method === 'mpesa' ? 'M-Pesa' : p.payment_method.charAt(0).toUpperCase() + p.payment_method.slice(1)}: {formatCurrency(p.amount)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()
                 ) : (
                   <div className="py-8 text-center text-muted-foreground text-sm">
                     <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-60" />

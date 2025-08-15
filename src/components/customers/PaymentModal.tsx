@@ -189,6 +189,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         total={paymentData.amount}
         customers={[]} // Empty array for debt payments - customer is already selected
         onConfirm={handleSplitPaymentConfirm}
+        context="debt"
       />
     </Dialog>
   );

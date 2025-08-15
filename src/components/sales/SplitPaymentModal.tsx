@@ -17,6 +17,7 @@ interface SplitPaymentModalProps {
   total: number;
   customers: Customer[];
   onConfirm: (data: SplitPaymentData) => void;
+  context?: 'sales' | 'debt'; // Add context to differentiate between sales and debt scenarios
 }
 
 const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
@@ -24,7 +25,8 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   onOpenChange,
   total,
   customers,
-  onConfirm
+  onConfirm,
+  context = 'sales' // Default to sales context for backward compatibility
 }) => {
   const [selectedMethods, setSelectedMethods] = useState({
     cash: false,
@@ -55,7 +57,15 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setSelectedMethods({ cash: false, mpesa: true, debt: false, discount: true });
+      // Set default methods based on context
+      if (context === 'debt') {
+        // For debt payments, only allow cash, mpesa, and discount (no debt option)
+        setSelectedMethods({ cash: false, mpesa: true, debt: false, discount: true });
+      } else {
+        // For sales, allow all methods including debt
+        setSelectedMethods({ cash: false, mpesa: true, debt: false, discount: true });
+      }
+      
       // Start with full amount on M-Pesa and zero discount
       setSliderValues([99]); // visual bias toward first segment
       setSelectedCustomerId('');
@@ -66,7 +76,7 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         discount: '0'
       });
     }
-  }, [open, total]);
+  }, [open, total, context]);
 
   const handleMethodToggle = useCallback((method: keyof typeof selectedMethods, enabled: boolean) => {
     setSelectedMethods(prev => {
@@ -266,8 +276,10 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
         {/* Payment Method Selection */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">Select Payment Methods (choose 2-3)</Label>
-          <div className="grid grid-cols-3 gap-2">
-              {Object.entries(selectedMethods).map(([method, enabled]) => (
+          <div className={`grid gap-2 ${context === 'debt' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+              {Object.entries(selectedMethods)
+                .filter(([method]) => context === 'debt' ? method !== 'debt' : true) // Hide debt option for debt context
+                .map(([method, enabled]) => (
                 <Button
                   key={method}
                   variant={enabled ? 'default' : 'outline'}
@@ -281,8 +293,11 @@ const SplitPaymentModal: React.FC<SplitPaymentModalProps> = ({
                 </Button>
               ))}
           </div>
-          {selectedMethods.debt && (
+          {selectedMethods.debt && context !== 'debt' && (
             <p className="text-xs text-muted-foreground">Customer selection will be required at checkout for debt payment</p>
+          )}
+          {context === 'debt' && (
+            <p className="text-xs text-muted-foreground">Recording payment for customer debt - only Cash, M-Pesa, and Discount available</p>
           )}
         </div>
 
