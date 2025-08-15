@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -575,15 +575,15 @@ export type Database = {
     Functions: {
       record_debt_payment_with_balance_update: {
         Args: {
-          p_user_id: string
+          p_amount: number
           p_customer_id: string
           p_customer_name: string
-          p_amount: number
+          p_last_purchase_date: string
+          p_new_outstanding_debt: number
           p_payment_method: string
           p_reference: string
           p_timestamp: string
-          p_new_outstanding_debt: number
-          p_last_purchase_date: string
+          p_user_id: string
         }
         Returns: undefined
       }
