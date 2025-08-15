@@ -124,8 +124,8 @@ const SplitPaymentDebtTest: React.FC = () => {
       throw new Error(`Expected debt amount 300, got ${createdSale.paymentDetails.debtAmount}`);
     }
 
-    // Record the debt increase manually (since this is what should happen in the checkout)
-    await recordDebtIncrease(testCustomer.id, testCustomer.name, 300, createdSale.id);
+    // DO NOT record debt increase manually - this should be handled by database trigger
+    // The split payment debt should be automatically processed by the database trigger
     
     console.log('[SplitPaymentDebtTest] Split payment test completed successfully');
   };
@@ -153,22 +153,22 @@ const SplitPaymentDebtTest: React.FC = () => {
     
     console.log('[SplitPaymentDebtTest] Updated customer debt:', updatedCustomer.outstandingDebt);
     
-    // Check if debt increased (allowing for trigger-based updates)
-    const expectedMinimumDebt = initialDebt + 300;
-    if (updatedCustomer.outstandingDebt < expectedMinimumDebt) {
-      // Check pending transactions as fallback
-      const pendingTransactions = getPendingDebtTransactions(testCustomer.id);
-      const pendingDebtIncrease = pendingTransactions
-        .filter(t => t.type === 'increase')
-        .reduce((sum, t) => sum + t.amount, 0);
-      
-      const totalExpectedDebt = initialDebt + pendingDebtIncrease;
-      
-      if (totalExpectedDebt < expectedMinimumDebt) {
-        throw new Error(
-          `Customer debt not updated correctly. Expected at least ${expectedMinimumDebt}, got ${updatedCustomer.outstandingDebt} (with ${pendingDebtIncrease} pending)`
-        );
-      }
+    // Check if debt increased by exactly the debt amount from split payment (300)
+    const expectedDebtIncrease = 300;
+    const actualDebtIncrease = updatedCustomer.outstandingDebt - initialDebt;
+    
+    console.log('[SplitPaymentDebtTest] Debt comparison:', {
+      initialDebt,
+      currentDebt: updatedCustomer.outstandingDebt,
+      expectedIncrease: expectedDebtIncrease,
+      actualIncrease: actualDebtIncrease
+    });
+    
+    // Allow for small floating point differences
+    if (Math.abs(actualDebtIncrease - expectedDebtIncrease) > 0.01) {
+      throw new Error(
+        `Customer debt not updated correctly by database trigger. Expected increase of ${expectedDebtIncrease}, got ${actualDebtIncrease}. Initial: ${initialDebt}, Current: ${updatedCustomer.outstandingDebt}`
+      );
     }
     
     console.log('[SplitPaymentDebtTest] Customer debt update test completed successfully');

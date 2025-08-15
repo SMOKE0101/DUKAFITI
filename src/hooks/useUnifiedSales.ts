@@ -205,6 +205,9 @@ export const useUnifiedSales = () => {
           debtAmount: saleData.paymentDetails.debtAmount
         });
 
+        // Map 'split' to 'partial' for database storage consistency
+        const dbPaymentMethod = saleData.paymentMethod === 'split' ? 'partial' : saleData.paymentMethod;
+        
         const { data, error } = await supabase
           .from('sales')
           .insert([{
@@ -218,7 +221,7 @@ export const useUnifiedSales = () => {
             cost_price: saleData.costPrice,
             profit: saleData.profit,
             total_amount: saleData.total,
-            payment_method: saleData.paymentMethod,
+            payment_method: dbPaymentMethod,
             payment_details: saleData.paymentDetails,
             timestamp: newSale.timestamp,
             synced: true,
