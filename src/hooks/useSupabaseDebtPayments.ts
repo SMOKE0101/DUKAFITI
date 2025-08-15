@@ -142,6 +142,7 @@ export const useSupabaseDebtPayments = () => {
     loading,
     error,
     createDebtPayment,
+    createMultipleDebtPayments,
     updateDebtPayment,
     deleteDebtPayment,
     refetch: fetchDebtPayments,

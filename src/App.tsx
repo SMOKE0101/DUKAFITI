@@ -26,6 +26,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
 import TestPage from "./pages/TestPage";
 import ImageDownloadTestPage from "./pages/ImageDownloadTest";
+import TemplateCacheCleaner from "./components/TemplateCacheCleaner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ function App() {
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <TooltipProvider>
               <AuthProvider>
+                <TemplateCacheCleaner />
                 <ErrorBoundary>
                 <div className="min-h-screen w-full bg-background text-foreground">
                   <Routes>
