@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
+import { useOfflineDebtManager } from '../../hooks/useOfflineDebtManager';
 
 import { SalesService } from '../../services/salesService';
 import { CartItem } from '../../types/cart';
@@ -47,8 +48,9 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
 
   const { user } = useAuth();
   const { toast } = useToast();
-const { createSale } = useUnifiedSales();
-const { updateProduct, forceRefetch: forceReloadProducts, products } = useUnifiedProducts();
+  const { createSale } = useUnifiedSales();
+  const { updateProduct, forceRefetch: forceReloadProducts, products } = useUnifiedProducts();
+  const { recordDebtIncrease, calculateCustomerDebt } = useOfflineDebtManager();
 
 // Use customers from parent to ensure single source of truth
 const allCustomers = initialCustomers;
@@ -236,6 +238,47 @@ const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
         const itemTotal = item.sellingPrice * item.quantity;
         const profit = item.costPrice > 0 ? (item.sellingPrice - item.costPrice) * item.quantity : 0;
         
+        console.log('[NewSalesCheckout] Creating sale data for item:', {
+          itemName: item.name,
+          itemTotal,
+          total,
+          paymentMethod,
+          splitPaymentData: splitPaymentData ? {
+            cash: splitPaymentData.methods.cash?.amount || 0,
+            mpesa: splitPaymentData.methods.mpesa?.amount || 0,
+            debt: splitPaymentData.methods.debt?.amount || 0,
+            discount: splitPaymentData.methods.discount?.amount || 0
+          } : null,
+          selectedCustomer: updatedCustomer ? {
+            id: updatedCustomer.id,
+            name: updatedCustomer.name,
+            currentDebt: updatedCustomer.outstandingDebt
+          } : null
+        });
+
+        // Calculate proportional amounts for split payments
+        const splitRatio = itemTotal / total;
+        const itemPaymentDetails = paymentMethod === 'split' && splitPaymentData ? {
+          cashAmount: Math.round((splitPaymentData.methods.cash?.amount || 0) * splitRatio),
+          mpesaAmount: Math.round((splitPaymentData.methods.mpesa?.amount || 0) * splitRatio),
+          debtAmount: Math.round((splitPaymentData.methods.debt?.amount || 0) * splitRatio),
+          discountAmount: Math.round((splitPaymentData.methods.discount?.amount || 0) * splitRatio),
+          saleReference: salesReference || undefined,
+        } : {
+          cashAmount: paymentMethod === 'cash' ? itemTotal : 0,
+          mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,
+          debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
+          discountAmount: 0,
+          saleReference: salesReference || undefined,
+        };
+
+        console.log('[NewSalesCheckout] Item payment details calculated:', {
+          itemName: item.name,
+          splitRatio,
+          itemPaymentDetails,
+          expectedDebtAmount: itemPaymentDetails.debtAmount
+        });
+
         const saleData: Omit<Sale, 'id' | 'synced'> = {
           productId: item.id,
           productName: item.name,
@@ -247,24 +290,47 @@ const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
           customerId: updatedCustomer?.id || undefined,
           customerName: updatedCustomer?.name || undefined,
           paymentMethod: paymentMethod,
-          paymentDetails: paymentMethod === 'split' && splitPaymentData ? {
-            cashAmount: (splitPaymentData.methods.cash?.amount || 0) * (itemTotal / total),
-            mpesaAmount: (splitPaymentData.methods.mpesa?.amount || 0) * (itemTotal / total),
-            debtAmount: (splitPaymentData.methods.debt?.amount || 0) * (itemTotal / total),
-            discountAmount: (splitPaymentData.methods.discount?.amount || 0) * (itemTotal / total),
-            saleReference: salesReference || undefined,
-          } : {
-            cashAmount: paymentMethod === 'cash' ? itemTotal : 0,
-            mpesaAmount: paymentMethod === 'mpesa' ? itemTotal : 0,
-            debtAmount: paymentMethod === 'debt' ? itemTotal : 0,
-            saleReference: salesReference || undefined,
-          },
+          paymentDetails: itemPaymentDetails,
           timestamp: new Date().toISOString(),
           clientSaleId: clientSaleId,
         };
 
-        console.log('[NewSalesCheckout] Creating sale for item:', item.name);
-        await createSale(saleData);
+        console.log('[NewSalesCheckout] Creating sale for item:', {
+          itemName: item.name,
+          saleData: {
+            productId: saleData.productId,
+            paymentMethod: saleData.paymentMethod,
+            paymentDetails: saleData.paymentDetails,
+            customerId: saleData.customerId,
+            customerName: saleData.customerName,
+            total: saleData.total
+          }
+        });
+        
+        const createdSale = await createSale(saleData);
+        console.log('[NewSalesCheckout] Sale created successfully:', {
+          itemName: item.name,
+          saleId: createdSale.id,
+          debtAmount: createdSale.paymentDetails.debtAmount,
+          customerId: createdSale.customerId
+        });
+
+        // Record debt increase if there's debt amount and customer
+        if (itemPaymentDetails.debtAmount > 0 && updatedCustomer) {
+          console.log('[NewSalesCheckout] Recording debt increase for split payment:', {
+            customerId: updatedCustomer.id,
+            customerName: updatedCustomer.name,
+            debtAmount: itemPaymentDetails.debtAmount,
+            saleId: createdSale.id
+          });
+          
+          await recordDebtIncrease(
+            updatedCustomer.id,
+            updatedCustomer.name,
+            itemPaymentDetails.debtAmount,
+            createdSale.id
+          );
+        }
 
         // Update product stock - use direct approach for variants like SalesCheckout
         console.log('[NewSalesCheckout] Updating stock for product:', {
@@ -381,7 +447,15 @@ console.log('[NewSalesCheckout] Checkout completed successfully');
 // Notify other parts of the app and refresh customers
 window.dispatchEvent(new CustomEvent('sale-completed'));
 window.dispatchEvent(new CustomEvent('checkout-completed'));
-onCustomersRefresh();
+
+// Force customer refresh to show updated debt balances
+console.log('[NewSalesCheckout] Forcing customer refresh after sale completion');
+await onCustomersRefresh();
+
+// Additional event to ensure all customer-related components update
+window.dispatchEvent(new CustomEvent('customers-refreshed', {
+  detail: { trigger: 'post-checkout', timestamp: new Date().toISOString() }
+}));
 
 // Reset states
 setSelectedCustomerId(null);

@@ -193,6 +193,18 @@ export const useUnifiedSales = () => {
           }
         }
 
+        console.log('[UnifiedSales] Inserting sale into database:', {
+          user_id: user.id,
+          product_id: saleData.productId,
+          product_name: saleData.productName,
+          customer_id: saleData.customerId,
+          customer_name: saleData.customerName,
+          payment_method: saleData.paymentMethod,
+          payment_details: saleData.paymentDetails,
+          total_amount: saleData.total,
+          debtAmount: saleData.paymentDetails.debtAmount
+        });
+
         const { data, error } = await supabase
           .from('sales')
           .insert([{
@@ -215,6 +227,18 @@ export const useUnifiedSales = () => {
           }])
           .select()
           .single();
+
+        console.log('[UnifiedSales] Database insert result:', {
+          success: !error,
+          error: error?.message,
+          insertedData: data ? {
+            id: data.id,
+            payment_method: data.payment_method,
+            payment_details: data.payment_details,
+            customer_id: data.customer_id,
+            total_amount: data.total_amount
+          } : null
+        });
 
         if (error) throw error;
 
