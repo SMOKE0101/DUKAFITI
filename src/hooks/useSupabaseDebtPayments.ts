@@ -73,6 +73,29 @@ export const useSupabaseDebtPayments = () => {
     return data;
   };
 
+  const createMultipleDebtPayments = async (paymentsData: Omit<DebtPayment, 'id' | 'created_at' | 'synced'>[]) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const paymentsWithUser = paymentsData.map(payment => ({
+      ...payment,
+      user_id: user.id,
+      synced: true,
+    }));
+
+    const { data, error } = await supabase
+      .from('debt_payments')
+      .insert(paymentsWithUser)
+      .select();
+
+    if (error) {
+      console.error('Error creating multiple debt payments:', error);
+      throw error;
+    }
+
+    await fetchDebtPayments();
+    return data;
+  };
+
   const updateDebtPayment = async (id: string, updates: Partial<DebtPayment>) => {
     if (!user) throw new Error('User not authenticated');
 

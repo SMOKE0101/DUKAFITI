@@ -165,24 +165,68 @@ const CustomersPage = () => {
     }
   };
 
-  const handlePaymentComplete = async (paymentData: { amount: number; method: string; notes?: string }) => {
+  const handlePaymentComplete = async (paymentData: { 
+    amount: number; 
+    method: string; 
+    notes?: string; 
+    splitPaymentData?: import('@/types/cart').SplitPaymentData 
+  }) => {
     if (!selectedCustomer) return;
     
     setOperationsInProgress(prev => ({ ...prev, recordingPayment: selectedCustomer.id }));
     try {
-      // Calculate new outstanding debt
-      const newOutstandingDebt = Math.max(0, selectedCustomer.outstandingDebt - paymentData.amount);
+      let totalPaymentAmount = paymentData.amount;
       
-      // Create debt payment record
-      await createDebtPayment({
-        user_id: user?.id || '',
-        customer_id: selectedCustomer.id,
-        customer_name: selectedCustomer.name,
-        amount: paymentData.amount,
-        payment_method: paymentData.method,
-        reference: paymentData.notes || undefined,
-        timestamp: new Date().toISOString(),
-      });
+      // Handle split payment - create multiple debt payment records
+      if (paymentData.splitPaymentData && paymentData.method === 'split') {
+        const splitData = paymentData.splitPaymentData;
+        const splitReference = `split_${Date.now()}`;
+        
+        // Create individual payment records for each method in the split
+        const paymentPromises = [];
+        
+        if (splitData.methods.cash && splitData.methods.cash.amount > 0) {
+          paymentPromises.push(createDebtPayment({
+            user_id: user?.id || '',
+            customer_id: selectedCustomer.id,
+            customer_name: selectedCustomer.name,
+            amount: splitData.methods.cash.amount,
+            payment_method: 'cash',
+            reference: `${splitReference}_cash`,
+            timestamp: new Date().toISOString(),
+          }));
+        }
+        
+        if (splitData.methods.mpesa && splitData.methods.mpesa.amount > 0) {
+          paymentPromises.push(createDebtPayment({
+            user_id: user?.id || '',
+            customer_id: selectedCustomer.id,
+            customer_name: selectedCustomer.name,
+            amount: splitData.methods.mpesa.amount,
+            payment_method: 'mpesa',
+            reference: splitData.methods.mpesa.reference || `${splitReference}_mpesa`,
+            timestamp: new Date().toISOString(),
+          }));
+        }
+        
+        // Execute all payment records
+        await Promise.all(paymentPromises);
+        totalPaymentAmount = splitData.total;
+      } else {
+        // Single payment method
+        await createDebtPayment({
+          user_id: user?.id || '',
+          customer_id: selectedCustomer.id,
+          customer_name: selectedCustomer.name,
+          amount: paymentData.amount,
+          payment_method: paymentData.method,
+          reference: paymentData.notes || undefined,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      
+      // Calculate new outstanding debt using total payment amount
+      const newOutstandingDebt = Math.max(0, selectedCustomer.outstandingDebt - totalPaymentAmount);
       
       // Update customer with new debt amount
       await updateCustomer(selectedCustomer.id, {
@@ -193,8 +237,8 @@ const CustomersPage = () => {
       toast({
         title: "Payment Recorded",
         description: isOnline 
-          ? `Payment of ${formatCurrency(paymentData.amount)} recorded successfully`
-          : `Payment of ${formatCurrency(paymentData.amount)} recorded (will sync when online)`,
+          ? `Payment of ${formatCurrency(totalPaymentAmount)} recorded successfully`
+          : `Payment of ${formatCurrency(totalPaymentAmount)} recorded (will sync when online)`,
       });
       
       setShowPaymentModal(false);
