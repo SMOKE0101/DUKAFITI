@@ -8,12 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
+import { Split } from 'lucide-react';
+import SplitPaymentModal from '../sales/SplitPaymentModal';
+import type { SplitPaymentData } from '@/types/cart';
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: Customer | null;
-  onPayment: (paymentData: { amount: number; method: string; notes?: string }) => Promise<void>;
+  onPayment: (paymentData: { amount: number; method: string; notes?: string; splitPaymentData?: SplitPaymentData }) => Promise<void>;
   isRecording: boolean;
 }
 
@@ -30,21 +33,55 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     notes: ''
   });
 
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitPaymentData, setSplitPaymentData] = useState<SplitPaymentData | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!customer || paymentData.amount <= 0) return;
+
+    // If split payment is selected, show split modal
+    if (paymentData.method === 'split') {
+      setShowSplitModal(true);
+      return;
+    }
     
     try {
-      await onPayment(paymentData);
+      await onPayment({
+        ...paymentData,
+        splitPaymentData: splitPaymentData
+      });
       // Reset form
       setPaymentData({
         amount: 0,
         method: 'cash',
         notes: ''
       });
+      setSplitPaymentData(null);
     } catch (error) {
       console.error('Failed to record payment:', error);
+    }
+  };
+
+  const handleSplitPaymentConfirm = async (data: SplitPaymentData) => {
+    setSplitPaymentData(data);
+    setShowSplitModal(false);
+    
+    try {
+      await onPayment({
+        ...paymentData,
+        splitPaymentData: data
+      });
+      // Reset form
+      setPaymentData({
+        amount: 0,
+        method: 'cash',
+        notes: ''
+      });
+      setSplitPaymentData(null);
+    } catch (error) {
+      console.error('Failed to record split payment:', error);
     }
   };
 
@@ -113,6 +150,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <SelectContent>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="mpesa">M-Pesa</SelectItem>
+                <SelectItem value="split">
+                  <div className="flex items-center gap-2">
+                    <Split className="h-4 w-4" />
+                    Split Payment
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -138,6 +181,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
         </form>
       </DialogContent>
+
+      {/* Split Payment Modal */}
+      <SplitPaymentModal
+        open={showSplitModal}
+        onOpenChange={setShowSplitModal}
+        total={paymentData.amount}
+        customers={[]} // Empty array for debt payments - customer is already selected
+        onConfirm={handleSplitPaymentConfirm}
+      />
     </Dialog>
   );
 };
