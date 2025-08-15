@@ -50,7 +50,7 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   const { toast } = useToast();
   const { createSale } = useUnifiedSales();
   const { updateProduct, forceRefetch: forceReloadProducts, products } = useUnifiedProducts();
-  const { recordDebtIncrease, calculateCustomerDebt } = useOfflineDebtManager();
+  const { calculateCustomerDebt } = useOfflineDebtManager();
 
 // Use customers from parent to ensure single source of truth
 const allCustomers = initialCustomers;
@@ -315,21 +315,15 @@ const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
           customerId: createdSale.customerId
         });
 
-        // Record debt increase if there's debt amount and customer
+        // Debt increases are now handled automatically by database trigger
+        // No manual debt recording needed to prevent duplication
         if (itemPaymentDetails.debtAmount > 0 && updatedCustomer) {
-          console.log('[NewSalesCheckout] Recording debt increase for split payment:', {
+          console.log('[NewSalesCheckout] Debt will be updated by database trigger:', {
             customerId: updatedCustomer.id,
             customerName: updatedCustomer.name,
             debtAmount: itemPaymentDetails.debtAmount,
             saleId: createdSale.id
           });
-          
-          await recordDebtIncrease(
-            updatedCustomer.id,
-            updatedCustomer.name,
-            itemPaymentDetails.debtAmount,
-            createdSale.id
-          );
         }
 
         // Update product stock - use direct approach for variants like SalesCheckout
