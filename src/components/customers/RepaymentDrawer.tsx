@@ -6,13 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { X, CreditCard } from 'lucide-react';
+import { X, CreditCard, Split } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseCustomers } from '../../hooks/useSupabaseCustomers';
 import { Customer } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../hooks/useAuth';
+import SplitPaymentModal from '../sales/SplitPaymentModal';
+import type { SplitPaymentData } from '../../types/cart';
 
 interface RepaymentDrawerProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
   const [method, setMethod] = useState('cash');
   const [reference, setReference] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitPaymentData, setSplitPaymentData] = useState<SplitPaymentData | null>(null);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { updateCustomer } = useSupabaseCustomers();
@@ -37,6 +41,12 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
         description: "Please enter a valid payment amount.",
         variant: "destructive",
       });
+      return;
+    }
+
+    // If split payment method is selected, open split modal
+    if (method === 'split') {
+      setShowSplitModal(true);
       return;
     }
 
@@ -103,10 +113,81 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
     }
   };
 
+  const handleSplitPaymentConfirm = async (data: SplitPaymentData) => {
+    if (!customer || !user) return;
+
+    setIsSubmitting(true);
+    try {
+      const totalPaymentAmount = parseFloat(amount);
+      const newBalance = Math.max(0, customer.outstandingDebt - totalPaymentAmount);
+      const timestamp = new Date().toISOString();
+
+      // Create payment records for each method in the split
+      const paymentMethods = Object.entries(data.methods).filter(([, method]) => method && method.amount > 0);
+      
+      for (const [methodType, methodData] of paymentMethods) {
+        if (!methodData || methodData.amount <= 0) continue;
+
+        // Skip discount as it's not a payment method
+        if (methodType === 'discount') continue;
+
+        await supabase.from('sales').insert({
+          user_id: user.id,
+          customer_id: customer.id,
+          customer_name: customer.name,
+          product_id: '00000000-0000-0000-0000-000000000001',
+          product_name: `Payment Received (${methodType.toUpperCase()})`,
+          quantity: 1,
+          selling_price: -methodData.amount,
+          cost_price: 0,
+          total_amount: -methodData.amount,
+          profit: 0,
+          payment_method: methodType === 'mpesa' ? 'mpesa' : methodType === 'debt' ? 'debt' : 'cash',
+          payment_details: {
+            splitPayment: true,
+            splitReference: `split_${Date.now()}`,
+            reference: methodType === 'mpesa' ? reference : undefined
+          },
+          timestamp
+        });
+      }
+
+      // Update customer balance
+      await updateCustomer(customer.id, {
+        outstandingDebt: newBalance,
+        lastPurchaseDate: timestamp
+      });
+
+      // Reset form
+      setAmount('');
+      setMethod('cash');
+      setReference('');
+      setSplitPaymentData(null);
+      
+      toast({
+        title: "Split Payment Recorded",
+        description: `Split payment of ${formatCurrency(totalPaymentAmount)} recorded for ${customer.name}`,
+      });
+
+      onClose();
+    } catch (error) {
+      console.error('Failed to record split payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record split payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleClose = () => {
     setAmount('');
     setMethod('cash');
     setReference('');
+    setSplitPaymentData(null);
+    setShowSplitModal(false);
     onClose();
   };
 
@@ -161,19 +242,39 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
             <SelectContent>
               <SelectItem value="cash">Cash</SelectItem>
               <SelectItem value="mpesa">M-Pesa</SelectItem>
+              <SelectItem value="split">
+                <div className="flex items-center gap-2">
+                  <Split className="w-4 h-4" />
+                  Split Payment
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div>
-          <Label htmlFor="reference">Reference (Optional)</Label>
-          <Input
-            id="reference"
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            placeholder={method === 'mpesa' ? 'M-Pesa code' : 'Payment reference'}
-          />
-        </div>
+        {method !== 'split' && (
+          <div>
+            <Label htmlFor="reference">Reference (Optional)</Label>
+            <Input
+              id="reference"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder={method === 'mpesa' ? 'M-Pesa code' : 'Payment reference'}
+            />
+          </div>
+        )}
+
+        {method === 'split' && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Split className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Split Payment Selected</span>
+            </div>
+            <p className="text-xs text-blue-600 dark:text-blue-300">
+              Click "Save Payment" to configure payment methods and amounts
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
@@ -190,7 +291,7 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
           disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
           className="flex-1 bg-green-600 hover:bg-green-700 text-white"
         >
-          {isSubmitting ? 'Recording...' : 'Save Payment'}
+          {isSubmitting ? 'Recording...' : method === 'split' ? 'Configure Split' : 'Save Payment'}
         </Button>
       </div>
     </div>
@@ -198,44 +299,66 @@ const RepaymentDrawer: React.FC<RepaymentDrawerProps> = ({ isOpen, onClose, cust
 
   if (isMobile) {
     return (
-      <Drawer open={isOpen} onOpenChange={handleClose}>
-        <DrawerContent className="px-6 pb-6">
-          <DrawerHeader className="text-center pb-0">
-            <DrawerClose asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-4 top-4 p-2"
-                onClick={handleClose}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </DrawerClose>
-            <DrawerTitle className="sr-only">Record Payment</DrawerTitle>
-          </DrawerHeader>
-          {content}
-        </DrawerContent>
-      </Drawer>
+      <>
+        <Drawer open={isOpen} onOpenChange={handleClose}>
+          <DrawerContent className="px-6 pb-6">
+            <DrawerHeader className="text-center pb-0">
+              <DrawerClose asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-4 top-4 p-2"
+                  onClick={handleClose}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </DrawerClose>
+              <DrawerTitle className="sr-only">Record Payment</DrawerTitle>
+            </DrawerHeader>
+            {content}
+          </DrawerContent>
+        </Drawer>
+
+        {/* Split Payment Modal */}
+        <SplitPaymentModal
+          open={showSplitModal}
+          onOpenChange={setShowSplitModal}
+          total={parseFloat(amount) || 0}
+          customers={[]} // Empty for debt payments
+          onConfirm={handleSplitPaymentConfirm}
+        />
+      </>
     );
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl p-6">
-        <DialogHeader>
-          <DialogTitle className="sr-only">Record Payment</DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="absolute right-4 top-4 p-2"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Record Payment</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              className="absolute right-4 top-4 p-2"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+
+      {/* Split Payment Modal */}
+      <SplitPaymentModal
+        open={showSplitModal}
+        onOpenChange={setShowSplitModal}
+        total={parseFloat(amount) || 0}
+        customers={[]} // Empty for debt payments
+        onConfirm={handleSplitPaymentConfirm}
+      />
+    </>
   );
 };
 
