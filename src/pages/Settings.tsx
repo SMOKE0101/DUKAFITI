@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopProfileSettings from '@/components/settings/ShopProfileSettings';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
+import TutorialSettings from '@/components/settings/TutorialSettings';
 
-import { Store, Monitor } from 'lucide-react';
+import { Store, Monitor, GraduationCap } from 'lucide-react';
 
 const Settings = () => {
   return (
@@ -33,7 +34,14 @@ const Settings = () => {
               className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             >
               <Monitor className="w-4 h-4" />
-              Display Settings
+              Display
+            </TabsTrigger>
+            <TabsTrigger 
+              value="tutorials" 
+              className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              <GraduationCap className="w-4 h-4" />
+              Tutorials
             </TabsTrigger>
           </TabsList>
 
@@ -68,6 +76,23 @@ const Settings = () => {
               </CardHeader>
               <CardContent className="p-6 pt-0">
                 <AppearanceSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tutorial Settings Tab Content */}
+          <TabsContent value="tutorials" className="mt-6">
+            <Card className="bg-card rounded-3xl border border-border shadow-sm hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="p-6 pb-4">
+                <CardTitle className="text-2xl font-semibold text-card-foreground mb-2">
+                  Tutorial Management
+                </CardTitle>
+                <CardDescription className="text-sm text-muted-foreground">
+                  Manage your learning experience and tutorial preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <TutorialSettings />
               </CardContent>
             </Card>
           </TabsContent>
