@@ -1,9 +1,10 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, ShoppingCart, Users, Package } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { Sale, Product, Customer } from '../../types';
+import { useUnifiedMetrics } from '../../hooks/useUnifiedMetrics';
 
 interface ReportsSummaryCardsProps {
   sales: Sale[];
@@ -18,30 +19,17 @@ const ReportsSummaryCards: React.FC<ReportsSummaryCardsProps> = ({
   customers,
   dateRange
 }) => {
-  const filteredSales = useMemo(() => {
-    return sales.filter(sale => {
-      const saleDate = new Date(sale.timestamp).toISOString().split('T')[0];
-      return saleDate >= dateRange.from && saleDate <= dateRange.to;
-    });
-  }, [sales, dateRange]);
-
-  const metrics = useMemo(() => {
-    const totalDiscounts = filteredSales.reduce((sum, sale) => sum + (sale.paymentDetails?.discountAmount || 0), 0);
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + Math.max(0, sale.total - (sale.paymentDetails?.discountAmount || 0)), 0);
-    const totalOrders = filteredSales.length;
-    const activeCustomers = new Set(filteredSales.map(sale => sale.customerId).filter(Boolean)).size;
-    const lowStockProducts = products.filter(product => 
-      product.currentStock <= (product.lowStockThreshold || 10)
-    ).length;
-
-    return {
-      totalRevenue,
-      totalOrders,
-      activeCustomers,
-      lowStockProducts,
-      totalDiscounts,
-    };
-  }, [filteredSales, products]);
+  // Use unified metrics for consistent data processing
+  const unifiedMetrics = useUnifiedMetrics(sales, products, customers, dateRange);
+  
+  // Extract period metrics for the reports view
+  const metrics = {
+    totalRevenue: unifiedMetrics.periodSales.totalRevenue,
+    totalOrders: unifiedMetrics.periodSales.orderCount,
+    activeCustomers: unifiedMetrics.customers.active,
+    lowStockProducts: unifiedMetrics.products.lowStock,
+    totalDiscounts: unifiedMetrics.periodSales.totalDiscounts,
+  };
 
   const cards = [
     {

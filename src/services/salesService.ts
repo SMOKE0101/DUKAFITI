@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Sale } from '../types';
+import { generateSplitPaymentReference, createSplitPaymentSales, validateSplitPayment, SplitPaymentGroup } from '../utils/splitPaymentUtils';
 
 export interface CreateSaleRequest {
   productId: string;
@@ -65,6 +66,98 @@ const parsePaymentDetails = (details: any) => {
 };
 
 export class SalesService {
+  static async createSplitPaymentSale(userId: string, splitGroup: SplitPaymentGroup): Promise<Sale[]> {
+    console.log('[SalesService] Creating split payment sale:', splitGroup);
+
+    try {
+      // Validate the split payment
+      const validation = validateSplitPayment(splitGroup.totalAmount, splitGroup.payments);
+      if (!validation.isValid) {
+        throw new Error(validation.error);
+      }
+
+      // Create individual sale records for each payment method
+      const saleRecords = createSplitPaymentSales(userId, splitGroup);
+      const createdSales: Sale[] = [];
+
+      for (const saleRecord of saleRecords) {
+        const dbRecord = {
+          user_id: userId,
+          product_id: saleRecord.productId,
+          product_name: saleRecord.productName,
+          quantity: saleRecord.quantity,
+          selling_price: saleRecord.sellingPrice,
+          cost_price: saleRecord.costPrice,
+          profit: saleRecord.profit,
+          total_amount: saleRecord.total,
+          customer_id: saleRecord.customerId || null,
+          customer_name: saleRecord.customerName || null,
+          payment_method: saleRecord.paymentMethod,
+          payment_details: saleRecord.paymentDetails,
+          timestamp: new Date().toISOString(),
+          synced: true,
+          client_sale_id: saleRecord.clientSaleId,
+          offline_id: saleRecord.offlineId,
+        };
+
+        const { data, error } = await supabase
+          .from('sales')
+          .insert([dbRecord])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[SalesService] Database error for split payment:', error);
+          throw new Error(`Failed to create split payment sale: ${error.message}`);
+        }
+
+        if (!data) {
+          throw new Error('Split payment sale was created but no data returned');
+        }
+
+        // Transform the response to match our Sale interface
+        const sale: Sale = {
+          id: data.id,
+          productId: data.product_id,
+          productName: data.product_name,
+          quantity: data.quantity,
+          sellingPrice: data.selling_price,
+          costPrice: data.cost_price,
+          profit: data.profit,
+          timestamp: data.timestamp,
+          synced: data.synced || true,
+          customerId: data.customer_id,
+          customerName: data.customer_name,
+          paymentMethod: data.payment_method as 'cash' | 'mpesa' | 'debt' | 'partial' | 'split',
+          paymentDetails: parsePaymentDetails(data.payment_details),
+          total: data.total_amount,
+          clientSaleId: data.client_sale_id,
+          offlineId: data.offline_id,
+        };
+
+        createdSales.push(sale);
+      }
+
+      console.log('[SalesService] Split payment sales created successfully:', createdSales.length);
+
+      // Update stock only once for the total quantity (avoid duplicate stock deductions)
+      if (splitGroup.quantity > 0) {
+        await this.updateProductStock(splitGroup.productId, splitGroup.quantity);
+      }
+
+      // Update customer debt if any debt payment was made
+      const debtPayment = splitGroup.payments.find(p => p.method === 'debt');
+      if (debtPayment && splitGroup.customerId) {
+        await this.updateCustomerDebt(splitGroup.customerId, debtPayment.amount);
+      }
+
+      return createdSales;
+    } catch (error) {
+      console.error('[SalesService] Error creating split payment sale:', error);
+      throw error;
+    }
+  }
+
   static async createSale(userId: string, saleData: CreateSaleRequest): Promise<Sale> {
     console.log('[SalesService] Creating sale:', saleData);
 

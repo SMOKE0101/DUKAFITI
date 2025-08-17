@@ -1,7 +1,6 @@
 
-import { useMemo } from 'react';
 import { Sale, Product, Customer } from '../types';
-import { dedupeSalesForReporting } from '../utils/salesDedupe';
+import { useUnifiedMetrics } from './useUnifiedMetrics';
 
 interface DashboardMetrics {
   todaySales: {
@@ -28,133 +27,13 @@ export const useDashboardMetrics = (
   products: Product[],
   customers: Customer[]
 ): DashboardMetrics => {
-  const metrics = useMemo(() => {
-    console.log('[DashboardMetrics] Calculating metrics with data:', {
-      salesCount: sales?.length || 0,
-      productsCount: products?.length || 0,
-      customersCount: customers?.length || 0,
-      salesData: sales ? 'present' : 'null',
-      productsData: products ? 'present' : 'null',
-      customersData: customers ? 'present' : 'null'
-    });
-
-    // Guard against null/undefined data
-    if (!sales || !products || !customers) {
-      console.warn('[DashboardMetrics] Missing data, returning empty metrics');
-      return {
-        todaySales: { totalRevenue: 0, totalProfit: 0, orderCount: 0, averageOrderValue: 0 },
-        customers: { total: 0, active: 0, withDebt: 0, totalDebt: 0 },
-        products: { total: 0, lowStock: 0, outOfStock: 0 }
-      };
-    }
-
-    // Get today's date in the same timezone as the data
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-
-    console.log('[DashboardMetrics] Today range:', {
-      start: todayStart.toISOString(),
-      end: todayEnd.toISOString()
-    });
-
-    // Apply deduplication before any filtering to avoid double counting temp/server duplicates
-    const deduped = dedupeSalesForReporting(sales);
-
-    // Filter today's sales with comprehensive date checking (from deduped set)
-    const todaySalesData = deduped.filter(sale => {
-      if (!sale.timestamp) {
-        console.log('[DashboardMetrics] Sale missing timestamp:', sale.id);
-        return false;
-      }
-
-      const saleDate = new Date(sale.timestamp);
-      const isToday = saleDate >= todayStart && saleDate < todayEnd;
-      
-      if (isToday) {
-        console.log('[DashboardMetrics] Today sale found:', {
-          id: sale.id,
-          timestamp: sale.timestamp,
-          total: sale.total,
-          discount: sale.paymentDetails?.discountAmount || 0,
-          productName: sale.productName
-        });
-      }
-
-      return isToday;
-    });
-
-    console.log('[DashboardMetrics] Today sales filtered:', todaySalesData.length);
-
-    // Calculate today's metrics
-    const todayTotalRevenue = todaySalesData.reduce((sum, sale) => {
-      const total = Number(sale.total) || 0;
-      const discount = Number(sale.paymentDetails?.discountAmount) || 0;
-      const net = Math.max(0, total - discount);
-      console.log('[DashboardMetrics] Adding sale net total:', { total, discount, net });
-      return sum + net;
-    }, 0);
-
-    // Filter out sales from products without both cost price and selling price for profit calculation
-    const validProfitSales = todaySalesData.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
-    const totalDiscounts = todaySalesData.reduce((sum, sale) => sum + (Number(sale.paymentDetails?.discountAmount) || 0), 0);
-    const rawProfit = validProfitSales.reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
-    const todayTotalProfit = Math.max(0, rawProfit - totalDiscounts);
-
-    const todayOrderCount = todaySalesData.length;
-    const averageOrderValue = todayOrderCount > 0 ? todayTotalRevenue / todayOrderCount : 0;
-
-    console.log('[DashboardMetrics] Today totals:', {
-      revenue: todayTotalRevenue,
-      profit: todayTotalProfit,
-      orders: todayOrderCount,
-      average: averageOrderValue
-    });
-
-    // Calculate customer metrics
-    const activeCustomers = new Set(
-      todaySalesData
-        .map(s => s.customerId)
-        .filter((id): id is string => !!id)
-    ).size;
-    const customersWithDebt = customers.filter(c => c.outstandingDebt > 0);
-    const totalOutstandingDebt = customersWithDebt.reduce((sum, c) => sum + c.outstandingDebt, 0);
-
-    // Calculate product metrics
-    const lowStockProducts = products.filter(p => {
-      const currentStock = p.currentStock ?? 0;
-      const threshold = p.lowStockThreshold ?? 10;
-      return currentStock !== -1 && currentStock <= threshold && currentStock > 0;
-    });
-
-    const outOfStockProducts = products.filter(p => {
-      const currentStock = p.currentStock ?? 0;
-      return currentStock === 0;
-    });
-
-    const calculatedMetrics: DashboardMetrics = {
-      todaySales: {
-        totalRevenue: todayTotalRevenue,
-        totalProfit: todayTotalProfit,
-        orderCount: todayOrderCount,
-        averageOrderValue: averageOrderValue,
-      },
-      customers: {
-        total: customers.length,
-        active: activeCustomers,
-        withDebt: customersWithDebt.length,
-        totalDebt: totalOutstandingDebt,
-      },
-      products: {
-        total: products.length,
-        lowStock: lowStockProducts.length,
-        outOfStock: outOfStockProducts.length,
-      },
-    };
-
-    console.log('[DashboardMetrics] Final calculated metrics:', calculatedMetrics);
-    return calculatedMetrics;
-  }, [sales, products, customers]);
-
-  return metrics;
+  // Use unified metrics for consistent data processing
+  const unifiedMetrics = useUnifiedMetrics(sales, products, customers);
+  
+  // Map unified metrics to dashboard metrics interface
+  return {
+    todaySales: unifiedMetrics.todaySales,
+    customers: unifiedMetrics.customers,
+    products: unifiedMetrics.products,
+  };
 };

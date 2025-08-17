@@ -1,7 +1,9 @@
 import { Sale } from '@/types';
+import { isSplitPaymentSale, getSplitPaymentReference } from './splitPaymentUtils';
 
-// Deduplicate sales for reporting by preferring server-synced rows over temp duplicates
-// Matching keys: offlineId+productId and clientSaleId+productId
+// Enhanced deduplicate sales for reporting by preferring server-synced rows over temp duplicates
+// Handles split payments properly by grouping them by reference
+// Matching keys: offlineId+productId, clientSaleId+productId, and splitPaymentReference
 export function dedupeSalesForReporting(sales: Sale[]): Sale[] {
   if (!Array.isArray(sales) || sales.length === 0) return sales;
 
@@ -9,6 +11,16 @@ export function dedupeSalesForReporting(sales: Sale[]): Sale[] {
 
   for (const s of sales) {
     const keys: string[] = [];
+    
+    // Handle split payments specially - each payment method should be unique
+    if (isSplitPaymentSale(s)) {
+      const splitRef = getSplitPaymentReference(s);
+      if (splitRef && s.paymentMethod) {
+        keys.push(`split:${splitRef}::${s.paymentMethod}`);
+      }
+    }
+    
+    // Standard deduplication keys
     if (s.offlineId && s.productId) keys.push(`off:${s.offlineId}::${s.productId}`);
     if (s.clientSaleId && s.productId) keys.push(`cli:${s.clientSaleId}::${s.productId}`);
 
