@@ -59,6 +59,29 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- **Supabase** (Primary Backend & Database)
+
+### Backend Architecture
+
+This project uses **Supabase** as its primary backend and database solution:
+
+- **Database**: Supabase PostgreSQL with Row Level Security (RLS)
+- **Authentication**: Supabase Auth with email/password and OAuth
+- **Storage**: Supabase Storage for product images
+- **Serverless**: Supabase Edge Functions for backend logic
+- **Real-time**: Supabase Realtime for live updates
+- **Offline Support**: Advanced offline-first architecture with Supabase sync
+
+### Important for Developers
+
+**CRITICAL**: Any modifications or new features MUST use Supabase as the backend. Do not introduce alternative database solutions (Firebase, MongoDB, etc.) as this project is architecturally built around Supabase.
+
+Key integration points:
+- Client: `src/integrations/supabase/client.ts`
+- Types: `src/integrations/supabase/types.ts`
+- Hooks: `src/hooks/useUnified*.ts`
+- Functions: `supabase/functions/`
+- Migrations: `supabase/migrations/`
 
 ## How can I deploy this project?
 

@@ -3,6 +3,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./config/backend";
+import "./utils/backendValidator";
 
 console.log('[Main] Starting React application initialization...');
 
