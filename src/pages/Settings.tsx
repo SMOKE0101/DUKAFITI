@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopProfileSettings from '@/components/settings/ShopProfileSettings';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
+import TutorialsSettings from '@/components/settings/TutorialsSettings';
 
-import { Store, Monitor } from 'lucide-react';
+import { Store, Monitor, Play } from 'lucide-react';
 
 const Settings = () => {
   return (
@@ -34,6 +35,13 @@ const Settings = () => {
             >
               <Monitor className="w-4 h-4" />
               Display Settings
+            </TabsTrigger>
+            <TabsTrigger 
+              value="tutorials" 
+              className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              <Play className="w-4 h-4" />
+              Tutorials
             </TabsTrigger>
           </TabsList>
 
@@ -70,6 +78,11 @@ const Settings = () => {
                 <AppearanceSettings />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Tutorials Tab Content */}
+          <TabsContent value="tutorials" className="mt-6">
+            <TutorialsSettings />
           </TabsContent>
         </Tabs>
       </div>

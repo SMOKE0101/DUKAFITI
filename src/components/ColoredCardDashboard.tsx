@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,9 @@ import AccurateDashboardStats from './dashboard/AccurateDashboardStats';
 import AddProductModal from './inventory/AddProductModal';
 import AddCustomerModal from './sales/AddCustomerModal';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
+import TutorialOverlay from './TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { DASHBOARD_TUTORIAL_STEPS } from '@/config/dashboardTutorial';
 
 const ColoredCardDashboard = () => {
   const isMobile = useIsMobile();
@@ -53,6 +56,35 @@ const ColoredCardDashboard = () => {
   // Modal states
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+
+  // Initialize tutorial
+  const {
+    isActive: isTutorialActive,
+    currentStep: currentTutorialStep,
+    currentStepIndex,
+    totalSteps,
+    startTutorial,
+    nextStep,
+    prevStep,
+    skipTutorial
+  } = useTutorial({
+    steps: DASHBOARD_TUTORIAL_STEPS,
+    onComplete: () => {
+      // Clear the localStorage flag when tutorial completes
+      localStorage.removeItem('startDashboardTutorial');
+    }
+  });
+
+  // Check if tutorial should start when component mounts
+  useEffect(() => {
+    const shouldStartTutorial = localStorage.getItem('startDashboardTutorial');
+    if (shouldStartTutorial === 'true') {
+      // Small delay to ensure page is fully loaded
+      setTimeout(() => {
+        startTutorial();
+      }, 500);
+    }
+  }, [startTutorial]);
 
   console.log('[ColoredCardDashboard] Rendering dashboard with data:', {
     salesCount: sales.length,
@@ -158,15 +190,17 @@ const ColoredCardDashboard = () => {
 
       <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
         {/* Accurate Summary Cards */}
-        <AccurateDashboardStats 
-          sales={sales}
-          products={products}
-          customers={customers}
-        />
+        <div id="dashboard-summary-cards">
+          <AccurateDashboardStats 
+            sales={sales}
+            products={products}
+            customers={customers}
+          />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Low Stock Alerts */}
-          <div className="border-2 border-orange-600 rounded-xl p-6 bg-transparent">
+          <div id="low-stock-alerts-card" className="border-2 border-orange-600 rounded-xl p-6 bg-transparent">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-5 h-5 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
                 <AlertTriangle className="w-3 h-3 text-orange-600 dark:text-orange-400" />
@@ -214,7 +248,7 @@ const ColoredCardDashboard = () => {
           </div>
 
           {/* Outstanding Debts */}
-          <div className="border-2 border-red-600 rounded-xl p-6 bg-transparent">
+          <div id="outstanding-debts-card" className="border-2 border-red-600 rounded-xl p-6 bg-transparent">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-5 h-5 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
                 <DollarSign className="w-3 h-3 text-red-600 dark:text-red-400" />
@@ -263,7 +297,7 @@ const ColoredCardDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-transparent">
+        <div id="quick-actions-section" className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-transparent">
           <h3 className="font-mono text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white mb-6">
             QUICK ACTIONS
           </h3>
@@ -304,6 +338,18 @@ const ColoredCardDashboard = () => {
         open={showAddCustomerModal}
         onOpenChange={setShowAddCustomerModal}
         onCustomerAdded={handleCustomerSave}
+      />
+      
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        isActive={isTutorialActive}
+        currentStep={currentTutorialStep}
+        currentStepIndex={currentStepIndex}
+        totalSteps={totalSteps}
+        onNext={nextStep}
+        onPrev={prevStep}
+        onSkip={skipTutorial}
+        onFinish={skipTutorial}
       />
     </div>
   );
