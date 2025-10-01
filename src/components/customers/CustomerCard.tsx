@@ -52,9 +52,12 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   };
 
   return (
-    <Card className={`relative transition-all duration-200 hover:shadow-lg ${
-      isDeleting || isRecordingPayment ? 'opacity-50' : ''
-    }`}>
+    <Card 
+      id={`customer-card-${customer.id}`}
+      className={`relative transition-all duration-200 hover:shadow-lg ${
+        isDeleting || isRecordingPayment ? 'opacity-50' : ''
+      }`}
+    >
       {/* Loading overlay */}
       {(isDeleting || isRecordingPayment) && (
         <div className="absolute inset-0 bg-background/50 rounded-lg flex items-center justify-center z-10">
@@ -107,7 +110,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
         </div>
 
         {/* Financial Info */}
-        <div className="pt-3 border-t space-y-2">
+        <div id={`customer-financial-info-${customer.id}`} className="pt-3 border-t space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Total Purchases:</span>
             <span className="font-medium text-success">
@@ -123,7 +126,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div id={`customer-actions-${customer.id}`} className="pt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
           <Button
             variant="outline"
             size="sm"

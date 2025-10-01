@@ -22,7 +22,11 @@ const AddCustomerDropdown: React.FC<AddCustomerDropdownProps> = ({
 
   if (isDesktop) {
     return (
-      <Button className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0" onClick={onAddNormalCustomer}>
+      <Button 
+        id="add-customer-dropdown-trigger"
+        className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0" 
+        onClick={onAddNormalCustomer}
+      >
         <Plus className="w-4 h-4 mr-1" />
         Add Customer
       </Button>
@@ -34,7 +38,10 @@ const AddCustomerDropdown: React.FC<AddCustomerDropdownProps> = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0">
+        <Button 
+          id="add-customer-dropdown-trigger"
+          className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0"
+        >
           <Plus className="w-4 h-4 mr-1" />
           {isMobile ? 'Add' : 'Add Customer'}
           <ChevronDown className="w-4 h-4 ml-1" />

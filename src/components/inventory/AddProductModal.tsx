@@ -41,6 +41,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templatesInitialized, setTemplatesInitialized] = useState(false);
+  
+  // Section checkboxes
+  const [enableProfitCalculation, setEnableProfitCalculation] = useState(true);
+  const [enableStockCalculation, setEnableStockCalculation] = useState(true);
 
   useEffect(() => {
     if (editingProduct) {
@@ -57,6 +61,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       });
       setCustomCategory(isCustom ? editingProduct.category : '');
       setShowCustomInput(isCustom);
+      
+      // Set section states based on existing data
+      setEnableProfitCalculation(editingProduct.costPrice > 0);
+      setEnableStockCalculation(editingProduct.currentStock >= 0);
     } else {
       setFormData({
         name: '',
@@ -70,6 +78,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       });
       setCustomCategory('');
       setShowCustomInput(false);
+      setEnableProfitCalculation(true);
+      setEnableStockCalculation(true);
     }
   }, [editingProduct, isOpen]);
 
@@ -119,16 +129,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
 
-    if (formData.sellingPrice < 0) {
+    if (formData.sellingPrice <= 0) {
       toast({
         title: "Validation Error",
-        description: "Selling price cannot be negative",
+        description: "Selling price must be greater than 0",
         variant: "destructive",
       });
       return;
     }
 
-    if (formData.costPrice < 0) {
+    if (enableProfitCalculation && formData.costPrice < 0) {
       toast({
         title: "Validation Error",
         description: "Cost price cannot be negative",
@@ -137,7 +147,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
 
-    if (formData.currentStock < 0) {
+    if (enableStockCalculation && formData.currentStock < 0) {
       toast({
         title: "Validation Error",
         description: "Stock cannot be negative",
@@ -146,8 +156,18 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
     
+    // Apply exclusion logic: set costPrice to 0 if profit calculation is disabled
+    const finalCostPrice = enableProfitCalculation ? formData.costPrice : 0;
+    
+    // Apply exclusion logic: set stock to -1 (uncountable) if stock calculation is disabled
+    const finalCurrentStock = enableStockCalculation ? formData.currentStock : -1;
+    const finalLowStockThreshold = enableStockCalculation ? formData.lowStockThreshold : 0;
+    
     const finalFormData = {
       ...formData,
+      costPrice: finalCostPrice,
+      currentStock: finalCurrentStock,
+      lowStockThreshold: finalLowStockThreshold,
       category: isCustomCategory(formData.category) ? customCategory : formData.category,
     };
     
@@ -205,8 +225,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     console.log('[AddProductModal] Template selection complete, modal closed');
   }, []);
 
-  const showProfitCalculation = formData.costPrice > 0 && formData.sellingPrice > 0;
-
   const modalTitle = editingProduct ? 'EDIT PRODUCT' : 'ADD PRODUCT';
   const modalDescription = editingProduct ? 'Update product details' : 'Create new inventory item';
 
@@ -242,199 +260,253 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         className="border-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
       >
         <form id="product-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-              {/* Use Templates Button */}
-              <div className="mb-6">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setTemplatesInitialized(true);
-                    setShowTemplateModal(true);
-                  }}
-                  className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  ✨ USE TEMPLATES
-                </Button>
-              </div>
+          {/* Use Templates Button */}
+          <div className="mb-6">
+            <Button
+              type="button"
+              onClick={() => {
+                setTemplatesInitialized(true);
+                setShowTemplateModal(true);
+              }}
+              className="w-full h-12 px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 rounded-lg font-mono font-bold uppercase tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              ✨ USE TEMPLATES
+            </Button>
+          </div>
 
-              {/* Product Image */}
-              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Product Image
-                </Label>
-                <ImageUpload
-                  value={formData.image_url}
-                  onChange={(url) => handleInputChange('image_url', url || '')}
-                  placeholder="Upload product image"
-                  compact={true}
-                />
-              </div>
+          {/* Product Info Section */}
+          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+                Product Info
+              </h3>
+            </div>
+            
+            {/* Product Image */}
+            <div className="mb-4">
+              <Label className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                Product Image
+              </Label>
+              <ImageUpload
+                value={formData.image_url}
+                onChange={(url) => handleInputChange('image_url', url || '')}
+                placeholder="Upload product image"
+                compact={true}
+              />
+            </div>
 
-              {/* Product Name */}
-              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Product Name *
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Enter product name"
-                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                  required
-                />
-              </div>
+            {/* Product Name */}
+            <div className="mb-4">
+              <Label htmlFor="name" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                Product Name *
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="Enter product name"
+                className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                required
+              />
+            </div>
 
-              {/* Product SKU */}
-              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <Label htmlFor="sku" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Product SKU (Auto-Generated)
-                </Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  readOnly
-                  disabled
-                  placeholder="Auto-generated SKU"
-                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 font-mono text-gray-600 dark:text-gray-400"
-                />
-              </div>
-              
-              {/* Category */}
-              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                <Label htmlFor="category" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                  Category *
-                </Label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={handleCategoryChange}
-                >
-                  <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent className="border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
-                    {PRODUCT_CATEGORIES.map(category => (
-                      <SelectItem key={category} value={category} className="font-mono">
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {showCustomInput && (
-                  <div className="mt-3">
-                    <Input
-                      placeholder="Enter custom category"
-                      value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                      className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                      maxLength={50}
-                    />
-                  </div>
-                )}
-              </div>
-              
-              {/* Pricing Section */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                  <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                    Cost Price (KES) *
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
-                      KES
-                    </span>
-                    <Input
-                      id="costPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.costPrice}
-                      onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      className="h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                  <Label htmlFor="sellingPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                    Selling Price (KES) *
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
-                      KES
-                    </span>
-                    <Input
-                      id="sellingPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.sellingPrice}
-                      onChange={(e) => handleInputChange('sellingPrice', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      className="h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Stock Section */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                  <Label htmlFor="currentStock" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                    Current Stock *
-                  </Label>
+            {/* Product SKU */}
+            <div className="mb-4">
+              <Label htmlFor="sku" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                Product SKU (Auto-Generated)
+              </Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                readOnly
+                disabled
+                placeholder="Auto-generated SKU"
+                className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 font-mono text-gray-600 dark:text-gray-400"
+              />
+            </div>
+            
+            {/* Category */}
+            <div>
+              <Label htmlFor="category" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                Category *
+              </Label>
+              <Select 
+                value={formData.category} 
+                onValueChange={handleCategoryChange}
+              >
+                <SelectTrigger className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
+                  {PRODUCT_CATEGORIES.map(category => (
+                    <SelectItem key={category} value={category} className="font-mono">
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {showCustomInput && (
+                <div className="mt-3">
                   <Input
-                    id="currentStock"
-                    type="number"
-                    min="0"
-                    value={formData.currentStock}
-                    onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
-                    placeholder="0"
+                    placeholder="Enter custom category"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
                     className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                    maxLength={50}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Profit Calculation Section */}
+          <div className={`border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent ${!enableProfitCalculation ? 'opacity-50' : ''}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+                Profit Calculation
+              </h3>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="enableProfit"
+                  checked={enableProfitCalculation}
+                  onCheckedChange={(checked) => setEnableProfitCalculation(checked as boolean)}
+                />
+                <Label 
+                  htmlFor="enableProfit" 
+                  className="font-mono text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white cursor-pointer"
+                >
+                  Enable
+                </Label>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+              <Label htmlFor="costPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                Cost Price (KES)
+              </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
+                    KES
+                  </span>
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={enableProfitCalculation ? formData.costPrice : 0}
+                    onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    className="h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                    disabled={!enableProfitCalculation}
+                    required={enableProfitCalculation}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="sellingPrice" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                  Selling Price (KES) *
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-mono">
+                    KES
+                  </span>
+                  <Input
+                    id="sellingPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.sellingPrice}
+                    onChange={(e) => handleInputChange('sellingPrice', parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    className="h-12 text-base pl-14 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
                     required
                   />
                 </div>
-                
-                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent">
-                  <Label htmlFor="lowStockThreshold" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-3 block">
-                    Low Stock Alert
-                  </Label>
-                  <Input
-                    id="lowStockThreshold"
-                    type="number"
-                    min="0"
-                    value={formData.lowStockThreshold}
-                    onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                    className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
-                  />
-                </div>
               </div>
+            </div>
 
-              {showProfitCalculation && (
-                <div className="border-2 border-blue-300 dark:border-blue-600 rounded-xl p-4 bg-blue-50/50 dark:bg-blue-900/20">
-                  <h3 className="font-mono font-bold uppercase tracking-wider text-blue-900 dark:text-blue-100 mb-3">
-                    Profit Summary
-                  </h3>
-                  <div className="space-y-2 font-mono text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit per unit:</span>
-                      <span className="font-bold text-green-600">
-                        KES {(formData.sellingPrice - formData.costPrice).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit margin:</span>
-                      <span className="font-bold text-green-600">
-                        {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
-                      </span>
-                    </div>
+            {enableProfitCalculation && formData.costPrice > 0 && formData.sellingPrice > 0 && (
+              <div className="border-2 border-blue-300 dark:border-blue-600 rounded-xl p-3 bg-blue-50/50 dark:bg-blue-900/20 mt-4">
+                <h4 className="font-mono font-bold uppercase tracking-wider text-blue-900 dark:text-blue-100 mb-2">
+                  Profit Summary
+                </h4>
+                <div className="space-y-1 font-mono text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit per unit:</span>
+                    <span className="font-bold text-green-600">
+                      KES {(formData.sellingPrice - formData.costPrice).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wide">Profit margin:</span>
+                    <span className="font-bold text-green-600">
+                      {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}%
+                    </span>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
+          </div>
+
+          {/* Stock Calculation Section */}
+          <div className={`border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-transparent ${!enableStockCalculation ? 'opacity-50' : ''}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+                Stock Calculation
+              </h3>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="enableStock"
+                  checked={enableStockCalculation}
+                  onCheckedChange={(checked) => setEnableStockCalculation(checked as boolean)}
+                />
+                <Label 
+                  htmlFor="enableStock" 
+                  className="font-mono text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white cursor-pointer"
+                >
+                  Enable
+                </Label>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="currentStock" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                  Current Stock {enableStockCalculation && '*'}
+                </Label>
+                <Input
+                  id="currentStock"
+                  type="number"
+                  min="0"
+                  value={enableStockCalculation ? formData.currentStock : 0}
+                  onChange={(e) => handleInputChange('currentStock', parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                  disabled={!enableStockCalculation}
+                  required={enableStockCalculation}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="lowStockThreshold" className="font-mono text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-2 block">
+                  Low Stock Alert
+                </Label>
+                <Input
+                  id="lowStockThreshold"
+                  type="number"
+                  min="0"
+                  value={enableStockCalculation ? formData.lowStockThreshold : 0}
+                  onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                  className="h-12 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent font-mono focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:border-green-500"
+                  disabled={!enableStockCalculation}
+                />
+              </div>
+            </div>
+          </div>
         </form>
       </MobileOptimizedModal>
         

@@ -20,18 +20,18 @@ const navigationItems = [
     matchPaths: ['/app/dashboard', '/app']
   },
   { 
-    id: 'sales', 
-    icon: ShoppingCart, 
-    path: '/app/sales',
-    label: 'Sales',
-    matchPaths: ['/app/sales']
-  },
-  { 
     id: 'inventory', 
     icon: Package, 
     path: '/app/inventory',
     label: 'Inventory',
     matchPaths: ['/app/inventory']
+  },
+  { 
+    id: 'sell', 
+    icon: ShoppingCart, 
+    path: '/app/sales',
+    label: 'Sell',
+    matchPaths: ['/app/sales']
   },
   { 
     id: 'customers', 
@@ -56,11 +56,16 @@ export const BottomNavigation: React.FC = () => {
 
   return (
     <nav className={cn(
-      "h-16 w-full border-t",
+      "h-16 w-full border-t relative",
       isDark 
         ? "bg-background border-border" 
         : "bg-white border-gray-200"
     )}>
+      {/* Arch/bump above the Sell button */}
+      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-12 h-2">
+        <div className="w-full h-full bg-gradient-to-b from-transparent to-current border-t-2 border-current rounded-t-full opacity-20"></div>
+      </div>
+      
       <div className="grid grid-cols-5 h-full">
         {navigationItems.map((item) => {
           const Icon = item.icon;

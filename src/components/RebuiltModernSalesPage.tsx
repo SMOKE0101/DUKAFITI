@@ -372,7 +372,7 @@ const { sales } = useUnifiedSales();
       return;
     }
 
-    // Allow adding products with unspecified stock (-1)
+    // Allow adding products with unspecified stock (-1) - stock calculation disabled
     if (product.currentStock !== -1 && product.currentStock < quantity) {
       toast({
         title: "Insufficient Stock",
