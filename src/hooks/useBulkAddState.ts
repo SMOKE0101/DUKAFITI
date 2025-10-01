@@ -66,8 +66,24 @@ export const useBulkAddState = () => {
       errors.push('Category is required');
     }
     
+    // Selling price is always required
     if (!row.sellingPrice || row.sellingPrice <= 0) {
       errors.push('Selling price is required and must be > 0');
+    }
+
+    // Cost price validation - only validate if provided
+    if (row.costPrice !== '' && typeof row.costPrice === 'number' && row.costPrice < 0) {
+      errors.push('Cost price cannot be negative');
+    }
+
+    // Stock validation - only validate if provided
+    if (row.currentStock !== '' && typeof row.currentStock === 'number' && row.currentStock < 0) {
+      errors.push('Current stock cannot be negative');
+    }
+
+    // Low stock threshold validation - only validate if provided
+    if (row.lowStockThreshold !== '' && typeof row.lowStockThreshold === 'number' && row.lowStockThreshold < 0) {
+      errors.push('Low stock threshold cannot be negative');
     }
 
     return { isValid: errors.length === 0, errors };
@@ -171,19 +187,26 @@ export const useBulkAddState = () => {
     const validRows = spreadsheetData.filter(row => row.isValid && row.name.trim());
     
     return validRows.map((row, index) => {
-      const isUncountable = (
-        row.currentStock === '' || Number(row.currentStock) === 0
-      ) && (
-        row.lowStockThreshold === '' || Number(row.lowStockThreshold) === 0
-      );
+      // Check if profit calculation is enabled (cost price provided)
+      const isProfitEnabled = row.costPrice !== '';
+
+      // Check if stock calculation is enabled (current stock provided)
+      const isStockEnabled = row.currentStock !== '';
+
+      // Apply exclusion logic for profit calculation
+      const finalCostPrice = isProfitEnabled ? (row.costPrice === '' ? 0 : Number(row.costPrice)) : 0;
+      
+      // Apply exclusion logic for stock calculation
+      const finalCurrentStock = isStockEnabled ? Number(row.currentStock) : -1;
+      const finalLowStockThreshold = isStockEnabled ? (row.lowStockThreshold === '' ? 10 : Number(row.lowStockThreshold)) : 0;
 
       return {
         name: row.name.trim(),
         category: row.category || 'General',
-        costPrice: row.costPrice === '' ? 0 : Number(row.costPrice),
+        costPrice: finalCostPrice,
         sellingPrice: Number(row.sellingPrice),
-        currentStock: isUncountable ? -1 : Number(row.currentStock),
-        lowStockThreshold: isUncountable ? 0 : (row.lowStockThreshold === '' ? 10 : Number(row.lowStockThreshold)),
+        currentStock: finalCurrentStock,
+        lowStockThreshold: finalLowStockThreshold,
         sku: generateSKU(row.category || 'General', row.name, index + 1), // Auto-generated SKU
         image_url: row.image_url || null, // Ensure image_url is properly transferred
       };

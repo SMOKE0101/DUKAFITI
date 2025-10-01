@@ -6,8 +6,6 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import AddProductModal from './inventory/AddProductModal';
 import BulkAddProductModal from './inventory/bulk/BulkAddProductModal';
-import UncountableProductModal from './inventory/UncountableProductModal';
-import VariationProductModal from './inventory/VariationProductModal';
 import EditProductModal from './inventory/EditProductModal';
 import DeleteProductModal from './inventory/DeleteProductModal';
 import RestockModal from './inventory/RestockModal';
@@ -21,14 +19,13 @@ import ImageChangeModal from './inventory/ImageChangeModal';
 import { Product } from '../types';
 import { useUnifiedProducts } from '../hooks/useUnifiedProducts';
 import { useUnifiedSyncManager } from '../hooks/useUnifiedSyncManager';
+import InventoryTutorial from './inventory/InventoryTutorial';
 
 const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [showUncountableModal, setShowUncountableModal] = useState(false);
-  const [showVariationModal, setShowVariationModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
@@ -36,6 +33,25 @@ const InventoryPage = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
+
+  // Check for auto-start tutorial flags
+  const [autoStartAddProduct, setAutoStartAddProduct] = useState(false);
+  const [autoStartProductCard, setAutoStartProductCard] = useState(false);
+
+  useEffect(() => {
+    const shouldStartAddProduct = localStorage.getItem('startAddProductTutorial') === 'true';
+    const shouldStartProductCard = localStorage.getItem('startProductCardTutorial') === 'true';
+    
+    if (shouldStartAddProduct) {
+      setAutoStartAddProduct(true);
+      localStorage.removeItem('startAddProductTutorial');
+    }
+    
+    if (shouldStartProductCard) {
+      setAutoStartProductCard(true);
+      localStorage.removeItem('startProductCardTutorial');
+    }
+  }, []);
 
   const { toast } = useToast();
   const { 
@@ -176,12 +192,6 @@ const InventoryPage = () => {
       case 'bulk':
         setShowBulkModal(true);
         break;
-      case 'uncountable':
-        setShowUncountableModal(true);
-        break;
-      case 'variation':
-        setShowVariationModal(true);
-        break;
     }
   };
 
@@ -248,70 +258,6 @@ const InventoryPage = () => {
     }
   };
 
-  const handleVariationProducts = async (parentProduct: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>, variants: any[]) => {
-    try {
-      console.log('[InventoryPage] Creating variation products:', { parentProduct, variants });
-      
-      // Create ONE parent product that will be displayed in inventory
-      const parentProductData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
-        ...parentProduct,
-        is_parent: true,
-        costPrice: 0, // Parent shows "Unspecified"
-        sellingPrice: 0, // Parent shows "Unspecified"
-      };
-      
-      const createdParent = await createProduct(parentProductData);
-      console.log('[InventoryPage] Created parent product:', createdParent);
-      
-      // Get parent ID
-      const parentId = typeof createdParent === 'object' && createdParent && 'id' in createdParent 
-        ? createdParent.id 
-        : undefined;
-
-      if (!parentId) {
-        throw new Error('Failed to get parent product ID');
-      }
-      
-      // Create child variant records (these won't appear in main inventory)
-      const variantInserts = variants.map(variant => ({
-        name: `${parentProduct.name} - ${variant.name}`, // Include parent product name for identification
-        category: parentProduct.category,
-        costPrice: variant.costPrice,
-        sellingPrice: variant.sellingPrice,
-        currentStock: -1, // Variants use parent stock
-        lowStockThreshold: 0,
-        parent_id: parentId,
-        variant_name: variant.name,
-        variant_multiplier: variant.multiplier,
-        stock_derivation_quantity: 1, // Set to 1 for proper stock calculation
-        is_parent: false,
-        sku: `${parentProduct.name.substring(0, 3)}-${variant.name.substring(0, 3)}`.toUpperCase(),
-        image_url: parentProduct.image_url,
-      }));
-
-      const variantResults = await Promise.allSettled(
-        variantInserts.map(variantData => createProduct(variantData))
-      );
-      
-      const successfulVariants = variantResults.filter(result => result.status === 'fulfilled').length;
-      
-      setShowVariationModal(false);
-      
-      toast({
-        title: "Product with Variants Created",
-        description: `Created "${parentProduct.name}" with ${successfulVariants} variants. Only parent product is shown in inventory.`,
-        duration: 3000,
-      });
-      
-    } catch (error) {
-      console.error('Error creating variation products:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create variation products. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleEditProduct = (product: Product) => {
     console.log('[InventoryPage] Opening edit modal for product:', product.id);
@@ -447,114 +393,108 @@ const InventoryPage = () => {
   }
 
   return (
-    <TooltipWrapper>
-      <div className="space-y-6">
-        {/* Header Section with InventoryHeader */}
-        <InventoryHeader
-          totalProducts={totalProducts}
-          totalValue={totalValue}
-          lowStockCount={lowStockCount}
-          onAddProduct={handleAddProductMode}
-        />
+    <InventoryTutorial
+      products={products}
+      onAddProduct={() => handleAddProductMode('normal')}
+      autoStartAddProduct={autoStartAddProduct}
+      autoStartProductCard={autoStartProductCard}
+    >
+      <TooltipWrapper>
+        <div className="space-y-6">
+          {/* Header Section with InventoryHeader */}
+          <InventoryHeader
+            totalProducts={totalProducts}
+            totalValue={totalValue}
+            lowStockCount={lowStockCount}
+            onAddProduct={handleAddProductMode}
+          />
 
-        {/* Search Section */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search products by name or category..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          {/* Search Section */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search products by name or category..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
+
+          {/* Products Grid */}
+          <ResponsiveProductGrid
+            products={filteredProducts}
+            variant="inventory"
+            onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
+            onRestock={handleRestock}
+            getSellingPrice={(product) => product.sellingPrice}
+            getCostPrice={(product) => product.costPrice}
+            getCurrentStock={(product) => product.currentStock}
+            getLowStockThreshold={(product) => product.lowStockThreshold}
+            gridConfig={{
+              cols: { mobile: 2, tablet: 3, desktop: 5 },
+              gap: 'gap-2'
+            }}
+            emptyStateMessage="No products found"
+            emptyStateDescription="Try adjusting your search or filters"
+          />
+
+          {/* Modals */}
+          <AddProductModal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onSave={handleAddProduct}
+          />
+
+          <BulkAddProductModal
+            isOpen={showBulkModal}
+            onClose={() => setShowBulkModal(false)}
+            onSave={handleBulkAddProducts}
+          />
+
+          <EditProductModal
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedProduct(null);
+            }}
+            onSave={handleUpdateProduct}
+            product={selectedProduct}
+          />
+
+          <DeleteProductModal
+            isOpen={showDeleteModal}
+            onClose={() => {
+              setShowDeleteModal(false);
+              setSelectedProduct(null);
+            }}
+            onDelete={handleConfirmDelete}
+            product={selectedProduct}
+          />
+
+          <RestockModal
+            isOpen={showRestockModal}
+            onClose={() => {
+              setShowRestockModal(false);
+              setSelectedProduct(null);
+            }}
+            onSave={handleRestockProduct}
+            product={selectedProduct}
+          />
+
+          <ImageChangeModal
+            isOpen={showImageChangeModal}
+            onClose={() => {
+              setShowImageChangeModal(false);
+              setSelectedProduct(null);
+            }}
+            product={selectedProduct}
+          />
         </div>
-
-        {/* Products Grid */}
-        <ResponsiveProductGrid
-          products={filteredProducts}
-          variant="inventory"
-          onEdit={handleEditProduct}
-          onDelete={handleDeleteProduct}
-          onRestock={handleRestock}
-          getSellingPrice={(product) => product.sellingPrice}
-          getCostPrice={(product) => product.costPrice}
-          getCurrentStock={(product) => product.currentStock}
-          getLowStockThreshold={(product) => product.lowStockThreshold}
-          gridConfig={{
-            cols: { mobile: 2, tablet: 3, desktop: 5 },
-            gap: 'gap-2'
-          }}
-          emptyStateMessage="No products found"
-          emptyStateDescription="Try adjusting your search or filters"
-        />
-
-        {/* Modals */}
-        <AddProductModal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onSave={handleAddProduct}
-        />
-
-        <BulkAddProductModal
-          isOpen={showBulkModal}
-          onClose={() => setShowBulkModal(false)}
-          onSave={handleBulkAddProducts}
-        />
-
-        <UncountableProductModal
-          isOpen={showUncountableModal}
-          onClose={() => setShowUncountableModal(false)}
-          onSave={handleAddProduct}
-        />
-
-        <VariationProductModal
-          isOpen={showVariationModal}
-          onClose={() => setShowVariationModal(false)}
-          onSave={handleVariationProducts}
-          existingProducts={products}
-        />
-
-        <EditProductModal
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedProduct(null);
-          }}
-          onSave={handleUpdateProduct}
-          product={selectedProduct}
-        />
-
-        <DeleteProductModal
-          isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setSelectedProduct(null);
-          }}
-          onDelete={handleConfirmDelete}
-          product={selectedProduct}
-        />
-
-        <RestockModal
-          isOpen={showRestockModal}
-          onClose={() => {
-            setShowRestockModal(false);
-            setSelectedProduct(null);
-          }}
-          onSave={handleRestockProduct}
-          product={selectedProduct}
-        />
-
-        <ImageChangeModal
-          isOpen={showImageChangeModal}
-          onClose={() => {
-            setShowImageChangeModal(false);
-            setSelectedProduct(null);
-          }}
-          product={selectedProduct}
-        />
-      </div>
-    </TooltipWrapper>
+      </TooltipWrapper>
+    </InventoryTutorial>
   );
 };
 

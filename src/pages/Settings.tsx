@@ -5,10 +5,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import ShopProfileSettings from '@/components/settings/ShopProfileSettings';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import TutorialsSettings from '@/components/settings/TutorialsSettings';
+import { useCustomersTutorial } from '@/hooks/useCustomersTutorial';
+import { useInventoryTutorial } from '@/hooks/useInventoryTutorial';
+import { useUnifiedCustomers } from '@/hooks/useUnifiedCustomers';
+import { useUnifiedProducts } from '@/hooks/useUnifiedProducts';
 
 import { Store, Monitor, Play } from 'lucide-react';
 
 const Settings = () => {
+  const { 
+    addCustomerCompleted, 
+    customerCardCompleted, 
+    hasCustomers,
+    setCustomerCount,
+    resetAddCustomerTutorial,
+    resetCustomerCardTutorial
+  } = useCustomersTutorial();
+  
+  const { 
+    addProductCompleted, 
+    productCardCompleted, 
+    hasProducts,
+    setProductCount,
+    resetAddProductTutorial,
+    resetProductCardTutorial
+  } = useInventoryTutorial();
+  
+  const { customers } = useUnifiedCustomers();
+  const { products } = useUnifiedProducts();
+  
+  // Update customer count when customers change
+  React.useEffect(() => {
+    setCustomerCount(customers.length);
+  }, [customers.length, setCustomerCount]);
+  
+  // Update product count when products change
+  React.useEffect(() => {
+    setProductCount(products.length);
+  }, [products.length, setProductCount]);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-8 space-y-8">
@@ -82,7 +117,14 @@ const Settings = () => {
 
           {/* Tutorials Tab Content */}
           <TabsContent value="tutorials" className="mt-6">
-            <TutorialsSettings />
+            <TutorialsSettings 
+              hasCustomers={hasCustomers}
+              hasProducts={hasProducts}
+              onResetAddCustomerTutorial={resetAddCustomerTutorial}
+              onResetCustomerCardTutorial={resetCustomerCardTutorial}
+              onResetAddProductTutorial={resetAddProductTutorial}
+              onResetProductCardTutorial={resetProductCardTutorial}
+            />
           </TabsContent>
         </Tabs>
       </div>

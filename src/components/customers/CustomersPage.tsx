@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { useContactsImport } from '../../hooks/useContactsImport';
 import { useSupabaseDebtPayments } from '../../hooks/useSupabaseDebtPayments';
 import { useAuth } from '../../hooks/useAuth';
 import CustomerHistoryModal from './CustomerHistoryModal';
+import CustomersTutorial from './CustomersTutorial';
 
 const CustomersPage = () => {
   const { 
@@ -292,12 +293,167 @@ const CustomersPage = () => {
     }
   };
 
+  // Check for auto-start tutorial flags
+  const [autoStartAddCustomer, setAutoStartAddCustomer] = useState(false);
+  const [autoStartCustomerCard, setAutoStartCustomerCard] = useState(false);
+
+  useEffect(() => {
+    const shouldStartAddCustomer = localStorage.getItem('startAddCustomerTutorial') === 'true';
+    const shouldStartCustomerCard = localStorage.getItem('startCustomerCardTutorial') === 'true';
+    
+    if (shouldStartAddCustomer) {
+      setAutoStartAddCustomer(true);
+      localStorage.removeItem('startAddCustomerTutorial');
+    }
+    
+    if (shouldStartCustomerCard) {
+      setAutoStartCustomerCard(true);
+      localStorage.removeItem('startCustomerCardTutorial');
+    }
+  }, []);
+
   if (isMobile) {
     return (
+      <CustomersTutorial
+        customers={customers}
+        onAddCustomer={handleAddCustomer}
+        onImportFromContacts={handleImportFromContacts}
+        autoStartAddCustomer={autoStartAddCustomer}
+        autoStartCustomerCard={autoStartCustomerCard}
+      >
+        <TooltipWrapper>
+          <div className="min-h-screen bg-background">
+            <div className="space-y-6">
+              {/* Mobile Header */}
+              <CustomersHeader
+                totalCustomers={totalCustomers}
+                totalOutstandingDebt={totalOutstandingDebt}
+                pendingOperations={pendingOperations}
+                isOnline={isOnline}
+                onAddCustomer={handleAddCustomer}
+                onImportFromContacts={handleImportFromContacts}
+              />
+
+              {/* Search Bar */}
+              <div className="px-4">
+                <Card className="bg-card rounded-xl border border-border shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        type="search"
+                        placeholder="Search customers..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-background rounded-lg border border-border"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Customer List */}
+              {loading ? (
+                <div className="text-center py-8 px-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-3 text-sm text-muted-foreground">Loading customers...</p>
+                </div>
+              ) : filteredCustomers.length === 0 ? (
+                <div className="px-4">
+                  <Card className="bg-card rounded-xl border border-border shadow-sm">
+                    <CardContent className="text-center py-8">
+                      <User className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
+                      <h3 className="text-lg font-semibold text-card-foreground mb-2">
+                        {searchQuery ? 'No customers found' : 'No customers yet'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
+                      </p>
+                      {!searchQuery && (
+                        <Button onClick={handleAddCustomer} className="mt-4 bg-primary hover:bg-primary/90">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Customer
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="space-y-4 px-4">
+                  {filteredCustomers.map((customer) => (
+                    <CustomerCard
+                      key={customer.id}
+                      customer={customer}
+                      onEdit={handleEditCustomer}
+                      onDelete={handleDeleteCustomer}
+                      onRecordPayment={handleRecordPayment}
+                      onViewHistory={handleViewHistory}
+                      isDeleting={operationsInProgress.deleting === customer.id}
+                      isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Modals */}
+              <CustomerFormModal
+                isOpen={showFormModal}
+                onClose={() => {
+                  setShowFormModal(false);
+                  setSelectedCustomer(null);
+                }}
+                customer={selectedCustomer}
+                isEditing={isEditing}
+                onSave={handleSaveCustomer}
+              />
+
+              <PaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => {
+                  setShowPaymentModal(false);
+                  setSelectedCustomer(null);
+                }}
+                customer={selectedCustomer}
+                onPayment={handlePaymentComplete}
+                isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
+              />
+
+              <DeleteCustomerModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                  setShowDeleteModal(false);
+                  setSelectedCustomer(null);
+                }}
+                customer={selectedCustomer}
+                onDelete={handleConfirmDelete}
+                isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
+              />
+
+              <CustomerHistoryModal
+                isOpen={showHistoryModal}
+                onClose={() => setShowHistoryModal(false)}
+                customer={selectedCustomer}
+              />
+
+            </div>
+          </div>
+        </TooltipWrapper>
+      </CustomersTutorial>
+    );
+  }
+
+  return (
+    <CustomersTutorial
+      customers={customers}
+      onAddCustomer={handleAddCustomer}
+      onImportFromContacts={handleImportFromContacts}
+      autoStartAddCustomer={autoStartAddCustomer}
+      autoStartCustomerCard={autoStartCustomerCard}
+    >
       <TooltipWrapper>
-        <div className="min-h-screen bg-background">
-          <div className="space-y-6">
-            {/* Mobile Header */}
+        <div className="min-h-screen bg-background font-['Inter']">
+          <div className="container mx-auto px-6 space-y-8">
+            {/* Desktop Header using CustomersHeader */}
             <CustomersHeader
               totalCustomers={totalCustomers}
               totalOutstandingDebt={totalOutstandingDebt}
@@ -308,51 +464,47 @@ const CustomersPage = () => {
             />
 
             {/* Search Bar */}
-            <div className="px-4">
-              <Card className="bg-card rounded-xl border border-border shadow-sm">
-                <CardContent className="p-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      type="search"
-                      placeholder="Search customers..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-background rounded-lg border border-border"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="bg-card rounded-3xl border border-border shadow-sm">
+              <CardContent className="p-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" strokeWidth={1.5} />
+                  <Input
+                    type="search"
+                    placeholder="Search customers by name, phone, or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-muted rounded-xl pl-12 pr-4 py-4 placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring border-0 text-base font-['Inter']"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Customer List */}
             {loading ? (
-              <div className="text-center py-8 px-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-3 text-sm text-muted-foreground">Loading customers...</p>
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4 text-base text-muted-foreground font-['Inter']">Loading customers...</p>
               </div>
             ) : filteredCustomers.length === 0 ? (
-              <div className="px-4">
-                <Card className="bg-card rounded-xl border border-border shadow-sm">
-                  <CardContent className="text-center py-8">
-                    <User className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-                    <h3 className="text-lg font-semibold text-card-foreground mb-2">
-                      {searchQuery ? 'No customers found' : 'No customers yet'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
-                    </p>
-                    {!searchQuery && (
-                      <Button onClick={handleAddCustomer} className="mt-4 bg-primary hover:bg-primary/90">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Customer
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+              <Card className="bg-card rounded-3xl border border-border shadow-sm">
+                <CardContent className="text-center py-12">
+                  <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" strokeWidth={1.5} />
+                  <h3 className="text-xl font-semibold text-card-foreground mb-2 font-['Inter']">
+                    {searchQuery ? 'No customers found' : 'No customers yet'}
+                  </h3>
+                  <p className="text-base text-muted-foreground font-['Inter']">
+                    {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
+                  </p>
+                  {!searchQuery && (
+                    <Button onClick={handleAddCustomer} className="mt-6 bg-primary hover:bg-primary/90 font-['Inter']">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Customer
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             ) : (
-              <div className="space-y-4 px-4">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredCustomers.map((customer) => (
                   <CustomerCard
                     key={customer.id}
@@ -391,143 +543,27 @@ const CustomersPage = () => {
               isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
             />
 
-            <DeleteCustomerModal
-              isOpen={showDeleteModal}
-              onClose={() => {
-                setShowDeleteModal(false);
-                setSelectedCustomer(null);
-              }}
-              customer={selectedCustomer}
-              onDelete={handleConfirmDelete}
-              isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
-            />
+              <DeleteCustomerModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                  setShowDeleteModal(false);
+                  setSelectedCustomer(null);
+                }}
+                customer={selectedCustomer}
+                onDelete={handleConfirmDelete}
+                isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
+              />
 
-            <CustomerHistoryModal
-              isOpen={showHistoryModal}
-              onClose={() => setShowHistoryModal(false)}
-              customer={selectedCustomer}
-            />
+              <CustomerHistoryModal
+                isOpen={showHistoryModal}
+                onClose={() => setShowHistoryModal(false)}
+                customer={selectedCustomer}
+              />
 
           </div>
         </div>
       </TooltipWrapper>
-    );
-  }
-
-  return (
-    <TooltipWrapper>
-      <div className="min-h-screen bg-background font-['Inter']">
-        <div className="container mx-auto px-6 space-y-8">
-          {/* Desktop Header using CustomersHeader */}
-          <CustomersHeader
-            totalCustomers={totalCustomers}
-            totalOutstandingDebt={totalOutstandingDebt}
-            pendingOperations={pendingOperations}
-            isOnline={isOnline}
-            onAddCustomer={handleAddCustomer}
-            onImportFromContacts={handleImportFromContacts}
-          />
-
-          {/* Search Bar */}
-          <Card className="bg-card rounded-3xl border border-border shadow-sm">
-            <CardContent className="p-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" strokeWidth={1.5} />
-                <Input
-                  type="search"
-                  placeholder="Search customers by name, phone, or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-muted rounded-xl pl-12 pr-4 py-4 placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring border-0 text-base font-['Inter']"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Customer List */}
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-base text-muted-foreground font-['Inter']">Loading customers...</p>
-            </div>
-          ) : filteredCustomers.length === 0 ? (
-            <Card className="bg-card rounded-3xl border border-border shadow-sm">
-              <CardContent className="text-center py-12">
-                <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" strokeWidth={1.5} />
-                <h3 className="text-xl font-semibold text-card-foreground mb-2 font-['Inter']">
-                  {searchQuery ? 'No customers found' : 'No customers yet'}
-                </h3>
-                <p className="text-base text-muted-foreground font-['Inter']">
-                  {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={handleAddCustomer} className="mt-6 bg-primary hover:bg-primary/90 font-['Inter']">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Customer
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredCustomers.map((customer) => (
-                <CustomerCard
-                  key={customer.id}
-                  customer={customer}
-                  onEdit={handleEditCustomer}
-                  onDelete={handleDeleteCustomer}
-                  onRecordPayment={handleRecordPayment}
-                  onViewHistory={handleViewHistory}
-                  isDeleting={operationsInProgress.deleting === customer.id}
-                  isRecordingPayment={operationsInProgress.recordingPayment === customer.id}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Modals */}
-          <CustomerFormModal
-            isOpen={showFormModal}
-            onClose={() => {
-              setShowFormModal(false);
-              setSelectedCustomer(null);
-            }}
-            customer={selectedCustomer}
-            isEditing={isEditing}
-            onSave={handleSaveCustomer}
-          />
-
-          <PaymentModal
-            isOpen={showPaymentModal}
-            onClose={() => {
-              setShowPaymentModal(false);
-              setSelectedCustomer(null);
-            }}
-            customer={selectedCustomer}
-            onPayment={handlePaymentComplete}
-            isRecording={operationsInProgress.recordingPayment === selectedCustomer?.id}
-          />
-
-            <DeleteCustomerModal
-              isOpen={showDeleteModal}
-              onClose={() => {
-                setShowDeleteModal(false);
-                setSelectedCustomer(null);
-              }}
-              customer={selectedCustomer}
-              onDelete={handleConfirmDelete}
-              isDeleting={operationsInProgress.deleting === selectedCustomer?.id}
-            />
-
-            <CustomerHistoryModal
-              isOpen={showHistoryModal}
-              onClose={() => setShowHistoryModal(false)}
-              customer={selectedCustomer}
-            />
-
-        </div>
-      </div>
-    </TooltipWrapper>
+    </CustomersTutorial>
   );
 };
 

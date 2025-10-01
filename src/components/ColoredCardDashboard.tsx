@@ -27,8 +27,8 @@ import AccurateDashboardStats from './dashboard/AccurateDashboardStats';
 import AddProductModal from './inventory/AddProductModal';
 import AddCustomerModal from './sales/AddCustomerModal';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
-import TutorialOverlay from './TutorialOverlay';
-import { useTutorial } from '@/hooks/useTutorial';
+import ImprovedTutorialOverlay from './ImprovedTutorialOverlay';
+import { useImprovedTutorial } from '@/hooks/useImprovedTutorial';
 import { DASHBOARD_TUTORIAL_STEPS } from '@/config/dashboardTutorial';
 
 const ColoredCardDashboard = () => {
@@ -66,9 +66,11 @@ const ColoredCardDashboard = () => {
     startTutorial,
     nextStep,
     prevStep,
-    skipTutorial
-  } = useTutorial({
+    skipTutorial,
+    isCompleting
+  } = useImprovedTutorial({
     steps: DASHBOARD_TUTORIAL_STEPS,
+    storageKey: 'dashboardTutorialCompleted',
     onComplete: () => {
       // Clear the localStorage flag when tutorial completes
       localStorage.removeItem('startDashboardTutorial');
@@ -129,9 +131,9 @@ const ColoredCardDashboard = () => {
     );
   }
 
-  // Calculate low stock products (excluding unspecified stock)
+  // Calculate low stock products (excluding unspecified stock - stock calculation disabled)
   const lowStockProducts = products.filter(p => 
-    p.currentStock !== -1 && // Exclude unspecified quantities
+    p.currentStock !== -1 && // Exclude unspecified quantities (stock calculation disabled)
     p.currentStock !== null && 
     p.currentStock !== undefined &&
     p.currentStock <= (p.lowStockThreshold || 10)
@@ -341,7 +343,7 @@ const ColoredCardDashboard = () => {
       />
       
       {/* Tutorial Overlay */}
-      <TutorialOverlay
+      <ImprovedTutorialOverlay
         isActive={isTutorialActive}
         currentStep={currentTutorialStep}
         currentStepIndex={currentStepIndex}
@@ -350,6 +352,7 @@ const ColoredCardDashboard = () => {
         onPrev={prevStep}
         onSkip={skipTutorial}
         onFinish={skipTutorial}
+        isCompleting={isCompleting}
       />
     </div>
   );

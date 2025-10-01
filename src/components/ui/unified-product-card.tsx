@@ -78,7 +78,8 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
   // Calculate stock status for inventory
   const getStockStatus = () => {
     if (variant !== 'inventory') return null;
-    if (currentStock === undefined || currentStock === null) return { label: 'N/A', variant: 'secondary' as const };
+    // If currentStock is undefined or null, or if stock calculation was disabled (currentStock < 0), don't show stock status
+    if (currentStock === undefined || currentStock === null || currentStock < 0) return null;
     if (currentStock === 0) return { label: 'Out of Stock', variant: 'destructive' as const };
     if (lowStockThreshold && currentStock <= lowStockThreshold && currentStock > 0) return { label: 'Low Stock', variant: 'outline' as const };
     return { label: 'In Stock', variant: 'secondary' as const };
@@ -112,6 +113,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card
+      id={variant === 'inventory' ? `product-card-${product.id}` : undefined}
       className={cn(
         "group relative bg-card rounded-xl border transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl overflow-hidden",
         // Template selection styling
@@ -224,6 +226,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
                 )}
               </div>
               
+              {/* Show cost price only if it was calculated (profit section enabled) */}
               {costPrice !== undefined && costPrice > 0 && !((product as any).is_parent) && (
                 <div className="text-xs text-muted-foreground">
                   Cost: {formatCurrency(costPrice)}
@@ -236,7 +239,8 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
                 </div>
               )}
               
-              {currentStock !== undefined && (
+              {/* Show stock info only if stock section was enabled (currentStock >= 0 means stock calculation was enabled) */}
+              {currentStock !== undefined && currentStock >= 0 && (
                 <div className="text-xs text-muted-foreground">
                   Stock: {currentStock === -1 ? 'Unlimited' : currentStock}
                 </div>
@@ -291,16 +295,16 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
               )}
               {onRestock && (
                 <button
-                  onClick={(e) => handleActionClick(e, () => { if (!isUncountable) onRestock(product); })}
+                  onClick={(e) => handleActionClick(e, () => { if (currentStock !== undefined && currentStock >= 0) onRestock(product); })}
                   className={cn(
                     "p-2 rounded-full shadow-lg transition-all duration-200 transform",
-                    isUncountable
+                    (currentStock === undefined || currentStock < 0)
                       ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
                       : "bg-primary text-primary-foreground hover:scale-105"
                   )}
-                  title={isUncountable ? "Restock unavailable for uncountable products" : "Restock Product"}
-                  disabled={!showIcons || isUncountable}
-                  aria-disabled={isUncountable}
+                  title={(currentStock === undefined || currentStock < 0) ? "Restock unavailable - stock calculation disabled" : "Restock Product"}
+                  disabled={!showIcons || (currentStock === undefined || currentStock < 0)}
+                  aria-disabled={(currentStock === undefined || currentStock < 0)}
                 >
                   <Plus className="w-4 h-4" />
                 </button>

@@ -5,7 +5,7 @@ import { Plus, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-export type ProductMode = 'normal' | 'bulk' | 'uncountable' | 'variation';
+export type ProductMode = 'normal' | 'bulk';
 
 interface AddProductDropdownProps {
   onModeSelect: (mode: ProductMode) => void;
@@ -19,8 +19,6 @@ const AddProductDropdown: React.FC<AddProductDropdownProps> = ({ onModeSelect, c
   const modes = [
     { id: 'normal' as ProductMode, label: 'Normal', description: 'Add single product' },
     { id: 'bulk' as ProductMode, label: 'Bulk', description: 'Add multiple products at once' },
-    { id: 'uncountable' as ProductMode, label: 'Uncountable', description: 'Items sold by scoops, cups, etc.' },
-    { id: 'variation' as ProductMode, label: 'Variation', description: 'Product with different sizes/units' },
   ];
 
   const handleModeSelect = (mode: ProductMode) => {
@@ -32,6 +30,7 @@ const AddProductDropdown: React.FC<AddProductDropdownProps> = ({ onModeSelect, c
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button 
+          id="add-product-dropdown-trigger"
           className={cn(
             "bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-shrink-0",
             className

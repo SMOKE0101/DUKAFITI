@@ -8,30 +8,63 @@ export interface TutorialStep {
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
 }
 
-interface UseTutorialProps {
+interface UseImprovedTutorialProps {
   steps: TutorialStep[];
   onComplete?: () => void;
   onStart?: () => void;
+  storageKey?: string;
 }
 
-export const useTutorial = ({ steps, onComplete, onStart }: UseTutorialProps) => {
+export const useImprovedTutorial = ({ 
+  steps, 
+  onComplete, 
+  onStart,
+  storageKey = 'tutorialCompleted'
+}: UseImprovedTutorialProps) => {
   const [isActive, setIsActive] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const targetElementRef = useRef<HTMLElement | null>(null);
+  const cleanupRef = useRef<(() => void)[]>([]);
+
+  const isTutorialCompleted = useCallback(() => {
+    return localStorage.getItem(storageKey) === 'true';
+  }, [storageKey]);
+
+  const markTutorialCompleted = useCallback(() => {
+    localStorage.setItem(storageKey, 'true');
+  }, [storageKey]);
 
   const startTutorial = useCallback(() => {
+    if (isTutorialCompleted()) {
+      return;
+    }
+    
     setIsActive(true);
     setIsVisible(true);
     setCurrentStepIndex(0);
+    setIsCompleting(false);
     onStart?.();
     
     // Disable body scroll during tutorial
+    const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    
+    // Store cleanup function
+    cleanupRef.current.push(() => {
+      document.body.style.overflow = originalOverflow;
+    });
     
     // Make bottom navigation unclickable by adding overlay
     const bottomNav = document.querySelector('[data-bottom-nav]') as HTMLElement | null;
     if (bottomNav) {
+      // Remove any existing overlay first
+      const existingOverlay = document.getElementById('tutorial-bottom-nav-overlay');
+      if (existingOverlay) {
+        existingOverlay.remove();
+      }
+      
       const overlay = document.createElement('div');
       overlay.id = 'tutorial-bottom-nav-overlay';
       overlay.style.cssText = `
@@ -47,29 +80,24 @@ export const useTutorial = ({ steps, onComplete, onStart }: UseTutorialProps) =>
       bottomNav.style.position = 'relative';
       bottomNav.style.zIndex = '40';
       bottomNav.appendChild(overlay);
+      
+      // Store cleanup function
+      cleanupRef.current.push(() => {
+        overlay.remove();
+        bottomNav.style.zIndex = '';
+        bottomNav.style.position = '';
+      });
     }
-  }, [onStart]);
+  }, [isTutorialCompleted, onStart]);
 
   const endTutorial = useCallback((shouldReload = false) => {
-    setIsActive(false);
-    setIsVisible(false);
-    setCurrentStepIndex(0);
+    if (isCompleting) return;
     
-    // Re-enable body scroll
-    document.body.style.overflow = '';
+    setIsCompleting(true);
     
-    // Remove bottom navigation overlay
-    const overlay = document.getElementById('tutorial-bottom-nav-overlay');
-    if (overlay) {
-      overlay.remove();
-    }
-    
-    // Reset bottom navigation z-index and position
-    const bottomNav = document.querySelector('[data-bottom-nav]') as HTMLElement | null;
-    if (bottomNav) {
-      bottomNav.style.zIndex = '';
-      bottomNav.style.position = '';
-    }
+    // Execute all cleanup functions
+    cleanupRef.current.forEach(cleanup => cleanup());
+    cleanupRef.current = [];
     
     // Remove highlight from target element
     if (targetElementRef.current) {
@@ -79,19 +107,32 @@ export const useTutorial = ({ steps, onComplete, onStart }: UseTutorialProps) =>
       targetElementRef.current = null;
     }
     
-    // Reload the page if requested
+    // Mark tutorial as completed
+    markTutorialCompleted();
+    
+    // Reload the page after a short delay to ensure cleanup
     if (shouldReload) {
       setTimeout(() => {
+        // Use location.reload() which works offline and online
         window.location.reload();
       }, 100);
+    } else {
+      // Clean up state after a short delay
+      setTimeout(() => {
+        setIsActive(false);
+        setIsVisible(false);
+        setCurrentStepIndex(0);
+        setIsCompleting(false);
+        onComplete?.();
+      }, 100);
     }
-  }, []);
+  }, [isCompleting, markTutorialCompleted, onComplete]);
 
   const nextStep = useCallback(() => {
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
     } else {
-      endTutorial();
+      endTutorial(true); // Reload on completion
       onComplete?.();
     }
   }, [currentStepIndex, steps.length, endTutorial, onComplete]);
@@ -103,17 +144,17 @@ export const useTutorial = ({ steps, onComplete, onStart }: UseTutorialProps) =>
   }, [currentStepIndex]);
 
   const skipTutorial = useCallback(() => {
-    endTutorial();
+    endTutorial(true); // Reload on skip
     onComplete?.();
   }, [endTutorial, onComplete]);
 
   const getCurrentStep = useCallback(() => {
-    return steps[currentStepIndex];
+    return steps[currentStepIndex] || null;
   }, [steps, currentStepIndex]);
 
   // Auto-scroll to target element and highlight it
   useEffect(() => {
-    if (!isActive || !isVisible) return;
+    if (!isActive || !isVisible || isCompleting) return;
 
     const step = getCurrentStep();
     if (!step) return;
@@ -141,11 +182,15 @@ export const useTutorial = ({ steps, onComplete, onStart }: UseTutorialProps) =>
         inline: 'center'
       });
     }
-  }, [currentStepIndex, isActive, isVisible, getCurrentStep]);
+  }, [currentStepIndex, isActive, isVisible, isCompleting, getCurrentStep]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Execute all cleanup functions
+      cleanupRef.current.forEach(cleanup => cleanup());
+      cleanupRef.current = [];
+      
       if (targetElementRef.current) {
         targetElementRef.current.style.outline = '';
         targetElementRef.current.style.outlineOffset = '';
@@ -165,6 +210,8 @@ export const useTutorial = ({ steps, onComplete, onStart }: UseTutorialProps) =>
     endTutorial,
     nextStep,
     prevStep,
-    skipTutorial
+    skipTutorial,
+    isCompleting,
+    isTutorialCompleted: isTutorialCompleted()
   };
 };

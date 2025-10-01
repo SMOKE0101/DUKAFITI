@@ -80,8 +80,8 @@ const ProductProfitsTable: React.FC<ProductProfitsTableProps> = ({
     });
 
     groups.forEach(({ sales: salesInGroup }) => {
-      // Only include valid items with positive prices
-      const validSales = salesInGroup.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
+      // Only include sales where profit calculation was enabled (costPrice > 0)
+      const validSales = salesInGroup.filter(sale => sale.costPrice > 0);
       if (validSales.length === 0) return;
 
       const groupTotal = validSales.reduce((sum, s) => sum + s.total, 0);

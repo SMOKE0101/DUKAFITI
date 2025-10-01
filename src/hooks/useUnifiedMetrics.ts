@@ -88,7 +88,8 @@ export const useUnifiedMetrics = (
         return sum + Math.max(0, total - discount);
       }, 0);
 
-      const validProfitSales = salesData.filter(sale => sale.costPrice > 0 && sale.sellingPrice > 0);
+      // Only include sales where profit calculation was enabled (costPrice > 0)
+      const validProfitSales = salesData.filter(sale => sale.costPrice > 0);
       const totalDiscounts = salesData.reduce((sum, sale) => sum + (Number(sale.paymentDetails?.discountAmount) || 0), 0);
       const rawProfit = validProfitSales.reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
       const totalProfit = Math.max(0, rawProfit - totalDiscounts);

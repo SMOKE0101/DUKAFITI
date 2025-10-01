@@ -3,16 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { TutorialStep } from '@/hooks/useImprovedTutorial';
 
-interface TutorialOverlayProps {
+interface ImprovedTutorialOverlayProps {
   isActive: boolean;
-  currentStep: {
-    id: string;
-    title: string;
-    description: string;
-    targetId: string;
-    position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
-  } | null;
+  currentStep: TutorialStep | null;
   currentStepIndex: number;
   totalSteps: number;
   onNext: () => void;
@@ -22,7 +17,7 @@ interface TutorialOverlayProps {
   isCompleting?: boolean;
 }
 
-const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
+const ImprovedTutorialOverlay: React.FC<ImprovedTutorialOverlayProps> = ({
   isActive,
   currentStep,
   currentStepIndex,
@@ -38,7 +33,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
   // Calculate tooltip position based on target element and mobile status
   useEffect(() => {
-    if (!isActive || !currentStep) return;
+    if (!isActive || !currentStep || isCompleting) return;
 
     // For mobile Steps 3 (Outstanding Debts) and 4 (Quick Actions), position at top
     const shouldPositionAtTop = isMobile && (currentStepIndex === 2 || currentStepIndex === 3);
@@ -85,9 +80,12 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
     }
 
     setTooltipPosition({ top, left });
-  }, [currentStep, isActive, currentStepIndex, isMobile]);
+  }, [currentStep, isActive, currentStepIndex, isMobile, isCompleting]);
 
-  if (!isActive || !currentStep || isCompleting) return null;
+  // Ensure overlay is completely removed when completing
+  if (!isActive || !currentStep || isCompleting) {
+    return null;
+  }
 
   const isLastStep = currentStepIndex === totalSteps - 1;
 
@@ -116,6 +114,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               size="sm"
               onClick={onSkip}
               className="h-6 w-6 p-0 hover:bg-gray-100"
+              disabled={isCompleting}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -135,7 +134,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               variant="outline"
               size="sm"
               onClick={onPrev}
-              disabled={currentStepIndex === 0}
+              disabled={currentStepIndex === 0 || isCompleting}
               className="flex items-center gap-1"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -146,6 +145,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               variant="default"
               size="sm"
               onClick={isLastStep ? onFinish : onNext}
+              disabled={isCompleting}
               className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700"
             >
               {isLastStep ? 'Finish' : 'Next'}
@@ -158,4 +158,4 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   );
 };
 
-export default TutorialOverlay;
+export default ImprovedTutorialOverlay;
