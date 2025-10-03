@@ -5,15 +5,30 @@ import { Switch } from '@/components/ui/switch';
 import { useSettings } from '../../hooks/useSettings';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, WifiOff } from 'lucide-react';
+import { useSMS } from '../../hooks/useSMS';
+import { Moon, Sun, WifiOff, MessageCircle } from 'lucide-react';
 
 const AppearanceSettings = () => {
   const { settings, saveSettings, loading } = useSettings();
   const { isOnline } = useNetworkStatus();
   const { theme: currentTheme, setTheme } = useTheme();
+  const { isSupported, hasPermissions, enableSMSReceipts, disableSMSReceipts } = useSMS();
   const [formData, setFormData] = useState({
     theme: 'light' as 'light' | 'dark',
+    sendSmsReceipts: false,
   });
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if we're on a mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Use the current theme from next-themes instead of stored settings
   useEffect(() => {
@@ -22,6 +37,7 @@ const AppearanceSettings = () => {
     console.log('AppearanceSettings - Using current active theme to prevent unwanted switches');
     setFormData({
       theme: (currentTheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark',
+      sendSmsReceipts: settings.sendSmsReceipts || false,
     });
   }, [currentTheme, settings]);
 
@@ -44,6 +60,23 @@ const AppearanceSettings = () => {
       });
     } else {
       console.log('Offline: Theme change applied locally only');
+    }
+  };
+
+  const handleSMSReceiptsToggle = async (enabled: boolean) => {
+    if (enabled) {
+      // Enable SMS receipts - this will handle permissions
+      const success = await enableSMSReceipts();
+      if (success) {
+        setFormData({ ...formData, sendSmsReceipts: true });
+      } else {
+        // Revert the toggle if enabling failed
+        setFormData({ ...formData, sendSmsReceipts: false });
+      }
+    } else {
+      // Disable SMS receipts
+      await disableSMSReceipts();
+      setFormData({ ...formData, sendSmsReceipts: false });
     }
   };
 
@@ -97,6 +130,37 @@ const AppearanceSettings = () => {
           </div>
         )}
       </div>
+
+      {/* SMS Receipts Section - Mobile Only */}
+      {isMobile && (
+        <div className="space-y-4">
+          <Label className="block text-sm font-medium text-foreground">
+            SMS Receipts
+          </Label>
+          
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
+            <div className="flex items-center gap-3">
+              <MessageCircle className="w-5 h-5 text-green-500" />
+              <span className="text-sm font-medium text-foreground">
+                Send SMS Receipts
+              </span>
+            </div>
+            
+            <Switch
+              checked={formData.sendSmsReceipts}
+              onCheckedChange={handleSMSReceiptsToggle}
+              className="data-[state=checked]:bg-primary focus:ring-ring"
+              disabled={!isSupported}
+            />
+          </div>
+          
+          {!isSupported && (
+            <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3 border border-dashed border-border">
+              SMS receipts are not supported on this device.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

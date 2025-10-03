@@ -5,21 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Package, Loader2, WifiOff } from 'lucide-react';
-import { formatCurrency } from '../../utils/currency';
 import { useToast } from '../../hooks/use-toast';
 import { Product } from '../../types';
 
 interface RestockModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (quantity: number, buyingPrice: number) => Promise<void>;
+  onSave: (quantity: number) => Promise<void>;
   product: Product | null;
   isLoading?: boolean;
 }
 
 const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, product, isLoading = false }) => {
   const [quantity, setQuantity] = useState('0');
-  const [buyingPrice, setBuyingPrice] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const { toast } = useToast();
@@ -32,9 +30,6 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
 
     if (!quantity || parseInt(quantity) <= 0) {
       newErrors.quantity = 'Valid quantity is required';
-    }
-    if (!buyingPrice || parseFloat(buyingPrice) < 0) {
-      newErrors.buyingPrice = 'Valid buying price is required';
     }
 
     setErrors(newErrors);
@@ -49,12 +44,11 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
     try {
       console.log('[RestockModal] Submitting restock with:', {
         quantity: parseInt(quantity),
-        buyingPrice: parseFloat(buyingPrice),
         isOnline
       });
 
       // Use the onSave callback which handles both online and offline scenarios
-      await onSave(parseInt(quantity), parseFloat(buyingPrice));
+      await onSave(parseInt(quantity));
       
       // Show appropriate success message
       if (isOnline) {
@@ -71,7 +65,6 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
       
       // Reset form
       setQuantity('0');
-      setBuyingPrice('');
       setErrors({});
       
       // Close modal
@@ -88,7 +81,6 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
 
   const handleClose = () => {
     setQuantity('0');
-    setBuyingPrice('');
     setErrors({});
     onClose();
   };
@@ -105,9 +97,8 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen]);
 
-  const isFormValid = quantity && buyingPrice && parseInt(quantity) > 0 && parseFloat(buyingPrice) >= 0;
+  const isFormValid = quantity && parseInt(quantity) > 0;
   const newTotal = product ? product.currentStock + (parseInt(quantity) || 0) : 0;
-  const totalCost = parseFloat(buyingPrice) * parseInt(quantity) || 0;
 
   if (!product) return null;
 
@@ -162,46 +153,14 @@ const RestockModal: React.FC<RestockModalProps> = ({ isOpen, onClose, onSave, pr
               {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
             </div>
 
-            {/* Buying Price */}
-            <div className="space-y-2">
-              <Label htmlFor="buyingPrice" className="text-sm font-medium flex items-center gap-2">
-                Buying Price (KES) <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm font-medium">
-                  KES
-                </span>
-                <Input
-                  id="buyingPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={buyingPrice}
-                  onChange={(e) => setBuyingPrice(e.target.value)}
-                  className={`pl-12 focus-visible:ring-2 focus-visible:ring-green-500 ${
-                    errors.buyingPrice ? 'border-red-500 focus-visible:ring-red-500' : ''
-                  }`}
-                  placeholder="0.00"
-                  disabled={isLoading}
-                />
-              </div>
-              {errors.buyingPrice && <p className="text-red-500 text-sm">{errors.buyingPrice}</p>}
-            </div>
-
             {/* Summary */}
-            {quantity && buyingPrice && isFormValid && (
+            {quantity && isFormValid && (
               <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 animate-in fade-in-0 slide-in-from-top-2 duration-200">
                 <h4 className="font-medium text-green-800 dark:text-green-300 mb-3">Restock Summary</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">New Total Stock:</span>
                     <span className="font-semibold text-green-700 dark:text-green-300">{newTotal} units</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total Cost:</span>
-                    <span className="font-semibold text-green-600 dark:text-green-400">
-                      {formatCurrency(totalCost)}
-                    </span>
                   </div>
                 </div>
               </div>

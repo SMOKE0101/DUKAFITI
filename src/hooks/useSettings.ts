@@ -36,6 +36,7 @@ interface ShopSettings {
   paymentConfirmationMessage: string;
   lowStockMessage: string;
   contactPhone: string;
+  sendSmsReceipts: boolean; // New setting for SMS receipts
 }
 
 const defaultSettings: ShopSettings = {
@@ -68,6 +69,7 @@ const defaultSettings: ShopSettings = {
   paymentConfirmationMessage: 'Payment of KSh {amount} received. Thank you!',
   lowStockMessage: 'Low stock alert: {product} has only {quantity} items left.',
   contactPhone: '',
+  sendSmsReceipts: false, // Default value for SMS receipts
 };
 
 export const useSettings = () => {

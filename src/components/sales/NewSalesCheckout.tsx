@@ -4,17 +4,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnifiedSales } from '../../hooks/useUnifiedSales';
 import { useUnifiedProducts } from '../../hooks/useUnifiedProducts';
 import { useOfflineDebtManager } from '../../hooks/useOfflineDebtManager';
+import { useSettings } from '../../hooks/useSettings';
+import { useSMS } from '../../hooks/useSMS';
 
 import { SalesService } from '../../services/salesService';
 import { CartItem } from '../../types/cart';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../utils/currency';
-import { User, UserPlus, Receipt, Banknote, DollarSign, AlertTriangle, Split, ChevronDown } from 'lucide-react';
+import { generateSMSReceipt, validatePhoneNumber, formatPhoneNumberForSMS } from '../../utils/smsReceiptUtils';
+import { User, UserPlus, Receipt, Banknote, DollarSign, AlertTriangle, Split, ChevronDown, MessageCircle } from 'lucide-react';
 import AddCustomerModal from './AddCustomerModal';
 import SplitPaymentModal from './SplitPaymentModal';
 import { SplitPaymentData } from '../../types/cart';
@@ -45,12 +50,15 @@ const NewSalesCheckout: React.FC<NewSalesCheckoutProps> = ({
   const [splitPaymentData, setSplitPaymentData] = useState<SplitPaymentData | null>(null);
   const [showRefInput, setShowRefInput] = useState(false);
   const [salesReference, setSalesReference] = useState('');
+  const [sendReceipt, setSendReceipt] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const { settings } = useSettings();
   const { createSale } = useUnifiedSales();
   const { updateProduct, forceRefetch: forceReloadProducts, products } = useUnifiedProducts();
   const { calculateCustomerDebt } = useOfflineDebtManager();
+  const { sendSMS } = useSMS();
 
 // Use customers from parent to ensure single source of truth
 const allCustomers = initialCustomers;
@@ -436,6 +444,64 @@ const handleCustomerAdded = useCallback(async (newCustomer: Customer) => {
         description: successMessage,
       });
 
+      // Send SMS receipt if enabled and requested
+      if (sendReceipt && settings.sendSmsReceipts && selectedCustomer?.phone) {
+        try {
+          // Validate phone number
+          if (!validatePhoneNumber(selectedCustomer.phone)) {
+            toast({
+              title: "Invalid Phone Number",
+              description: "Customer phone number format is invalid. SMS receipt not sent.",
+              variant: "destructive",
+            });
+          } else {
+            // Generate SMS receipt
+            const receiptData = {
+              shopName: settings.shopName || 'Your Shop',
+              customer: selectedCustomer,
+              cart,
+              total,
+              paymentMethod,
+              splitPaymentData: paymentMethod === 'split' ? splitPaymentData : null,
+              salesReference: salesReference || undefined,
+              timestamp: new Date(),
+            };
+            
+            const receiptMessage = generateSMSReceipt(receiptData);
+            const formattedPhone = formatPhoneNumberForSMS(selectedCustomer.phone);
+            
+            // Send SMS
+            const result = await sendSMS(formattedPhone, receiptMessage);
+            
+            if (result.success) {
+              toast({
+                title: "SMS Receipt Sent",
+                description: result.message,
+              });
+            } else {
+              toast({
+                title: "SMS Failed",
+                description: result.message,
+                variant: "destructive",
+              });
+            }
+          }
+        } catch (smsError) {
+          console.error('[NewSalesCheckout] SMS receipt sending failed:', smsError);
+          toast({
+            title: "SMS Error",
+            description: "Failed to send SMS receipt. Please check customer phone number.",
+            variant: "destructive",
+          });
+        }
+      } else if (sendReceipt && settings.sendSmsReceipts && !selectedCustomer?.phone) {
+        toast({
+          title: "Customer Phone Required",
+          description: "Customer phone number is required to send an SMS receipt.",
+          variant: "destructive",
+        });
+      }
+
 console.log('[NewSalesCheckout] Checkout completed successfully');
 
 // Notify other parts of the app and refresh customers
@@ -455,6 +521,7 @@ window.dispatchEvent(new CustomEvent('customers-refreshed', {
 setSelectedCustomerId(null);
 setPaymentMethod('cash');
 setSplitPaymentData(null);
+setSendReceipt(false);
 
 onCheckoutComplete();
 
@@ -498,7 +565,7 @@ onCheckoutComplete();
                   setSelectedCustomerId(newCustomerId);
                 }}
               >
-                <SelectTrigger className="flex-1 h-12 bg-background border border-border hover:border-primary/50 transition-colors">
+                <SelectTrigger id="customer-selection-dropdown" className="flex-1 h-12 bg-background border border-border hover:border-primary/50 transition-colors">
                   <SelectValue>
                     {selectedCustomer ? (
                       <div className="flex flex-col items-start w-full">
@@ -579,6 +646,7 @@ onCheckoutComplete();
             <Button
               variant={paymentMethod === 'cash' ? 'default' : 'outline'}
               size="sm"
+              id="payment-method-cash"
               onClick={() => setPaymentMethod('cash')}
               className="flex-1"
             >
@@ -588,6 +656,7 @@ onCheckoutComplete();
             <Button
               variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
               size="sm"
+              id="payment-method-mpesa"
               onClick={() => setPaymentMethod('mpesa')}
               className="flex-1"
             >
@@ -597,6 +666,7 @@ onCheckoutComplete();
             <Button
               variant={paymentMethod === 'debt' ? 'default' : 'outline'}
               size="sm"
+              id="payment-method-debt"
               onClick={() => setPaymentMethod('debt')}
               className="flex-1"
             >
@@ -606,6 +676,7 @@ onCheckoutComplete();
             <Button
               variant={paymentMethod === 'split' ? 'default' : 'outline'}
               size="sm"
+              id="payment-method-split"
               onClick={() => setIsSplitPaymentModalOpen(true)}
               className="flex-1"
             >
@@ -692,12 +763,7 @@ onCheckoutComplete();
         </CardContent>
       </Card>
 
-      {/* Toggle for Sales Reference */}
-      <div className="flex justify-end">
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setShowRefInput(v => !v)} aria-expanded={showRefInput} aria-controls="sales-ref-input">
-          <ChevronDown className={`h-4 w-4 transition-transform ${showRefInput ? 'rotate-180' : ''}`} />
-        </Button>
-      </div>
+      {/* Sales Reference Input */}
       {showRefInput && (
         <Input
           id="sales-ref-input"
@@ -708,8 +774,39 @@ onCheckoutComplete();
         />
       )}
 
+      {/* Send SMS Receipt Toggle - Only show if enabled in settings */}
+      {settings.sendSmsReceipts && (
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
+          <div className="flex items-center gap-3">
+            <MessageCircle className="w-5 h-5 text-green-500" />
+            <div>
+              <Label className="text-sm font-medium text-foreground">
+                Send Receipt
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Send SMS receipt to customer
+              </p>
+            </div>
+          </div>
+          
+          <Switch
+            checked={sendReceipt}
+            onCheckedChange={setSendReceipt}
+            className="data-[state=checked]:bg-primary focus:ring-ring"
+          />
+        </div>
+      )}
+
+      {/* Toggle for Sales Reference */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setShowRefInput(v => !v)} aria-expanded={showRefInput} aria-controls="sales-ref-input">
+          <ChevronDown className={`h-4 w-4 transition-transform ${showRefInput ? 'rotate-180' : ''}`} />
+        </Button>
+      </div>
+
       {/* Checkout Button */}
       <Button
+        id="complete-sale-button"
         onClick={handleCheckout}
         disabled={isDisabled}
         className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:transform-none active:scale-95 min-h-[56px]"

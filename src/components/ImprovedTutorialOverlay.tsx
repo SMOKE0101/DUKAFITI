@@ -35,11 +35,11 @@ const ImprovedTutorialOverlay: React.FC<ImprovedTutorialOverlayProps> = ({
   useEffect(() => {
     if (!isActive || !currentStep || isCompleting) return;
 
-    // For mobile Steps 3 (Outstanding Debts) and 4 (Quick Actions), position at top
-    const shouldPositionAtTop = isMobile && (currentStepIndex === 2 || currentStepIndex === 3);
+    // For mobile Steps 1 (Record Cash Lending) and other special steps, position at top
+    const shouldPositionAtTop = isMobile && currentStep.targetId === 'add-debt-card';
 
     if (shouldPositionAtTop) {
-      // Position at top for mobile steps 3 and 4
+      // Position at top for mobile debt card step
       setTooltipPosition({ 
         top: 10, 
         left: (window.innerWidth - Math.min(300, window.innerWidth - 20)) / 2 

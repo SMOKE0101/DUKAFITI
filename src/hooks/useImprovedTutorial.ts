@@ -163,6 +163,7 @@ export const useImprovedTutorial = ({
     if (targetElementRef.current) {
       targetElementRef.current.style.outline = '';
       targetElementRef.current.style.outlineOffset = '';
+      targetElementRef.current.style.zIndex = '';
     }
 
     // Find and highlight target element
@@ -170,10 +171,16 @@ export const useImprovedTutorial = ({
     if (targetElement) {
       targetElementRef.current = targetElement;
       
-      // Add highlight
-      targetElement.style.outline = '3px solid #3b82f6';
-      targetElement.style.outlineOffset = '2px';
-      targetElement.style.zIndex = '50';
+      // Add highlight - but don't highlight add-debt-card in checkout tutorial on mobile
+      const isMobile = window.innerWidth < 768;
+      const shouldSkipHighlight = step.targetId === 'add-debt-card' && 
+        step.id !== 'record-cash-lending'; // Only highlight for the specific record cash lending step
+      
+      if (!shouldSkipHighlight) {
+        targetElement.style.outline = '3px solid #3b82f6';
+        targetElement.style.outlineOffset = '2px';
+        targetElement.style.zIndex = '50';
+      }
       
       // Scroll to element
       targetElement.scrollIntoView({

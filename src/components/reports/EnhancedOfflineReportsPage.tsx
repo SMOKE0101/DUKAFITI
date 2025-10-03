@@ -14,6 +14,7 @@ import OrdersBarChart from './OrdersBarChart';
 import SalesReportTable from './SalesReportTable';
 import ProductProfitsTable from './ProductProfitsTable';
 import DebtTransactionsTable from './DebtTransactionsTable';
+import RestockRecordsTable from './RestockRecordsTable';
 import { DatePicker } from '@/components/ui/date-picker';
 import { dedupeSalesForReporting } from '@/utils/salesDedupe';
 
@@ -216,7 +217,7 @@ const EnhancedOfflineReportsPage = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         {/* Modern Summary Cards */}
-        <div>
+        <div id="summary-cards-container">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Performance Overview
@@ -236,7 +237,7 @@ const EnhancedOfflineReportsPage = () => {
         </div>
 
         {/* Sales Trend Chart */}
-        <div>
+        <div id="sales-trend-chart">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Sales Analytics
           </h2>
@@ -244,7 +245,7 @@ const EnhancedOfflineReportsPage = () => {
         </div>
 
         {/* Orders Bar Chart */}
-        <div>
+        <div id="orders-bar-chart">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Orders Analytics
           </h2>
@@ -252,7 +253,7 @@ const EnhancedOfflineReportsPage = () => {
         </div>
 
         {/* Sales Report Table */}
-        <div>
+        <div id="sales-report-table">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Detailed Sales Report
           </h2>
@@ -260,7 +261,7 @@ const EnhancedOfflineReportsPage = () => {
         </div>
 
         {/* Product Profits Table */}
-        <div>
+        <div id="product-profits-table">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Product Profits Report
           </h2>
@@ -268,11 +269,19 @@ const EnhancedOfflineReportsPage = () => {
         </div>
 
         {/* Debt Transactions Table */}
-        <div>
+        <div id="debt-transactions-table">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Debt Transactions Report
           </h2>
           <DebtTransactionsTable sales={dedupedSales} loading={isLoading} isOffline={readOnly} />
+        </div>
+
+        {/* Restock Records Table */}
+        <div id="restock-records-table">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Restock Records
+          </h2>
+          <RestockRecordsTable products={currentProducts} loading={isLoading} isOffline={readOnly} />
         </div>
 
         {/* Always Current Data Panels */}

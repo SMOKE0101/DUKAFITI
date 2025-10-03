@@ -113,7 +113,7 @@ const UnifiedProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card
-      id={variant === 'inventory' ? `product-card-${product.id}` : undefined}
+      id={variant === 'inventory' || variant === 'sales' ? `product-card-${product.id}` : undefined}
       className={cn(
         "group relative bg-card rounded-xl border transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl overflow-hidden",
         // Template selection styling

@@ -25,6 +25,7 @@ import AddDebtModal from './sales/AddDebtModal';
 import ResponsiveProductGrid from './ui/responsive-product-grid';
 import VariantSelectionModal from './sales/VariantSelectionModal';
 import TopPicksSection from './sales/TopPicksSection';
+import SellingPageTutorial from './sales/SellingPageTutorial';
 
 import { 
   Search, 
@@ -544,7 +545,15 @@ const { sales } = useUnifiedSales();
   
   if (isMobile) {
     return (
-      <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <SellingPageTutorial
+        products={products}
+        cartItems={cart}
+        customers={customers}
+        autoStartAddToCart={localStorage.getItem('startSellingAddToCartTutorial') === 'true'}
+        autoStartCheckout={localStorage.getItem('startSellingCheckoutTutorial') === 'true'}
+        onMobilePanelSwitch={handlePanelSwitch}
+      >
+        <div className="flex flex-col bg-background" style={{ minHeight: '100vh', paddingBottom: '0px', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Mobile Content - no header, minimal top padding */}
         <div className="flex-1 overflow-hidden relative">
           {activePanel === 'search' ? (
@@ -622,7 +631,7 @@ const { sales } = useUnifiedSales();
   )}
 
   {/* Special debt card */}
-  <Card className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
+  <Card id="add-debt-card" className="overflow-hidden bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md">
     <CardContent className="p-2.5">
       <div className="flex flex-col h-full">
         <h3 className="font-medium text-xs mb-1 text-red-700 dark:text-red-400 truncate leading-tight">Record Cash Lending</h3>
@@ -783,11 +792,19 @@ const { sales } = useUnifiedSales();
           onVariantSelect={handleVariantSelect}
         />
       </div>
-    );
-  }
+    </SellingPageTutorial>
+  );
+}
 
-  // Desktop view remains the same as before
-  return (
+// Desktop view remains the same as before
+return (
+  <SellingPageTutorial
+    products={products}
+    cartItems={cart}
+    customers={customers}
+    autoStartAddToCart={localStorage.getItem('startSellingAddToCartTutorial') === 'true'}
+    autoStartCheckout={localStorage.getItem('startSellingCheckoutTutorial') === 'true'}
+  >
     <div className="flex h-screen bg-background">
       {/* Left Panel - Products */}
       <div className="flex-1 flex flex-col border-r border-border">
@@ -1010,7 +1027,8 @@ const { sales } = useUnifiedSales();
         onVariantSelect={handleVariantSelect}
       />
     </div>
-  );
+  </SellingPageTutorial>
+);
 };
 
 export default RebuiltModernSalesPage;

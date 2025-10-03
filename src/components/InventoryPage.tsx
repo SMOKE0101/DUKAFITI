@@ -329,14 +329,13 @@ const InventoryPage = () => {
     setShowRestockModal(true);
   };
 
-  const handleRestockProduct = async (quantity: number, buyingPrice: number) => {
+  const handleRestockProduct = async (quantity: number) => {
     if (!selectedProduct) return;
 
     try {
       const newStock = selectedProduct.currentStock + quantity;
       await updateProduct(selectedProduct.id, { 
-        currentStock: newStock,
-        costPrice: buyingPrice 
+        currentStock: newStock
       });
       
       setShowRestockModal(false);

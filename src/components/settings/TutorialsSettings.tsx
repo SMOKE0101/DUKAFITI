@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Users, Package } from 'lucide-react';
+import { Play, Users, Package, ShoppingCart, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TutorialsSettingsProps {
@@ -10,12 +10,19 @@ interface TutorialsSettingsProps {
   onStartCustomerCardTutorial?: () => void;
   onStartAddProductTutorial?: () => void;
   onStartProductCardTutorial?: () => void;
+  onStartAddToCartTutorial?: () => void;
+  onStartCheckoutTutorial?: () => void;
+  onStartReportsTutorial?: () => void;
   hasCustomers?: boolean;
   hasProducts?: boolean;
+  hasCartItems?: boolean;
   onResetAddCustomerTutorial?: () => void;
   onResetCustomerCardTutorial?: () => void;
   onResetAddProductTutorial?: () => void;
   onResetProductCardTutorial?: () => void;
+  onResetAddToCartTutorial?: () => void;
+  onResetCheckoutTutorial?: () => void;
+  onResetReportsTutorial?: () => void;
 }
 
 const TutorialsSettings: React.FC<TutorialsSettingsProps> = ({ 
@@ -24,12 +31,19 @@ const TutorialsSettings: React.FC<TutorialsSettingsProps> = ({
   onStartCustomerCardTutorial,
   onStartAddProductTutorial,
   onStartProductCardTutorial,
+  onStartAddToCartTutorial,
+  onStartCheckoutTutorial,
+  onStartReportsTutorial,
   hasCustomers = false,
   hasProducts = false,
+  hasCartItems = false,
   onResetAddCustomerTutorial,
   onResetCustomerCardTutorial,
   onResetAddProductTutorial,
-  onResetProductCardTutorial
+  onResetProductCardTutorial,
+  onResetAddToCartTutorial,
+  onResetCheckoutTutorial,
+  onResetReportsTutorial
 }) => {
   const navigate = useNavigate();
 
@@ -268,6 +282,147 @@ const TutorialsSettings: React.FC<TutorialsSettingsProps> = ({
                   onClick={handleStartProductCardTutorial}
                   disabled={!hasProducts}
                   className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
+                >
+                  <Play className="h-4 w-4" />
+                  Start
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Selling Tutorials */}
+          <div className="space-y-3">
+            <h4 className="font-medium text-foreground flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Selling Page Tutorials
+            </h4>
+            
+            {/* Add to Cart Tutorial */}
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
+              <div>
+                <h3 className="font-medium text-foreground">Add Product to Cart Tutorial</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Learn how to add products to your cart for sale
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={() => {
+                    localStorage.removeItem('sellingAddToCartTutorialCompleted');
+                    if (onResetAddToCartTutorial) {
+                      onResetAddToCartTutorial();
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Reset
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // Navigate to sales page and trigger add to cart tutorial
+                    navigate('/app/sales');
+                    // We'll use localStorage to signal that tutorial should start
+                    localStorage.setItem('startSellingAddToCartTutorial', 'true');
+                    if (onStartAddToCartTutorial) {
+                      onStartAddToCartTutorial();
+                    }
+                  }}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Play className="h-4 w-4" />
+                  Start
+                </Button>
+              </div>
+            </div>
+            
+            {/* Checkout Tutorial */}
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
+              <div>
+                <h3 className="font-medium text-foreground">Checkout Tutorial</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Learn how to complete sales and process payments
+                </p>
+                {!hasCartItems && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Please add products to cart first
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={() => {
+                    localStorage.removeItem('sellingCheckoutTutorialCompleted');
+                    if (onResetCheckoutTutorial) {
+                      onResetCheckoutTutorial();
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Reset
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // Navigate to sales page and trigger checkout tutorial
+                    navigate('/app/sales');
+                    // We'll use localStorage to signal that tutorial should start
+                    localStorage.setItem('startSellingCheckoutTutorial', 'true');
+                    if (onStartCheckoutTutorial) {
+                      onStartCheckoutTutorial();
+                    }
+                  }}
+                  disabled={!hasCartItems}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
+                >
+                  <Play className="h-4 w-4" />
+                  Start
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Reports Tutorial */}
+          <div className="space-y-3">
+            <h4 className="font-medium text-foreground flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Reports Page Tutorial
+            </h4>
+            
+            {/* Reports Tutorial */}
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
+              <div>
+                <h3 className="font-medium text-foreground">Reports Page Tutorial</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Learn how to analyze your business performance with detailed reports
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={() => {
+                    if (onResetReportsTutorial) {
+                      onResetReportsTutorial();
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Reset
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // Navigate to reports page and trigger reports tutorial
+                    navigate('/app/reports');
+                    // We'll use localStorage to signal that tutorial should start
+                    localStorage.setItem('startReportsTutorial', 'true');
+                    if (onStartReportsTutorial) {
+                      onStartReportsTutorial();
+                    }
+                  }}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   <Play className="h-4 w-4" />
                   Start

@@ -7,8 +7,11 @@ import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import TutorialsSettings from '@/components/settings/TutorialsSettings';
 import { useCustomersTutorial } from '@/hooks/useCustomersTutorial';
 import { useInventoryTutorial } from '@/hooks/useInventoryTutorial';
+import { useSellingTutorial } from '@/hooks/useSellingTutorial';
+import { useReportsTutorial } from '@/hooks/useReportsTutorial';
 import { useUnifiedCustomers } from '@/hooks/useUnifiedCustomers';
 import { useUnifiedProducts } from '@/hooks/useUnifiedProducts';
+import { usePersistedCart } from '@/hooks/usePersistedCart';
 
 import { Store, Monitor, Play } from 'lucide-react';
 
@@ -30,6 +33,20 @@ const Settings = () => {
     resetAddProductTutorial,
     resetProductCardTutorial
   } = useInventoryTutorial();
+  
+  const { cart } = usePersistedCart();
+  const { 
+    addToCartCompleted, 
+    checkoutCompleted, 
+    hasCartItems,
+    resetAddToCartTutorial,
+    resetCheckoutTutorial
+  } = useSellingTutorial(cart);
+  
+  const { 
+    reportsTutorialCompleted,
+    resetReportsTutorial
+  } = useReportsTutorial();
   
   const { customers } = useUnifiedCustomers();
   const { products } = useUnifiedProducts();
@@ -120,10 +137,14 @@ const Settings = () => {
             <TutorialsSettings 
               hasCustomers={hasCustomers}
               hasProducts={hasProducts}
+              hasCartItems={hasCartItems}
               onResetAddCustomerTutorial={resetAddCustomerTutorial}
               onResetCustomerCardTutorial={resetCustomerCardTutorial}
               onResetAddProductTutorial={resetAddProductTutorial}
               onResetProductCardTutorial={resetProductCardTutorial}
+              onResetAddToCartTutorial={resetAddToCartTutorial}
+              onResetCheckoutTutorial={resetCheckoutTutorial}
+              onResetReportsTutorial={resetReportsTutorial}
             />
           </TabsContent>
         </Tabs>
