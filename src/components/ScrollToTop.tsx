@@ -5,67 +5,42 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    // Use requestAnimationFrame to ensure DOM is ready
+    // Only scroll to top of main content areas, not the entire window
     const resetScroll = () => {
-      // Scroll window to top
-      window.scrollTo(0, 0);
-      
-      // Reset main content areas with data attribute
-      const mainContentElements = document.querySelectorAll('[data-main-content="true"]');
-      mainContentElements.forEach(element => {
-        if (element.scrollTo) {
-          element.scrollTo(0, 0);
+      try {
+        // Reset main content areas with data attribute (main app content)
+        const mainContentElements = document.querySelectorAll('[data-main-content="true"]');
+        mainContentElements.forEach(element => {
+          if (element.scrollTo) {
+            element.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        });
+        
+        // Reset specific scrollable areas that are part of the main UI
+        const scrollAreas = document.querySelectorAll('.scroll-area, [data-scroll-area="true"]');
+        scrollAreas.forEach(element => {
+          if (element.scrollTo) {
+            element.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        });
+        
+        // Only scroll window to top if we're not in a mobile PWA context
+        // This prevents unwanted reloads on mobile devices
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        const isIOSStandalone = (window.navigator as any).standalone;
+        
+        if (!isStandalone && !isIOSStandalone) {
+          // Only scroll window on desktop/non-PWA contexts
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      });
-      
-      // Reset Radix ScrollArea viewports (most commonly used scrollable areas)
-      const radixScrollAreas = document.querySelectorAll('[data-radix-scroll-area-viewport]');
-      radixScrollAreas.forEach(element => {
-        element.scrollTo(0, 0);
-      });
-      
-      // Reset custom scroll areas
-      const scrollAreas = document.querySelectorAll('.scroll-area, [data-scroll-area="true"]');
-      scrollAreas.forEach(element => {
-        element.scrollTo(0, 0);
-      });
-      
-      // Reset overflow containers (reports, tables, etc.)
-      const overflowContainers = document.querySelectorAll(
-        '.overflow-auto, .overflow-y-auto, .overflow-x-auto, .overflow-scroll'
-      );
-      overflowContainers.forEach(element => {
-        element.scrollTo(0, 0);
-      });
-
-      // Reset specific page containers
-      const pageContainers = document.querySelectorAll(
-        '.min-h-screen, .h-full, .flex-1'
-      );
-      pageContainers.forEach(element => {
-        if (element.scrollTo) {
-          element.scrollTo(0, 0);
-        }
-      });
-
-      // Reset modal and drawer content areas
-      const modalContainers = document.querySelectorAll(
-        '[role="dialog"] .overflow-y-auto, [role="dialog"] .scroll-area'
-      );
-      modalContainers.forEach(element => {
-        element.scrollTo(0, 0);
-      });
-      
-      // Force reset of document body and html scroll
-      document.body.scrollTop = 0;
-      document.documentElement.scrollTop = 0;
+      } catch (error) {
+        // Silently fail if scroll operations fail (common in mobile contexts)
+        console.debug('Scroll to top failed (likely mobile context):', error);
+      }
     };
 
-    // Reset immediately
-    resetScroll();
-    
-    // Also reset after a small delay to catch any late-rendered elements
-    const timeoutId = setTimeout(resetScroll, 100);
+    // Reset with a small delay to ensure DOM is ready
+    const timeoutId = setTimeout(resetScroll, 50);
     
     return () => clearTimeout(timeoutId);
   }, [pathname]);

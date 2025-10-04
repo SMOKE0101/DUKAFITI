@@ -110,29 +110,21 @@ export const useImprovedTutorial = ({
     // Mark tutorial as completed
     markTutorialCompleted();
     
-    // Reload the page after a short delay to ensure cleanup
-    if (shouldReload) {
-      setTimeout(() => {
-        // Use location.reload() which works offline and online
-        window.location.reload();
-      }, 100);
-    } else {
-      // Clean up state after a short delay
-      setTimeout(() => {
-        setIsActive(false);
-        setIsVisible(false);
-        setCurrentStepIndex(0);
-        setIsCompleting(false);
-        onComplete?.();
-      }, 100);
-    }
+    // Clean up state after a short delay
+    setTimeout(() => {
+      setIsActive(false);
+      setIsVisible(false);
+      setCurrentStepIndex(0);
+      setIsCompleting(false);
+      onComplete?.();
+    }, 100);
   }, [isCompleting, markTutorialCompleted, onComplete]);
 
   const nextStep = useCallback(() => {
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
     } else {
-      endTutorial(true); // Reload on completion
+      endTutorial();
       onComplete?.();
     }
   }, [currentStepIndex, steps.length, endTutorial, onComplete]);
@@ -144,7 +136,7 @@ export const useImprovedTutorial = ({
   }, [currentStepIndex]);
 
   const skipTutorial = useCallback(() => {
-    endTutorial(true); // Reload on skip
+    endTutorial();
     onComplete?.();
   }, [endTutorial, onComplete]);
 

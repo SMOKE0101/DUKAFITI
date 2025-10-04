@@ -27,6 +27,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import TestPage from "./pages/TestPage";
 import ImageDownloadTestPage from "./pages/ImageDownloadTest";
 import TutorialTestPage from "./pages/TutorialTestPage";
+import OfflineTestPage from "./pages/OfflineTestPage";
 import TemplateCacheCleaner from "./components/TemplateCacheCleaner";
 
 const queryClient = new QueryClient({
@@ -88,6 +89,7 @@ function App() {
                     <Route path="/test" element={<TestPage />} />
                     <Route path="/image-download-test" element={<ImageDownloadTestPage />} />
                     <Route path="/tutorial-test" element={<TutorialTestPage />} />
+                    <Route path="/offline-test" element={<OfflineTestPage />} />
                     
                     
                     {/* 404 - Always show with layout if user is authenticated */}

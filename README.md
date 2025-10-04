@@ -1,96 +1,233 @@
-# Welcome to your Lovable project
+# Dukafiti - Offline-First Business Management App
 
-## Project info
+Dukafiti is a comprehensive business management application designed for small to medium enterprises. This app works fully offline and can be packaged as a mobile app with SMS receipt capabilities.
 
-**URL**: https://lovable.dev/projects/e3e40a8a-4b0d-4486-a2f9-2b8a65e76033
+## Features
 
-## How can I edit this code?
+- ✅ **Fully Offline-First**: All features work without internet connection
+- ✅ **SMS Receipts**: Send SMS receipts via device SIM card (Android)
+- ✅ **Live Preview**: Test on other devices during development
+- ✅ **Mobile App**: Installable Android APK with native features
+- ✅ **PWA Support**: Install as web app on any device
+- ✅ **Data Sync**: Automatic sync when online restored
 
-There are several ways of editing your application.
+## Prerequisites
 
-**Use Lovable**
+- Node.js 18+
+- Android Studio (for Android development)
+- Java Development Kit (JDK 17+)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e3e40a8a-4b0d-4486-a2f9-2b8a65e76033) and start prompting.
+## Development
 
-Changes made via Lovable will be committed automatically to this repo.
+### Live Preview Development
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+Start development server with network access:
+```bash
+npm run dev:network
 ```
 
-**Edit a file directly in GitHub**
+This will show a network URL that you can access from other devices on the same network.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Build for Development
+```bash
+npm run build:dev
+```
 
-**Use GitHub Codespaces**
+### Preview Build
+```bash
+npm run preview:network
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Mobile App Development
 
-## What technologies are used for this project?
+### Android Development
 
-This project is built with:
+1. **Build and open Android project:**
+```bash
+npm run mobile:android
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-- **Supabase** (Primary Backend & Database)
+2. **Manual Android operations:**
+```bash
+npm run cap:android    # Open Android Studio
+npm run cap:sync       # Sync web assets
+npm run cap:build      # Build and copy assets
+```
 
-### Backend Architecture
+### iOS Development
 
-This project uses **Supabase** as its primary backend and database solution:
+1. **Build and open iOS project:**
+```bash
+npm run mobile:ios
+```
 
-- **Database**: Supabase PostgreSQL with Row Level Security (RLS)
-- **Authentication**: Supabase Auth with email/password and OAuth
-- **Storage**: Supabase Storage for product images
-- **Serverless**: Supabase Edge Functions for backend logic
-- **Real-time**: Supabase Realtime for live updates
-- **Offline Support**: Advanced offline-first architecture with Supabase sync
+2. **Manual iOS operations:**
+```bash
+npm run cap:ios        # Open Xcode
+npm run cap:sync       # Sync web assets
+npm run cap:build      # Build and copy assets
+```
 
-### Important for Developers
+## SMS Receipts Configuration
 
-**CRITICAL**: Any modifications or new features MUST use Supabase as the backend. Do not introduce alternative database solutions (Firebase, MongoDB, etc.) as this project is architecturally built around Supabase.
+### Android Permissions
 
-Key integration points:
-- Client: `src/integrations/supabase/client.ts`
-- Types: `src/integrations/supabase/types.ts`
-- Hooks: `src/hooks/useUnified*.ts`
-- Functions: `supabase/functions/`
-- Migrations: `supabase/migrations/`
+The app automatically requests SMS permissions. Users can:
+1. Enable SMS receipts in Settings
+2. Grant SMS permissions when prompted
+3. Send receipts directly via device SIM card
 
-## How can I deploy this project?
+### Web/Other Platforms
 
-Simply open [Lovable](https://lovable.dev/projects/e3e40a8a-4b0d-4486-a2f9-2b8a65e76033) and click on Share -> Publish.
+- Uses Web SMS API when available
+- Falls back to service worker queuing
+- Sends when connectivity is restored
 
-## Can I connect a custom domain to my Lovable project?
+## Offline Capabilities
 
-Yes, you can!
+### Data Storage
+- **IndexedDB**: Primary offline storage
+- **Service Worker**: Caching and background sync
+- **Local Storage**: User preferences and settings
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Features Working Offline
+- ✅ Customer management (add, edit, delete)
+- ✅ Inventory management (products, stock levels)
+- ✅ Sales processing (checkout, payments)
+- ✅ Debt tracking and payments
+- ✅ Reports and analytics
+- ✅ SMS receipts (queued for sending)
+- ✅ Settings and preferences
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Project Structure
+
+```
+DUKAFITI/
+├── src/                 # React source code
+├── public/              # Static assets and PWA files
+├── android/             # Android native project
+├── ios/                 # iOS native project (when added)
+├── dist/                # Build output
+├── capacitor.config.ts  # Capacitor configuration
+└── vite.config.ts       # Vite build configuration
+```
+
+## Key Files
+
+- `public/unified-offline-sw.js` - Service worker for offline functionality
+- `src/hooks/useSMS.ts` - SMS functionality with Capacitor integration
+- `capacitor.config.ts` - Mobile app configuration
+- `vite.config.ts` - Build and PWA configuration
+
+## Building for Production
+
+### Web Build (PWA)
+```bash
+npm run build
+```
+
+### Android APK
+1. Build web assets:
+```bash
+npm run build
+```
+
+2. Copy to Android project:
+```bash
+npx cap copy android
+```
+
+3. Open in Android Studio:
+```bash
+npx cap open android
+```
+
+4. Build APK in Android Studio
+
+### iOS App
+1. Build web assets:
+```bash
+npm run build
+```
+
+2. Copy to iOS project:
+```bash
+npx cap copy ios
+```
+
+3. Open in Xcode:
+```bash
+npx cap open ios
+```
+
+4. Build in Xcode
+
+## Testing Offline Functionality
+
+1. **Development Testing:**
+   - Use browser dev tools to simulate offline
+   - Test all CRUD operations without network
+   - Verify data persistence in IndexedDB
+
+2. **Mobile Testing:**
+   - Install APK on device
+   - Test in airplane mode
+   - Verify SMS receipts queue and send
+   - Test data sync when online restored
+
+## Troubleshooting
+
+### Common Issues
+
+1. **SMS Permissions Not Working:**
+   - Check AndroidManifest.xml permissions
+   - Verify device SMS app permissions
+   - Test with different phone numbers
+
+2. **Offline Data Not Syncing:**
+   - Check service worker registration
+   - Verify IndexedDB storage
+   - Test network connectivity restoration
+
+3. **Build Errors:**
+   - Run `npm run cap:sync` to refresh plugins
+   - Clean and rebuild Android project
+   - Check Capacitor plugin versions
+
+### Debug Commands
+
+```bash
+# Check Capacitor status
+npx cap doctor
+
+# Update Capacitor plugins
+npx cap update
+
+# Clean and rebuild
+npm run build && npx cap copy
+```
+
+## Environment Variables
+
+Create a `.env` file with:
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_PWA_ENABLED=true
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Commit changes
+4. Push to branch
+5. Create pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For issues and feature requests, please create an issue on GitHub.

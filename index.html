@@ -73,18 +73,64 @@
             await navigator.serviceWorker.ready;
             console.log('[SW] Service worker is ready and active');
             
-            // Handle updates
+            // Handle updates - notify user instead of auto-reloading
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     console.log('[SW] New version available');
-                    // Auto-update after a delay
+                    // Notify user about update instead of auto-reloading
+                    // Create a subtle notification
+                    const updateToast = document.createElement('div');
+                    updateToast.innerHTML = `
+                      <div style="
+                        position: fixed;
+                        bottom: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: hsl(var(--card));
+                        color: hsl(var(--card-foreground));
+                        border: 1px solid hsl(var(--border));
+                        padding: 12px 16px;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px hsl(var(--shadow));
+                        z-index: 9999;
+                        max-width: 90vw;
+                        font-family: system-ui, -apple-system, sans-serif;
+                        font-size: 14px;
+                        animation: slideUp 0.3s ease-out;
+                      ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <span>🔄</span>
+                          <span>New version available. Refresh to update.</span>
+                          <button onclick="window.location.reload()" style="
+                            margin-left: 8px;
+                            padding: 4px 8px;
+                            background: hsl(var(--primary));
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            font-size: 12px;
+                            cursor: pointer;
+                          ">Refresh</button>
+                        </div>
+                      </div>
+                      <style>
+                        @keyframes slideUp {
+                          from { transform: translateX(-50%) translateY(100%); opacity: 0; }
+                          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+                        }
+                      </style>
+                    `;
+                    document.body.appendChild(updateToast);
+                    
+                    // Auto remove after 10 seconds
                     setTimeout(() => {
-                      newWorker.postMessage({ type: 'SKIP_WAITING' });
-                      window.location.reload();
-                    }, 2000);
+                      if (updateToast.parentElement) {
+                        updateToast.remove();
+                      }
+                    }, 10000);
                   }
                 });
               }
